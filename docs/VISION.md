@@ -1,5 +1,7 @@
 # Guidad Felsökning
 
+> Styrdokument för utveckling: [Master Prompt v1.0](MASTER-PROMPT.md)
+
 ## Vision
 
 Guidad Felsökning är en professionell diagnostikplattform som steg för steg vägleder tekniker genom en strukturerad felsökningsprocess. Plattformen dokumenterar varje moment, hämtar information från tillverkarens system via användarens egna behörigheter och skapar en komplett, spårbar felsökningshistorik.
