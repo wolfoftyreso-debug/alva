@@ -33,7 +33,11 @@ export default function DelatArende() {
   const avslutat = arAvslutat(arende);
   const bilder = foton(arende);
   const matvarden = arende.handelser.filter((p) => p.handelse.typ === "matvarde");
-  const kundposter = arende.handelser.filter((p) => p.handelse.typ !== "kategori_byte");
+  // Hypoteser är internt arbetsmaterial och delas inte externt —
+  // de får aldrig riskera att läsas som konstaterade fel.
+  const kundposter = arende.handelser.filter(
+    (p) => p.handelse.typ !== "kategori_byte" && p.handelse.typ !== "hypotes",
+  );
   const pagaende = b.rekommenderatNastaSteg[0];
 
   return (

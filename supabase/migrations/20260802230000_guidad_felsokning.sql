@@ -44,7 +44,8 @@ revoke update, delete on public.felsokning_handelser from authenticated, anon;
 
 -- Live Share: anonym läsning sker ENDAST via delningskod genom en
 -- security definer-funktion — tabellerna exponeras aldrig direkt för anon.
--- Interna poster (kategoribyten) filtreras bort ur den delade vyn.
+-- Interna poster (kategoribyten, hypoteser) filtreras bort ur den delade
+-- vyn: hypoteser är arbetsmaterial och får aldrig läsas som konstaterade fel.
 create or replace function public.hamta_delat_arende(kod text)
 returns jsonb
 language sql
@@ -58,7 +59,7 @@ as $$
       select jsonb_agg(to_jsonb(h) order by h.tidpunkt, h.id)
       from felsokning_handelser h
       where h.arende_id = a.id
-        and h.handelse->>'typ' <> 'kategori_byte'
+        and h.handelse->>'typ' not in ('kategori_byte', 'hypotes')
     ), '[]'::jsonb)
   )
   from felsokning_arenden a

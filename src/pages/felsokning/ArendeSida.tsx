@@ -606,7 +606,11 @@ function RapportFlik({
   const b = brief(arende, metodik, nu);
   const bilder = foton(arende);
   const fordelning = tidsfordelningsRader(arende, nu);
-  const kundposter = arende.handelser.filter((p) => p.handelse.typ !== "kategori_byte");
+  // Kategoribyten är interna; hypoteser är arbetsmaterial och ingår inte
+  // i det som delas med kund.
+  const kundposter = arende.handelser.filter(
+    (p) => p.handelse.typ !== "kategori_byte" && p.handelse.typ !== "hypotes",
+  );
 
   // Alla exporter bygger på samma händelselogg och versionsmärks:
   // version = antal händelser vid exporttillfället.
