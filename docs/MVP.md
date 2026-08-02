@@ -25,8 +25,10 @@ npm test           # projektionstester
 | Röstinmatning (tal in, text ut) | ✅ Push-to-Talk via webbläsarens taligenkänning (sv-SE): lyssnar bara efter aktivt tryck, röd indikator med realtidstranskript, texten hamnar i ett redigerbart fält och skickas aldrig automatiskt. Knappen visas bara i webbläsare med talstöd. Produktionsversionen byter motor till leverantörens Voice-to-Text bakom samma gränssnitt. |
 | Verifierade checklistor | ✅ Varje kontroll i metodiken har ett minimikrav (foto, mätvärde eller kort observation). Foto-kontroller verifieras med bild; mätningar kan inte markeras verifierade utan värde. |
 | Export | ✅ Versionsmärkt JSON-export (version = antal händelser vid exporttillfället, med användare och tidpunkt); exporten loggas själv som händelse. PDF via utskrift. CSV och API i backend-fasen. |
-| Öppet API | 🔶 Datamodellen är API-klar (händelser som JSON), men MVP:t lagrar lokalt (localStorage). Nästa steg: backend med samma händelsemodell. |
-| Live Share | 🔶 Kräver backend — specificerad i [moduler/live-share.md](moduler/live-share.md). Kundrapporten är förberedd som samma projektion. |
+| Backend & synk | ✅ Databas-migration (`supabase/migrations/20260802230000_guidad_felsokning.sql`): ärenden + händelser med RLS, append-only även i databasen (inga update/delete-rättigheter). Synklager i klienten: konfliktfri ihopflätning av händelser per id (testad), push av lokala + pull av kollegors händelser var 15:e sekund. Utan inloggning arbetar appen i lokalt läge; status visas i ärendehuvudet. |
+| Metodiker | ✅ Tre: vibration, elsystem/strömförsörjning (relä-exemplet ur visionen) och generisk — vald automatiskt utifrån felbeskrivningen. |
+| Live Share | ✅ Skrivskyddad livevy per ärende (`/felsokning/dela/:id`): status ✔/🔄/⏳, bilder, mätvärdestabell, tidslinje, rekommenderat nästa steg. Uppdateras automatiskt, interna poster filtreras bort. Anonym extern åtkomst via delningskod är förberedd i databasen (security definer-funktion `hamta_delat_arende`); varje ärende får en slumpad delningskod vid skapande. Behörighetsnivåer (kund/intern/partner) i nästa fas. |
+| Öppet API | 🔶 Datamodellen är API-klar (händelser som JSON i Postgres). REST/OpenAPI-lager i nästa fas. |
 
 ## Arkitekturprinciper i koden
 

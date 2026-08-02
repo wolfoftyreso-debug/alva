@@ -65,6 +65,9 @@ export interface Arende {
   id: string;
   nummer: number;
   skapad: string; // ISO 8601
+  // Slumpad kod för Live Share-länken; sätts vid skapande och kan aldrig
+  // ändras (ärenderaden är append-only även i databasen).
+  delningskod?: string;
   handelser: LoggPost[];
 }
 

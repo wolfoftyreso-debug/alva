@@ -17,6 +17,7 @@ import {
   tidsfordelningsRader,
 } from "@/felsokning/projektioner";
 import { metodikForArende, useFelsokning } from "@/felsokning/store";
+import { synkroniseraArende, type SynkStatus } from "@/felsokning/synk";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto, tidKlockslag } from "@/felsokning/format";
 
@@ -29,12 +30,50 @@ const FLIKAR = [
 
 type Flik = (typeof FLIKAR)[number]["id"];
 
+const SYNKSTATUS_LABEL: Record<SynkStatus, string> = {
+  lokal: "Lokalt läge",
+  synkar: "Synkar …",
+  synkad: "Synkad",
+  offline: "Offline",
+};
+
+// Synkar ärendet mot backend: direkt vid nya händelser och därefter var
+// 15:e sekund (hämtar kollegors händelser). Utan inloggning: lokalt läge.
+function useSynk(arende: Arende | undefined): SynkStatus {
+  const [status, setStatus] = useState<SynkStatus>("lokal");
+  const sammanfoga = useFelsokning((s) => s.sammanfoga);
+  const arendeId = arende?.id;
+  const antal = arende?.handelser.length ?? 0;
+
+  useEffect(() => {
+    if (!arende || !arendeId) return;
+    let aktiv = true;
+    const kor = async () => {
+      setStatus((s) => (s === "synkad" ? "synkar" : s));
+      const resultat = await synkroniseraArende(arende);
+      if (!aktiv) return;
+      setStatus(resultat.status);
+      if (resultat.handelser) sammanfoga(arendeId, resultat.handelser);
+    };
+    kor();
+    const timer = setInterval(kor, 15000);
+    return () => {
+      aktiv = false;
+      clearInterval(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- antal driver omsynk vid nya händelser
+  }, [arendeId, antal, sammanfoga]);
+
+  return status;
+}
+
 export default function ArendeSida() {
   const { id } = useParams<{ id: string }>();
   const arende = useFelsokning((s) => (id ? s.arenden[id] : undefined));
   const laggTill = useFelsokning((s) => s.laggTill);
   const [flik, setFlik] = useState<Flik>("guide");
   const [nu, setNu] = useState(() => new Date().toISOString());
+  const synkStatus = useSynk(arende);
 
   useEffect(() => {
     const timer = setInterval(() => setNu(new Date().toISOString()), 30000);
@@ -63,7 +102,9 @@ export default function ArendeSida() {
       hoger={
         <div className="text-right">
           <p className="text-lg font-extrabold text-amber-400">{total}</p>
-          <p className="text-xs font-bold uppercase text-zinc-500">{avslutat ? "Avslutat" : "Pågår"}</p>
+          <p className="text-xs font-bold uppercase text-zinc-500">
+            {avslutat ? "Avslutat" : "Pågår"} · {SYNKSTATUS_LABEL[synkStatus]}
+          </p>
         </div>
       }
     >
@@ -600,6 +641,9 @@ function RapportFlik({
             Exportera JSON
           </StorKnapp>
         </div>
+        <Link to={`/felsokning/dela/${arende.id}`} className="mt-2 block">
+          <StorKnapp variant="sekundar">🟢 Öppna Live Share-vy</StorKnapp>
+        </Link>
       </Panel>
       <Panel rubrik={`Ärende #${arende.nummer}`}>
         {b.objekt && (

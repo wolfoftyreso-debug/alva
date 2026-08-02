@@ -5,7 +5,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Arende, Handelse, Objekt } from "./domain";
+import type { Arende, Handelse, LoggPost, Objekt } from "./domain";
 import { nyLoggPost } from "./domain";
 import { felbeskrivning } from "./projektioner";
 import { GENERISK_METODIK, valjMetodik, type Metodik } from "./metodik";
@@ -17,6 +17,15 @@ interface FelsokningState {
   sattAnvandare: (namn: string) => void;
   skapaArende: (objekt: Objekt, felbeskrivningText: string) => string;
   laggTill: (arendeId: string, handelse: Handelse) => void;
+  // Används endast av synken: ersätter listan med den ihopflätade versionen.
+  // Semantiken är fortfarande append-only — flätningen lägger bara till.
+  sammanfoga: (arendeId: string, handelser: LoggPost[]) => void;
+}
+
+function nyDelningskod(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) =>
+    "abcdefghijklmnopqrstuvwxyz0123456789"[b % 36],
+  ).join("");
 }
 
 export const useFelsokning = create<FelsokningState>()(
@@ -35,6 +44,7 @@ export const useFelsokning = create<FelsokningState>()(
           id,
           nummer: nastaNummer,
           skapad: new Date().toISOString(),
+          delningskod: nyDelningskod(),
           handelser: [
             nyLoggPost(anvandare, { typ: "objekt_identifierat", objekt }),
             nyLoggPost(anvandare, { typ: "felbeskrivning", text: felbeskrivningText }),
@@ -60,6 +70,16 @@ export const useFelsokning = create<FelsokningState>()(
                 handelser: [...arende.handelser, nyLoggPost(anvandare, handelse)],
               },
             },
+          };
+        });
+      },
+
+      sammanfoga: (arendeId, handelser) => {
+        set((s) => {
+          const arende = s.arenden[arendeId];
+          if (!arende || handelser.length === arende.handelser.length) return s;
+          return {
+            arenden: { ...s.arenden, [arendeId]: { ...arende, handelser } },
           };
         });
       },

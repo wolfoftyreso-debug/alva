@@ -153,7 +153,64 @@ export const GENERISK_METODIK: Metodik = {
   ],
 };
 
-const METODIKER = [VIBRATION_METODIK, GENERISK_METODIK];
+// Elsystem-metodik enligt visionens relä-exempel: mätningar med krav på
+// värden, reläkontroll och funktionstest.
+export const ELSYSTEM_METODIK: Metodik = {
+  id: "elsystem",
+  namn: "Elsystem / strömförsörjning",
+  steg: [
+    {
+      id: "symptom",
+      rubrik: "Verifiera symptom",
+      fragor: [
+        { id: "reproducerbart", text: "Går felet att reproducera?", svarstyp: "janej" },
+        {
+          id: "omfattning",
+          text: "Är funktionen helt död eller delvis fungerande?",
+          svarstyp: "val",
+          val: ["Helt död", "Delvis fungerande", "Intermittent"],
+        },
+        { id: "funktion", text: "Vilken funktion saknas eller felar?", svarstyp: "text" },
+        { id: "forandring", text: "Har något åtgärdats eller förändrats nyligen?", svarstyp: "text" },
+      ],
+    },
+    {
+      id: "visuell",
+      rubrik: "Visuell kontroll",
+      kontroller: [
+        { id: "foto_komponent", text: "Fotografera komponenten och dess anslutningar", krav: "foto" },
+        { id: "skador", text: "Kontrollera synliga skador, korrosion och lösa kontaktdon", krav: "kommentar" },
+      ],
+    },
+    {
+      id: "matningar",
+      rubrik: "Mätningar",
+      kontroller: [
+        { id: "batterispanning", text: "Mät batterispänning", krav: "matvarde" },
+        { id: "sakringar", text: "Kontrollera berörda säkringar", krav: "kommentar" },
+        { id: "matningsspanning", text: "Mät matningsspänning vid komponenten", krav: "matvarde" },
+        { id: "jord", text: "Mät spänningsfall mot jord", krav: "matvarde" },
+      ],
+    },
+    {
+      id: "rela",
+      rubrik: "Relä och styrsignal",
+      kontroller: [
+        { id: "rela_klick", text: "Kontrollera om reläet klickar vid aktivering", krav: "kommentar" },
+        { id: "styrsignal", text: "Mät styrsignal till reläet", krav: "matvarde" },
+      ],
+    },
+    {
+      id: "funktionstest",
+      rubrik: "Funktionstest",
+      kontroller: [
+        { id: "test", text: "Genomför funktionstest och dokumentera resultatet", krav: "kommentar" },
+      ],
+    },
+  ],
+};
+
+export const METODIKER = [VIBRATION_METODIK, ELSYSTEM_METODIK, GENERISK_METODIK];
 
 export function metodikForId(id: string): Metodik {
   return METODIKER.find((m) => m.id === id) ?? GENERISK_METODIK;
@@ -162,6 +219,9 @@ export function metodikForId(id: string): Metodik {
 export function valjMetodik(felbeskrivning: string): Metodik {
   const text = felbeskrivning.toLowerCase();
   if (/vibr|skak|obalans/.test(text)) return VIBRATION_METODIK;
+  if (/relä|rela\b|säkring|elektr|spänning|volt\b|batteri|lampa|belysning|ström|kortslut/.test(text)) {
+    return ELSYSTEM_METODIK;
+  }
   return GENERISK_METODIK;
 }
 
