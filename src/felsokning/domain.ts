@@ -51,6 +51,7 @@ export type Handelse =
   | { typ: "kategori_byte"; kategori: TidKategori }
   | { typ: "inaktivitet_forklarad"; text: string; minuter: number }
   | { typ: "overlamning"; fran: string; till?: string }
+  | { typ: "export_skapad"; format: string; version: number }
   | { typ: "arende_avslutat" };
 
 export interface LoggPost {
@@ -106,6 +107,8 @@ export function handelseRubrik(post: LoggPost): string {
       return `Komplettering (${h.minuter} min utan aktivitet): ${h.text}`;
     case "overlamning":
       return h.till ? `Arbete överlämnat från ${h.fran} till ${h.till}` : `Arbete överlämnat av ${h.fran}`;
+    case "export_skapad":
+      return `Export skapad: ${h.format}, version ${h.version}`;
     case "arende_avslutat":
       return "Felsökning avslutad";
   }

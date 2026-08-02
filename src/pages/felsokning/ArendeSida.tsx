@@ -88,7 +88,7 @@ export default function ArendeSida() {
       )}
       {flik === "logg" && <LoggFlik arende={arende} />}
       {flik === "brief" && <BriefFlik arende={arende} metodik={metodik} nu={nu} />}
-      {flik === "rapport" && <RapportFlik arende={arende} metodik={metodik} nu={nu} />}
+      {flik === "rapport" && <RapportFlik arende={arende} metodik={metodik} nu={nu} skicka={skicka} />}
     </FelsokningSkal>
   );
 }
@@ -114,7 +114,7 @@ function InaktivitetsBanner({
         Ingen aktivitet har registrerats de senaste {minuter} minuterna.
       </p>
       <p className="mb-3 text-zinc-300">Beskriv kort vad som gjorts under denna period.</p>
-      <TextFalt label="Vad har gjorts?" varde={text} satt={setText} platshallare="T.ex. Demonterade instrumentpanelen för att komma åt kabelstammen." />
+      <TextFalt label="Vad har gjorts?" varde={text} satt={setText} platshallare="T.ex. Demonterade instrumentpanelen för att komma åt kabelstammen." rost />
       <StorKnapp
         disabled={!text.trim()}
         onClick={() => {
@@ -245,7 +245,7 @@ function FrageKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse) =>
       )}
       {fraga.svarstyp === "text" && (
         <>
-          <TextFalt label="Svar" varde={text} satt={setText} />
+          <TextFalt label="Svar" varde={text} satt={setText} rost />
           <StorKnapp disabled={!text.trim()} onClick={() => svara(text.trim())}>
             Spara svar
           </StorKnapp>
@@ -255,11 +255,14 @@ function FrageKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse) =>
   );
 }
 
+// Verifierad checklista: en kontrollpunkt är inte slutförd enbart genom en
+// kryssruta — minimikravet (foto, mätvärde eller kort observation) styrs av
+// kontrolltypen i metodiken.
 function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse) => void }) {
   const kontroll = steg.kontroll!;
   const [resultat, setResultat] = useState("");
   const filRef = useRef<HTMLInputElement>(null);
-  const arFoto = /fotografera|foto/i.test(kontroll.text);
+  const krav = kontroll.krav;
 
   const utford = () =>
     skicka({
@@ -270,11 +273,13 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
       resultat: resultat.trim() || undefined,
     });
 
+  const kravUppfyllt = krav === "foto" || !krav || resultat.trim().length > 0;
+
   return (
     <>
       {steg.steg.beskrivning && <p className="mb-2 text-zinc-400">{steg.steg.beskrivning}</p>}
       <p className="mb-4 text-2xl font-extrabold leading-snug">{kontroll.text}</p>
-      {arFoto && (
+      {krav === "foto" ? (
         <>
           <input
             ref={filRef}
@@ -290,13 +295,36 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
               utford();
             }}
           />
-          <StorKnapp className="mb-2" onClick={() => filRef.current?.click()}>
-            📷 Ta / välj foto
+          <TextFalt label="Observation (valfritt)" varde={resultat} satt={setResultat} rost />
+          <StorKnapp onClick={() => filRef.current?.click()}>📷 Ta foto — verifierar kontrollen</StorKnapp>
+          <p className="mt-2 text-sm text-zinc-500">Denna kontroll verifieras med foto.</p>
+        </>
+      ) : (
+        <>
+          <TextFalt
+            label={
+              krav === "matvarde"
+                ? "Uppmätt värde (krävs för verifiering)"
+                : krav === "kommentar"
+                  ? "Vad observerades? (krävs för verifiering)"
+                  : "Resultat / avläst värde (valfritt)"
+            }
+            varde={resultat}
+            satt={setResultat}
+            platshallare={krav === "matvarde" ? "T.ex. 2,4 bar samtliga hjul" : "T.ex. Säkringen är hel, spänning på båda sidor"}
+            rost
+          />
+          {!kravUppfyllt && (
+            <p className="mb-3 text-sm font-bold text-amber-400">
+              Ingen {krav === "matvarde" ? "mätning" : "observation"} har registrerats — lägg till en kort{" "}
+              {krav === "matvarde" ? "mätuppgift" : "kommentar"} innan kontrollen kan verifieras.
+            </p>
+          )}
+          <StorKnapp disabled={!kravUppfyllt} onClick={utford}>
+            Markera verifierad
           </StorKnapp>
         </>
       )}
-      <TextFalt label="Resultat / avläst värde (valfritt)" varde={resultat} satt={setResultat} platshallare="T.ex. 2,4 bar samtliga hjul" />
-      <StorKnapp onClick={utford}>Markera utförd</StorKnapp>
     </>
   );
 }
@@ -375,6 +403,7 @@ function SnabbDokumentation({ skicka }: { skicka: (h: Handelse) => void }) {
             varde={text}
             satt={setText}
             platshallare={typ === "matvarde" ? "T.ex. Matningsspänning stift 30" : ""}
+            rost
           />
           {typ === "matvarde" && <TextFalt label="Värde (med enhet)" varde={varde} satt={setVarde} platshallare="T.ex. 13,9 V" />}
           <StorKnapp disabled={!text.trim() || (typ === "matvarde" && !varde.trim())} onClick={spara}>
@@ -521,11 +550,40 @@ function BriefFlik({ arende, metodik, nu }: { arende: Arende; metodik: Metodik; 
 
 // Kundrapporten: en tydlig tidslinje i stället för "Felsökning – 2,5 timmar".
 // Interna poster (kategoribyten) visas inte för kund.
-function RapportFlik({ arende, metodik, nu }: { arende: Arende; metodik: Metodik; nu: string }) {
+function RapportFlik({
+  arende,
+  metodik,
+  nu,
+  skicka,
+}: {
+  arende: Arende;
+  metodik: Metodik;
+  nu: string;
+  skicka: (h: Handelse) => void;
+}) {
+  const anvandare = useFelsokning((s) => s.anvandare);
   const b = brief(arende, metodik, nu);
   const bilder = foton(arende);
   const fordelning = tidsfordelningsRader(arende, nu);
   const kundposter = arende.handelser.filter((p) => p.handelse.typ !== "kategori_byte");
+
+  // Alla exporter bygger på samma händelselogg och versionsmärks:
+  // version = antal händelser vid exporttillfället.
+  const exporteraJson = () => {
+    const version = arende.handelser.length;
+    const data = {
+      export: { format: "JSON", version, exporteradAv: anvandare, tidpunkt: new Date().toISOString() },
+      arende,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const lank = document.createElement("a");
+    lank.href = url;
+    lank.download = `arende-${arende.nummer}-v${version}.json`;
+    lank.click();
+    URL.revokeObjectURL(url);
+    skicka({ typ: "export_skapad", format: "JSON", version });
+  };
 
   return (
     <>
@@ -534,9 +592,14 @@ function RapportFlik({ arende, metodik, nu }: { arende: Arende; metodik: Metodik
           Delningsbar sammanställning av utfört arbete. Granska innehållet innan rapporten delas — bilder kan
           innehålla uppgifter om andra kunder.
         </p>
-        <StorKnapp variant="sekundar" onClick={() => window.print()}>
-          Skriv ut / spara som PDF
-        </StorKnapp>
+        <div className="grid grid-cols-2 gap-2">
+          <StorKnapp variant="sekundar" onClick={() => window.print()}>
+            Skriv ut / PDF
+          </StorKnapp>
+          <StorKnapp variant="sekundar" onClick={exporteraJson}>
+            Exportera JSON
+          </StorKnapp>
+        </div>
       </Panel>
       <Panel rubrik={`Ärende #${arende.nummer}`}>
         {b.objekt && (

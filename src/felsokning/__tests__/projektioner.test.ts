@@ -26,6 +26,19 @@ const OBJEKT: Handelse = {
   },
 };
 
+describe("verifierade checklistor", () => {
+  it("varje kontroll i metodikerna har ett definierat minimikrav", async () => {
+    const { GENERISK_METODIK } = await import("../metodik");
+    for (const metodik of [VIBRATION_METODIK, GENERISK_METODIK]) {
+      for (const steg of metodik.steg) {
+        for (const kontroll of steg.kontroller ?? []) {
+          expect(kontroll.krav, `${metodik.id}/${steg.id}/${kontroll.id}`).toBeDefined();
+        }
+      }
+    }
+  });
+});
+
 describe("metodikval", () => {
   it("väljer vibrationsmetodiken när felbeskrivningen nämner vibration", () => {
     expect(valjMetodik("Bilen vibrerar runt 88 km/h").id).toBe("vibration");

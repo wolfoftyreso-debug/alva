@@ -15,9 +15,14 @@ export interface Fraga {
   val?: string[];
 }
 
+// Minimikrav enligt modulen Verifierade checklistor: en kontrollpunkt är
+// inte slutförd enbart genom en kryssruta — den samlar bevis och kontext.
+export type KontrollKrav = "matvarde" | "kommentar" | "foto";
+
 export interface Kontroll {
   id: string;
   text: string;
+  krav?: KontrollKrav;
 }
 
 export interface MetodikSteg {
@@ -67,23 +72,23 @@ export const VIBRATION_METODIK: Metodik = {
       rubrik: "Visuell kontroll",
       beskrivning: "Fotografera samtliga hjul. Skilj på observation och slutsats.",
       kontroller: [
-        { id: "foto_vf", text: "Fotografera vänster framhjul" },
-        { id: "foto_hf", text: "Fotografera höger framhjul" },
-        { id: "foto_vb", text: "Fotografera vänster bakhjul" },
-        { id: "foto_hb", text: "Fotografera höger bakhjul" },
-        { id: "dot", text: "Dokumentera DOT-/tillverkningsdatum" },
-        { id: "slitage", text: "Kontrollera däckslitage" },
+        { id: "foto_vf", text: "Fotografera vänster framhjul", krav: "foto" },
+        { id: "foto_hf", text: "Fotografera höger framhjul", krav: "foto" },
+        { id: "foto_vb", text: "Fotografera vänster bakhjul", krav: "foto" },
+        { id: "foto_hb", text: "Fotografera höger bakhjul", krav: "foto" },
+        { id: "dot", text: "Dokumentera DOT-/tillverkningsdatum", krav: "kommentar" },
+        { id: "slitage", text: "Kontrollera däckslitage", krav: "kommentar" },
       ],
     },
     {
       id: "kontroller",
       rubrik: "Rekommenderade kontroller",
       kontroller: [
-        { id: "lufttryck", text: "Kontrollera lufttryck" },
-        { id: "hjulmoment", text: "Kontrollera hjulmoment" },
-        { id: "kast", text: "Kontrollera radial- och sidokast" },
-        { id: "balansering", text: "Kontrollera hjulbalansering" },
-        { id: "bussningar", text: "Kontrollera bussningar och leder" },
+        { id: "lufttryck", text: "Kontrollera lufttryck", krav: "matvarde" },
+        { id: "hjulmoment", text: "Kontrollera hjulmoment", krav: "matvarde" },
+        { id: "kast", text: "Kontrollera radial- och sidokast", krav: "matvarde" },
+        { id: "balansering", text: "Kontrollera hjulbalansering", krav: "kommentar" },
+        { id: "bussningar", text: "Kontrollera bussningar och leder", krav: "kommentar" },
       ],
     },
     {
@@ -91,11 +96,11 @@ export const VIBRATION_METODIK: Metodik = {
       rubrik: "Provkörning",
       beskrivning: "Verifiera under provkörning:",
       kontroller: [
-        { id: "pk_hastighet", text: "Hastighet där vibration uppstår" },
-        { id: "pk_acc", text: "Förändring vid acceleration" },
-        { id: "pk_motorbroms", text: "Förändring vid motorbroms" },
-        { id: "pk_kurva", text: "Förändring vid kurvtagning" },
-        { id: "pk_var", text: "Om vibration känns i ratt eller kaross" },
+        { id: "pk_hastighet", text: "Hastighet där vibration uppstår", krav: "kommentar" },
+        { id: "pk_acc", text: "Förändring vid acceleration", krav: "kommentar" },
+        { id: "pk_motorbroms", text: "Förändring vid motorbroms", krav: "kommentar" },
+        { id: "pk_kurva", text: "Förändring vid kurvtagning", krav: "kommentar" },
+        { id: "pk_var", text: "Om vibration känns i ratt eller kaross", krav: "kommentar" },
       ],
     },
   ],
@@ -124,25 +129,25 @@ export const GENERISK_METODIK: Metodik = {
       id: "visuell",
       rubrik: "Visuell kontroll",
       kontroller: [
-        { id: "foto_objekt", text: "Fotografera objektet och det berörda området" },
-        { id: "skador", text: "Kontrollera synliga skador, läckage eller lösa anslutningar" },
-        { id: "typskylt", text: "Dokumentera typskylt/märkning" },
+        { id: "foto_objekt", text: "Fotografera objektet och det berörda området", krav: "foto" },
+        { id: "skador", text: "Kontrollera synliga skador, läckage eller lösa anslutningar", krav: "kommentar" },
+        { id: "typskylt", text: "Dokumentera typskylt/märkning", krav: "foto" },
       ],
     },
     {
       id: "grundkontroller",
       rubrik: "Grundkontroller",
       kontroller: [
-        { id: "matning", text: "Utför grundläggande mätningar (spänning, tryck, temperatur — det som är relevant)" },
-        { id: "sakringar", text: "Kontrollera säkringar/skydd" },
-        { id: "anslutningar", text: "Kontrollera kontaktdon och anslutningar" },
+        { id: "matning", text: "Utför grundläggande mätningar (spänning, tryck, temperatur — det som är relevant)", krav: "matvarde" },
+        { id: "sakringar", text: "Kontrollera säkringar/skydd", krav: "kommentar" },
+        { id: "anslutningar", text: "Kontrollera kontaktdon och anslutningar", krav: "kommentar" },
       ],
     },
     {
       id: "funktionstest",
       rubrik: "Funktionstest",
       kontroller: [
-        { id: "test", text: "Genomför funktionstest och dokumentera resultatet" },
+        { id: "test", text: "Genomför funktionstest och dokumentera resultatet", krav: "kommentar" },
       ],
     },
   ],

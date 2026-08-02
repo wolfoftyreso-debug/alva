@@ -22,7 +22,11 @@ npm test           # projektionstester
 | Ärendebrief | ✅ Regenereras ur loggen vid varje visning: utförda kontroller, observationer, **ej kontrollerat**, rekommenderat nästa steg, tillförlitlighet, total arbetstid. |
 | Överlämning | ✅ ”Lämna över arbete” genererar överlämningsrapport ur briefen och loggar överlämningen. |
 | Kundrapport | ✅ Tidslinjevy utan interna poster, med bilder och tidsfördelning. Utskrift/PDF via webbläsaren, med påminnelse om granskning före delning. |
+| Röstinmatning (tal in, text ut) | ✅ Push-to-Talk via webbläsarens taligenkänning (sv-SE): lyssnar bara efter aktivt tryck, röd indikator med realtidstranskript, texten hamnar i ett redigerbart fält och skickas aldrig automatiskt. Knappen visas bara i webbläsare med talstöd. Produktionsversionen byter motor till leverantörens Voice-to-Text bakom samma gränssnitt. |
+| Verifierade checklistor | ✅ Varje kontroll i metodiken har ett minimikrav (foto, mätvärde eller kort observation). Foto-kontroller verifieras med bild; mätningar kan inte markeras verifierade utan värde. |
+| Export | ✅ Versionsmärkt JSON-export (version = antal händelser vid exporttillfället, med användare och tidpunkt); exporten loggas själv som händelse. PDF via utskrift. CSV och API i backend-fasen. |
 | Öppet API | 🔶 Datamodellen är API-klar (händelser som JSON), men MVP:t lagrar lokalt (localStorage). Nästa steg: backend med samma händelsemodell. |
+| Live Share | 🔶 Kräver backend — specificerad i [moduler/live-share.md](moduler/live-share.md). Kundrapporten är förberedd som samma projektion. |
 
 ## Arkitekturprinciper i koden
 

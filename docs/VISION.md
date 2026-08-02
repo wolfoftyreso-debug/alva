@@ -1,6 +1,6 @@
 # Guidad Felsökning
 
-> Styrdokument för utveckling: [Master Prompt v1.0](MASTER-PROMPT.md)
+> Styrdokument för utveckling: [Master Prompt v2.0](MASTER-PROMPT.md)
 
 ## Vision
 
@@ -124,6 +124,9 @@ Utöver grundprinciperna byggs plattformen upp av moduler som specificeras separ
 - [Arbetslogg & Tidredovisning](moduler/arbetslogg-och-tidredovisning.md) – tidsatt, spårbart arbete kopplat till konkreta aktiviteter; ett digitalt arbetsprotokoll där tid, aktivitet och tekniskt resonemang hänger ihop.
 - [Delningsbar kundrapport (Kundvy)](moduler/kundrapport.md) – en tydlig tidslinje med bilder, mätvärden och kommentarer som visar kunden vad de faktiskt betalat för.
 - [Ärendebrief](moduler/arendebrief.md) – en löpande uppdaterad arbetsbild av ärendet som gör att en ny tekniker blir produktiv på under en minut; fleranvändararbetsyta med överlämning med ett klick.
+- [Kommunikationsmodell (röst)](moduler/kommunikationsmodell.md) – tal in, text ut via Push-to-Talk; röst är ett inmatningssätt, inte ett separat gränssnitt, och inget skickas utan bekräftelse.
+- [Verifierade checklistor](moduler/verifierade-checklistor.md) – en kontrollpunkt är inte slutförd genom en kryssruta; varje kontroll samlar bevis och kontext med minimikrav per kontrolltyp.
+- [Live Share](moduler/live-share.md) – behörighetsstyrd delningslänk som visar ärendet i realtid; versionsmärkta exporter ur samma händelselogg.
 
 Hur processen fungerar i praktiken illustreras i exempelflödet [”Bilen vibrerar runt 88 km/h”](exempel/vibration-vid-88-km-h.md).
 

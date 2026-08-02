@@ -3,9 +3,10 @@
 // träffytor (handskvänligt), få val per skärm, inga distraktioner.
 
 import { Link } from "react-router-dom";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import type { Tillforlitlighet } from "./domain";
 import { TILLFORLITLIGHET_LABEL } from "./domain";
+import { MikrofonKnapp } from "./Mikrofon";
 
 export function FelsokningSkal({
   rubrik,
@@ -90,18 +91,31 @@ export function TextFalt({
   satt,
   platshallare,
   flerRad,
+  rost,
 }: {
   label: string;
   varde: string;
   satt: (v: string) => void;
   platshallare?: string;
   flerRad?: boolean;
+  rost?: boolean;
 }) {
+  // Tal-till-text skriver in i samma redigerbara fält — användaren
+  // granskar och bekräftar alltid innan något sparas i loggen.
+  const vardeRef = useRef(varde);
+  vardeRef.current = varde;
   const klass =
     "w-full rounded-lg border-2 border-zinc-600 bg-zinc-950 px-4 py-3 text-lg text-zinc-50 placeholder-zinc-500 focus:border-amber-400 focus:outline-none";
   return (
     <label className="mb-3 block">
-      <span className="mb-1 block text-sm font-bold uppercase tracking-wide text-zinc-400">{label}</span>
+      <span className="mb-1 flex min-h-11 items-center justify-between gap-2">
+        <span className="text-sm font-bold uppercase tracking-wide text-zinc-400">{label}</span>
+        {rost && (
+          <MikrofonKnapp
+            paText={(text) => satt(vardeRef.current ? `${vardeRef.current.trimEnd()} ${text}` : text)}
+          />
+        )}
+      </span>
       {flerRad ? (
         <textarea value={varde} onChange={(e) => satt(e.target.value)} placeholder={platshallare} rows={3} className={klass} />
       ) : (

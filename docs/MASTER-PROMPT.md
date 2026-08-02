@@ -1,237 +1,171 @@
-# Guidad Felsökning – Master Prompt v1.0
+# Guidad Felsökning – Master Prompt v2.0
 
-Det här är ett produktdirektiv, inte en teknisk specifikation – ett styrdokument som ett utvecklingsteam kan använda från dag ett. Visionen och de resonemang som ligger bakom finns i [VISION.md](VISION.md).
+**Production Ready AI Wrapper Platform (MVP/Beta)**
 
----
-
-## Projektmål
-
-Bygg en produktionsklar SaaS-plattform med namnet **Guidad Felsökning**.
-
-Plattformen är ett professionellt arbetsverktyg för mekaniker, servicetekniker och felsökare inom alla tekniska områden där strukturerad diagnostik används.
-
-Exempel:
-
-- Fordon
-- Lastbilar
-- Bussar
-- Entreprenadmaskiner
-- Lantbruksmaskiner
-- Kompressorer
-- Generatorer
-- Industrimaskiner
-- Marin utrustning
-- Elsystem
-- Hydraulik
-- Pneumatik
-- Automation
-
-Systemet ska fungera som en digital diagnostikhandledare. Det ska inte ersätta teknikerens kompetens eller fatta beslut åt användaren, utan metodiskt vägleda genom en dokumenterad felsökningsprocess.
+Det här är ett produktdirektiv, inte en teknisk specifikation. Visionen och resonemangen bakom finns i [VISION.md](VISION.md); v1.0 finns i versionshistoriken. Detaljerade modulspecifikationer: [kommunikationsmodell (röst/PTT)](moduler/kommunikationsmodell.md), [Live Share](moduler/live-share.md), [verifierade checklistor](moduler/verifierade-checklistor.md), [ärendebrief](moduler/arendebrief.md), [arbetslogg & tidredovisning](moduler/arbetslogg-och-tidredovisning.md), [kundrapport](moduler/kundrapport.md).
 
 ---
 
-## Designfilosofi
+## Projekt
 
-Designen ska kännas som ett professionellt fabriksverktyg.
+Bygg en produktionsredo SaaS-plattform med namnet **Guidad Felsökning**.
 
-Målbild:
+Plattformen är en AI-wrapper ovanpå en LLM-leverantörs API och fungerar som ett professionellt arbetsverktyg för mekaniker och servicetekniker. Den ska inte ersätta teknisk kompetens eller tillverkarens dokumentation, utan vägleda användaren genom en strukturerad felsökningsprocess, dokumentera allt arbete och skapa full spårbarhet.
 
-- enkel
-- robust
-- extremt tydlig
-- inga onödiga animationer
-- inga sociala funktioner
-- inga distraktioner
-- stora knappar
-- hög kontrast
-- optimerad för arbete med handskar
-- fullt stöd för mobil, surfplatta och dator
-
-Varje skärm ska ha ett tydligt syfte och minimera antalet val.
+Målet är att lansera en stabil, enkel och köpvärdig beta-version.
 
 ---
 
-## Arbetsflöde
+## Produktfilosofi
 
-1. Identifiera objektet.
-2. Starta arbetsloggen.
-3. Beskriv felet.
-4. AI leder användaren genom verifierbara kontroller.
-5. Bilder, video och mätvärden dokumenteras.
-6. Alla aktiviteter tidsstämplas.
-7. Rapport genereras.
-8. Rapport exporteras eller delas via API.
+Produkten ska kännas som ett verktyg från en stor industrileverantör: enkel, stabil, extremt snabb, professionell, förutsägbar, tydlig, minimalistisk.
+
+Ingen "AI-leksak". Ingen onödig design. Inga experimentella funktioner. Allting ska kännas robust.
 
 ---
 
-## Kärnfunktioner
+## Roller
 
-- Samtalsbaserad guidning (text och röst)
-- Bildanalys
-- OCR
-- Objektidentifiering
-- Automatisk arbetslogg
-- Tidrapportering
-- Fotodokumentation
-- Videostöd
-- Mätvärdeslogg
-- Checklista
-- Kundrapport
-- API-export
-- Integration med affärssystem
-- Integration med tillverkarinformation via användarens egna behörigheter
-- Rollbaserad behörighet
-- Offline-läge med synkronisering
+### Systemadministratör
+
+Normalt en eller flera personer hos kunden. Behörigheter: hantera organisation, API-nycklar, integrationer, skapa/ta bort användare, roller, behörigheter, export, säkerhetsinställningar, fakturering, loggar.
+
+### Tekniker
+
+Kan skapa ärenden, fortsätta ärenden, ta över ärenden, skriva, prata, fotografera, filma, mäta, exportera rapport.
+
+### Arbetsledare
+
+Kan dessutom se alla ärenden, omfördela ärenden, följa status, läsa rapporter, skapa statistik.
 
 ---
 
-## AI-principer
+## Multi-tenant
 
-AI får aldrig gissa.
-
-Alla rekommendationer ska tydligt skilja mellan:
-
-- observation
-- verifierat faktum
-- hypotes
-- rekommenderat nästa steg
-
-Varje svar ska ha en tydlig tillförlitlighetsnivå.
-
-AI ska vara konsekvent, kortfattad och metodisk.
+Varje kund är en egen tenant med egna användare, API-nycklar, integrationer, ärenden, databaslogik och säkerhet. **Ingen data får blandas mellan kunder.**
 
 ---
 
-## Dokumentation
+## Enkel onboarding
 
-Varje aktivitet ska lagras.
+Första gången en kund loggar in:
 
-Exempel:
+1. Skapa företag
+2. Lägg till logotyp
+3. Lägg till användare
+4. Lägg till API-nyckel för AI-tjänsten
+5. Lägg till eventuella integrationer
 
-- tid
-- användare
-- GPS (om aktiverat)
-- objekt
-- bilder
-- video
-- mätvärden
-- användarens kommentarer
-- AI:s rekommendation
-- resultat
-
-Loggen ska vara revisionssäker, vilket innebär att historik bevaras och ändringar kan spåras.
+Klart. Hela onboarding ska ta mindre än fem minuter.
 
 ---
 
-## API-first
+## Dashboard
 
-Hela plattformen byggs API-first.
-
-Alla objekt ska kunna:
-
-- hämtas
-- uppdateras
-- exporteras
-- integreras
-
-Dokumentationen ska vara komplett (exempelvis OpenAPI/Swagger) så att externa system enkelt kan anslutas.
+Visa endast det viktigaste: Mina ärenden · Pågående · Väntar · Klara · Starta nytt ärende.
 
 ---
 
-## Infrastruktur
+## Nytt ärende
 
-Bygg för hög tillgänglighet och skalbarhet.
-
-Exempel på målarkitektur:
-
-- AWS
-- Kubernetes
-- Docker
-- PostgreSQL
-- Redis
-- Objektlagring för bilder och dokument
-- CDN
-- Lastbalansering
-- Automatisk skalning
-- Övervakning och loggning
-- Dagliga säkerhetskopior
-- Katastrofåterställning
-- Kryptering av data under överföring och lagring
+Identifiera objekt genom registreringsnummer, VIN, maskinnummer, QR, streckkod, OCR, foto eller manuell identifiering. Objektet verifieras innan felsökning startar.
 
 ---
 
-## Säkerhet
+## AI-guidning
 
-Systemet ska vara lämpligt för professionella verksamheter.
+Systemet arbetar stegvis. Inte långa svar. En kontroll åt gången:
 
-Prioritera:
+> Kontrollera säkring F24. → Användaren svarar. → AI går vidare.
 
-- stark autentisering
-- rollbaserad åtkomst
-- API-nycklar och OAuth där det passar
-- detaljerad revisionslogg
-- principen om minsta behörighet
-- säker nyckelhantering
-- möjlighet att uppfylla krav enligt relevanta regelverk (t.ex. GDPR)
+### AI-regler
+
+AI får aldrig hitta på fakta, låtsas veta eller gissa. Den ska skilja på **Observation**, **Verifierat**, **Hypotes** och **Rekommendation**. Alla svar ska ha tydlig tillförlitlighet.
+
+---
+
+## Kommunikationsmodell
+
+**Tal in, text ut.** All röstinmatning sker via tal-till-text enligt Push-to-Talk — ingen bakgrundslyssning, ingen röstagent, aldrig automatiskt skick. Transkriberingen är alltid redigerbar innan den sparas i arbetsloggen. Se [modulen](moduler/kommunikationsmodell.md) för fullständig specifikation.
+
+---
+
+## Kamerastöd
+
+Foto, video, OCR, bildanalys och objektidentifiering: däck, typskyltar, serienummer, skyltar, komponenter, mätinstrument.
+
+---
+
+## Arbetslogg
+
+Allt loggas: tid, användare, objekt, kommentar, foto, video, mätvärde, AI-fråga, AI-svar, resultat. Ingenting får försvinna. Loggen ska vara revisionssäker.
+
+---
+
+## Tidrapportering
+
+När objektet identifierats startar arbetstiden. Vid längre inaktivitet ber systemet om en kort beskrivning av vad som gjorts. Slutrapporten visar total tid fördelad på moment (provkörning, diagnos, administration …).
+
+---
+
+## Ärendebrief
+
+AI håller alltid en levande sammanfattning. När en annan tekniker öppnar ärendet visas automatiskt: vad kunden beskriver, vad som gjorts, vad som verifierats, vad som återstår, rekommenderade nästa steg och total arbetstid.
+
+---
+
+## Verifierade checklistor
+
+En kontrollpunkt är inte slutförd enbart genom en kryssruta — varje kontroll samlar bevis och kontext (observation, mätvärde, foto) med minimikrav anpassade efter kontrolltyp. Se [modulen](moduler/verifierade-checklistor.md).
+
+---
+
+## Samarbete
+
+Flera tekniker kan arbeta samtidigt. Alla ser bilder, filmer, mätningar, anteckningar, AI-sammanfattning, status och rekommendationer.
+
+---
+
+## Kundrapport och Live Share
+
+Kundrapporten genereras automatiskt (objekt, felbeskrivning, bilder, tester, mätvärden, utförda kontroller, tid, rekommendation, nästa steg) och delas som PDF, länk eller API. Varje ärende kan dessutom publiceras via en säker, behörighetsstyrd delningslänk som uppdateras i realtid — se [Live Share-modulen](moduler/live-share.md). Alla exporter versionsmärks (version, datum, tid, vem, format).
+
+---
+
+## API First
+
+Bygg hela systemet API-first. Alla resurser ska kunna skapas, läsas, uppdateras, exporteras och integreras. Dokumentera API:erna med OpenAPI/Swagger.
 
 ---
 
 ## Integrationer
 
-Systemet ska kunna integreras med:
-
-- DMS-system
-- ERP-system
-- CRM-system
-- elektroniska serviceböcker
-- garantihantering
-- fakturering
-- tidredovisning
-- reservdelssystem
-- tillverkarnas informationssystem, när användaren har giltig behörighet och integration finns tillgänglig
+Förbered integrationsramverk för DMS, ERP, CRM, elektroniska serviceböcker, tidredovisning, fakturering, reservdelssystem och tillverkarsystem via kundens egna behörigheter. Modulär integrationsarkitektur så att nya integrationer läggs till utan att påverka kärnplattformen.
 
 ---
 
-## Kundrapport
+## Infrastruktur
 
-Efter varje avslutat arbete ska systemet kunna generera en professionell rapport med:
-
-- identifierat objekt
-- felbeskrivning
-- utförda kontroller
-- bilder
-- mätvärden
-- provkörning
-- rekommenderade nästa steg
-- total tidsåtgång
-- komplett arbetslogg
-
-Rapporten ska kunna delas via länk, PDF eller API.
+Bygg för produktion. Exempel på målarkitektur: AWS, Kubernetes, Docker, PostgreSQL, Redis, objektlagring, CDN, automatisk skalning, lastbalansering, backup, central loggning, övervakning, CI/CD, Infrastructure as Code.
 
 ---
 
-## Affärsmål
+## Säkerhet
 
-Produkten ska ge värde på flera nivåer:
-
-- Teknikern får metodstöd och mindre administration.
-- Verkstaden får bättre kvalitet, spårbarhet och debiteringsunderlag.
-- Kunden får insyn i vad som faktiskt utförts.
-- Organisationen bygger över tid en sökbar kunskapsbas.
-- I framtiden kan anonymiserade och aggregerade data användas för trendanalyser, förutsatt att detta sker i enlighet med avtal och tillämpliga regler.
+Rollbaserad åtkomst, kryptering i vila och under överföring, säker API-autentisering, revisionsloggar, principen om minsta behörighet, säker hantering av API-nycklar och hemligheter. Utforma systemet så att det kan uppfylla relevanta krav, exempelvis GDPR, beroende på hur kunden använder tjänsten.
 
 ---
 
-## MVP-avgränsning
+## Beta-fokus
 
-Det här är en produkt som lämpar sig väl för ett MVP. Den första versionen behöver inte stödja alla maskintyper eller alla integrationer.
+Prioritera ett litet antal funktioner med hög kvalitet framför många halvfärdiga funktioner.
 
-Om man bygger en stabil kärna –
+MVP ska innehålla: inloggning, organisation (tenant), användarhantering, starta ärende, objektidentifiering, AI-guidad felsökning, kamera och bildanalys, arbetslogg, tidrapportering, ärendebrief, kundrapport, API, administration.
 
-1. objektidentifiering,
-2. AI-guidad felsökning,
-3. arbetslogg,
-4. dokumentation,
-5. ett öppet API
+All övrig funktionalitet planeras för senare versioner.
 
-– finns en plattform som sedan kan utökas bransch för bransch utan att behöva göras om i grunden.
+---
+
+## Slutmål
+
+Bygg en plattform som känns lika självklar för en mekaniker eller servicetekniker som ett diagnosinstrument är idag. Fokus på snabbhet, tydlighet, metodisk vägledning och spårbar dokumentation. När en användare öppnar appen ska den upplevas som ett pålitligt professionellt verktyg — inte som en generell AI-chatt. Det ska vara enkelt att komma igång, enkelt att samarbeta och enkelt att visa kunden exakt hur felsökningen har genomförts.
