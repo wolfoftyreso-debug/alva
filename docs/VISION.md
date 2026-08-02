@@ -123,6 +123,7 @@ Utöver grundprinciperna byggs plattformen upp av moduler som specificeras separ
 
 - [Arbetslogg & Tidredovisning](moduler/arbetslogg-och-tidredovisning.md) – tidsatt, spårbart arbete kopplat till konkreta aktiviteter; ett digitalt arbetsprotokoll där tid, aktivitet och tekniskt resonemang hänger ihop.
 - [Delningsbar kundrapport (Kundvy)](moduler/kundrapport.md) – en tydlig tidslinje med bilder, mätvärden och kommentarer som visar kunden vad de faktiskt betalat för.
+- [Ärendebrief](moduler/arendebrief.md) – en löpande uppdaterad arbetsbild av ärendet som gör att en ny tekniker blir produktiv på under en minut; fleranvändararbetsyta med överlämning med ett klick.
 
 Hur processen fungerar i praktiken illustreras i exempelflödet [”Bilen vibrerar runt 88 km/h”](exempel/vibration-vid-88-km-h.md).
 
