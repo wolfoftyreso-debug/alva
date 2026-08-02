@@ -14,6 +14,9 @@ import Admin from "./pages/Admin";
 import FAQ from "./pages/FAQ";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import ChangeSubscription from "./pages/ChangeSubscription";
+import Arendelista from "./pages/felsokning/Arendelista";
+import NyttArende from "./pages/felsokning/NyttArende";
+import ArendeSida from "./pages/felsokning/ArendeSida";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 const queryClient = new QueryClient();
@@ -33,6 +36,9 @@ function AppContent() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/order-confirmation" element={<OrderConfirmation />} />
         <Route path="/account/change-subscription" element={<ChangeSubscription />} />
+        <Route path="/felsokning" element={<Arendelista />} />
+        <Route path="/felsokning/nytt" element={<NyttArende />} />
+        <Route path="/felsokning/arende/:id" element={<ArendeSida />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
