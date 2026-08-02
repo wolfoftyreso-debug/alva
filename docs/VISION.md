@@ -107,6 +107,14 @@ På så sätt blir Guidad Felsökning en komponent i befintliga arbetsflöden, i
 
 ---
 
+## Moduler
+
+Utöver grundprinciperna byggs plattformen upp av moduler som specificeras separat:
+
+- [Arbetslogg & Tidredovisning](moduler/arbetslogg-och-tidredovisning.md) – tidsatt, spårbart arbete kopplat till konkreta aktiviteter; ett digitalt arbetsprotokoll där tid, aktivitet och tekniskt resonemang hänger ihop.
+
+---
+
 ## Användargränssnitt
 
 Gränssnittet ska vara avsiktligt enkelt.
