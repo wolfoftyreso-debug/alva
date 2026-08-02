@@ -10,6 +10,14 @@ Produkten ska inte försöka vara en AI-mekaniker, utan en **digital felsökning
 
 ---
 
+## Ledstjärna
+
+> **Systemet dokumenterar observationer, leder användaren genom verifierbara kontroller och rekommenderar nästa steg – men presenterar aldrig en hypotes som ett konstaterat fel.**
+
+Den principen gör verktyget användbart både för erfarna tekniker och för mindre erfarna användare, samtidigt som det ger ett robust underlag för kunder, verkstäder och framtida analyser. Guidad Felsökning är en digital diagnostikprocess, inte en AI-chat.
+
+---
+
 ## Grundprinciper
 
 ### 1. Ingen gissning
@@ -112,6 +120,9 @@ På så sätt blir Guidad Felsökning en komponent i befintliga arbetsflöden, i
 Utöver grundprinciperna byggs plattformen upp av moduler som specificeras separat:
 
 - [Arbetslogg & Tidredovisning](moduler/arbetslogg-och-tidredovisning.md) – tidsatt, spårbart arbete kopplat till konkreta aktiviteter; ett digitalt arbetsprotokoll där tid, aktivitet och tekniskt resonemang hänger ihop.
+- [Delningsbar kundrapport (Kundvy)](moduler/kundrapport.md) – en tydlig tidslinje med bilder, mätvärden och kommentarer som visar kunden vad de faktiskt betalat för.
+
+Hur processen fungerar i praktiken illustreras i exempelflödet [”Bilen vibrerar runt 88 km/h”](exempel/vibration-vid-88-km-h.md).
 
 ---
 
