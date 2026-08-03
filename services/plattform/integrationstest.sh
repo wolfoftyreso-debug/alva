@@ -112,7 +112,31 @@ kontroll "översikten härleder felbeskrivning" "$(echo "$OVERSIKT" | falt '.are
 kontroll "översikten härleder status" "$(echo "$OVERSIKT" | falt '.arenden[0].avslutat')" "false"
 kontroll "översikten räknar händelser" "$(echo "$OVERSIKT" | falt '.arenden[0].antal_handelser')" "2"
 
-# 10. API-first: OpenAPI-specen serveras live, utan inloggning
+# 10. Live Share-behörighetsnivåer: kund/partner/intern + återkallelse
+curl -s -X POST "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"h3","tidpunkt":"2026-08-03T08:03:00Z","anvandare":"Anna","handelse":{"typ":"hypotes","text":"Trasigt relä","niva":"lag"}}]}' >/dev/null
+kontroll "kundkoden filtrerar hypoteser" "$(curl -s "$BAS/api/delad/delkod123" | falt .handelser.length)" "1"
+
+PARTNERKOD=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"niva":"partner"}' | falt .kod)
+PARTNER=$(curl -s "$BAS/api/delad/$PARTNERKOD")
+kontroll "partnernivån visar hypoteser" "$(echo "$PARTNER" | falt .handelser.length)" "2"
+kontroll "partnernivån döljer kategoribyten" "$(echo "$PARTNER" | falt '.handelser.some(h=>h.handelse.typ==="kategori_byte")')" "false"
+kontroll "nivån följer med svaret" "$(echo "$PARTNER" | falt .niva)" "partner"
+
+INTERNKOD=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"niva":"intern"}' | falt .kod)
+kontroll "internnivån visar allt" "$(curl -s "$BAS/api/delad/$INTERNKOD" | falt .handelser.length)" "3"
+
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-test1/delningar" \
+  -H "Authorization: Bearer $TOKEN_B" -H 'Content-Type: application/json' -d '{"niva":"intern"}')
+kontroll "org B kan inte skapa delning av org A:s ärende" "$KOD" "404"
+
+curl -s -X POST "$BAS/api/delningar/$PARTNERKOD/aterkalla" -H "Authorization: Bearer $TOKEN_A" >/dev/null
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/delad/$PARTNERKOD")
+kontroll "återkallad delning ger 404" "$KOD" "404"
+
+# 11. API-first: OpenAPI-specen serveras live, utan inloggning
 SPEC=$(curl -s "$BAS/api/openapi.yaml")
 case "$SPEC" in
   "openapi: 3.0.3"*) echo "✓ OpenAPI-specen serveras på /api/openapi.yaml" ;;

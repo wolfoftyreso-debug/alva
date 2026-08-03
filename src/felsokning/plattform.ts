@@ -98,6 +98,36 @@ export async function skapaAnvandare(
   }
 }
 
+// Live Share-delningar: återkallbara länkar med behörighetsnivå.
+export type DelningsNiva = "kund" | "partner" | "intern";
+
+export interface Delning {
+  kod: string;
+  niva: DelningsNiva;
+  skapad: string;
+  aterkallad: string | null;
+}
+
+export async function hamtaDelningar(arendeId: string): Promise<Delning[]> {
+  const res = await plattformFetch(`/api/arenden/${arendeId}/delningar`);
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { delningar: Delning[] }).delningar;
+}
+
+export async function skapaDelning(arendeId: string, niva: DelningsNiva): Promise<string> {
+  const res = await plattformFetch(`/api/arenden/${arendeId}/delningar`, {
+    method: "POST",
+    body: JSON.stringify({ niva }),
+  });
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { kod: string }).kod;
+}
+
+export async function aterkallaDelning(kod: string): Promise<void> {
+  const res = await plattformFetch(`/api/delningar/${kod}/aterkalla`, { method: "POST" });
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+}
+
 // Organisationsöversikt (arbetsledare/admin; servern verifierar).
 export interface OversiktsRad {
   id: string;

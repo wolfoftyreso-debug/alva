@@ -39,7 +39,9 @@ Länkar kan skapas med olika åtkomstnivåer:
 
 - **Kund** – läsbehörighet till den information verkstaden valt att dela.
 - **Intern** – full insyn för kollegor och arbetsledare.
-- **Extern partner** – exempelvis försäkringsbolag eller tillverkare, med avgränsad information.
+- **Extern partner** – exempelvis försäkringsbolag eller tillverkare, med avgränsad information (inklusive hypoteser, tydligt märkta som ej verifierade).
+
+Implementerat i plattformen: varje länk skapas med en nivå, filtreringen sker på serversidan och länkar kan återkallas — en återkallad länk ger 404.
 
 ## Export
 

@@ -62,3 +62,16 @@ drop trigger if exists arenden_append_only on felsokning_arenden;
 create trigger arenden_append_only
   before update or delete on felsokning_arenden
   for each row execute function forbjud_andring();
+
+-- Live Share-delningar: återkallbara länkar med behörighetsnivå.
+-- (Åtkomststyrning, inte journal — därför ingen append-only-trigger:
+-- återkallelse sätter aterkallad-tidpunkten.)
+create table if not exists delningar (
+  kod text primary key,
+  arende_id text not null references felsokning_arenden(id),
+  niva text not null check (niva in ('kund', 'partner', 'intern')),
+  skapad_av uuid references anvandare(id),
+  skapad timestamptz not null default now(),
+  aterkallad timestamptz
+);
+create index if not exists delningar_arende_idx on delningar (arende_id);

@@ -12,9 +12,17 @@ import { FelsokningSkal, Panel } from "@/felsokning/ui";
 interface DelatSvar {
   arende: { id: string; nummer: number; skapad: string };
   handelser: { id: string; tidpunkt: string; anvandare: string; handelse: Handelse }[];
+  niva?: "kund" | "partner" | "intern";
 }
 
-async function hamtaDelat(kod: string): Promise<Arende | undefined> {
+const NIVA_NOTIS: Record<string, string> = {
+  kund: "Skrivskyddad livevy från verkstaden — sidan uppdateras automatiskt när ny information registreras.",
+  partner:
+    "Skrivskyddad livevy (partnernivå) — inkluderar tekniska hypoteser, tydligt märkta som ej verifierade. Uppdateras automatiskt.",
+  intern: "Skrivskyddad livevy (intern nivå) — full insyn i ärendet. Uppdateras automatiskt.",
+};
+
+async function hamtaDelat(kod: string): Promise<{ arende: Arende; niva: string } | undefined> {
   const { plattformAktiv, PLATTFORM_URL } = await import("@/felsokning/plattform");
   let data: unknown;
   if (plattformAktiv()) {
@@ -32,21 +40,25 @@ async function hamtaDelat(kod: string): Promise<Arende | undefined> {
   }
   const svar = data as DelatSvar;
   return {
-    id: svar.arende.id,
-    nummer: svar.arende.nummer,
-    skapad: new Date(svar.arende.skapad).toISOString(),
-    handelser: svar.handelser.map((rad) => ({
-      id: rad.id,
-      tidpunkt: new Date(rad.tidpunkt).toISOString(),
-      anvandare: rad.anvandare,
-      handelse: rad.handelse,
-    })),
+    niva: svar.niva ?? "kund",
+    arende: {
+      id: svar.arende.id,
+      nummer: svar.arende.nummer,
+      skapad: new Date(svar.arende.skapad).toISOString(),
+      handelser: svar.handelser.map((rad) => ({
+        id: rad.id,
+        tidpunkt: new Date(rad.tidpunkt).toISOString(),
+        anvandare: rad.anvandare,
+        handelse: rad.handelse,
+      })),
+    },
   };
 }
 
 export default function PublikDelning() {
   const { kod } = useParams<{ kod: string }>();
   const [arende, setArende] = useState<Arende | undefined>();
+  const [niva, setNiva] = useState<string>("kund");
   const [status, setStatus] = useState<"laddar" | "klar" | "saknas">("laddar");
   const [nu, setNu] = useState(() => new Date().toISOString());
 
@@ -57,7 +69,8 @@ export default function PublikDelning() {
       try {
         const resultat = await hamtaDelat(kod);
         if (!aktiv) return;
-        setArende(resultat);
+        setArende(resultat?.arende);
+        if (resultat) setNiva(resultat.niva);
         setStatus(resultat ? "klar" : "saknas");
         setNu(new Date().toISOString());
       } catch {
@@ -90,7 +103,8 @@ export default function PublikDelning() {
     <DelatArendeVy
       arende={arende}
       nu={nu}
-      notis="Skrivskyddad livevy från verkstaden — sidan uppdateras automatiskt när ny information registreras."
+      notis={NIVA_NOTIS[niva] ?? NIVA_NOTIS.kund}
+      redanFiltrerad
     />
   );
 }

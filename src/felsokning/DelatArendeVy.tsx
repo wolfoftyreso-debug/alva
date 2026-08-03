@@ -11,15 +11,28 @@ import { metodikForArende } from "./store";
 import { tidDatum, tidKlockslag } from "./format";
 import { FelsokningSkal, Panel } from "./ui";
 
-export function DelatArendeVy({ arende, nu, notis }: { arende: Arende; nu: string; notis: string }) {
+export function DelatArendeVy({
+  arende,
+  nu,
+  notis,
+  redanFiltrerad = false,
+}: {
+  arende: Arende;
+  nu: string;
+  notis: string;
+  // Sant när servern redan filtrerat per behörighetsnivå (publik delning) —
+  // då renderas händelserna som de kom, inklusive t.ex. hypoteser på
+  // partner-/internnivå.
+  redanFiltrerad?: boolean;
+}) {
   const metodik = metodikForArende(arende);
   const b = brief(arende, metodik, nu);
   const avslutat = arAvslutat(arende);
   const bilder = foton(arende);
   const matvarden = arende.handelser.filter((p) => p.handelse.typ === "matvarde");
-  const kundposter = arende.handelser.filter(
-    (p) => !["kategori_byte", "hypotes", "ai_svar"].includes(p.handelse.typ),
-  );
+  const kundposter = redanFiltrerad
+    ? arende.handelser
+    : arende.handelser.filter((p) => !["kategori_byte", "hypotes", "ai_svar"].includes(p.handelse.typ));
   const pagaende = b.rekommenderatNastaSteg[0];
 
   return (

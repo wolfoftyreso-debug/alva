@@ -15,7 +15,7 @@
 //   PORT                default 8080
 
 import { createServer } from "node:http";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import crypto, { createHmac, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -78,6 +78,12 @@ async function lasKropp(req) {
     bitar.push(bit);
   }
   return JSON.parse(Buffer.concat(bitar).toString("utf8"));
+}
+
+function nyKod() {
+  const tecken = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const { randomBytes } = crypto;
+  return Array.from(randomBytes(16), (b) => tecken[b % 36]).join("");
 }
 
 function kravAuth(req, hemlighet) {
@@ -186,20 +192,44 @@ export function skapaServer() {
       }
 
       // -- Publik delning (Live Share via delningskod) --
-      const delad = vag.match(/^\/api\/delad\/([a-z0-9-]+)$/);
+      // Behörighetsnivån styr filtreringen på serversidan:
+      //   kund    – det kunddelbara (inga kategoribyten, hypoteser, AI-dialog)
+      //   partner – försäkringsbolag/tillverkare: även hypoteser (tydligt märkta)
+      //   intern  – full insyn
+      const delad = vag.match(/^\/api\/delad\/([A-Za-z0-9_-]+)$/);
       if (req.method === "GET" && delad) {
-        const arende = await pool.query(
-          `select id, nummer, skapad from felsokning_arenden where delningskod = $1`,
+        let arendeId = null;
+        let niva = "kund";
+        const delning = await pool.query(
+          `select arende_id, niva from delningar where kod = $1 and aterkallad is null`,
           [delad[1]],
         );
-        if (arende.rowCount === 0) return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
+        if (delning.rowCount > 0) {
+          arendeId = delning.rows[0].arende_id;
+          niva = delning.rows[0].niva;
+        } else {
+          // Bakåtkompatibelt: ärendets ursprungliga delningskod = kundnivå.
+          const viaArende = await pool.query(
+            `select id from felsokning_arenden where delningskod = $1`,
+            [delad[1]],
+          );
+          if (viaArende.rowCount > 0) arendeId = viaArende.rows[0].id;
+        }
+        if (!arendeId) return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
+
+        const arende = await pool.query(
+          `select id, nummer, skapad from felsokning_arenden where id = $1`,
+          [arendeId],
+        );
+        const bortfiltrerat =
+          niva === "intern" ? [] : niva === "partner" ? ["kategori_byte", "ai_svar"] : ["kategori_byte", "hypotes", "ai_svar"];
         const handelser = await pool.query(
           `select id, tidpunkt, anvandare, handelse from felsokning_handelser
-           where arende_id = $1 and handelse->>'typ' not in ('kategori_byte','hypotes','ai_svar')
+           where arende_id = $1 and not (handelse->>'typ' = any($2))
            order by tidpunkt, id`,
-          [arende.rows[0].id],
+          [arendeId, bortfiltrerat],
         );
-        return svara(res, 200, { arende: arende.rows[0], handelser: handelser.rows });
+        return svara(res, 200, { arende: arende.rows[0], handelser: handelser.rows, niva });
       }
 
       // -- Skyddade endpoints (organisationsknutna) --
@@ -281,6 +311,47 @@ export function skapaServer() {
            values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing`,
           [id, anspr.org, nummer, skapad, delningskod ?? null, metodikId ?? null, anspr.sub],
         );
+        return svara(res, 200, { ok: true });
+      }
+
+      // Delningslänkar: skapa/lista per ärende, återkalla per kod.
+      // Verkstaden kontrollerar alltid delningen (organisationskravet).
+      const delningarVag = vag.match(/^\/api\/arenden\/([A-Za-z0-9_-]+)\/delningar$/);
+      if (delningarVag) {
+        if (!(await arendeIOrg(delningarVag[1], anspr.org))) {
+          return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
+        }
+        if (req.method === "GET") {
+          const rader = await pool.query(
+            `select kod, niva, skapad, aterkallad from delningar where arende_id = $1 order by skapad desc`,
+            [delningarVag[1]],
+          );
+          return svara(res, 200, { delningar: rader.rows });
+        }
+        if (req.method === "POST") {
+          const { niva } = await lasKropp(req);
+          if (!["kund", "partner", "intern"].includes(niva)) {
+            return svara(res, 400, { error: "Ogiltig nivå." });
+          }
+          const kod = nyKod();
+          await pool.query(
+            `insert into delningar (kod, arende_id, niva, skapad_av) values ($1, $2, $3, $4)`,
+            [kod, delningarVag[1], niva, anspr.sub],
+          );
+          return svara(res, 200, { kod, niva });
+        }
+      }
+
+      const aterkalla = vag.match(/^\/api\/delningar\/([A-Za-z0-9_-]+)\/aterkalla$/);
+      if (req.method === "POST" && aterkalla) {
+        const rad = await pool.query(
+          `update delningar d set aterkallad = now()
+           from felsokning_arenden a
+           where d.kod = $1 and d.arende_id = a.id and a.organisation_id = $2 and d.aterkallad is null
+           returning d.kod`,
+          [aterkalla[1], anspr.org],
+        );
+        if (rad.rowCount === 0) return svara(res, 404, { error: "Delningen är inte tillgänglig." });
         return svara(res, 200, { ok: true });
       }
 

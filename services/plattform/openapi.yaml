@@ -269,22 +269,99 @@ paths:
         "401": { $ref: "#/components/responses/Fel" }
         "403": { $ref: "#/components/responses/Fel" }
 
+  /api/arenden/{arendeId}/delningar:
+    parameters:
+      - name: arendeId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Delning]
+      summary: Lista ärendets delningslänkar
+      responses:
+        "200":
+          description: Delningar (inklusive återkallade).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  delningar:
+                    type: array
+                    items: { $ref: "#/components/schemas/Delning" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+    post:
+      tags: [Delning]
+      summary: Skapa delningslänk med behörighetsnivå
+      description: >
+        Verkstaden kontrollerar alltid delningen: kund (det kunddelbara),
+        partner (även hypoteser, tydligt märkta ej verifierade) eller
+        intern (full insyn). Nivåfiltreringen sker på serversidan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [niva]
+              properties:
+                niva: { $ref: "#/components/schemas/DelningsNiva" }
+      responses:
+        "200":
+          description: Den skapade länkens kod.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kod: { type: string }
+                  niva: { $ref: "#/components/schemas/DelningsNiva" }
+        "400": { $ref: "#/components/responses/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+
+  /api/delningar/{kod}/aterkalla:
+    post:
+      tags: [Delning]
+      summary: Återkalla en delningslänk
+      description: Efter återkallelse ger länken 404. Kan inte ångras.
+      parameters:
+        - name: kod
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Återkallad.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "401": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+
   /api/delad/{delningskod}:
     get:
       tags: [Delning]
       summary: Publik Live Share-vy via delningskod
       description: >
-        Kräver ingen inloggning — delningskoden är nyckeln. Interna poster
-        (kategoribyten, hypoteser, AI-dialog) är bortfiltrerade.
+        Kräver ingen inloggning — delningskoden är nyckeln. Filtreringen
+        styrs av länkens behörighetsnivå: kund utesluter kategoribyten,
+        hypoteser och AI-dialog; partner utesluter kategoribyten och
+        AI-dialog; intern visar allt. Ärendets ursprungliga delningskod
+        fungerar bakåtkompatibelt som kundnivå.
       security: []
       parameters:
         - name: delningskod
           in: path
           required: true
-          schema: { type: string, pattern: "^[a-z0-9-]+$" }
+          schema: { type: string, pattern: "^[A-Za-z0-9_-]+$" }
       responses:
         "200":
-          description: Ärendet med kunddelbar händelselogg.
+          description: Ärendet med nivåfiltrerad händelselogg.
           content:
             application/json:
               schema:
@@ -299,6 +376,7 @@ paths:
                   handelser:
                     type: array
                     items: { $ref: "#/components/schemas/LoggPost" }
+                  niva: { $ref: "#/components/schemas/DelningsNiva" }
         "404": { $ref: "#/components/responses/Fel" }
 
   /api/ai:
@@ -378,6 +456,16 @@ components:
     Roll:
       type: string
       enum: [tekniker, arbetsledare, admin]
+    DelningsNiva:
+      type: string
+      enum: [kund, partner, intern]
+    Delning:
+      type: object
+      properties:
+        kod: { type: string }
+        niva: { $ref: "#/components/schemas/DelningsNiva" }
+        skapad: { type: string, format: date-time }
+        aterkallad: { type: string, format: date-time, nullable: true }
     Anvandare:
       type: object
       properties:

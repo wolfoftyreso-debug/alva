@@ -18,6 +18,14 @@ import {
 } from "@/felsokning/projektioner";
 import { metodikForArende, useFelsokning } from "@/felsokning/store";
 import { synkroniseraArende, type SynkStatus } from "@/felsokning/synk";
+import {
+  aterkallaDelning,
+  hamtaDelningar,
+  plattformAktiv,
+  skapaDelning,
+  type Delning,
+  type DelningsNiva,
+} from "@/felsokning/plattform";
 import { AI_RADTYP_LABEL, fragaAi, granskaUnderlag, sammanfattaOverlamning } from "@/felsokning/ai";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto, tidKlockslag } from "@/felsokning/format";
@@ -605,6 +613,104 @@ function OverlamningDialog({
   );
 }
 
+const NIVA_LABEL: Record<DelningsNiva, string> = {
+  kund: "Kund",
+  partner: "Extern partner",
+  intern: "Intern",
+};
+
+// Live Share-behörighetsnivåer: skapa och återkalla delningslänkar.
+// Nivåfiltreringen sker alltid på serversidan; verkstaden kontrollerar
+// delningen och varje skapad/återkallad länk loggas i ärendet.
+function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
+  const [oppen, setOppen] = useState(false);
+  const [delningar, setDelningar] = useState<Delning[]>([]);
+  const [fel, setFel] = useState("");
+
+  const uppdatera = async () => {
+    try {
+      setDelningar(await hamtaDelningar(arende.id));
+      setFel("");
+    } catch {
+      setFel("Kunde inte hämta delningar — kräver inloggning och att ärendet är synkat.");
+    }
+  };
+
+  if (!oppen) {
+    return (
+      <StorKnapp
+        variant="sekundar"
+        className="mt-2"
+        onClick={() => {
+          setOppen(true);
+          uppdatera();
+        }}
+      >
+        🔗 Delningslänkar (kund/partner/intern)
+      </StorKnapp>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border-2 border-zinc-700 bg-zinc-950 p-3">
+      {fel && <p className="mb-2 font-bold text-red-400">{fel}</p>}
+      {delningar.map((delning) => (
+        <div key={delning.kod} className="flex items-center justify-between gap-2 border-b border-zinc-800 py-2 last:border-0">
+          <span className="text-lg">
+            {NIVA_LABEL[delning.niva]}{" "}
+            {delning.aterkallad && <span className="text-sm font-bold text-red-400">(återkallad)</span>}
+          </span>
+          {!delning.aterkallad && (
+            <span className="flex gap-2">
+              <button
+                className="rounded border-2 border-zinc-600 px-3 py-1 font-bold text-zinc-200 hover:border-amber-400"
+                onClick={() =>
+                  navigator.clipboard.writeText(`${window.location.origin}/felsokning/delad/${delning.kod}`)
+                }
+              >
+                Kopiera
+              </button>
+              <button
+                className="rounded border-2 border-zinc-600 px-3 py-1 font-bold text-red-400 hover:border-red-400"
+                onClick={async () => {
+                  await aterkallaDelning(delning.kod);
+                  skicka({ typ: "kommentar", text: `Delningslänk (${NIVA_LABEL[delning.niva]}) återkallad.` });
+                  uppdatera();
+                }}
+              >
+                Återkalla
+              </button>
+            </span>
+          )}
+        </div>
+      ))}
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {(Object.keys(NIVA_LABEL) as DelningsNiva[]).map((niva) => (
+          <button
+            key={niva}
+            className="min-h-12 rounded-lg border-2 border-zinc-600 text-sm font-extrabold text-zinc-200 hover:border-amber-400"
+            onClick={async () => {
+              try {
+                await skapaDelning(arende.id, niva);
+                skicka({ typ: "kommentar", text: `Delningslänk skapad (${NIVA_LABEL[niva]}).` });
+                uppdatera();
+              } catch {
+                setFel("Kunde inte skapa delning — kräver inloggning och att ärendet är synkat.");
+              }
+            }}
+          >
+            + {NIVA_LABEL[niva]}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-zinc-500">
+        Kund: det kunddelbara · Extern partner: även hypoteser (märkta ej verifierade) · Intern: full insyn.
+        Filtreringen sker på servern.
+      </p>
+    </div>
+  );
+}
+
 function LoggFlik({ arende }: { arende: Arende }) {
   return (
     <Panel rubrik="Arbetslogg — append-only, ingenting skrivs över">
@@ -808,17 +914,21 @@ function RapportFlik({
         <Link to={`/felsokning/dela/${arende.id}`} className="mt-2 block">
           <StorKnapp variant="sekundar">🟢 Öppna Live Share-vy</StorKnapp>
         </Link>
-        {arende.delningskod && (
-          <StorKnapp
-            variant="sekundar"
-            className="mt-2"
-            onClick={() => {
-              navigator.clipboard.writeText(`${window.location.origin}/felsokning/delad/${arende.delningskod}`);
-              skicka({ typ: "kommentar", text: "Delningslänk kopierad för extern mottagare." });
-            }}
-          >
-            🔗 Kopiera delningslänk
-          </StorKnapp>
+        {plattformAktiv() ? (
+          <DelningsHanterare arende={arende} skicka={skicka} />
+        ) : (
+          arende.delningskod && (
+            <StorKnapp
+              variant="sekundar"
+              className="mt-2"
+              onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/felsokning/delad/${arende.delningskod}`);
+                skicka({ typ: "kommentar", text: "Delningslänk kopierad för extern mottagare." });
+              }}
+            >
+              🔗 Kopiera delningslänk
+            </StorKnapp>
+          )
         )}
         <p className="mt-2 text-sm text-zinc-500">
           Delningslänken kräver att ärendet är synkat mot molnet (inloggad användare).
