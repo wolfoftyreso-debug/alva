@@ -24,6 +24,15 @@ import pg from "pg";
 // API-first: OpenAPI-specen är en versionerad artefakt och serveras live.
 const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "openapi.yaml"), "utf8");
 
+// ECM Knowledge Library: regelpaketet är serverägd konfiguration — inte
+// appkod. Uppdateras genom att byta filen (ECM_REGLER_FIL kan peka på en
+// ConfigMap-mount i klustret) och starta om tjänsten; klienterna hämtar
+// det nya paketet vid nästa inloggning/sidladdning.
+const ECM_REGLER = readFileSync(
+  process.env.ECM_REGLER_FIL ?? join(dirname(fileURLToPath(import.meta.url)), "ecm-regler.json"),
+  "utf8",
+);
+
 const PORT = Number(process.env.PORT ?? 8080);
 const MAX_KROPP = 4 * 1024 * 1024;
 const TOKEN_LIVSTID_S = 12 * 60 * 60;
@@ -264,6 +273,15 @@ export function skapaServer() {
           if (rad.rowCount === 0) return svara(res, 409, { error: "E-postadressen är redan registrerad." });
           return svara(res, 200, rad.rows[0]);
         }
+      }
+
+      // ECM Knowledge Library: aktuellt regelpaket för inloggade klienter.
+      if (req.method === "GET" && vag === "/api/ecm/regler") {
+        res.writeHead(200, {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        });
+        return res.end(ECM_REGLER);
       }
 
       // Organisationens inställningar: vad som visas när ett ärende

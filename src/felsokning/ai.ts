@@ -101,7 +101,7 @@ export function tolkaAiSvar(data: unknown): AiSvar {
 // (OCR + layoutförståelse) och returnerar strukturerade fält med
 // konfidens per värde. Bara osäkra fält behöver granskas.
 
-export type ArbetsorderGrupp = "Kund" | "Fordon" | "Verkstad" | "Ärende";
+export type ArbetsorderGrupp = "Kund" | "Personbil" | "Verkstad" | "Ärende";
 
 export interface TolkatFalt {
   id: string;
@@ -118,15 +118,15 @@ export const ARBETSORDER_FALT: { id: string; grupp: ArbetsorderGrupp; etikett: s
   { id: "kund_foretag", grupp: "Kund", etikett: "Företag" },
   { id: "kund_telefon", grupp: "Kund", etikett: "Telefon" },
   { id: "kund_epost", grupp: "Kund", etikett: "E-post" },
-  { id: "fordon_regnr", grupp: "Fordon", etikett: "Regnr" },
-  { id: "fordon_vin", grupp: "Fordon", etikett: "VIN" },
-  { id: "fordon_marke", grupp: "Fordon", etikett: "Märke" },
-  { id: "fordon_modell", grupp: "Fordon", etikett: "Modell" },
-  { id: "fordon_motor", grupp: "Fordon", etikett: "Motor" },
-  { id: "fordon_arsmodell", grupp: "Fordon", etikett: "Årsmodell" },
-  { id: "fordon_matarstallning", grupp: "Fordon", etikett: "Mätarställning" },
-  { id: "fordon_motorkod", grupp: "Fordon", etikett: "Motorkod" },
-  { id: "fordon_vaxellada", grupp: "Fordon", etikett: "Växellåda" },
+  { id: "fordon_regnr", grupp: "Personbil", etikett: "Regnr" },
+  { id: "fordon_vin", grupp: "Personbil", etikett: "VIN" },
+  { id: "fordon_marke", grupp: "Personbil", etikett: "Märke" },
+  { id: "fordon_modell", grupp: "Personbil", etikett: "Modell" },
+  { id: "fordon_motor", grupp: "Personbil", etikett: "Motor" },
+  { id: "fordon_arsmodell", grupp: "Personbil", etikett: "Årsmodell" },
+  { id: "fordon_matarstallning", grupp: "Personbil", etikett: "Mätarställning" },
+  { id: "fordon_motorkod", grupp: "Personbil", etikett: "Motorkod" },
+  { id: "fordon_vaxellada", grupp: "Personbil", etikett: "Växellåda" },
   { id: "ao_nummer", grupp: "Verkstad", etikett: "Arbetsordernr" },
   { id: "ao_claim", grupp: "Verkstad", etikett: "Claim-/garantinr" },
   { id: "ao_skadenummer", grupp: "Verkstad", etikett: "Skadenummer" },

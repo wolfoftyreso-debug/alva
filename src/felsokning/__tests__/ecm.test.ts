@@ -254,3 +254,58 @@ describe("Felorsaksanalys (Root Cause Analysis)", () => {
     expect(orsak?.handelse.typ === "felorsak" && orsak.handelse.underlag.length > 0).toBe(true);
   });
 });
+
+describe("ECM Knowledge Library (regelpaket)", () => {
+  it("serverpaketet och det inbyggda standardpaketet är samma regler", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { STANDARD_REGELPAKET, normaliseraRegelpaket } = await import("../ecm");
+    const server = normaliseraRegelpaket(JSON.parse(readFileSync("services/plattform/ecm-regler.json", "utf8")));
+    expect(server.version).toBe(STANDARD_REGELPAKET.version);
+    expect(server.arendetypRegler).toEqual(STANDARD_REGELPAKET.arendetypRegler);
+    expect(server.orsakskategorier).toEqual(STANDARD_REGELPAKET.orsakskategorier);
+  });
+
+  it("trasiga paket faller tillbaka till standard, okända krav-typer filtreras", async () => {
+    const { STANDARD_REGELPAKET, normaliseraRegelpaket } = await import("../ecm");
+    expect(normaliseraRegelpaket(null)).toEqual(STANDARD_REGELPAKET);
+    const paket = normaliseraRegelpaket({
+      version: "2.1",
+      arendetypRegler: {
+        Garanti: [
+          { id: "x", rubrik: "Ny regel", krav: "foto", detaljVidBrist: "Kräver foto." },
+          { id: "y", rubrik: "Trasig", krav: "pahittad_kravtyp", detaljVidBrist: "…" },
+        ],
+      },
+    });
+    expect(paket.version).toBe("2.1");
+    expect(paket.arendetypRegler.Garanti).toHaveLength(1);
+    expect(paket.undantagsorsaker).toEqual(STANDARD_REGELPAKET.undantagsorsaker);
+  });
+
+  it("ett uppdaterat regelpaket ändrar kvalitetsgrinden utan appändring", async () => {
+    const { normaliseraRegelpaket } = await import("../ecm");
+    localStorage.setItem(
+      "gf-ecm-regelpaket",
+      JSON.stringify(
+        normaliseraRegelpaket({
+          version: "2.1-test",
+          arendetypRegler: {
+            "Privat kund": [
+              { id: "test_foto", rubrik: "Foto krävs för alla privatkunder", krav: "foto", detaljVidBrist: "Testregel." },
+            ],
+          },
+        }),
+      ),
+    );
+    try {
+      const utanFoto = byggArende([OBJEKT]);
+      const rad = kvalitetsgrind(utanFoto, VIBRATION_METODIK).find((r) => r.id === "test_foto");
+      expect(rad?.ok).toBe(false);
+      expect(rad?.rubrik).toContain("Privat kund");
+      // Spårbarheten bär paketversionen.
+      expect(sparbarhetspaket(utanFoto, VIBRATION_METODIK).regelpaketVersion).toBe("2.1-test");
+    } finally {
+      localStorage.removeItem("gf-ecm-regelpaket");
+    }
+  });
+});

@@ -241,11 +241,29 @@ export function arendetyp(arende: Arende): Arendetyp {
   return typ;
 }
 
-interface ComplianceKrav {
+// ---- ECM Knowledge Library --------------------------------------------
+// Regelpaketet är data, inte kod: reglerna är deklarativa (krav-typ i
+// stället för funktioner) och kan därför distribueras från servern
+// (GET /api/ecm/regler, filen services/plattform/ecm-regler.json — i
+// klustret utbytbar via ConfigMap) och uppdateras utan appändring.
+// Klienten cachar senast hämtade paket och faller tillbaka till det
+// inbyggda standardpaketet offline/i lokalt läge.
+
+export type ComplianceKravTyp = "miltal" | "historik" | "claim" | "skadenummer" | "foto";
+
+export interface ComplianceRegel {
   id: string;
   rubrik: string;
-  uppfyllt: (arende: Arende) => boolean;
+  krav: ComplianceKravTyp;
   detaljVidBrist: string;
+}
+
+export interface RegelPaket {
+  version: string;
+  arendetypRegler: Partial<Record<string, ComplianceRegel[]>>;
+  undantagsorsaker: string[];
+  orsakskategorier: string[];
+  underlagskallor: string[];
 }
 
 function objektFalt(arende: Arende, falt: "miltal" | "claim" | "skadenummer" | "arbetsorder"): string | undefined {
@@ -255,36 +273,106 @@ function objektFalt(arende: Arende, falt: "miltal" | "claim" | "skadenummer" | "
   return undefined;
 }
 
-const harMatarstallning = (arende: Arende) =>
-  arende.handelser.some((p) => p.handelse.typ === "matarstallning" && !p.handelse.undantag) ||
-  !!objektFalt(arende, "miltal");
-const harHistorik = (arende: Arende) =>
-  arende.handelser.some((p) => p.handelse.typ === "historik_kontrollerad" && p.handelse.kontrollerad);
-const harFoto = (arende: Arende) => arende.handelser.some((p) => p.handelse.typ === "foto");
-
-// Regelpaket per ärendetyp — här ansluter framtida serverdistribuerade
-// regler (garantivillkor per tillverkare, försäkringsbolagens krav …).
-const COMPLIANCE_REGLER: Partial<Record<Arendetyp, ComplianceKrav[]>> = {
-  Garanti: [
-    { id: "garanti_miltal", rubrik: "Miltal dokumenterat", uppfyllt: harMatarstallning, detaljVidBrist: "Garantiärenden kräver dokumenterad mätarställning." },
-    { id: "garanti_historik", rubrik: "Servicehistorik kontrollerad", uppfyllt: harHistorik, detaljVidBrist: "Garantiärenden kräver kontrollerad servicehistorik." },
-    { id: "garanti_claim", rubrik: "Claim-/garantinummer registrerat", uppfyllt: (a) => !!objektFalt(a, "claim"), detaljVidBrist: "Ange claim-/garantinummer (läses ur arbetsordern)." },
-  ],
-  Goodwill: [
-    { id: "goodwill_miltal", rubrik: "Miltal dokumenterat", uppfyllt: harMatarstallning, detaljVidBrist: "Goodwillärenden kräver dokumenterad mätarställning." },
-    { id: "goodwill_historik", rubrik: "Servicehistorik kontrollerad", uppfyllt: harHistorik, detaljVidBrist: "Goodwillärenden kräver kontrollerad servicehistorik." },
-  ],
-  Försäkring: [
-    { id: "forsakring_skadenummer", rubrik: "Skadenummer registrerat", uppfyllt: (a) => !!objektFalt(a, "skadenummer"), detaljVidBrist: "Försäkringsärenden kräver skadenummer (läses ur arbetsordern)." },
-    { id: "forsakring_bildbevis", rubrik: "Bildbevis finns", uppfyllt: harFoto, detaljVidBrist: "Försäkringsärenden kräver bilddokumentation." },
-  ],
-  Reklamation: [
-    { id: "reklamation_historik", rubrik: "Historik och tidigare försök kontrollerade", uppfyllt: harHistorik, detaljVidBrist: "Reklamationer kräver kontrollerad historik (tidigare reparationer/försök)." },
-  ],
-  Begagnatgaranti: [
-    { id: "begagnat_miltal", rubrik: "Miltal dokumenterat", uppfyllt: harMatarstallning, detaljVidBrist: "Begagnatgaranti kräver dokumenterad mätarställning." },
-  ],
+// Krav-typ → verifiering mot händelseloggen. Nya krav-typer läggs till
+// här; vilka regler som använder dem styrs helt av regelpaketet.
+const KRAV_KONTROLLER: Record<ComplianceKravTyp, (arende: Arende) => boolean> = {
+  miltal: (a) =>
+    a.handelser.some((p) => p.handelse.typ === "matarstallning" && !p.handelse.undantag) ||
+    !!objektFalt(a, "miltal"),
+  historik: (a) => a.handelser.some((p) => p.handelse.typ === "historik_kontrollerad" && p.handelse.kontrollerad),
+  claim: (a) => !!objektFalt(a, "claim"),
+  skadenummer: (a) => !!objektFalt(a, "skadenummer"),
+  foto: (a) => a.handelser.some((p) => p.handelse.typ === "foto"),
 };
+
+// Inbyggt standardpaket = fallback när servern inte nåtts ännu.
+export const STANDARD_REGELPAKET: RegelPaket = {
+  version: ECM_VERSION,
+  arendetypRegler: {
+    Garanti: [
+      { id: "garanti_miltal", rubrik: "Miltal dokumenterat", krav: "miltal", detaljVidBrist: "Garantiärenden kräver dokumenterad mätarställning." },
+      { id: "garanti_historik", rubrik: "Servicehistorik kontrollerad", krav: "historik", detaljVidBrist: "Garantiärenden kräver kontrollerad servicehistorik." },
+      { id: "garanti_claim", rubrik: "Claim-/garantinummer registrerat", krav: "claim", detaljVidBrist: "Ange claim-/garantinummer (läses ur arbetsordern)." },
+    ],
+    Goodwill: [
+      { id: "goodwill_miltal", rubrik: "Miltal dokumenterat", krav: "miltal", detaljVidBrist: "Goodwillärenden kräver dokumenterad mätarställning." },
+      { id: "goodwill_historik", rubrik: "Servicehistorik kontrollerad", krav: "historik", detaljVidBrist: "Goodwillärenden kräver kontrollerad servicehistorik." },
+    ],
+    Försäkring: [
+      { id: "forsakring_skadenummer", rubrik: "Skadenummer registrerat", krav: "skadenummer", detaljVidBrist: "Försäkringsärenden kräver skadenummer (läses ur arbetsordern)." },
+      { id: "forsakring_bildbevis", rubrik: "Bildbevis finns", krav: "foto", detaljVidBrist: "Försäkringsärenden kräver bilddokumentation." },
+    ],
+    Reklamation: [
+      { id: "reklamation_historik", rubrik: "Historik och tidigare försök kontrollerade", krav: "historik", detaljVidBrist: "Reklamationer kräver kontrollerad historik (tidigare reparationer/försök)." },
+    ],
+    Begagnatgaranti: [
+      { id: "begagnat_miltal", rubrik: "Miltal dokumenterat", krav: "miltal", detaljVidBrist: "Begagnatgaranti kräver dokumenterad mätarställning." },
+    ],
+  },
+  undantagsorsaker: UNDANTAGSORSAKER,
+  orsakskategorier: ORSAKSKATEGORIER,
+  underlagskallor: UNDERLAGSKALLOR,
+};
+
+const REGELPAKET_NYCKEL = "gf-ecm-regelpaket";
+
+// Validerar och normaliserar ett paket från servern/cachen — trasiga
+// eller ofullständiga paket faller tillbaka till standard per fält.
+export function normaliseraRegelpaket(data: unknown): RegelPaket {
+  const d = (data ?? {}) as Partial<RegelPaket>;
+  const lista = (varden: unknown, standard: string[]) =>
+    Array.isArray(varden) && varden.length > 0 && varden.every((v) => typeof v === "string")
+      ? (varden as string[])
+      : standard;
+  const regler: RegelPaket["arendetypRegler"] = {};
+  if (d.arendetypRegler && typeof d.arendetypRegler === "object") {
+    for (const [typ, rader] of Object.entries(d.arendetypRegler)) {
+      if (!Array.isArray(rader)) continue;
+      const giltiga = rader.filter(
+        (r): r is ComplianceRegel =>
+          !!r && typeof r.id === "string" && typeof r.rubrik === "string" &&
+          typeof r.detaljVidBrist === "string" && typeof r.krav === "string" && r.krav in KRAV_KONTROLLER,
+      );
+      if (giltiga.length > 0) regler[typ] = giltiga;
+    }
+  }
+  return {
+    version: typeof d.version === "string" && d.version ? d.version : STANDARD_REGELPAKET.version,
+    arendetypRegler: Object.keys(regler).length > 0 ? regler : STANDARD_REGELPAKET.arendetypRegler,
+    undantagsorsaker: lista(d.undantagsorsaker, STANDARD_REGELPAKET.undantagsorsaker),
+    orsakskategorier: lista(d.orsakskategorier, STANDARD_REGELPAKET.orsakskategorier),
+    underlagskallor: lista(d.underlagskallor, STANDARD_REGELPAKET.underlagskallor),
+  };
+}
+
+export function aktivtRegelpaket(): RegelPaket {
+  try {
+    const rad = localStorage.getItem(REGELPAKET_NYCKEL);
+    return rad ? normaliseraRegelpaket(JSON.parse(rad)) : STANDARD_REGELPAKET;
+  } catch {
+    return STANDARD_REGELPAKET;
+  }
+}
+
+// Hämtar aktuellt regelpaket från plattformen (inloggat läge) och cachar
+// det. Anropas vid sidladdning — misslyckas hämtningen gäller cachen
+// eller standardpaketet.
+export async function hamtaRegelpaket(): Promise<RegelPaket> {
+  try {
+    const { plattformAktiv, plattformToken, plattformFetch } = await import("./plattform");
+    if (plattformAktiv() && plattformToken()) {
+      const res = await plattformFetch("/api/ecm/regler");
+      if (res.ok) {
+        const paket = normaliseraRegelpaket(await res.json());
+        localStorage.setItem(REGELPAKET_NYCKEL, JSON.stringify(paket));
+        return paket;
+      }
+    }
+  } catch {
+    // Nätverksfel: cache/standard gäller.
+  }
+  return aktivtRegelpaket();
+}
 
 // ---- 4. Validation Engine ---------------------------------------------
 
@@ -482,16 +570,18 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     detalj: fotoKravUtanFoto > 0 ? `${fotoKravUtanFoto} fotokrävande kontroll(er) utan bild i loggen.` : undefined,
   });
 
-  // Compliance Engine: ärendetypens regelpaket.
+  // Compliance Engine: ärendetypens regler ur det aktiva regelpaketet
+  // (serverdistribuerat via ECM Knowledge Library, standard som fallback).
+  const paket = aktivtRegelpaket();
   const typ = arendetyp(arende);
-  for (const krav of COMPLIANCE_REGLER[typ] ?? []) {
-    const ok = krav.uppfyllt(arende);
+  for (const regel of paket.arendetypRegler[typ] ?? []) {
+    const ok = KRAV_KONTROLLER[regel.krav](arende);
     rader.push({
-      id: krav.id,
-      rubrik: `${typ}: ${krav.rubrik}`,
+      id: regel.id,
+      rubrik: `${typ}: ${regel.rubrik}`,
       ok,
       kravs: true,
-      detalj: ok ? undefined : krav.detaljVidBrist,
+      detalj: ok ? undefined : regel.detaljVidBrist,
     });
   }
 
@@ -530,6 +620,7 @@ export function grindGodkand(arende: Arende, metodik: Metodik): boolean {
 export function sparbarhetspaket(arende: Arende, metodik: Metodik) {
   return {
     ecmVersion: ECM_VERSION,
+    regelpaketVersion: aktivtRegelpaket().version,
     arendetyp: arendetyp(arende),
     evidensniva: evidensNiva(arende),
     kvalitetsgrind: kvalitetsgrind(arende, metodik).map(({ id, rubrik, ok, kravs }) => ({ id, rubrik, ok, kravs })),

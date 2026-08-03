@@ -1,0 +1,59 @@
+{
+  "version": "2.0",
+  "beskrivning": "ECM Knowledge Library — serverdistribuerat regelpaket. Uppdateras utan appändring: redigera filen (eller montera en ConfigMap över den i klustret) och starta om tjänsten. Klienten hämtar paketet vid inloggning och faller tillbaka till sitt inbyggda standardpaket offline.",
+  "arendetypRegler": {
+    "Garanti": [
+      { "id": "garanti_miltal", "rubrik": "Miltal dokumenterat", "krav": "miltal", "detaljVidBrist": "Garantiärenden kräver dokumenterad mätarställning." },
+      { "id": "garanti_historik", "rubrik": "Servicehistorik kontrollerad", "krav": "historik", "detaljVidBrist": "Garantiärenden kräver kontrollerad servicehistorik." },
+      { "id": "garanti_claim", "rubrik": "Claim-/garantinummer registrerat", "krav": "claim", "detaljVidBrist": "Ange claim-/garantinummer (läses ur arbetsordern)." }
+    ],
+    "Goodwill": [
+      { "id": "goodwill_miltal", "rubrik": "Miltal dokumenterat", "krav": "miltal", "detaljVidBrist": "Goodwillärenden kräver dokumenterad mätarställning." },
+      { "id": "goodwill_historik", "rubrik": "Servicehistorik kontrollerad", "krav": "historik", "detaljVidBrist": "Goodwillärenden kräver kontrollerad servicehistorik." }
+    ],
+    "Försäkring": [
+      { "id": "forsakring_skadenummer", "rubrik": "Skadenummer registrerat", "krav": "skadenummer", "detaljVidBrist": "Försäkringsärenden kräver skadenummer (läses ur arbetsordern)." },
+      { "id": "forsakring_bildbevis", "rubrik": "Bildbevis finns", "krav": "foto", "detaljVidBrist": "Försäkringsärenden kräver bilddokumentation." }
+    ],
+    "Reklamation": [
+      { "id": "reklamation_historik", "rubrik": "Historik och tidigare försök kontrollerade", "krav": "historik", "detaljVidBrist": "Reklamationer kräver kontrollerad historik (tidigare reparationer/försök)." }
+    ],
+    "Begagnatgaranti": [
+      { "id": "begagnat_miltal", "rubrik": "Miltal dokumenterat", "krav": "miltal", "detaljVidBrist": "Begagnatgaranti kräver dokumenterad mätarställning." }
+    ]
+  },
+  "undantagsorsaker": [
+    "Komponenten är oåtkomlig",
+    "Fordonet kan inte lyftas säkert",
+    "Kunden avböjde demontering",
+    "Dålig sikt/åtkomst",
+    "Utrustning saknas"
+  ],
+  "orsakskategorier": [
+    "Normalt slitage",
+    "Ålder",
+    "Körsträcka",
+    "Materialutmattning",
+    "Tillverkningsfel",
+    "Bristande underhåll",
+    "Felaktig tidigare reparation",
+    "Yttre påverkan",
+    "Korrosion",
+    "Överhettning",
+    "Förorening",
+    "Felaktig användning",
+    "Modifiering",
+    "Olycka eller skada",
+    "Okänd orsak"
+  ],
+  "underlagskallor": [
+    "Foto",
+    "Video",
+    "Mätresultat",
+    "Diagnosutläsning",
+    "Tidigare historik",
+    "Servicehistorik",
+    "Teknisk dokumentation",
+    "Direkt observation"
+  ]
+}

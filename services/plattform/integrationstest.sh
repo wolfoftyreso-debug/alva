@@ -166,6 +166,11 @@ curl -s -X POST "$BAS/api/delningar/$PARTNERKOD/aterkalla" -H "Authorization: Be
 KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/delad/$PARTNERKOD")
 kontroll "återkallad delning ger 404" "$KOD" "404"
 
+# 10b. ECM Knowledge Library: regelpaketet serveras till inloggade klienter
+REGLER=$(curl -s "$BAS/api/ecm/regler" -H "Authorization: Bearer $TOKEN_J")
+kontroll "regelpaketet serveras" "$(echo "$REGLER" | falt .version)" "2.0"
+kontroll "regelpaketet innehåller garantiregler" "$(echo "$REGLER" | falt '.arendetypRegler.Garanti.length')" "3"
+
 # 11. API-first: OpenAPI-specen serveras live, utan inloggning
 SPEC=$(curl -s "$BAS/api/openapi.yaml")
 case "$SPEC" in

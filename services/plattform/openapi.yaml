@@ -147,6 +147,29 @@ paths:
         "403": { $ref: "#/components/responses/Fel" }
         "409": { $ref: "#/components/responses/Fel" }
 
+  /api/ecm/regler:
+    get:
+      tags: [Drift]
+      summary: ECM Knowledge Library — aktuellt regelpaket
+      description: >
+        Serverdistribuerat, versionerat regelpaket (compliance-regler per
+        ärendetyp, orsakskategorier, evidenskällor, undantagsorsaker).
+        Uppdateras i driften utan appändring; klienten cachar och faller
+        tillbaka till sitt inbyggda standardpaket offline.
+      responses:
+        "200":
+          description: Regelpaketet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: string }
+                  arendetypRegler: { type: object, additionalProperties: true }
+                  undantagsorsaker: { type: array, items: { type: string } }
+                  orsakskategorier: { type: array, items: { type: string } }
+                  underlagskallor: { type: array, items: { type: string } }
+
   /api/organisation:
     get:
       tags: [Organisation]

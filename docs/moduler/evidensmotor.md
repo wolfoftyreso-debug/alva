@@ -48,10 +48,16 @@ väljs i identitetsraden och loggas (`arendetyp_satt`):
 | Reklamation | Historik och tidigare försök kontrollerade |
 | Begagnatgaranti | Miltal |
 
-Här ansluter det framtida **ECM Knowledge Library**: serverdistribuerade,
-versionerade regelpaket (garantivillkor per tillverkare, försäkringsbolagens
-krav, reklamationslagstiftning, OEM-kontrollpunkter) som laddas dynamiskt
-utan appändring.
+**ECM Knowledge Library är implementerat**: reglerna är deklarativa data
+(krav-typ, inte kod) och distribueras från plattformen via
+`GET /api/ecm/regler` (`services/plattform/ecm-regler.json` — i klustret
+utbytbar via ConfigMap och miljövariabeln `ECM_REGLER_FIL`). Klienten
+hämtar paketet vid sidladdning, cachar det och faller tillbaka till sitt
+inbyggda standardpaket offline; trasiga paket och okända krav-typer
+filtreras. Regelpaketets version följer med i varje spårbarhetspaket.
+Nya regler — garantivillkor per tillverkare, försäkringsbolagens krav,
+reklamationslagstiftning, OEM-kontrollpunkter — läggs till i driften
+utan att applikationen byggs om.
 
 ### 4. Validation Engine
 Inga påståenden utan underlag, i tre lager: (a) orkesterns grundprompt —

@@ -42,14 +42,13 @@ import {
   MARKOR_FELBESKRIVNING_VERIFIERAD,
   MARKOR_INGA_TIDIGA_OBSERVATIONER,
   MARKOR_TIDIGA_OBSERVATIONER_KLARA,
-  ORSAKSKATEGORIER,
-  UNDANTAGSORSAKER,
-  UNDERLAGSKALLOR,
+  aktivtRegelpaket,
   arendetyp,
   felorsaker,
   granskaAvvikelse,
   grindGodkand,
   kvalitetsgrind,
+  hamtaRegelpaket,
   preDiagnostik,
   reproducering,
   reproduceringsText,
@@ -115,6 +114,9 @@ export default function ArendeSida() {
 
   useEffect(() => {
     const timer = setInterval(() => setNu(new Date().toISOString()), 30000);
+    // ECM Knowledge Library: färskt regelpaket från plattformen (cache/
+    // standardpaket gäller offline).
+    hamtaRegelpaket();
     return () => clearInterval(timer);
   }, []);
 
@@ -551,7 +553,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
           />
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">2. Mest sannolik orsak (en eller flera)</p>
           <div className="mb-3 grid grid-cols-2 gap-1 sm:grid-cols-3">
-            {ORSAKSKATEGORIER.map((o) => (
+            {aktivtRegelpaket().orsakskategorier.map((o) => (
               <button
                 key={o}
                 onClick={() => vaxla(orsaker, setOrsaker, o)}
@@ -565,7 +567,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
           </div>
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">3. Underlag som stöder bedömningen</p>
           <div className="mb-3 grid grid-cols-2 gap-1 sm:grid-cols-4">
-            {UNDERLAGSKALLOR.map((k) => (
+            {aktivtRegelpaket().underlagskallor.map((k) => (
               <button
                 key={k}
                 onClick={() => vaxla(underlag, setUnderlag, k)}
@@ -1103,7 +1105,7 @@ function Undantag({ vidUndantag }: { vidUndantag: (orsak: string) => void }) {
         Kontrollen dokumenteras utan underlag — ange orsak (obligatoriskt). Detta flaggas i brief och rapport.
       </p>
       <div className="mb-2 grid grid-cols-1 gap-1">
-        {UNDANTAGSORSAKER.map((val) => (
+        {aktivtRegelpaket().undantagsorsaker.map((val) => (
           <button
             key={val}
             onClick={() => setOrsak(val)}
@@ -1787,7 +1789,7 @@ function RapportFlik({
       </Panel>
       <Panel rubrik="Fordonsinformation">
         {identitetsRader([
-          ["Fordon", idn.beskrivning],
+          ["Personbil", idn.beskrivning],
           ["Regnr", idn.identifierare],
           ["VIN", idn.vin],
           ["Mätarställning in", matIn],

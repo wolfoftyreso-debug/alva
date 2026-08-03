@@ -72,6 +72,7 @@ describe("AI-orkestern", () => {
       ["/api/auth/registrera", "/api/auth/registrera"],
       ["/api/auth/logga-in", "/api/auth/logga-in"],
       ["/api/anvandare", "/api/anvandare"],
+      ["/api/ecm/regler", "/api/ecm/regler"],
       ["/api/organisation", "/api/organisation"],
       ["/api/organisation/installningar", "/api/organisation/installningar"],
       ["/api/arenden", "/api/arenden"],
@@ -151,7 +152,7 @@ describe("arbetsorderskanning", () => {
     expect(falt.map((f) => f.id)).toEqual(["fordon_regnr", "fordon_vin"]);
     expect(falt[0].konfidens).toBe(1);
     expect(falt[0].varde).toBe("abc123");
-    expect(falt[0].grupp).toBe("Fordon");
+    expect(falt[0].grupp).toBe("Personbil");
     expect(falt[1].omrade?.x).toBe(0.5);
     expect(() => normaliseraArbetsorder({})).toThrow();
   });

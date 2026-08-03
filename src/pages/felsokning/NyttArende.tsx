@@ -295,7 +295,7 @@ function GranskaTolkning({
 
   const obekraftade = rader.filter((r) => !r.bekraftad);
   const vald = rader.find((r) => r.id === markerad);
-  const grupper: ArbetsorderGrupp[] = ["Kund", "Fordon", "Verkstad", "Ärende"];
+  const grupper: ArbetsorderGrupp[] = ["Kund", "Personbil", "Verkstad", "Ärende"];
 
   const uppdatera = (id: string, andring: Partial<(typeof rader)[number]>) =>
     setRader((r) => r.map((rad) => (rad.id === id ? { ...rad, ...andring } : rad)));
