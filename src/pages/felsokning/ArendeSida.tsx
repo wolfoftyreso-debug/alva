@@ -63,6 +63,7 @@ import {
   reproduceringsText,
   sparbarhetspaket,
   underlagFinns,
+  UNDANTAGSORSAKER,
 } from "@/felsokning/ecm";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { lasVideo, skalaNerFoto, tidDatum, tidKlockslag } from "@/felsokning/format";

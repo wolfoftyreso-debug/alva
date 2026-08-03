@@ -22,7 +22,7 @@ flowchart LR
 | `plattform` | Självhostad backend (`services/plattform`): **multi-tenant** — registrering skapar organisation + systemadministratör, admin hanterar användare (tekniker/arbetsledare/admin), all ärendedata organisationsisolerad. Inloggning (bcrypt via pgcrypto, HS256-JWT med roll + org i anspråken), append-only händelse-API, publik delningsendpoint | Deployment + Service + HPA + PDB |
 | `ai-orkester` | AI-orkestern (`services/ai-orkester`): fyra uppgifter routade till Sonnet 5 / Opus 5 / Haiku 4.5 — verifierar plattformens JWT (delad hemlighet) | Deployment + Service + HPA + PDB |
 | `postgres` | Händelselogg + användare; **append-only garanterat med databastriggers** — historik kan inte ändras eller raderas oavsett roll | StatefulSet + PVC (10 Gi). Produktion: CloudNativePG-operatorn för backup/failover/PITR |
-| Hemligheter | `anthropic-api-key`, `jwt-secret` (delas av plattform + orkester), `postgres-losenord` | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
+| Hemligheter | `anthropic-api-key`, `jwt-secret` (delas av plattform + orkester), `postgres-losenord`, `integration-nyckel` (krypterar kundernas märkesspecifika credentials) | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
 
 **Klienten har två driftlägen**, valda vid bygget: med `VITE_PLATTFORM_URL` går inloggning, synk, Live Share och AI mot klustret (helt självhostat); utan den används Supabase-läget (edge-funktion + managerad Postgres/Auth) som tidigare. Samma händelsemodell, samma orkester — låst av paritetstester.
 
@@ -43,7 +43,8 @@ kubectl create namespace guidad-felsokning
 kubectl -n guidad-felsokning create secret generic felsokning-hemligheter \
   --from-literal=anthropic-api-key='sk-ant-…' \
   --from-literal=jwt-secret="$(openssl rand -base64 48)" \
-  --from-literal=postgres-losenord="$(openssl rand -base64 24)"
+  --from-literal=postgres-losenord="$(openssl rand -base64 24)" \
+  --from-literal=integration-nyckel="$(openssl rand -hex 32)"
 
 # 3. Applicera manifesten (Postgres initieras med schema + append-only-triggers)
 kubectl apply -k infra/k8s
@@ -55,6 +56,29 @@ curl https://app.exempel.se/api/openapi.yaml # API-first: hela API-specen
 ```
 
 Byt domän och cert-issuer i `infra/k8s/ingress.yaml`. Att skapa nya organisationer är öppet i beta — stäng med `REGISTRERING_OPPEN=false` på plattformens Deployment; användare inom en organisation skapas alltid av dess systemadministratör.
+
+## Märkesspecifika kopplingar
+
+Varje verkstad har sina egna avtal med tillverkare och dataleverantörer.
+Kopplingarna konfigureras därför av kunden själv under **Inställningar →
+Märkesspecifika kopplingar**: systemadministratören väljer leverantör och
+fyller i sina credentials.
+
+* **Uppgifterna når aldrig webbläsaren.** De krypteras med AES-256-GCM
+  (`INTEGRATION_NYCKEL`, 32 byte hex eller base64) innan de skrivs till
+  tabellen `integrationer`, och API:t returnerar hemliga fält maskerade
+  (`••••3456`). Alla uppslag mot leverantören görs av servern.
+* **Fail closed.** Saknas `INTEGRATION_NYCKEL` sparas ingenting — API:t
+  svarar 503 och inställningssidan säger varför. Inga uppgifter hamnar
+  någonsin i klartext.
+* **Leverantörer är data, inte kod.** Registret ligger i
+  `services/plattform/integrationer.json` och kan bytas mot en
+  ConfigMap-mount via `INTEGRATIONER_FIL`. Nya märken läggs till genom
+  att beskriva URL-mall, autentiseringstyp och svarsmappning — ingen
+  ombyggnad av applikationen krävs.
+* **Testresultat loggas på kopplingen.** Varje uppslag skriver
+  `senast_testad` och `senaste_status`, så ett trasigt abonnemang syns i
+  inställningarna i stället för att tyst ge tomma svar.
 
 ## Multi-tenant och roller
 

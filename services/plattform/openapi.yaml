@@ -26,6 +26,7 @@ tags:
   - name: Översikt
   - name: Delning
   - name: AI
+  - name: Integrationer
   - name: Drift
 
 paths:
@@ -228,6 +229,185 @@ paths:
                         antal: { type: integer }
         "401": { $ref: "#/components/responses/Fel" }
         "403": { $ref: "#/components/responses/Fel" }
+
+  /api/integrationer/leverantorer:
+    get:
+      tags: [Integrationer]
+      summary: Registret över märkesspecifika kopplingar
+      description: >
+        Leverantörer är data, inte kod: registret läses ur
+        `integrationer.json` (eller filen i `INTEGRATIONER_FIL`) och kan
+        bytas via ConfigMap utan att applikationen byggs om. Innehåller
+        endast fältdefinitioner — aldrig någon organisations uppgifter.
+      responses:
+        "200":
+          description: Leverantörsdefinitioner.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: string }
+                  leverantorer:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        namn: { type: string }
+                        beskrivning: { type: string }
+                        nyckeltyp:
+                          type: string
+                          enum: [vin, regnr]
+                          description: Vad uppslaget sker på. Utelämnat betyder VIN.
+                        falt:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              nyckel: { type: string }
+                              etikett: { type: string }
+                              hemlig:
+                                type: boolean
+                                description: >
+                                  Hemliga fält maskeras alltid i svar och
+                                  visas aldrig igen efter sparande.
+        "401": { $ref: "#/components/responses/Fel" }
+
+  /api/integrationer:
+    get:
+      tags: [Integrationer]
+      summary: Organisationens konfigurerade kopplingar
+      description: >
+        Kräver rollen `admin`. Uppgifterna lagras krypterade
+        (AES-256-GCM) och returneras alltid maskerade — hemliga värden
+        lämnar aldrig servern i klartext.
+      responses:
+        "200":
+          description: Konfigurerade kopplingar med maskerade uppgifter.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  krypteringKonfigurerad:
+                    type: boolean
+                    description: Falskt om `INTEGRATION_NYCKEL` saknas — då kan inget sparas.
+                  integrationer:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        leverantor: { type: string }
+                        namn: { type: string }
+                        aktiv: { type: boolean }
+                        uppdaterad: { type: string, format: date-time }
+                        senast_testad: { type: string, format: date-time, nullable: true }
+                        senaste_status: { type: string, nullable: true }
+                        uppgifter:
+                          type: object
+                          additionalProperties: { type: string }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+    post:
+      tags: [Integrationer]
+      summary: Spara eller uppdatera en kopplings uppgifter
+      description: >
+        Kräver rollen `admin`. Endast leverantörens definierade fält
+        sparas och samtliga måste fyllas i. Uppgifterna krypteras innan
+        de skrivs. Ett sparande nollställer tidigare testresultat.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [leverantor, uppgifter]
+              properties:
+                leverantor: { type: string }
+                aktiv: { type: boolean, default: true }
+                uppgifter:
+                  type: object
+                  additionalProperties: { type: string }
+      responses:
+        "200": { description: Sparad. }
+        "400": { $ref: "#/components/responses/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+        "503":
+          description: Kryptering är inte konfigurerad (`INTEGRATION_NYCKEL` saknas).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fel" }
+
+  /api/integrationer/{leverantor}:
+    delete:
+      tags: [Integrationer]
+      summary: Ta bort en kopplings uppgifter
+      description: Kräver rollen `admin`.
+      parameters:
+        - name: leverantor
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Borttagen. }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+
+  /api/integrationer/{leverantor}/uppslag:
+    post:
+      tags: [Integrationer]
+      summary: Slå upp ett fordon hos leverantören
+      description: >
+        Anropet görs alltid av servern — kundens leverantörsnycklar når
+        aldrig webbläsaren. Svaret mappas till våra fält enligt
+        registrets `svarsfalt`. Resultatet skrivs som kopplingens
+        senaste teststatus.
+      parameters:
+        - name: leverantor
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifierare]
+              properties:
+                identifierare:
+                  type: string
+                  description: VIN eller registreringsnummer beroende på leverantörens `nyckeltyp`.
+      responses:
+        "200":
+          description: Fordonsuppgifter från leverantören.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fordon:
+                    type: object
+                    additionalProperties: { type: string }
+        "400": { $ref: "#/components/responses/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "404":
+          description: Kopplingen är inte konfigurerad för organisationen.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fel" }
+        "502":
+          description: Leverantören svarade med fel eller inga kända fält.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fel" }
+        "503":
+          description: Kryptering är inte konfigurerad.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fel" }
 
   /api/delad/{delningskod}/beslut:
     post:
@@ -617,6 +797,10 @@ components:
             properties:
               error: { type: string }
   schemas:
+    Fel:
+      type: object
+      properties:
+        error: { type: string }
     Roll:
       type: string
       enum: [tekniker, arbetsledare, admin]

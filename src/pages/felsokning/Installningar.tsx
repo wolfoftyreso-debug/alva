@@ -12,8 +12,17 @@ import {
   sparaInstallningar,
   type Installningar as Inst,
 } from "@/felsokning/installningar";
-import { plattformAktiv, plattformKonto } from "@/felsokning/plattform";
-import { FelsokningSkal, Panel, StorKnapp } from "@/felsokning/ui";
+import {
+  hamtaIntegrationer,
+  hamtaLeverantorer,
+  plattformAktiv,
+  plattformKonto,
+  sparaIntegration,
+  taBortIntegration,
+  type Integration,
+  type Leverantor,
+} from "@/felsokning/plattform";
+import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 
 function Vallista({
   alla,
@@ -44,6 +53,145 @@ function Vallista({
         );
       })}
     </div>
+  );
+}
+
+
+// Märkesspecifika kopplingar: systemadministratören lägger in
+// organisationens egna leverantörsuppgifter. Värdena skickas till
+// servern, lagras krypterade och kommer aldrig tillbaka i klartext —
+// hemliga fält visas alltid maskerade. Alla uppslag görs av servern.
+function Integrationer() {
+  const [leverantorer, setLeverantorer] = useState<Leverantor[]>([]);
+  const [befintliga, setBefintliga] = useState<Integration[]>([]);
+  const [krypteringKlar, setKrypteringKlar] = useState(true);
+  const [oppen, setOppen] = useState<string | null>(null);
+  const [varden, setVarden] = useState<Record<string, string>>({});
+  const [fel, setFel] = useState("");
+  const [sparat, setSparat] = useState("");
+
+  const ladda = () => {
+    hamtaLeverantorer().then(setLeverantorer).catch(() => setLeverantorer([]));
+    hamtaIntegrationer()
+      .then((svar) => {
+        setBefintliga(svar.integrationer);
+        setKrypteringKlar(svar.krypteringKonfigurerad);
+      })
+      .catch(() => setBefintliga([]));
+  };
+
+  useEffect(ladda, []);
+  if (leverantorer.length === 0) return null;
+
+  return (
+    <Panel rubrik="Märkesspecifika kopplingar">
+      <p className="mb-2 text-[12px] text-[#707070]">
+        Organisationens egna avtal hos tillverkare och dataleverantörer. Uppgifterna lagras krypterat på
+        plattformen och används bara av servern — de skickas aldrig till teknikernas enheter.
+      </p>
+      {!krypteringKlar && (
+        <p className="mb-2 rounded border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
+          Kryptering är inte konfigurerad i driften (INTEGRATION_NYCKEL) — uppgifter kan inte sparas förrän
+          nyckeln finns.
+        </p>
+      )}
+
+      {leverantorer.map((lev) => {
+        const finns = befintliga.find((i) => i.leverantor === lev.id);
+        return (
+          <div key={lev.id} className="border-b border-[#EBEBEB] py-2 last:border-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold">{lev.namn}</p>
+                {lev.beskrivning && <p className="text-[12px] text-[#707070]">{lev.beskrivning}</p>}
+                {finns && (
+                  <p className="mt-1 text-[12px] text-[#4A5560]">
+                    {Object.entries(finns.uppgifter)
+                      .map(([nyckel, varde]) => `${nyckel}: ${varde || "—"}`)
+                      .join(" · ")}
+                    {finns.senaste_status && ` · senaste uppslag: ${finns.senaste_status}`}
+                  </p>
+                )}
+              </div>
+              <span className={`shrink-0 text-[11px] font-semibold ${finns ? "text-[#1E6B34]" : "text-[#707070]"}`}>
+                {finns ? "Konfigurerad" : "Ej konfigurerad"}
+              </span>
+            </div>
+
+            {oppen === lev.id ? (
+              <div className="mt-2 rounded border border-[#C6C6C6] bg-white p-2">
+                {lev.falt.map((falt) => (
+                  <TextFalt
+                    key={falt.nyckel}
+                    label={`${falt.etikett}${falt.hemlig ? " (lagras krypterat)" : ""}`}
+                    varde={varden[falt.nyckel] ?? ""}
+                    satt={(v) => setVarden((f) => ({ ...f, [falt.nyckel]: v }))}
+                    losenord={falt.hemlig}
+                  />
+                ))}
+                {fel && <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">{fel}</p>}
+                <div className="grid grid-cols-2 gap-2">
+                  <StorKnapp variant="sekundar" onClick={() => { setOppen(null); setFel(""); }}>
+                    Avbryt
+                  </StorKnapp>
+                  <StorKnapp
+                    disabled={!krypteringKlar}
+                    onClick={async () => {
+                      setFel("");
+                      try {
+                        await sparaIntegration(lev.id, varden);
+                        setVarden({});
+                        setOppen(null);
+                        setSparat(lev.namn);
+                        ladda();
+                      } catch (misslyckande) {
+                        setFel(misslyckande instanceof Error ? misslyckande.message : "Kunde inte spara.");
+                      }
+                    }}
+                  >
+                    Spara uppgifter
+                  </StorKnapp>
+                </div>
+                <p className="mt-1 text-[11px] text-[#707070]">
+                  Hemliga fält visas aldrig igen efter sparande — fyll i på nytt för att byta värde.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <StorKnapp
+                  variant="sekundar"
+                  onClick={() => {
+                    setOppen(lev.id);
+                    setFel("");
+                    // Icke-hemliga värden förifylls så bara hemligheten
+                    // behöver skrivas om.
+                    const start: Record<string, string> = {};
+                    for (const falt of lev.falt) {
+                      if (!falt.hemlig && finns?.uppgifter[falt.nyckel]) start[falt.nyckel] = finns.uppgifter[falt.nyckel];
+                    }
+                    setVarden(start);
+                  }}
+                >
+                  {finns ? "Uppdatera uppgifter" : "Lägg till uppgifter"}
+                </StorKnapp>
+                {finns && (
+                  <StorKnapp
+                    variant="fara"
+                    onClick={async () => {
+                      await taBortIntegration(lev.id);
+                      ladda();
+                    }}
+                  >
+                    Ta bort
+                  </StorKnapp>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {sparat && <p className="mt-2 text-[12px] font-semibold text-[#1E6B34]">Uppgifter sparade för {sparat}.</p>}
+    </Panel>
   );
 }
 
@@ -120,6 +268,8 @@ export default function Installningar() {
           vidByte={(identifieringsmetoder) => byt({ identifieringsmetoder })}
         />
       </Panel>
+
+      {inloggad && <Integrationer />}
 
       {status === "fel" && <p className="mb-3 font-semibold text-[#8B1A1A]">{felText}</p>}
       {status === "sparat" && <p className="mb-3 font-semibold text-[#1E6B34]">✓ Sparat</p>}

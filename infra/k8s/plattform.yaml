@@ -24,6 +24,12 @@ spec:
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef: { name: felsokning-hemligheter, key: jwt-secret }
+            # Krypteringsnyckel för kundernas märkesspecifika credentials
+            # (32 byte hex eller base64). Saknas den sparas inga uppgifter
+            # alls — tjänsten failar closed i stället för att lagra i klartext.
+            - name: INTEGRATION_NYCKEL
+              valueFrom:
+                secretKeyRef: { name: felsokning-hemligheter, key: integration-nyckel }
             - name: POSTGRES_LOSENORD
               valueFrom:
                 secretKeyRef: { name: felsokning-hemligheter, key: postgres-losenord }

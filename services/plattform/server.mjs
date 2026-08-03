@@ -15,7 +15,7 @@
 //   PORT                default 8080
 
 import { createServer } from "node:http";
-import crypto, { createHmac, timingSafeEqual } from "node:crypto";
+import crypto, { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -31,6 +31,16 @@ const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "open
 const ECM_REGLER = readFileSync(
   process.env.ECM_REGLER_FIL ?? join(dirname(fileURLToPath(import.meta.url)), "ecm-regler.json"),
   "utf8",
+);
+
+// Register över märkesspecifika kopplingar — data, inte kod. Nya
+// leverantörer läggs till i filen (eller via ConfigMap-mount) utan att
+// applikationen byggs om.
+const INTEGRATIONER = JSON.parse(
+  readFileSync(
+    process.env.INTEGRATIONER_FIL ?? join(dirname(fileURLToPath(import.meta.url)), "integrationer.json"),
+    "utf8",
+  ),
 );
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -84,6 +94,46 @@ export function verifieraJwt(token, hemlighet) {
   }
 }
 
+// ---- Integrationsuppgifter: kryptering i vila ------------------------
+//
+// Kundens egna leverantörsnycklar lagras krypterade med AES-256-GCM.
+// Nyckeln kommer ur INTEGRATION_NYCKEL (32 byte, hex eller base64) och
+// finns bara i driftens hemlighetshantering. Saknas nyckeln kan
+// integrationer varken sparas eller användas — fail closed.
+
+function integrationsNyckel() {
+  const ra = process.env.INTEGRATION_NYCKEL;
+  if (!ra) return null;
+  const buf = /^[0-9a-fA-F]{64}$/.test(ra) ? Buffer.from(ra, "hex") : Buffer.from(ra, "base64");
+  return buf.length === 32 ? buf : null;
+}
+
+export function kryptera(klartext, nyckel) {
+  const iv = randomBytes(12);
+  const chiffer = createCipheriv("aes-256-gcm", nyckel, iv);
+  const data = Buffer.concat([chiffer.update(klartext, "utf8"), chiffer.final()]);
+  return `${iv.toString("base64")}.${chiffer.getAuthTag().toString("base64")}.${data.toString("base64")}`;
+}
+
+export function dekryptera(paket, nyckel) {
+  const [iv, tagg, data] = paket.split(".");
+  const dechiffer = createDecipheriv("aes-256-gcm", nyckel, Buffer.from(iv, "base64"));
+  dechiffer.setAuthTag(Buffer.from(tagg, "base64"));
+  return Buffer.concat([dechiffer.update(Buffer.from(data, "base64")), dechiffer.final()]).toString("utf8");
+}
+
+// Hemliga fält lämnar aldrig servern i klartext — klienten ser bara att
+// ett värde finns och dess sista tecken.
+export function maskera(varde) {
+  if (typeof varde !== "string" || varde.length === 0) return "";
+  if (varde.length <= 4) return "••••";
+  return `••••${varde.slice(-4)}`;
+}
+
+function leverantorsDef(id) {
+  return INTEGRATIONER.leverantorer.find((l) => l.id === id);
+}
+
 // ---- Hjälpare ---------------------------------------------------------
 
 function svara(res, status, kropp) {
@@ -125,6 +175,44 @@ async function arendeIOrg(arendeId, organisationId) {
     [arendeId, organisationId],
   );
   return rader.rowCount > 0;
+}
+
+// Generiskt uppslag mot en leverantör. All variation ligger i registret
+// (URL-mall, autentiseringstyp, svarsmappning) — inga leverantörs-
+// specifika kodgrenar.
+export async function gorUppslag(def, uppgifter, identifierare, hamtare = fetch) {
+  const u = def.uppslag ?? {};
+  const mall = uppgifter[u.urlFalt ?? "bas_url"];
+  if (typeof mall !== "string" || !/^https?:\/\//.test(mall)) {
+    return { ok: false, fel: "Bas-URL saknas eller är ogiltig." };
+  }
+  let url = mall.replace(/\{vin\}/gi, encodeURIComponent(identifierare)).replace(/\{regnr\}/gi, encodeURIComponent(identifierare));
+  const headers = { Accept: "application/json" };
+
+  if (u.auth === "bearer") headers.Authorization = `Bearer ${uppgifter[u.authFalt]}`;
+  if (u.auth === "header") headers[u.authHeader ?? "X-Api-Key"] = uppgifter[u.authFalt];
+  if (u.auth === "basic") {
+    const par = `${uppgifter[u.authFalt]}:${uppgifter[u.authFalt2]}`;
+    headers.Authorization = `Basic ${Buffer.from(par).toString("base64")}`;
+  }
+  if (u.auth === "query") {
+    url += `${url.includes("?") ? "&" : "?"}${encodeURIComponent(u.authParam ?? "key")}=${encodeURIComponent(uppgifter[u.authFalt])}`;
+  }
+
+  try {
+    const svarFran = await hamtare(url, { headers, signal: AbortSignal.timeout(10_000) });
+    if (!svarFran.ok) return { ok: false, fel: `Leverantören svarade ${svarFran.status}.` };
+    const data = await svarFran.json();
+    const fordon = {};
+    for (const [vart, deras] of Object.entries(u.svarsfalt ?? {})) {
+      const varde = deras.split(".").reduce((niva, del) => (niva == null ? niva : niva[del]), data);
+      if (varde !== undefined && varde !== null && `${varde}`.trim()) fordon[vart] = `${varde}`.trim();
+    }
+    if (Object.keys(fordon).length === 0) return { ok: false, fel: "Leverantören returnerade inga kända fält." };
+    return { ok: true, fordon };
+  } catch (fel) {
+    return { ok: false, fel: fel?.name === "TimeoutError" ? "Leverantören svarade inte i tid." : "Anropet misslyckades." };
+  }
 }
 
 // ---- Server -----------------------------------------------------------
@@ -362,6 +450,135 @@ export function skapaServer() {
           "Access-Control-Allow-Origin": "*",
         });
         return res.end(ECM_REGLER);
+      }
+
+      // -- Märkesspecifika kopplingar (integrationer) --
+      // Registret läses av alla inloggade (så inställningssidan kan visa
+      // vilka leverantörer som finns); uppgifterna hanteras endast av
+      // systemadministratören och returneras alltid maskerade.
+      if (req.method === "GET" && vag === "/api/integrationer/leverantorer") {
+        return svara(res, 200, INTEGRATIONER);
+      }
+
+      if (vag === "/api/integrationer") {
+        if (req.method === "GET") {
+          if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+          const nyckel = integrationsNyckel();
+          const rader = await pool.query(
+            `select leverantor, uppgifter_krypt, aktiv, uppdaterad, senast_testad, senaste_status
+             from integrationer where organisation_id = $1 order by leverantor`,
+            [anspr.org],
+          );
+          const integrationer = rader.rows.map((rad) => {
+            const def = leverantorsDef(rad.leverantor);
+            let uppgifter = {};
+            try {
+              if (nyckel) uppgifter = JSON.parse(dekryptera(rad.uppgifter_krypt, nyckel));
+            } catch {
+              // Fel nyckel eller manipulerad rad — visa inga värden.
+            }
+            const maskerade = {};
+            for (const falt of def?.falt ?? []) {
+              const varde = uppgifter[falt.nyckel];
+              maskerade[falt.nyckel] = falt.hemlig ? maskera(varde) : (varde ?? "");
+            }
+            return {
+              leverantor: rad.leverantor,
+              namn: def?.namn ?? rad.leverantor,
+              aktiv: rad.aktiv,
+              uppdaterad: rad.uppdaterad,
+              senast_testad: rad.senast_testad,
+              senaste_status: rad.senaste_status,
+              uppgifter: maskerade,
+            };
+          });
+          return svara(res, 200, { integrationer, krypteringKonfigurerad: !!nyckel });
+        }
+        if (req.method === "POST") {
+          if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+          const nyckel = integrationsNyckel();
+          if (!nyckel) {
+            return svara(res, 503, {
+              error: "Kryptering är inte konfigurerad (INTEGRATION_NYCKEL saknas) — uppgifter kan inte sparas.",
+            });
+          }
+          const { leverantor, uppgifter, aktiv } = await lasKropp(req);
+          const def = leverantorsDef(leverantor);
+          if (!def) return svara(res, 400, { error: "Okänd leverantör." });
+          if (!uppgifter || typeof uppgifter !== "object") {
+            return svara(res, 400, { error: "Uppgifter saknas." });
+          }
+          // Endast leverantörens definierade fält sparas, och varje fält
+          // måste ha ett värde — inga tomma nycklar i vila.
+          const rena = {};
+          for (const falt of def.falt) {
+            const varde = uppgifter[falt.nyckel];
+            if (typeof varde !== "string" || !varde.trim()) {
+              return svara(res, 400, { error: `Fältet "${falt.etikett}" måste fyllas i.` });
+            }
+            if (varde.length > 2000) return svara(res, 400, { error: "Ett värde är för långt." });
+            rena[falt.nyckel] = varde.trim();
+          }
+          await pool.query(
+            `insert into integrationer (organisation_id, leverantor, uppgifter_krypt, aktiv)
+             values ($1, $2, $3, $4)
+             on conflict (organisation_id, leverantor)
+             do update set uppgifter_krypt = excluded.uppgifter_krypt,
+                           aktiv = excluded.aktiv,
+                           uppdaterad = now(),
+                           senast_testad = null,
+                           senaste_status = null`,
+            [anspr.org, leverantor, kryptera(JSON.stringify(rena), nyckel), aktiv !== false],
+          );
+          return svara(res, 200, { ok: true });
+        }
+      }
+
+      const integrationVag = vag.match(/^\/api\/integrationer\/([a-z0-9_]+)$/);
+      if (req.method === "DELETE" && integrationVag) {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        await pool.query(`delete from integrationer where organisation_id = $1 and leverantor = $2`, [
+          anspr.org,
+          integrationVag[1],
+        ]);
+        return svara(res, 200, { ok: true });
+      }
+
+      // Uppslag mot märkesspecifik koppling. Anropet görs alltid av
+      // servern — kundens leverantörsnycklar når aldrig webbläsaren.
+      const uppslagVag = vag.match(/^\/api\/integrationer\/([a-z0-9_]+)\/uppslag$/);
+      if (req.method === "POST" && uppslagVag) {
+        const nyckel = integrationsNyckel();
+        const def = leverantorsDef(uppslagVag[1]);
+        if (!def) return svara(res, 400, { error: "Okänd leverantör." });
+        if (!nyckel) return svara(res, 503, { error: "Kryptering är inte konfigurerad." });
+
+        const { identifierare } = await lasKropp(req);
+        if (typeof identifierare !== "string" || !/^[A-Za-z0-9-]{4,20}$/.test(identifierare.trim())) {
+          return svara(res, 400, { error: "Ogiltig identifierare." });
+        }
+        const rad = await pool.query(
+          `select uppgifter_krypt from integrationer
+           where organisation_id = $1 and leverantor = $2 and aktiv = true`,
+          [anspr.org, uppslagVag[1]],
+        );
+        if (rad.rowCount === 0) return svara(res, 404, { error: "Kopplingen är inte konfigurerad." });
+
+        let uppgifter;
+        try {
+          uppgifter = JSON.parse(dekryptera(rad.rows[0].uppgifter_krypt, nyckel));
+        } catch {
+          return svara(res, 500, { error: "Uppgifterna kunde inte läsas — spara om kopplingen." });
+        }
+
+        const resultat = await gorUppslag(def, uppgifter, identifierare.trim().toUpperCase());
+        await pool.query(
+          `update integrationer set senast_testad = now(), senaste_status = $3
+           where organisation_id = $1 and leverantor = $2`,
+          [anspr.org, uppslagVag[1], resultat.ok ? "ok" : `fel: ${resultat.fel}`.slice(0, 200)],
+        );
+        if (!resultat.ok) return svara(res, 502, { error: resultat.fel });
+        return svara(res, 200, { fordon: resultat.fordon });
       }
 
       // Organisationens inställningar: vad som visas när ett ärende

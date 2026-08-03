@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "beskrivning": "Register över märkesspecifika kopplingar. Leverantörer är data, inte kod: nya märken/dataleverantörer läggs till här (eller via ConfigMap-mount, INTEGRATIONER_FIL) utan att applikationen byggs om. Fält märkta hemlig=true maskeras alltid i API-svar och lagras krypterat.",
+  "leverantorer": [
+    {
+      "id": "generisk_vin",
+      "namn": "Generisk VIN-tjänst",
+      "beskrivning": "Valfri dataleverantör med VIN-uppslag över HTTP. Ange bas-URL och nyckel enligt leverantörens dokumentation.",
+      "falt": [
+        { "nyckel": "bas_url", "etikett": "Bas-URL (använd {vin} som platshållare)", "hemlig": false },
+        { "nyckel": "api_nyckel", "etikett": "API-nyckel", "hemlig": true }
+      ],
+      "uppslag": {
+        "urlFalt": "bas_url",
+        "auth": "bearer",
+        "authFalt": "api_nyckel",
+        "svarsfalt": {
+          "marke": "make",
+          "modell": "model",
+          "arsmodell": "year",
+          "motor": "engine",
+          "vaxellada": "transmission"
+        }
+      }
+    },
+    {
+      "id": "vag_erwin",
+      "namn": "Volkswagen Group erWin",
+      "beskrivning": "OEM-portal för VW, Audi, Škoda och SEAT. Kräver eget abonnemang hos tillverkaren.",
+      "falt": [
+        { "nyckel": "bas_url", "etikett": "Bas-URL (använd {vin} som platshållare)", "hemlig": false },
+        { "nyckel": "anvandarnamn", "etikett": "Användarnamn", "hemlig": false },
+        { "nyckel": "losenord", "etikett": "Lösenord", "hemlig": true }
+      ],
+      "uppslag": {
+        "urlFalt": "bas_url",
+        "auth": "basic",
+        "authFalt": "anvandarnamn",
+        "authFalt2": "losenord",
+        "svarsfalt": {
+          "marke": "brand",
+          "modell": "model",
+          "arsmodell": "modelYear",
+          "motor": "engineCode",
+          "vaxellada": "gearbox"
+        }
+      }
+    },
+    {
+      "id": "volvo_vida",
+      "namn": "Volvo VIDA",
+      "beskrivning": "Volvos verkstadsportal. Kräver eget abonnemang och verkstads-ID.",
+      "falt": [
+        { "nyckel": "bas_url", "etikett": "Bas-URL (använd {vin} som platshållare)", "hemlig": false },
+        { "nyckel": "verkstadsid", "etikett": "Verkstads-ID", "hemlig": false },
+        { "nyckel": "api_nyckel", "etikett": "API-nyckel", "hemlig": true }
+      ],
+      "uppslag": {
+        "urlFalt": "bas_url",
+        "auth": "header",
+        "authHeader": "X-Api-Key",
+        "authFalt": "api_nyckel",
+        "svarsfalt": {
+          "marke": "make",
+          "modell": "model",
+          "arsmodell": "year",
+          "motor": "engine",
+          "vaxellada": "transmission"
+        }
+      }
+    },
+    {
+      "id": "fordonsregister",
+      "namn": "Fordonsregisteruppslag (regnr → fordon)",
+      "beskrivning": "Nationell fordonsdata via vald leverantör. Uppslag sker på registreringsnummer i stället för VIN.",
+      "nyckeltyp": "regnr",
+      "falt": [
+        { "nyckel": "bas_url", "etikett": "Bas-URL (använd {regnr} som platshållare)", "hemlig": false },
+        { "nyckel": "api_nyckel", "etikett": "API-nyckel", "hemlig": true }
+      ],
+      "uppslag": {
+        "urlFalt": "bas_url",
+        "auth": "query",
+        "authParam": "key",
+        "authFalt": "api_nyckel",
+        "svarsfalt": {
+          "marke": "make",
+          "modell": "model",
+          "arsmodell": "year",
+          "vin": "vin",
+          "motor": "engine"
+        }
+      }
+    }
+  ]
+}

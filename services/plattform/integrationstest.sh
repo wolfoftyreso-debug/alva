@@ -253,6 +253,88 @@ for i in 1 2 3 4 5 6 7; do
 done
 kontroll "takt-begränsning stoppar upprepade försök" "$SISTA" "429"
 
+# 10d. Märkesspecifika kopplingar: kundens egna credentials
+# Registret är läsbart för alla inloggade (inställningssidan behöver
+# veta vilka leverantörer som finns) men innehåller inga uppgifter.
+LEV=$(curl -s "$BAS/api/integrationer/leverantorer" -H "Authorization: Bearer $TOKEN_J")
+kontroll "leverantörsregistret är läsbart för tekniker" \
+  "$(echo "$LEV" | falt '.leverantorer.some(l=>l.id==="generisk_vin")')" "true"
+kontroll "registret pekar ut hemliga fält" \
+  "$(echo "$LEV" | falt '.leverantorer.every(l=>l.falt.some(f=>f.hemlig===true))')" "true"
+
+# Uppgifterna är administratörens ensak
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_J")
+kontroll "tekniker ser inte kopplingarnas uppgifter" "$KOD" "403"
+
+# Utan konfigurerad krypteringsnyckel sparas ingenting — fail closed
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"leverantor":"generisk_vin","uppgifter":{"bas_url":"https://x.se/{vin}","api_nyckel":"k"}}')
+kontroll "utan krypteringsnyckel sparas inga uppgifter" "$KOD" "503"
+
+# Starta om tjänsten med krypteringsnyckel konfigurerad
+kill "$SERVER_PID" 2>/dev/null || true
+wait "$SERVER_PID" 2>/dev/null || true
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  JWT_SECRET=integrationshemlighet PORT=$APPPORT \
+  INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
+  node server.mjs &
+SERVER_PID=$!
+sleep 1
+
+# Okänd leverantör och ofullständiga uppgifter avvisas
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"leverantor":"hittepa","uppgifter":{"a":"b"}}')
+kontroll "okänd leverantör avvisas" "$KOD" "400"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"leverantor":"generisk_vin","uppgifter":{"bas_url":"https://x.se/{vin}"}}')
+kontroll "ofullständiga uppgifter avvisas" "$KOD" "400"
+
+# Administratören sparar organisationens egna credentials
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"leverantor":"generisk_vin","uppgifter":{"bas_url":"http://127.0.0.1:9/vin/{vin}","api_nyckel":"sk-verkstad-123456"}}')
+kontroll "administratören kan spara credentials" "$KOD" "200"
+
+# Hemligheten lämnar aldrig servern i klartext
+INT=$(curl -s "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A")
+kontroll "krypteringen är konfigurerad" "$(echo "$INT" | falt .krypteringKonfigurerad)" "true"
+kontroll "hemligt fält maskeras i svaret" "$(echo "$INT" | falt '.integrationer[0].uppgifter.api_nyckel')" "••••3456"
+kontroll "öppet fält visas som det är" "$(echo "$INT" | falt '.integrationer[0].uppgifter.bas_url')" "http://127.0.0.1:9/vin/{vin}"
+
+# … och ligger krypterad i databasen
+RAD=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select uppgifter_krypt from integrationer where leverantor='generisk_vin'")
+case "$RAD" in
+  *sk-verkstad-123456*) echo "✗ uppgifterna ligger i klartext i databasen"; exit 1 ;;
+  *) echo "✓ uppgifterna ligger krypterade i databasen" ;;
+esac
+
+# Uppslag: identifieraren valideras, okonfigurerad koppling ger 404
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer/generisk_vin/uppslag" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d '{"identifierare":"x"}')
+kontroll "ogiltig identifierare avvisas" "$KOD" "400"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer/volvo_vida/uppslag" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d '{"identifierare":"YV1DZ8256F2123456"}')
+kontroll "okonfigurerad koppling ger 404" "$KOD" "404"
+
+# Leverantören är onåbar i testmiljön — felet rapporteras ärligt, inte tyst
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer/generisk_vin/uppslag" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d '{"identifierare":"YV1DZ8256F2123456"}')
+kontroll "onåbar leverantör rapporteras som 502" "$KOD" "502"
+STATUS=$(curl -s "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A" \
+  | falt '.integrationer[0].senaste_status.slice(0,3)')
+kontroll "senaste testresultat sparas på kopplingen" "$STATUS" "fel"
+
+# Kopplingar är organisationsknutna
+ANTAL_B=$(curl -s "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_B" | falt .integrationer.length)
+kontroll "org B ser inte org A:s kopplingar" "$ANTAL_B" "0"
+
+# Borttagning
+curl -s -X DELETE "$BAS/api/integrationer/generisk_vin" -H "Authorization: Bearer $TOKEN_A" >/dev/null
+ANTAL=$(curl -s "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A" | falt .integrationer.length)
+kontroll "kopplingen kan tas bort" "$ANTAL" "0"
+
 # 11. API-first: OpenAPI-specen serveras live, utan inloggning
 SPEC=$(curl -s "$BAS/api/openapi.yaml")
 case "$SPEC" in

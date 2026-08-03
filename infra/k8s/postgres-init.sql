@@ -16,6 +16,21 @@ create table if not exists organisationer (
 );
 alter table organisationer add column if not exists installningar jsonb not null default '{}'::jsonb;
 
+-- Märkesspecifika kopplingar per organisation. Uppgifterna lagras
+-- krypterade (AES-256-GCM, nyckel ur INTEGRATION_NYCKEL) och lämnar
+-- aldrig servern i klartext — klienten ser bara maskerade värden.
+create table if not exists integrationer (
+  organisation_id uuid not null references organisationer(id),
+  leverantor text not null,
+  uppgifter_krypt text not null,
+  aktiv boolean not null default true,
+  skapad timestamptz not null default now(),
+  uppdaterad timestamptz not null default now(),
+  senast_testad timestamptz,
+  senaste_status text,
+  primary key (organisation_id, leverantor)
+);
+
 create table if not exists anvandare (
   id uuid primary key default gen_random_uuid(),
   organisation_id uuid not null references organisationer(id),

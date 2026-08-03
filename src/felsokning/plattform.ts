@@ -175,6 +175,75 @@ export async function hamtaFelorsaksstatistik(): Promise<{ orsak: string; antal:
   return ((await res.json()) as { orsaker: { orsak: string; antal: number }[] }).orsaker;
 }
 
+// Märkesspecifika kopplingar. Uppgifterna lagras krypterat på servern
+// och returneras alltid maskerade — klienten ser aldrig hemligheterna.
+export interface LeverantorsFalt {
+  nyckel: string;
+  etikett: string;
+  hemlig: boolean;
+}
+
+export interface Leverantor {
+  id: string;
+  namn: string;
+  beskrivning?: string;
+  nyckeltyp?: string;
+  falt: LeverantorsFalt[];
+}
+
+export interface Integration {
+  leverantor: string;
+  namn: string;
+  aktiv: boolean;
+  uppdaterad: string;
+  senast_testad: string | null;
+  senaste_status: string | null;
+  uppgifter: Record<string, string>;
+}
+
+export async function hamtaLeverantorer(): Promise<Leverantor[]> {
+  const res = await plattformFetch("/api/integrationer/leverantorer");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { leverantorer: Leverantor[] }).leverantorer;
+}
+
+export async function hamtaIntegrationer(): Promise<{ integrationer: Integration[]; krypteringKonfigurerad: boolean }> {
+  const res = await plattformFetch("/api/integrationer");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return (await res.json()) as { integrationer: Integration[]; krypteringKonfigurerad: boolean };
+}
+
+export async function sparaIntegration(leverantor: string, uppgifter: Record<string, string>): Promise<void> {
+  const res = await plattformFetch("/api/integrationer", {
+    method: "POST",
+    body: JSON.stringify({ leverantor, uppgifter }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Fel ${res.status}`);
+  }
+}
+
+export async function taBortIntegration(leverantor: string): Promise<void> {
+  const res = await plattformFetch(`/api/integrationer/${leverantor}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+}
+
+// Uppslag mot leverantören — anropet görs av servern med organisationens
+// krypterade uppgifter; klienten skickar bara identifieraren.
+export async function gorUppslag(
+  leverantor: string,
+  identifierare: string,
+): Promise<Record<string, string>> {
+  const res = await plattformFetch(`/api/integrationer/${leverantor}/uppslag`, {
+    method: "POST",
+    body: JSON.stringify({ identifierare }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { fordon?: Record<string, string>; error?: string };
+  if (!res.ok) throw new Error(data.error ?? `Fel ${res.status}`);
+  return data.fordon ?? {};
+}
+
 // Autentiserat anrop mot plattformen. En utgången token rensas (401) så
 // att appen faller tillbaka till lokalt läge tills nästa inloggning.
 export async function plattformFetch(vag: string, init?: RequestInit): Promise<Response> {
