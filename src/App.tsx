@@ -27,14 +27,21 @@ const queryClient = new QueryClient();
 
 // Hash-baserad routing för miljöer utan SPA-rewrites (t.ex. förhandsvisning
 // på en statisk sida). Standard är vanlig historik-routing.
-const Router = import.meta.env.VITE_HASH_ROUTER ? HashRouter : BrowserRouter;
+//
+// Historik-routing kräver att sidan serveras från roten: ligger den under
+// en sökväg matchar ingen route och besökaren får 404-sidan. I
+// förhandsvisningsläge går routingen därför via hash — då spelar
+// sökvägen ingen roll — och startsidan är Guidad Felsökning i stället för
+// värdapplikationens startsida.
+const forhandsvisning = !!import.meta.env.VITE_HASH_ROUTER;
+const Router = forhandsvisning ? HashRouter : BrowserRouter;
 
 function AppContent() {
   return (
     <Router>
       <PaymentTestModeBanner />
       <Routes>
-        <Route path="/" element={<Index />} />
+        <Route path="/" element={forhandsvisning ? <Arendelista /> : <Index />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/reset-password" element={<ResetPassword />} />

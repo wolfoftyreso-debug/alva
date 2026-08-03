@@ -8,7 +8,18 @@ Första körbara versionen av kärnan i [Master Prompt v1.0](MASTER-PROMPT.md). 
 npm install
 npm run dev        # öppna http://localhost:8080/felsokning
 npm test           # projektions-, synk- och demotester
+npm run typkontroll # tsc --noEmit (vite build typkontrollerar inte)
 ```
+
+**Förhandsvisning som en enda fil** (t.ex. för delning) byggs med
+hash-routing, annars fungerar den bara när den serveras från roten:
+
+```sh
+VITE_HASH_ROUTER=1 npm run build
+```
+
+I det läget är `/` Guidad Felsökning i stället för värdapplikationens
+startsida, och sidan fungerar oavsett vilken sökväg den ligger på.
 
 Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på startsidan lägger in ett komplett vibrationsärende med 1 tim 35 min historik.
 
