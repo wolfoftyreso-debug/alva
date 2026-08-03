@@ -21,6 +21,18 @@ export function felbeskrivning(arende: Arende): string | undefined {
   return undefined;
 }
 
+// Ansvarig tekniker härleds ur loggen: skaparen, tills en överlämning
+// med mottagare eller en omfördelning (ansvarig_satt) pekar ut någon annan.
+export function ansvarig(arende: Arende): string | undefined {
+  let namn = arende.handelser[0]?.anvandare;
+  for (const post of arende.handelser) {
+    const h = post.handelse;
+    if (h.typ === "ansvarig_satt") namn = h.ansvarig;
+    if (h.typ === "overlamning" && h.till) namn = h.till;
+  }
+  return namn;
+}
+
 export function arAvslutat(arende: Arende): boolean {
   return arende.handelser.some((p) => p.handelse.typ === "arende_avslutat");
 }
@@ -161,6 +173,7 @@ export function tillforlitlighet(arende: Arende): TillforlitlighetsRad[] {
 
 export interface Brief {
   objekt?: Objekt;
+  ansvarig?: string;
   felbeskrivning?: string;
   utfordaKontroller: UtfordKontroll[];
   observationer: string[];
@@ -190,6 +203,7 @@ export function brief(arende: Arende, metodik: Metodik, nu?: string): Brief {
   }
   return {
     objekt: objekt(arende),
+    ansvarig: ansvarig(arende),
     felbeskrivning: felbeskrivning(arende),
     utfordaKontroller: utfordaKontroller(arende),
     observationer: observationer(arende),

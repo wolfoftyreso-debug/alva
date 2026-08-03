@@ -139,6 +139,27 @@ describe("tidsfordelning", () => {
   });
 });
 
+describe("ansvarig", () => {
+  it("skaparen är ansvarig tills överlämning eller omfördelning pekar ut någon annan", async () => {
+    const { ansvarig } = await import("../projektioner");
+    const bas: [string, Handelse][] = [["2026-08-03T08:00:00Z", OBJEKT]];
+    expect(ansvarig(byggArende(bas))).toBe("Anna");
+
+    const efterOverlamning = byggArende([
+      ...bas,
+      ["2026-08-03T09:00:00Z", { typ: "overlamning", fran: "Anna", till: "Johan" }],
+    ]);
+    expect(ansvarig(efterOverlamning)).toBe("Johan");
+
+    const efterOmfordelning = byggArende([
+      ...bas,
+      ["2026-08-03T09:00:00Z", { typ: "overlamning", fran: "Anna", till: "Johan" }],
+      ["2026-08-03T10:00:00Z", { typ: "ansvarig_satt", ansvarig: "Lisa" }],
+    ]);
+    expect(ansvarig(efterOmfordelning)).toBe("Lisa");
+  });
+});
+
 describe("brief", () => {
   const arende = byggArende([
     ["2026-08-02T08:03:00Z", OBJEKT],

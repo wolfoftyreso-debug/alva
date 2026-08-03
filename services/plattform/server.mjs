@@ -222,7 +222,7 @@ export function skapaServer() {
           [arendeId],
         );
         const bortfiltrerat =
-          niva === "intern" ? [] : niva === "partner" ? ["kategori_byte", "ai_svar"] : ["kategori_byte", "hypotes", "ai_svar"];
+          niva === "intern" ? [] : niva === "partner" ? ["kategori_byte", "ai_svar", "ansvarig_satt"] : ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt"];
         const handelser = await pool.query(
           `select id, tidpunkt, anvandare, handelse from felsokning_handelser
            where arende_id = $1 and not (handelse->>'typ' = any($2))
@@ -238,7 +238,9 @@ export function skapaServer() {
 
       // Användarhantering: endast systemadministratör, endast egen org.
       if (vag === "/api/anvandare") {
-        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        // Läsning: admin + arbetsledare (behövs för omfördelning).
+        // Skapande: endast admin.
+        if (anspr.roll === "tekniker") return svara(res, 403, { error: "Kräver arbetsledar- eller administratörsbehörighet." });
         if (req.method === "GET") {
           const rader = await pool.query(
             `select id, epost, namn, roll from anvandare where organisation_id = $1 order by namn`,
@@ -247,6 +249,7 @@ export function skapaServer() {
           return svara(res, 200, { anvandare: rader.rows });
         }
         if (req.method === "POST") {
+          if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
           const { epost, losenord, namn, roll } = await lasKropp(req);
           if (!epost?.includes("@") || !losenord || losenord.length < 8 || !namn?.trim() || !ROLLER.includes(roll)) {
             return svara(res, 400, { error: "Ange namn, e-post, roll och lösenord (minst 8 tecken)." });
@@ -280,6 +283,10 @@ export function skapaServer() {
                      filter (where h.handelse->>'typ' = 'objekt_identifierat'))[1] as objekt,
                   (array_agg(h.handelse->>'text')
                      filter (where h.handelse->>'typ' = 'felbeskrivning'))[1] as felbeskrivning,
+                  (array_agg(coalesce(h.handelse->>'ansvarig', h.handelse->>'till') order by h.tidpunkt desc)
+                     filter (where h.handelse->>'typ' in ('ansvarig_satt', 'overlamning')
+                             and coalesce(h.handelse->>'ansvarig', h.handelse->>'till') is not null))[1] as ansvarig,
+                  (array_agg(h.anvandare order by h.tidpunkt asc))[1] as skapare,
                   array_agg(distinct h.anvandare) filter (where h.anvandare is not null) as tekniker
            from felsokning_arenden a
            left join felsokning_handelser h on h.arende_id = a.id

@@ -83,7 +83,7 @@ describe("AI-orkestern", () => {
     // … och AI-endpointen + händelsetyperna är dokumenterade.
     expect(spec).toContain("/api/ai:");
     expect(spec).toContain("append-only");
-    for (const typ of ["objekt_identifierat", "kontroll_utford", "ai_svar", "arende_avslutat"]) {
+    for (const typ of ["objekt_identifierat", "kontroll_utford", "ai_svar", "ansvarig_satt", "arende_avslutat"]) {
       expect(spec).toContain(typ);
     }
   });

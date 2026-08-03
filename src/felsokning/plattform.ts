@@ -141,6 +141,8 @@ export interface OversiktsRad {
   avslutat: boolean;
   objekt: string | null;
   felbeskrivning: string | null;
+  ansvarig: string | null;
+  skapare: string | null;
   tekniker: string[] | null;
 }
 

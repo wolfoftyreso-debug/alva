@@ -796,6 +796,7 @@ function BriefFlik({
             <p className="text-xl font-extrabold">{b.objekt.beskrivning}</p>
             <p className="font-bold text-amber-400">{b.objekt.identifierare}</p>
             {b.objekt.kund && <p className="text-zinc-300">Kund: {b.objekt.kund}</p>}
+            {b.ansvarig && <p className="text-zinc-300">Ansvarig tekniker: {b.ansvarig}</p>}
           </>
         ) : (
           <p className="text-zinc-400">Ej identifierat</p>
@@ -875,7 +876,7 @@ function RapportFlik({
   // Kategoribyten är interna; hypoteser och AI-dialogen är arbetsmaterial
   // och ingår inte i det som delas med kund.
   const kundposter = arende.handelser.filter(
-    (p) => !["kategori_byte", "hypotes", "ai_svar"].includes(p.handelse.typ),
+    (p) => !["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt"].includes(p.handelse.typ),
   );
 
   // Alla exporter bygger på samma händelselogg och versionsmärks:

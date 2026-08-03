@@ -106,7 +106,7 @@ paths:
     get:
       tags: [Användare]
       summary: Lista organisationens användare
-      description: Kräver rollen `admin`.
+      description: Kräver rollen `admin` eller `arbetsledare`.
       responses:
         "200":
           description: Användare i den egna organisationen.
@@ -512,6 +512,7 @@ components:
             - kategori_byte
             - inaktivitet_forklarad
             - overlamning
+            - ansvarig_satt
             - export_skapad
             - ai_svar
             - arende_avslutat

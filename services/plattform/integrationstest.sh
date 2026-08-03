@@ -112,6 +112,16 @@ kontroll "översikten härleder felbeskrivning" "$(echo "$OVERSIKT" | falt '.are
 kontroll "översikten härleder status" "$(echo "$OVERSIKT" | falt '.arenden[0].avslutat')" "false"
 kontroll "översikten räknar händelser" "$(echo "$OVERSIKT" | falt '.arenden[0].antal_handelser')" "2"
 
+# 9b. Omfördelning: arbetsledaren listar användare och sätter ny ansvarig
+ANTAL_ANV=$(curl -s "$BAS/api/anvandare" -H "Authorization: Bearer $TOKEN_L" | falt .anvandare.length)
+kontroll "arbetsledaren kan lista användare" "$ANTAL_ANV" "3"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/anvandare" -H "Authorization: Bearer $TOKEN_L" \
+  -H 'Content-Type: application/json' -d '{"epost":"y@a.se","losenord":"hemligt123","namn":"Y","roll":"tekniker"}')
+kontroll "arbetsledaren nekas skapa användare" "$KOD" "403"
+curl -s -X POST "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_L" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"h-omf","tidpunkt":"2026-08-03T08:05:00Z","anvandare":"Lisa","handelse":{"typ":"ansvarig_satt","ansvarig":"Johan"}}]}' >/dev/null
+kontroll "översikten visar ny ansvarig" "$(curl -s "$BAS/api/oversikt" -H "Authorization: Bearer $TOKEN_L" | falt '.arenden[0].ansvarig')" "Johan"
+
 # 10. Live Share-behörighetsnivåer: kund/partner/intern + återkallelse
 curl -s -X POST "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
   -d '{"handelser":[{"id":"h3","tidpunkt":"2026-08-03T08:03:00Z","anvandare":"Anna","handelse":{"typ":"hypotes","text":"Trasigt relä","niva":"lag"}}]}' >/dev/null
@@ -126,7 +136,7 @@ kontroll "nivån följer med svaret" "$(echo "$PARTNER" | falt .niva)" "partner"
 
 INTERNKOD=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
   -H 'Content-Type: application/json' -d '{"niva":"intern"}' | falt .kod)
-kontroll "internnivån visar allt" "$(curl -s "$BAS/api/delad/$INTERNKOD" | falt .handelser.length)" "3"
+kontroll "internnivån visar allt" "$(curl -s "$BAS/api/delad/$INTERNKOD" | falt .handelser.length)" "4"
 
 KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-test1/delningar" \
   -H "Authorization: Bearer $TOKEN_B" -H 'Content-Type: application/json' -d '{"niva":"intern"}')

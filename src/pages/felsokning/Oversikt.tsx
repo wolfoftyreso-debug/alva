@@ -7,17 +7,76 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Arende } from "@/felsokning/domain";
 import {
+  hamtaAnvandare,
   hamtaOversikt,
   plattformAktiv,
   plattformFetch,
   plattformKonto,
   type OversiktsRad,
+  type PlattformAnvandare,
 } from "@/felsokning/plattform";
+import { nyLoggPost } from "@/felsokning/domain";
 import { flataIhop } from "@/felsokning/synk";
 import { useFelsokning } from "@/felsokning/store";
 import { formateraTid } from "@/felsokning/projektioner";
 import { FelsokningSkal, Panel, StorKnapp } from "@/felsokning/ui";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
+
+// Omfördelning: arbetsledaren pekar ut ny ansvarig tekniker — loggas som
+// append-only-händelsen ansvarig_satt i ärendets logg (organisationsintern,
+// delas aldrig i kund-/partnervyer).
+function Omfordela({ rad, vidKlar }: { rad: OversiktsRad; vidKlar: () => void }) {
+  const [oppen, setOppen] = useState(false);
+  const [personer, setPersoner] = useState<PlattformAnvandare[]>([]);
+  const konto = plattformKonto();
+
+  if (!oppen) {
+    return (
+      <StorKnapp
+        variant="sekundar"
+        onClick={() => {
+          setOppen(true);
+          hamtaAnvandare().then(setPersoner).catch(() => setPersoner([]));
+        }}
+      >
+        Omfördela
+      </StorKnapp>
+    );
+  }
+  return (
+    <div className="col-span-2 rounded-lg border-2 border-zinc-700 bg-zinc-950 p-2">
+      <p className="mb-2 text-sm font-bold uppercase text-zinc-400">Ny ansvarig tekniker</p>
+      <div className="grid grid-cols-2 gap-2">
+        {personer.map((person) => (
+          <button
+            key={person.id}
+            className="min-h-12 rounded-lg border-2 border-zinc-600 font-extrabold text-zinc-200 hover:border-amber-400"
+            onClick={async () => {
+              const post = nyLoggPost(konto?.namn ?? "arbetsledare", {
+                typ: "ansvarig_satt",
+                ansvarig: person.namn,
+              });
+              await plattformFetch(`/api/arenden/${rad.id}/handelser`, {
+                method: "POST",
+                body: JSON.stringify({ handelser: [post] }),
+              });
+              setOppen(false);
+              vidKlar();
+            }}
+          >
+            {person.namn}
+          </button>
+        ))}
+        <button
+          className="min-h-12 rounded-lg border-2 border-zinc-600 font-bold text-zinc-400"
+          onClick={() => setOppen(false)}
+        >
+          Avbryt
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function Oversikt() {
   const navigate = useNavigate();
@@ -138,13 +197,16 @@ export default function Oversikt() {
               <p className="mt-1 text-xl font-extrabold">{rad.objekt ?? "Okänt objekt"}</p>
               {rad.felbeskrivning && <p className="text-lg text-zinc-200">”{rad.felbeskrivning}”</p>}
               <p className="mt-1 text-sm text-zinc-500">
-                {rad.antal_handelser} händelser
-                {rad.tekniker?.length ? ` · ${rad.tekniker.join(", ")}` : ""}
+                Ansvarig: <span className="font-bold text-zinc-300">{rad.ansvarig ?? rad.skapare ?? "—"}</span>
+                {` · ${rad.antal_handelser} händelser`}
                 {rad.senaste ? ` · senast ${tidDatum(rad.senaste)} ${tidKlockslag(rad.senaste)}` : ""}
               </p>
-              <StorKnapp variant="sekundar" className="mt-2" onClick={() => oppna(rad)}>
-                Öppna ärendet
-              </StorKnapp>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <StorKnapp variant="sekundar" onClick={() => oppna(rad)}>
+                  Öppna ärendet
+                </StorKnapp>
+                {!rad.avslutat && <Omfordela rad={rad} vidKlar={() => hamtaOversikt().then(setRader)} />}
+              </div>
             </div>
           ))}
         </>
