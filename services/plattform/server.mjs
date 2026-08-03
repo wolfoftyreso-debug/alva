@@ -222,7 +222,7 @@ export function skapaServer() {
           [arendeId],
         );
         const bortfiltrerat =
-          niva === "intern" ? [] : niva === "partner" ? ["kategori_byte", "ai_svar", "ansvarig_satt"] : ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt"];
+          niva === "intern" ? [] : niva === "partner" ? ["kategori_byte", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"] : ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"];
         const handelser = await pool.query(
           `select id, tidpunkt, anvandare, handelse from felsokning_handelser
            where arende_id = $1 and not (handelse->>'typ' = any($2))

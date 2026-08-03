@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useFelsokning, metodikForArende } from "@/felsokning/store";
 import { arAvslutat, felbeskrivning, objekt, sistaAktivitet, brief } from "@/felsokning/projektioner";
@@ -227,6 +227,12 @@ export default function Arendelista() {
   const { anvandare, arenden, sattAnvandare, laggInArende, nastaNummer } = useFelsokning();
   const [namn, setNamn] = useState("");
   const [filter, setFilter] = useState<Filter>("alla");
+
+  // Inloggad användare tillfrågas aldrig om namn — kontot vet redan.
+  const kontoNamn = plattformKonto()?.namn;
+  useEffect(() => {
+    if (!anvandare && kontoNamn) sattAnvandare(kontoNamn);
+  }, [anvandare, kontoNamn, sattAnvandare]);
 
   if (!anvandare) {
     return (

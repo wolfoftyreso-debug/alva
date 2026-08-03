@@ -37,9 +37,18 @@ export interface Objekt {
   kund?: string;
 }
 
+// Ett fält tolkat ur en skannad arbetsorder, med AI:ns läs-säkerhet.
+export interface ArbetsorderFalt {
+  id: string;
+  etikett: string;
+  varde: string;
+  konfidens: number; // 0–1
+}
+
 // Varje händelse är en av dessa typer. Ingen händelse ändras eller tas bort.
 export type Handelse =
   | { typ: "objekt_identifierat"; objekt: Objekt }
+  | { typ: "arbetsorder_skannad"; falt: ArbetsorderFalt[]; dataUrl?: string }
   | { typ: "felbeskrivning"; text: string }
   | { typ: "fraga_besvarad"; stegId: string; frageId: string; fraga: string; svar: string }
   | { typ: "kontroll_utford"; stegId: string; kontrollId: string; text: string; resultat?: string }
@@ -98,6 +107,8 @@ export function handelseRubrik(post: LoggPost): string {
   switch (h.typ) {
     case "objekt_identifierat":
       return `Objekt identifierat: ${h.objekt.beskrivning} (${h.objekt.identifierare})`;
+    case "arbetsorder_skannad":
+      return `Arbetsorder skannad — ${h.falt.length} fält tolkade`;
     case "felbeskrivning":
       return `Felbeskrivning registrerad`;
     case "fraga_besvarad":

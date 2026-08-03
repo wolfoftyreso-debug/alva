@@ -1014,7 +1014,7 @@ function RapportFlik({
   // Kategoribyten är interna; hypoteser och AI-dialogen är arbetsmaterial
   // och ingår inte i det som delas med kund.
   const kundposter = arende.handelser.filter(
-    (p) => !["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt"].includes(p.handelse.typ),
+    (p) => !["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"].includes(p.handelse.typ),
   );
 
   // Alla exporter bygger på samma händelselogg och versionsmärks:

@@ -567,6 +567,7 @@ components:
             - inaktivitet_forklarad
             - overlamning
             - ansvarig_satt
+            - arbetsorder_skannad
             - export_skapad
             - ai_svar
             - arende_avslutat

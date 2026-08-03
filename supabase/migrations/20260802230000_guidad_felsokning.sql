@@ -59,7 +59,7 @@ as $$
       select jsonb_agg(to_jsonb(h) order by h.tidpunkt, h.id)
       from felsokning_handelser h
       where h.arende_id = a.id
-        and h.handelse->>'typ' not in ('kategori_byte', 'hypotes', 'ai_svar', 'ansvarig_satt')
+        and h.handelse->>'typ' not in ('kategori_byte', 'hypotes', 'ai_svar', 'ansvarig_satt', 'arbetsorder_skannad')
     ), '[]'::jsonb)
   )
   from felsokning_arenden a

@@ -8,10 +8,11 @@
 // klassificerat enligt AI-reglerna.
 //
 // Orkestern (serverns routing):
-// - handledning     → Claude Sonnet 5  (realtidssvar på varje dokumentation)
-// - granskning      → Claude Opus 5    (motsägelser/luckor i hela underlaget)
-// - sammanfattning  → Claude Sonnet 5  (överlämning: risker & osäkerheter)
-// - metodikval      → Claude Haiku 4.5 (klassificering av felbeskrivning)
+// - handledning      → Claude Sonnet 5  (realtidssvar på varje dokumentation)
+// - granskning       → Claude Opus 5    (motsägelser/luckor i hela underlaget)
+// - sammanfattning   → Claude Sonnet 5  (överlämning: risker & osäkerheter)
+// - metodikval       → Claude Haiku 4.5 (klassificering av felbeskrivning)
+// - dokumenttolkning → Claude Sonnet 5  (vision: skannad arbetsorder → fält)
 
 import type { Arende } from "./domain";
 import { handelseRubrik } from "./domain";
@@ -20,7 +21,7 @@ import { METODIKER } from "./metodik";
 import type { Brief } from "./projektioner";
 import { brief } from "./projektioner";
 
-export type AiUppgift = "handledning" | "granskning" | "sammanfattning" | "metodikval";
+export type AiUppgift = "handledning" | "granskning" | "sammanfattning" | "metodikval" | "dokumenttolkning";
 
 export type AiRadTyp = "observation" | "verifierat" | "hypotes" | "rekommendation";
 
@@ -89,13 +90,86 @@ export function tolkaAiSvar(data: unknown): AiSvar {
   return { rader, nastaSteg: svar.nastaSteg };
 }
 
+// ---- Arbetsorderskanning (dokumenttolkning) ---------------------------
+// Teknikern fotograferar arbetsorderns framsida; AI:n läser dokumentet
+// (OCR + layoutförståelse) och returnerar strukturerade fält med
+// konfidens per värde. Bara osäkra fält behöver granskas.
+
+export type ArbetsorderGrupp = "Kund" | "Fordon" | "Verkstad" | "Ärende";
+
+export interface TolkatFalt {
+  id: string;
+  etikett: string;
+  grupp: ArbetsorderGrupp;
+  varde: string;
+  konfidens: number; // 0–1
+  // Ungefärlig position i den skannade bilden, normaliserad 0–1.
+  omrade?: { x: number; y: number; bredd: number; hojd: number };
+}
+
+export const ARBETSORDER_FALT: { id: string; grupp: ArbetsorderGrupp; etikett: string }[] = [
+  { id: "kund_namn", grupp: "Kund", etikett: "Namn" },
+  { id: "kund_foretag", grupp: "Kund", etikett: "Företag" },
+  { id: "kund_telefon", grupp: "Kund", etikett: "Telefon" },
+  { id: "kund_epost", grupp: "Kund", etikett: "E-post" },
+  { id: "fordon_regnr", grupp: "Fordon", etikett: "Regnr" },
+  { id: "fordon_vin", grupp: "Fordon", etikett: "VIN" },
+  { id: "fordon_marke", grupp: "Fordon", etikett: "Märke" },
+  { id: "fordon_modell", grupp: "Fordon", etikett: "Modell" },
+  { id: "fordon_motor", grupp: "Fordon", etikett: "Motor" },
+  { id: "fordon_arsmodell", grupp: "Fordon", etikett: "Årsmodell" },
+  { id: "fordon_matarstallning", grupp: "Fordon", etikett: "Mätarställning" },
+  { id: "fordon_motorkod", grupp: "Fordon", etikett: "Motorkod" },
+  { id: "fordon_vaxellada", grupp: "Fordon", etikett: "Växellåda" },
+  { id: "ao_nummer", grupp: "Verkstad", etikett: "Arbetsordernr" },
+  { id: "ao_referens", grupp: "Verkstad", etikett: "Intern referens" },
+  { id: "ao_serviceradgivare", grupp: "Verkstad", etikett: "Servicerådgivare" },
+  { id: "ao_bokningsdatum", grupp: "Verkstad", etikett: "Bokningsdatum" },
+  { id: "felbeskrivning", grupp: "Ärende", etikett: "Felbeskrivning" },
+];
+
+const ARBETSORDER_PROMPT =
+  "Tolka den bifogade arbetsordern från en fordonsverkstad och extrahera fälten.";
+
+// Rensar AI-svaret: okända fält-id filtreras, konfidens klipps till 0–1,
+// tomma värden tas bort och etikett/grupp slås upp ur katalogen.
+export function normaliseraArbetsorder(data: unknown): TolkatFalt[] {
+  const rader = (data as { falt?: unknown }).falt;
+  if (!Array.isArray(rader)) throw new Error("Oväntat tolkningsformat");
+  const resultat: TolkatFalt[] = [];
+  for (const rad of rader as Partial<TolkatFalt>[]) {
+    const def = ARBETSORDER_FALT.find((f) => f.id === rad?.id);
+    if (!def || typeof rad.varde !== "string" || !rad.varde.trim()) continue;
+    if (resultat.some((f) => f.id === def.id)) continue;
+    const konfidens = typeof rad.konfidens === "number" ? Math.min(1, Math.max(0, rad.konfidens)) : 0;
+    const o = rad.omrade;
+    const omrade =
+      o && [o.x, o.y, o.bredd, o.hojd].every((v) => typeof v === "number" && v >= 0 && v <= 1)
+        ? o
+        : undefined;
+    resultat.push({ id: def.id, etikett: def.etikett, grupp: def.grupp, varde: rad.varde.trim(), konfidens, omrade });
+  }
+  return resultat;
+}
+
+export async function tolkaArbetsorder(
+  dataUrl: string,
+): Promise<{ falt: TolkatFalt[]; modell: string } | null> {
+  const resultat = await anropa("dokumenttolkning", ARBETSORDER_PROMPT, { bild: dataUrl });
+  return resultat ? { falt: normaliseraArbetsorder(resultat.svar), modell: resultat.modell } : null;
+}
+
 // I Kubernetes-driften pekar VITE_AI_ORKESTER_URL på orkestertjänsten
 // (services/ai-orkester); utan den används Supabase-edge-funktionen.
 const ORKESTER_URL = (import.meta.env.VITE_AI_ORKESTER_URL as string | undefined)?.replace(/\/$/, "");
 
 // Returnerar null i lokalt läge (ej inloggad) — orkestern nås via
 // plattformens autentiserade backend.
-async function anropa(uppgift: AiUppgift, prompt: string): Promise<{ modell: string; svar: unknown } | null> {
+async function anropa(
+  uppgift: AiUppgift,
+  prompt: string,
+  extra?: Record<string, unknown>,
+): Promise<{ modell: string; svar: unknown } | null> {
   const { plattformAktiv, plattformToken, PLATTFORM_URL } = await import("./plattform");
 
   let token: string | null = null;
@@ -120,14 +194,14 @@ async function anropa(uppgift: AiUppgift, prompt: string): Promise<{ modell: str
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ uppgift, prompt }),
+      body: JSON.stringify({ uppgift, prompt, ...extra }),
     });
     if (!res.ok) throw new Error(`AI-orkestern svarade ${res.status}`);
     resultat = await res.json();
   } else {
     const { supabase } = await import("@/integrations/supabase/client");
     const { data: svar, error } = await supabase.functions.invoke("felsokning-ai", {
-      body: { uppgift, prompt },
+      body: { uppgift, prompt, ...extra },
     });
     if (error) throw error;
     resultat = svar;

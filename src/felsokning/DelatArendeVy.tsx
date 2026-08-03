@@ -32,7 +32,7 @@ export function DelatArendeVy({
   const matvarden = arende.handelser.filter((p) => p.handelse.typ === "matvarde");
   const kundposter = redanFiltrerad
     ? arende.handelser
-    : arende.handelser.filter((p) => !["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt"].includes(p.handelse.typ));
+    : arende.handelser.filter((p) => !["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"].includes(p.handelse.typ));
   const pagaende = b.rekommenderatNastaSteg[0];
 
   return (

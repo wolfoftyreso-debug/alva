@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { byggAnvandarPrompt, byggGranskningsPrompt, tolkaAiSvar } from "../ai";
+import { byggAnvandarPrompt, byggGranskningsPrompt, normaliseraArbetsorder, tolkaAiSvar, ARBETSORDER_FALT } from "../ai";
 import { VIBRATION_METODIK } from "../metodik";
 import { brief } from "../projektioner";
 import { byggDemoArende } from "../demo";
@@ -10,7 +10,7 @@ const ENDPOINT = readFileSync("supabase/functions/felsokning-ai/index.ts", "utf8
 describe("AI-orkestern", () => {
   it("plattformens endpoint routar uppgifter till olika modeller", () => {
     // Servern äger orkestern: modellval, effort, systemprompt och schema.
-    for (const uppgift of ["handledning:", "granskning:", "sammanfattning:", "metodikval:"]) {
+    for (const uppgift of ["handledning:", "granskning:", "sammanfattning:", "metodikval:", "dokumenttolkning:"]) {
       expect(ENDPOINT).toContain(uppgift);
     }
     expect(ENDPOINT).toContain('"claude-sonnet-5"');
@@ -29,6 +29,7 @@ describe("AI-orkestern", () => {
       "granskning:",
       "sammanfattning:",
       "metodikval:",
+      "dokumenttolkning:",
       "Hitta aldrig på fakta",
       "SUPABASE_JWT_SECRET",
     ]) {
@@ -85,7 +86,7 @@ describe("AI-orkestern", () => {
     // … och AI-endpointen + händelsetyperna är dokumenterade.
     expect(spec).toContain("/api/ai:");
     expect(spec).toContain("append-only");
-    for (const typ of ["objekt_identifierat", "kontroll_utford", "ai_svar", "ansvarig_satt", "arende_avslutat"]) {
+    for (const typ of ["objekt_identifierat", "kontroll_utford", "ai_svar", "ansvarig_satt", "arbetsorder_skannad", "arende_avslutat"]) {
       expect(spec).toContain(typ);
     }
   });
@@ -133,5 +134,47 @@ describe("AI-orkestern", () => {
 
     expect(() => tolkaAiSvar({ rader: "inte en lista", nastaSteg: "x" })).toThrow();
     expect(() => tolkaAiSvar(null)).toThrow();
+  });
+});
+
+describe("arbetsorderskanning", () => {
+  it("normaliserar tolkningen: okända fält bort, konfidens klipps, tomma värden bort", () => {
+    const falt = normaliseraArbetsorder({
+      falt: [
+        { id: "fordon_regnr", varde: " abc123 ", konfidens: 1.7 },
+        { id: "pahittat_falt", varde: "x", konfidens: 0.9 },
+        { id: "kund_namn", varde: "   ", konfidens: 0.9 },
+        { id: "fordon_vin", varde: "YV1DZ8256F2123456", konfidens: 0.74, omrade: { x: 0.5, y: 0.2, bredd: 0.4, hojd: 0.05 } },
+        { id: "fordon_vin", varde: "DUBBLETT", konfidens: 0.5 },
+      ],
+    });
+    expect(falt.map((f) => f.id)).toEqual(["fordon_regnr", "fordon_vin"]);
+    expect(falt[0].konfidens).toBe(1);
+    expect(falt[0].varde).toBe("abc123");
+    expect(falt[0].grupp).toBe("Fordon");
+    expect(falt[1].omrade?.x).toBe(0.5);
+    expect(() => normaliseraArbetsorder({})).toThrow();
+  });
+
+  it("demo-tolkningen använder bara kända fält och alla konfidensnivåer", async () => {
+    const { byggDemoTolkning } = await import("../demo");
+    const falt = byggDemoTolkning();
+    for (const f of falt) {
+      expect(ARBETSORDER_FALT.some((def) => def.id === f.id), f.id).toBe(true);
+    }
+    // Flödet ska kunna demonstrera alla tre nivåerna: auto-godkänd,
+    // granska och kräver bekräftelse.
+    expect(falt.some((f) => f.konfidens >= 0.95)).toBe(true);
+    expect(falt.some((f) => f.konfidens >= 0.8 && f.konfidens < 0.95)).toBe(true);
+    expect(falt.some((f) => f.konfidens < 0.8)).toBe(true);
+  });
+
+  it("händelsetypen arbetsorder_skannad är organisationsintern i alla delningsvägar", () => {
+    const server = readFileSync("services/plattform/server.mjs", "utf8");
+    const migration = readFileSync("supabase/migrations/20260802230000_guidad_felsokning.sql", "utf8");
+    const delatVy = readFileSync("src/felsokning/DelatArendeVy.tsx", "utf8");
+    for (const innehall of [server, migration, delatVy]) {
+      expect(innehall).toContain("arbetsorder_skannad");
+    }
   });
 });

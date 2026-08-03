@@ -141,19 +141,22 @@ kontroll "tomma listor avvisas" "$KOD" "400"
 
 # 10. Live Share-behörighetsnivåer: kund/partner/intern + återkallelse
 curl -s -X POST "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
-  -d '{"handelser":[{"id":"h3","tidpunkt":"2026-08-03T08:03:00Z","anvandare":"Anna","handelse":{"typ":"hypotes","text":"Trasigt relä","niva":"lag"}}]}' >/dev/null
-kontroll "kundkoden filtrerar hypoteser" "$(curl -s "$BAS/api/delad/delkod123" | falt .handelser.length)" "1"
+  -d '{"handelser":[
+    {"id":"h3","tidpunkt":"2026-08-03T08:03:00Z","anvandare":"Anna","handelse":{"typ":"hypotes","text":"Trasigt relä","niva":"lag"}},
+    {"id":"h4","tidpunkt":"2026-08-03T08:04:00Z","anvandare":"Anna","handelse":{"typ":"arbetsorder_skannad","falt":[{"id":"kund_namn","etikett":"Namn","varde":"Kalle Kund","konfidens":0.97}]}}
+  ]}' >/dev/null
+kontroll "kundkoden filtrerar hypoteser och arbetsorder" "$(curl -s "$BAS/api/delad/delkod123" | falt .handelser.length)" "1"
 
 PARTNERKOD=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
   -H 'Content-Type: application/json' -d '{"niva":"partner"}' | falt .kod)
 PARTNER=$(curl -s "$BAS/api/delad/$PARTNERKOD")
-kontroll "partnernivån visar hypoteser" "$(echo "$PARTNER" | falt .handelser.length)" "2"
+kontroll "partnernivån visar hypoteser men inte arbetsordern" "$(echo "$PARTNER" | falt .handelser.length)" "2"
 kontroll "partnernivån döljer kategoribyten" "$(echo "$PARTNER" | falt '.handelser.some(h=>h.handelse.typ==="kategori_byte")')" "false"
 kontroll "nivån följer med svaret" "$(echo "$PARTNER" | falt .niva)" "partner"
 
 INTERNKOD=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
   -H 'Content-Type: application/json' -d '{"niva":"intern"}' | falt .kod)
-kontroll "internnivån visar allt" "$(curl -s "$BAS/api/delad/$INTERNKOD" | falt .handelser.length)" "4"
+kontroll "internnivån visar allt" "$(curl -s "$BAS/api/delad/$INTERNKOD" | falt .handelser.length)" "5"
 
 KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-test1/delningar" \
   -H "Authorization: Bearer $TOKEN_B" -H 'Content-Type: application/json' -d '{"niva":"intern"}')
