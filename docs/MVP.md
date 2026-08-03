@@ -16,7 +16,7 @@ Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på st
 
 | Direktivets kärna | Status i MVP |
 | --- | --- |
-| Objektidentifiering först | ✅ Manuell inmatning (reg.nr/VIN/serienummer/maskinnummer) med bekräftelsesteg. QR/streckkod/OCR är markerade som kommande. |
+| Objektidentifiering först | ✅ **QR-/streckkodsläsning** (`src/felsokning/streckkod.ts`): kameraströmmen läser QR, Code 39/128, Data Matrix och PDF417 via webbläsarens BarcodeDetector. Avläst kod klassificeras innan den används — VIN (17 tecken utan I/O/Q), svenskt regnr (båda serierna) eller serienummer — och identifieraren plockas ut även ur QR-innehåll som URL:er eller `vin=…`-fält; fritext och nakna URL:er avvisas. Saknar webbläsaren API:t (t.ex. iOS/Safari) **fotograferas typskylten** i stället och plattformens bildtolkning läser av den — kameran är gränssnittet oavsett enhet. Manuell inmatning med bekräftelsesteg finns kvar. |
 | AI-guidad felsökning | ✅ Deterministisk metodikmotor (en fråga i taget, tre metodiker) **plus Claude-orkestern driven av plattformen**: edge-funktionen `felsokning-ai` äger Claude API-nyckeln (serverhemligheten `ANTHROPIC_API_KEY`) och routar per uppgift — handledning i realtid (Sonnet 5), djupgranskning av hela underlaget via knapp i briefen (Opus 5, hög effort), AI-komplettering av överlämningen med risker & osäkerheter (Sonnet 5) och metodikklassificering av felbeskrivningen (Haiku 4.5). Alla svar är schema-bundna och klassificerade enligt AI-reglerna, med automatisk fallback till Anthropics rekommenderade reservmodell vid avböjd förfrågan; modellen som svarade loggas i varje händelse. Kräver inloggad användare; svaren är interna och delas aldrig i kundvyer. I lokalt läge guidar metodiken ensam. |
 | Arbetslogg | ✅ Append-only händelselogg med tidsstämpel och användare på varje post. Ingenting skrivs över. |
 | Tidredovisning | ✅ Kategorier (aktiv felsökning, väntetid, provkörning …) via kategoribyten i loggen; paus räknas inte i total tid. Inaktivitetsfråga efter 20 min utan händelser. |
@@ -57,4 +57,5 @@ Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på st
 
 ## Medvetna avgränsningar
 
-- QR-/streckkodsläsning, VIN-avkodning mot fordonsdatabaser (utrustningsnivå, återkallelser, TSB:er) och tillverkarintegrationer ingår inte ännu — arbetsorderskanningen ger strukturen de kopplas in i.
+- VIN-avkodning mot fordonsdatabaser (utrustningsnivå, återkallelser, TSB:er) och tillverkarintegrationer ingår inte ännu — arbetsorderskanningen och QR-/VIN-avläsningen ger strukturen de kopplas in i.
+- Publikt kundgodkännande direkt i delningslänken (kunden klickar själv) kräver en skrivande publik endpoint med egen säkerhetsmodell; i dag registrerar verkstaden kundens besked med kanal och tidpunkt.

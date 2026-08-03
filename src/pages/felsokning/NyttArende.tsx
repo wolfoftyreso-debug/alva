@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import type { Objekt } from "@/felsokning/domain";
 import { useFelsokning } from "@/felsokning/store";
 import { valjMetodik } from "@/felsokning/metodik";
-import { tolkaArbetsorder, valjMetodikMedAi, type TolkatFalt, type ArbetsorderGrupp } from "@/felsokning/ai";
+import { lasAvInstrument, tolkaArbetsorder, valjMetodikMedAi, type TolkatFalt, type ArbetsorderGrupp } from "@/felsokning/ai";
 import { byggDemoTolkning } from "@/felsokning/demo";
 import { hamtaInstallningar, lastaInstallningar } from "@/felsokning/installningar";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto } from "@/felsokning/format";
 import { IkonKamera } from "@/felsokning/ikoner";
+import { startaSkanning, stodStreckkod, tolkaKod, type AvlastKod, type Skanning } from "@/felsokning/streckkod";
 
 // Ärendestart: teknikern är redan känd (inloggning/namn) och ska kunna
 // starta ett ärende på under 15 sekunder. Primärvägen är att fotografera
@@ -37,6 +38,62 @@ export default function NyttArende() {
   const [kund, setKund] = useState("");
   const [fel, setFel] = useState("");
   const [startar, setStartar] = useState(false);
+
+  // QR/streckkod: läses direkt ur kameraströmmen när webbläsaren stöder
+  // det, annars fotograferas typskylten och bildtolkningen läser av den.
+  const [skannarKod, setSkannarKod] = useState(false);
+  const [kodFel, setKodFel] = useState("");
+  const [avlastKod, setAvlastKod] = useState<AvlastKod | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const skanningRef = useRef<Skanning | null>(null);
+  const typskyltRef = useRef<HTMLInputElement>(null);
+  const [laserTypskylt, setLaserTypskylt] = useState(false);
+
+  useEffect(() => () => skanningRef.current?.stoppa(), []);
+
+  const anvandKod = (kod: AvlastKod) => {
+    setAvlastKod(kod);
+    setIdentifierare(kod.varde);
+    if (inst.identifieringsmetoder.includes(kod.typ)) setMetod(kod.typ);
+    setSkannarKod(false);
+  };
+
+  const oppnaSkanning = async () => {
+    setKodFel("");
+    setSkannarKod(true);
+    // Videoelementet monteras i samma render — vänta in det.
+    setTimeout(async () => {
+      if (!videoRef.current) return;
+      skanningRef.current = await startaSkanning(videoRef.current, anvandKod, (m) => {
+        setKodFel(m);
+        setSkannarKod(false);
+      });
+    }, 50);
+  };
+
+  const stangSkanning = () => {
+    skanningRef.current?.stoppa();
+    skanningRef.current = null;
+    setSkannarKod(false);
+  };
+
+  // Fallback: fota typskylten — bildtolkningen läser VIN/regnr ur bilden.
+  const lasTypskylt = async (fil: File) => {
+    setLaserTypskylt(true);
+    setKodFel("");
+    const foto = await skalaNerFoto(fil);
+    try {
+      const resultat = await lasAvInstrument(foto);
+      const kandidater = resultat?.tolkning.varden.map((v) => v.varde) ?? [];
+      const traff = kandidater.map((v) => tolkaKod(v)).find((k): k is AvlastKod => !!k);
+      if (traff) anvandKod(traff);
+      else if (!resultat) setKodFel("Avläsning av typskylt kräver inloggning — ange identiteten manuellt.");
+      else setKodFel("Ingen identifierare kunde läsas ur bilden — försök igen eller ange manuellt.");
+    } catch {
+      setKodFel("Avläsningen kunde inte nås — ange identiteten manuellt.");
+    }
+    setLaserTypskylt(false);
+  };
 
   const [tolkning, setTolkning] = useState<{ foto: string; falt: TolkatFalt[]; modell?: string; demo?: boolean } | null>(null);
   const [skannar, setSkannar] = useState(false);
@@ -198,8 +255,51 @@ export default function NyttArende() {
             ))}
           </div>
           <p className="mt-3 text-[12px] text-[#707070]">
-            QR-kod, streckkod och OCR från typskylt tillkommer i senare version — ange identiteten manuellt.
+            QR-kod, streckkod och typskylt kan läsas av i nästa steg — eller ange identiteten manuellt.
           </p>
+        </Panel>
+        <Panel rubrik="Läs av identiteten">
+          <input
+            ref={typskyltRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const fil = e.target.files?.[0];
+              e.target.value = "";
+              if (fil) lasTypskylt(fil);
+            }}
+          />
+          {skannarKod ? (
+            <div>
+              <video ref={videoRef} playsInline muted className="mb-2 w-full rounded border border-[#C6C6C6]" />
+              <p className="mb-2 text-[12px] text-[#707070]">
+                Rikta kameran mot QR-koden, streckkoden eller VIN-etiketten.
+              </p>
+              <StorKnapp variant="sekundar" onClick={stangSkanning}>
+                Avbryt skanning
+              </StorKnapp>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {stodStreckkod() && (
+                <StorKnapp variant="sekundar" onClick={oppnaSkanning}>
+                  Skanna QR/streckkod
+                </StorKnapp>
+              )}
+              <StorKnapp variant="sekundar" disabled={laserTypskylt} onClick={() => typskyltRef.current?.click()}>
+                <IkonKamera /> {laserTypskylt ? "Läser av …" : "Fotografera typskylt"}
+              </StorKnapp>
+            </div>
+          )}
+          {avlastKod && (
+            <p className="mt-2 text-[12px] font-semibold text-[#1E6B34]">
+              Avläst {avlastKod.typ}: {avlastKod.varde}
+              {avlastKod.format ? ` (${avlastKod.format})` : ""} — kontrollera värdet nedan.
+            </p>
+          )}
+          {kodFel && <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">{kodFel}</p>}
         </Panel>
         <Panel rubrik="Objektets identitet">
           <TextFalt label={metod} varde={identifierare} satt={setIdentifierare} platshallare="T.ex. ABC123" />
