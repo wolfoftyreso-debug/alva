@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import type { Arende } from "@/felsokning/domain";
 import {
   hamtaAnvandare,
+  hamtaFelorsaksstatistik,
   hamtaOversikt,
   plattformAktiv,
   plattformFetch,
@@ -82,6 +83,7 @@ export default function Oversikt() {
   const navigate = useNavigate();
   const { arenden, laggInArende, sammanfoga } = useFelsokning();
   const [rader, setRader] = useState<OversiktsRad[] | null>(null);
+  const [felorsaker, setFelorsaker] = useState<{ orsak: string; antal: number }[]>([]);
   const [fel, setFel] = useState("");
   const konto = plattformKonto();
   const behorig = plattformAktiv() && (konto?.roll === "arbetsledare" || konto?.roll === "admin");
@@ -91,6 +93,8 @@ export default function Oversikt() {
     hamtaOversikt()
       .then(setRader)
       .catch(() => setFel("Kunde inte hämta översikten — kontrollera inloggningen."));
+    // Flottdata: återkommande felorsaker över organisationen.
+    hamtaFelorsaksstatistik().then(setFelorsaker).catch(() => setFelorsaker([]));
   }, [behorig]);
 
   if (!behorig) {
@@ -177,6 +181,24 @@ export default function Oversikt() {
               </p>
             )}
           </Panel>
+
+          {felorsaker.length > 0 && (
+            <Panel rubrik="Felorsaksstatistik — återkommande fel i organisationen">
+              {felorsaker.map((rad) => (
+                <div key={rad.orsak} className="flex items-center gap-2 py-0.5 text-[13px]">
+                  <span className="w-52 shrink-0 text-[#333333]">{rad.orsak}</span>
+                  <span
+                    className="h-3 rounded-sm bg-[#00437A]"
+                    style={{ width: `${Math.min(100, (rad.antal / felorsaker[0].antal) * 100)}%`, minWidth: 6 }}
+                  />
+                  <span className="font-semibold">{rad.antal}</span>
+                </div>
+              ))}
+              <p className="mt-2 text-[11px] text-[#707070]">
+                Ur dokumenterade felorsaksanalyser — visar mönster som slitage, tidigare reparationer eller möjliga konstruktionsproblem.
+              </p>
+            </Panel>
+          )}
 
           {rader.length === 0 && <p className="text-center text-[14px] text-[#4A5560]">Inga ärenden i organisationen ännu.</p>}
 

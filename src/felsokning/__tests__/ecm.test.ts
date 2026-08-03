@@ -309,3 +309,29 @@ describe("ECM Knowledge Library (regelpaket)", () => {
     }
   });
 });
+
+describe("Fordonshistorik (lokal projektion)", () => {
+  it("hittar tidigare ärenden på samma identifierare med felorsaker", async () => {
+    const { lokalFordonshistorik } = await import("../projektioner");
+    const tidigare = byggArende([
+      OBJEKT,
+      {
+        typ: "felorsak",
+        avvikelse: "Vattenpumpen läcker vid axeltätningen.",
+        orsaker: ["Normalt slitage"],
+        underlag: ["Foto"],
+        sakerhet: "hog",
+        atgard: "Byt vattenpump.",
+      },
+      { typ: "arende_avslutat" },
+    ]);
+    const aktuellt = byggArende([OBJEKT]);
+    aktuellt.id = "nytt-arende";
+    const historik = lokalFordonshistorik({ [tidigare.id]: tidigare, [aktuellt.id]: aktuellt }, "abc123", aktuellt.id);
+    expect(historik).toHaveLength(1);
+    expect(historik[0].avslutat).toBe(true);
+    expect(historik[0].felorsaker[0].orsaker).toContain("Normalt slitage");
+    // Annat fordon → ingen träff.
+    expect(lokalFordonshistorik({ [tidigare.id]: tidigare }, "ZZZ111")).toHaveLength(0);
+  });
+});

@@ -5,9 +5,9 @@
 export type Tillforlitlighet = "hog" | "medel" | "lag";
 
 export const TILLFORLITLIGHET_LABEL: Record<Tillforlitlighet, string> = {
-  hog: "🟢 Hög",
-  medel: "🟡 Medel",
-  lag: "🔴 Låg",
+  hog: "Hög",
+  medel: "Medel",
+  lag: "Låg",
 };
 
 export type TidKategori =

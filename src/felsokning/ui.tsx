@@ -10,6 +10,7 @@ import { useRef, type ReactNode } from "react";
 import type { Tillforlitlighet } from "./domain";
 import { TILLFORLITLIGHET_LABEL } from "./domain";
 import { MikrofonKnapp } from "./Mikrofon";
+import { IkonPunkt } from "./ikoner";
 
 // Industriell palett (inspirerad av tyska verkstadssystem):
 //   bakgrund #ECECEC · paneler #F7F7F7 · kanter #C6C6C6
@@ -109,8 +110,19 @@ export function Panel({ rubrik, children }: { rubrik?: string; children: ReactNo
   );
 }
 
+const NIVA_FARG: Record<Tillforlitlighet, string> = {
+  hog: "#1E6B34",
+  medel: "#C08A00",
+  lag: "#8B1A1A",
+};
+
 export function NivaBadge({ niva }: { niva: Tillforlitlighet }) {
-  return <span className="whitespace-nowrap text-[12px] font-semibold">{TILLFORLITLIGHET_LABEL[niva]}</span>;
+  return (
+    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] font-semibold">
+      <IkonPunkt farg={NIVA_FARG[niva]} />
+      {TILLFORLITLIGHET_LABEL[niva]}
+    </span>
+  );
 }
 
 export function TextFalt({

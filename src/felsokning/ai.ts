@@ -34,7 +34,7 @@ export type AiRadTyp = "observation" | "verifierat" | "hypotes" | "rekommendatio
 export const AI_RADTYP_LABEL: Record<AiRadTyp, string> = {
   observation: "Observation",
   verifierat: "Verifierat",
-  hypotes: "🔴 Hypotes",
+  hypotes: "Hypotes (ej verifierad)",
   rekommendation: "Rekommendation",
 };
 

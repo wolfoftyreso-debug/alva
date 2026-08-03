@@ -591,7 +591,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     rubrik: "Hypoteser redovisas som ej verifierade",
     ok: true,
     kravs: false,
-    detalj: hypoteser > 0 ? `${hypoteser} hypotes(er) markeras 🔴 i rapporten — aldrig som konstaterade fel.` : undefined,
+    detalj: hypoteser > 0 ? `${hypoteser} hypotes(er) markeras som ej verifierade i rapporten — aldrig som konstaterade fel.` : undefined,
   });
 
   rader.push({

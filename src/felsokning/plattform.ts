@@ -152,6 +152,29 @@ export async function hamtaOversikt(): Promise<OversiktsRad[]> {
   return ((await res.json()) as { arenden: OversiktsRad[] }).arenden;
 }
 
+// Fordonshistorik: organisationens tidigare ärenden på samma objekt.
+export interface FordonshistorikRad {
+  id: string;
+  nummer: number;
+  skapad: string;
+  avslutat: boolean;
+  felbeskrivning: string | null;
+  felorsaker: { avvikelse: string; orsaker: string[]; atgard: string }[];
+}
+
+export async function hamtaFordonshistorik(identifierare: string): Promise<FordonshistorikRad[]> {
+  const res = await plattformFetch(`/api/fordon/${encodeURIComponent(identifierare)}/historik`);
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { arenden: FordonshistorikRad[] }).arenden;
+}
+
+// Flottdata: felorsaksstatistik per orsakskategori (arbetsledare/admin).
+export async function hamtaFelorsaksstatistik(): Promise<{ orsak: string; antal: number }[]> {
+  const res = await plattformFetch("/api/statistik/felorsaker");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { orsaker: { orsak: string; antal: number }[] }).orsaker;
+}
+
 // Autentiserat anrop mot plattformen. En utgången token rensas (401) så
 // att appen faller tillbaka till lokalt läge tills nästa inloggning.
 export async function plattformFetch(vag: string, init?: RequestInit): Promise<Response> {

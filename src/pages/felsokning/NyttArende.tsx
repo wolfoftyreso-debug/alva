@@ -8,6 +8,7 @@ import { byggDemoTolkning } from "@/felsokning/demo";
 import { hamtaInstallningar, lastaInstallningar } from "@/felsokning/installningar";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto } from "@/felsokning/format";
+import { IkonKamera } from "@/felsokning/ikoner";
 
 // Ärendestart: teknikern är redan känd (inloggning/namn) och ska kunna
 // starta ett ärende på under 15 sekunder. Primärvägen är att fotografera
@@ -137,7 +138,7 @@ export default function NyttArende() {
           {skannar ? (
             <p className="animate-pulse py-2 text-center font-semibold text-[#00437A]">Tolkar dokumentet …</p>
           ) : (
-            <StorKnapp onClick={() => skanRef.current?.click()}>📷 Skanna arbetsorder</StorKnapp>
+            <StorKnapp onClick={() => skanRef.current?.click()}><IkonKamera /> Skanna arbetsorder</StorKnapp>
           )}
           {skanningsFel && <p className="mt-2 font-semibold text-[#8B1A1A]">{skanningsFel}</p>}
         </Panel>
@@ -273,9 +274,9 @@ export default function NyttArende() {
 
 // Visuell granskning: den skannade arbetsordern till vänster, tolkade
 // fält till höger. Konfidensen styr vad teknikern behöver göra:
-//   🟢 ≥ 95 %  godkänns automatiskt
-//   🟡 80–95 % markerad för genomläsning
-//   🔴 < 80 %  kräver aktiv bekräftelse (eller redigering)
+//   Grön  ≥ 95 %  godkänns automatiskt
+//   Gul   80–95 % markerad för genomläsning
+//   Röd   < 80 %  kräver aktiv bekräftelse (eller redigering)
 // Klick på ett fält markerar var i dokumentet värdet hittades.
 function GranskaTolkning({
   foto,

@@ -16,6 +16,7 @@ import {
   type PlattformRoll,
 } from "@/felsokning/plattform";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
+import { IkonDiagram, IkonKugghjul } from "@/felsokning/ikoner";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
 
 type Filter = "alla" | "pagaende" | "klara";
@@ -59,12 +60,12 @@ function PlattformInloggning() {
           </div>
           {(konto.roll === "arbetsledare" || konto.roll === "admin") && (
             <Link to="/felsokning/oversikt" className="mt-3 block">
-              <StorKnapp variant="sekundar">📊 Organisationsöversikt</StorKnapp>
+              <StorKnapp variant="sekundar"><IkonDiagram /> Organisationsöversikt</StorKnapp>
             </Link>
           )}
           {konto.roll === "admin" && (
             <Link to="/felsokning/installningar" className="mt-2 block">
-              <StorKnapp variant="sekundar">⚙️ Inställningar för organisationen</StorKnapp>
+              <StorKnapp variant="sekundar"><IkonKugghjul /> Inställningar för organisationen</StorKnapp>
             </Link>
           )}
         </Panel>
@@ -313,7 +314,7 @@ export default function Arendelista() {
 
       {!plattformKonto() && (
         <Link to="/felsokning/installningar" className="mb-4 block">
-          <StorKnapp variant="sekundar">⚙️ Inställningar</StorKnapp>
+          <StorKnapp variant="sekundar"><IkonKugghjul /> Inställningar</StorKnapp>
         </Link>
       )}
 

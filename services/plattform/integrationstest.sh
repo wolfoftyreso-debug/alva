@@ -166,6 +166,29 @@ curl -s -X POST "$BAS/api/delningar/$PARTNERKOD/aterkalla" -H "Authorization: Be
 KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/delad/$PARTNERKOD")
 kontroll "återkallad delning ger 404" "$KOD" "404"
 
+# 10a. Fordonshistorik och felorsaksstatistik
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-test2","nummer":2,"skapad":"2026-08-03T09:00:00Z"}' >/dev/null
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-test3","nummer":3,"skapad":"2026-08-03T10:00:00Z"}' >/dev/null
+curl -s -X POST "$BAS/api/arenden/arende-test2/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"f1","tidpunkt":"2026-08-03T09:01:00Z","anvandare":"Anna","handelse":{"typ":"objekt_identifierat","objekt":{"typ":"Personbil","identifierare":"XYZ999","identifieringsmetod":"Regnr","beskrivning":"VW Golf 2023"}}}]}' >/dev/null
+curl -s -X POST "$BAS/api/arenden/arende-test3/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[
+    {"id":"f2","tidpunkt":"2026-08-03T10:01:00Z","anvandare":"Johan","handelse":{"typ":"objekt_identifierat","objekt":{"typ":"Personbil","identifierare":"xyz999","identifieringsmetod":"Regnr","beskrivning":"VW Golf 2023"}}},
+    {"id":"f3","tidpunkt":"2026-08-03T10:02:00Z","anvandare":"Johan","handelse":{"typ":"felorsak","avvikelse":"Vattenpumpen läcker vid axeltätningen.","orsaker":["Normalt slitage","Ålder"],"underlag":["Foto"],"sakerhet":"hog","atgard":"Byt vattenpump."}}
+  ]}' >/dev/null
+HIST=$(curl -s "$BAS/api/fordon/XYZ999/historik" -H "Authorization: Bearer $TOKEN_J")
+kontroll "fordonshistoriken hittar båda ärendena (case-okänsligt)" "$(echo "$HIST" | falt .arenden.length)" "2"
+kontroll "historiken bär felorsakerna" "$(echo "$HIST" | falt '.arenden.flatMap(a=>a.felorsaker).length')" "1"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/fordon/XYZ999/historik" -H "Authorization: Bearer $TOKEN_B")
+kontroll "org B ser inte org A:s fordonshistorik" "$(curl -s "$BAS/api/fordon/XYZ999/historik" -H "Authorization: Bearer $TOKEN_B" | falt .arenden.length)" "0"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/statistik/felorsaker" -H "Authorization: Bearer $TOKEN_J")
+kontroll "tekniker nekas felorsaksstatistiken" "$KOD" "403"
+STAT=$(curl -s "$BAS/api/statistik/felorsaker" -H "Authorization: Bearer $TOKEN_L")
+kontroll "statistiken räknar orsakskategorier" "$(echo "$STAT" | falt .orsaker.length)" "2"
+kontroll "statistiken är organisationsknuten data" "$(echo "$STAT" | falt '.orsaker[0].antal')" "1"
+
 # 10b. ECM Knowledge Library: regelpaketet serveras till inloggade klienter
 REGLER=$(curl -s "$BAS/api/ecm/regler" -H "Authorization: Bearer $TOKEN_J")
 kontroll "regelpaketet serveras" "$(echo "$REGLER" | falt .version)" "2.0"

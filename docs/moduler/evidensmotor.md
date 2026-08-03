@@ -94,9 +94,13 @@ vilken mätning → vilken tekniker → vilken regel → vilken regelverksversio
 Ingen felsökning påbörjas förrän grundkontrollerna är genomförda eller
 dokumenterat motiverade — metodiken låses upp först därefter:
 
-1. **Fordonshistorik** — kontrollerad (tidigare arbeten, återkommande
-   fel, TSB, kampanjer; relevanta samband kan noteras som orsakskedja)
-   eller Nej med obligatorisk orsak → kvalitetsvarning.
+1. **Fordonshistorik** — systemet hämtar automatiskt organisationens
+   tidigare ärenden på samma objekt (regnr/VIN) med deras dokumenterade
+   felorsaker (`GET /api/fordon/{identifierare}/historik`; lokala storen
+   offline) och visar dem i historiksteget. Teknikern kan koppla
+   **orsakskedjan** till det aktuella ärendet med ett tryck ("kopplat
+   till tidigare ärende #N — …"), kvitterar kontrollen — eller anger Nej
+   med obligatorisk orsak → kvalitetsvarning.
 2. **Ingående mätarställning** — instrumentpanelen fotograferas;
    bildtolkningen föreslår värdet, teknikern bekräftar. Fotot blir den
    officiella ingående mätarställningen.
@@ -148,10 +152,11 @@ Varje konstaterat fel kräver fyra obligatoriska svar:
    ytterligare kontroller som skulle stärka bedömningen.
 
 Avslutsknappen är spärrad tills SVP + felorsaksanalys är dokumenterade,
-och kvalitetsgrinden gör båda obligatoriska när ärendet stängs. Efter
-tusentals ärenden ger orsakskategorierna dessutom flottdata: vilka
-komponenter fallerar av slitage, vilka efter tidigare reparationer,
-vilka tyder på konstruktionsproblem.
+och kvalitetsgrinden gör båda obligatoriska när ärendet stängs.
+Flottdatan är redan igång: **felorsaksstatistiken** i arbetsledarvyn
+(`GET /api/statistik/felorsaker`) aggregerar orsakskategorierna över
+organisationen — vilka komponenter fallerar av slitage, vilka efter
+tidigare reparationer, vilka tyder på konstruktionsproblem.
 
 ## Ärendeidentitet (Case Identity & Vehicle Context)
 

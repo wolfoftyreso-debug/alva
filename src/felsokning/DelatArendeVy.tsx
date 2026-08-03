@@ -10,6 +10,7 @@ import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader } from 
 import { metodikForArende } from "./store";
 import { tidDatum, tidKlockslag } from "./format";
 import { FelsokningSkal, Panel } from "./ui";
+import { IkonCheck, IkonKlocka, IkonUppdatera } from "./ikoner";
 
 function IdentitetsPanel({ arende, avslutat }: { arende: Arende; avslutat: boolean }) {
   const idn = arendeidentitet(arende);
@@ -72,7 +73,7 @@ export function DelatArendeVy({
             avslutat ? "bg-[#3E5A78] text-white" : "bg-[#1E6B34] text-white"
           }`}
         >
-          {avslutat ? "Avslutat" : "🟢 Felsökning pågår"}
+          {avslutat ? "Avslutat" : "Felsökning pågår"}
         </span>
       }
     >
@@ -93,11 +94,11 @@ export function DelatArendeVy({
 
       <Panel rubrik="Aktuell status">
         {b.utfordaKontroller.map((k, i) => (
-          <p key={`u${i}`} className="py-0.5 text-[14px]">✔ {k.text}</p>
+          <p key={`u${i}`} className="py-0.5 text-[14px]"><span className="text-[#1E6B34]"><IkonCheck /></span> {k.text}</p>
         ))}
-        {!avslutat && pagaende && <p className="py-0.5 text-[14px] text-[#00437A]">🔄 {pagaende}</p>}
+        {!avslutat && pagaende && <p className="py-0.5 text-[14px] text-[#00437A]"><IkonUppdatera /> {pagaende}</p>}
         {b.ejKontrollerat.slice(avslutat ? 0 : 1).map((e, i) => (
-          <p key={`e${i}`} className="py-0.5 text-[14px] text-[#4A5560]">⏳ {e}</p>
+          <p key={`e${i}`} className="py-0.5 text-[14px] text-[#4A5560]"><IkonKlocka /> {e}</p>
         ))}
       </Panel>
 

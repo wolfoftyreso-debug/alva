@@ -312,6 +312,59 @@ export function skapaServer() {
         return svara(res, 200, { ok: true });
       }
 
+      // Fordonshistorik: organisationens tidigare ärenden på samma objekt
+      // (regnr/VIN), med dokumenterade felorsaker — pre-diagnostikens
+      // historiksteg och orsakskedjan. Organisationsgränsen gäller alltid.
+      const fordonVag = vag.match(/^\/api\/fordon\/([^/]+)\/historik$/);
+      if (req.method === "GET" && fordonVag) {
+        const ident = decodeURIComponent(fordonVag[1]).trim().toUpperCase();
+        if (!ident) return svara(res, 400, { error: "Identifierare saknas." });
+        const rader = await pool.query(
+          `select a.id, a.nummer, a.skapad,
+                  coalesce(bool_or(h.handelse->>'typ' = 'arende_avslutat'), false) as avslutat,
+                  (array_agg(h.handelse->>'text')
+                     filter (where h.handelse->>'typ' = 'felbeskrivning'))[1] as felbeskrivning,
+                  coalesce(json_agg(json_build_object(
+                      'avvikelse', h.handelse->>'avvikelse',
+                      'orsaker', h.handelse->'orsaker',
+                      'atgard', h.handelse->>'atgard'))
+                     filter (where h.handelse->>'typ' = 'felorsak'), '[]') as felorsaker
+           from felsokning_arenden a
+           join felsokning_handelser h on h.arende_id = a.id
+           where a.organisation_id = $1
+             and a.id in (
+               select arende_id from felsokning_handelser
+               where handelse->>'typ' = 'objekt_identifierat'
+                 and upper(handelse->'objekt'->>'identifierare') = $2
+             )
+           group by a.id
+           order by a.skapad desc
+           limit 20`,
+          [anspr.org, ident],
+        );
+        return svara(res, 200, { arenden: rader.rows });
+      }
+
+      // Flottdata: felorsaksstatistik per orsakskategori över hela
+      // organisationen (arbetsledare/admin) — återkommande fel blir
+      // synliga när orsakerna är strukturerad data.
+      if (req.method === "GET" && vag === "/api/statistik/felorsaker") {
+        if (anspr.roll !== "arbetsledare" && anspr.roll !== "admin") {
+          return svara(res, 403, { error: "Kräver arbetsledar- eller administratörsbehörighet." });
+        }
+        const rader = await pool.query(
+          `select orsak, count(*)::int as antal
+           from felsokning_arenden a
+           join felsokning_handelser h on h.arende_id = a.id,
+                jsonb_array_elements_text(h.handelse->'orsaker') as orsak
+           where a.organisation_id = $1 and h.handelse->>'typ' = 'felorsak'
+           group by orsak
+           order by antal desc`,
+          [anspr.org],
+        );
+        return svara(res, 200, { orsaker: rader.rows });
+      }
+
       // Organisationsöversikt för arbetsledare/admin: alla ärenden med
       // status, deltagande tekniker och sammanfattning — härlett ur
       // händelseloggen, aldrig lagrat separat.

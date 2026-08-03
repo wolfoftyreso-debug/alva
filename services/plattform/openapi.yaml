@@ -170,6 +170,65 @@ paths:
                   orsakskategorier: { type: array, items: { type: string } }
                   underlagskallor: { type: array, items: { type: string } }
 
+  /api/fordon/{identifierare}/historik:
+    get:
+      tags: [Ärenden]
+      summary: Fordonshistorik — tidigare ärenden på samma objekt
+      description: >
+        Organisationens tidigare ärenden där objektet (regnr/VIN) matchar,
+        med dokumenterade felorsaker. Underlag för pre-diagnostikens
+        historiksteg och orsakskedjan.
+      parameters:
+        - name: identifierare
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Tidigare ärenden (senaste 20).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  arenden:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        nummer: { type: integer }
+                        skapad: { type: string, format: date-time }
+                        avslutat: { type: boolean }
+                        felbeskrivning: { type: string, nullable: true }
+                        felorsaker: { type: array, items: { type: object, additionalProperties: true } }
+        "401": { $ref: "#/components/responses/Fel" }
+
+  /api/statistik/felorsaker:
+    get:
+      tags: [Översikt]
+      summary: Felorsaksstatistik per orsakskategori
+      description: >
+        Flottdata ur dokumenterade felorsaksanalyser i organisationen.
+        Kräver rollen `arbetsledare` eller `admin`.
+      responses:
+        "200":
+          description: Antal per orsakskategori, fallande.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orsaker:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        orsak: { type: string }
+                        antal: { type: integer }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+
   /api/organisation:
     get:
       tags: [Organisation]

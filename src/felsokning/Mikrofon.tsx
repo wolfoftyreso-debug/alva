@@ -4,6 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { startaIgenkanning, stodRost } from "./rost";
+import { IkonMik } from "./ikoner";
 
 export function MikrofonKnapp({ paText }: { paText: (text: string) => void }) {
   const [lyssnar, setLyssnar] = useState(false);
@@ -53,7 +54,7 @@ export function MikrofonKnapp({ paText }: { paText: (text: string) => void }) {
             : "border-[#ADADAD] bg-white text-[#1A1A1A] hover:border-[#00437A]"
         }`}
       >
-        {lyssnar ? "■" : "🎤"}
+        {lyssnar ? "■" : <IkonMik />}
       </button>
       {lyssnar && (
         <span className="text-[12px] font-semibold text-[#8B1A1A]">

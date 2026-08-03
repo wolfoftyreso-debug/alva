@@ -11,11 +11,13 @@ import {
   felbeskrivning,
   formateraTid,
   foton,
+  lokalFordonshistorik,
   objekt,
   overlamningstext,
   sistaAktivitet,
   tidsfordelning,
   tidsfordelningsRader,
+  type HistorikArende,
 } from "@/felsokning/projektioner";
 import { metodikForArende, useFelsokning } from "@/felsokning/store";
 import { synkroniseraArende, type SynkStatus } from "@/felsokning/synk";
@@ -56,7 +58,8 @@ import {
   underlagFinns,
 } from "@/felsokning/ecm";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
-import { skalaNerFoto, tidKlockslag } from "@/felsokning/format";
+import { skalaNerFoto, tidDatum, tidKlockslag } from "@/felsokning/format";
+import { IkonCheck, IkonKamera, IkonKryss, IkonLank, IkonPunkt, IkonSok, IkonVarning } from "@/felsokning/ikoner";
 
 const FLIKAR = [
   { id: "guide", label: "Guide" },
@@ -290,7 +293,7 @@ function MatarstallningSteg({ lage, skicka }: { lage: "ingaende" | "utgaende"; s
       />
       {!foto && !laser && (
         <StorKnapp variant="sekundar" onClick={() => filRef.current?.click()}>
-          📷 Fotografera instrumentpanelen
+          <IkonKamera /> Fotografera instrumentpanelen
         </StorKnapp>
       )}
       {laser && <p className="animate-pulse py-1 text-center text-[12px] font-semibold text-[#00437A]">Systemet läser av mätarställningen …</p>}
@@ -320,6 +323,79 @@ function MatarstallningSteg({ lage, skicka }: { lage: "ingaende" | "utgaende"; s
   );
 }
 
+// Fordonshistorik i pre-diagnostiken: tidigare ärenden på samma objekt
+// hämtas automatiskt (plattformen i inloggat läge, lokala storen annars)
+// med deras dokumenterade felorsaker. Teknikern kan koppla orsakskedjan
+// till det aktuella ärendet med ett tryck.
+function TidigareArenden({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
+  const arenden = useFelsokning((s) => s.arenden);
+  const o = objekt(arende);
+  const [rader, setRader] = useState<HistorikArende[]>(() =>
+    o ? lokalFordonshistorik(arenden, o.identifierare, arende.id) : [],
+  );
+  const identifierare = o?.identifierare;
+
+  useEffect(() => {
+    if (!identifierare) return;
+    let aktiv = true;
+    (async () => {
+      const { plattformAktiv: aktivPlattform, plattformToken, hamtaFordonshistorik } = await import("@/felsokning/plattform");
+      if (!aktivPlattform() || !plattformToken()) return;
+      try {
+        const svar = await hamtaFordonshistorik(identifierare);
+        if (aktiv) {
+          setRader(
+            svar
+              .filter((r) => r.id !== arende.id)
+              .map((r) => ({ ...r, felbeskrivning: r.felbeskrivning ?? undefined, felorsaker: r.felorsaker ?? [] })),
+          );
+        }
+      } catch {
+        // Lokal historik gäller.
+      }
+    })();
+    return () => {
+      aktiv = false;
+    };
+  }, [identifierare, arende.id]);
+
+  if (rader.length === 0) return null;
+  return (
+    <div className="mb-2 rounded border border-[#C6C6C6] bg-white p-2">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
+        Tidigare ärenden på {identifierare} — granska innan historiken kvitteras
+      </p>
+      {rader.map((rad) => (
+        <div key={rad.id} className="border-b border-[#EBEBEB] py-1.5 text-[12px] last:border-0">
+          <p>
+            <span className="font-semibold">Ärende #{rad.nummer}</span> · {tidDatum(rad.skapad)} ·{" "}
+            {rad.avslutat ? "avslutat" : "pågående"}
+            {rad.felbeskrivning && <span className="text-[#4A5560]"> — ”{rad.felbeskrivning}”</span>}
+          </p>
+          {rad.felorsaker.map((f, i) => (
+            <p key={i} className="pl-3 text-[#4A5560]">
+              Felorsak: {f.avvikelse} ({f.orsaker.join(", ")})
+            </p>
+          ))}
+          <button
+            className="mt-1 text-[11px] font-semibold text-[#00437A] underline-offset-2 hover:underline"
+            onClick={() =>
+              skicka({
+                typ: "kommentar",
+                text: `Orsakskedja: kopplat till tidigare ärende #${rad.nummer}${
+                  rad.felorsaker[0] ? ` — ${rad.felorsaker[0].avvikelse}` : rad.felbeskrivning ? ` — ${rad.felbeskrivning}` : ""
+                }`,
+              })
+            }
+          >
+            + Koppla till orsakskedjan
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Pre-Diagnostic Validation: ingen felsökning påbörjas förrän
 // grundkontrollerna är genomförda — eller dokumenterat motiverade.
 function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
@@ -334,8 +410,8 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
     <Panel rubrik="Pre-diagnostik — innan felsökningen börjar">
       {rader.map((r) => (
         <p key={r.id} className="py-0.5 text-[13px]">
-          <span className={r.klar ? "text-[#1E6B34]" : "text-[#8B1A1A]"}>{r.klar ? "✅" : "☐"}</span> {r.rubrik}
-          {r.varning && <span className="ml-1 text-[11px] font-semibold text-[#9A6700]">⚠ {r.varning}</span>}
+          <span className={r.klar ? "text-[#1E6B34]" : "text-[#8B1A1A]"}>{r.klar ? <IkonCheck /> : "☐"}</span> {r.rubrik}
+          {r.varning && <span className="ml-1 text-[11px] font-semibold text-[#9A6700]"><IkonVarning /> {r.varning}</span>}
         </p>
       ))}
 
@@ -344,6 +420,7 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
             Har fordonets historik kontrollerats? (tidigare arbeten, återkommande fel, TSB, kampanjer)
           </p>
+          <TidigareArenden arende={arende} skicka={skicka} />
           <div className="mb-2 grid grid-cols-2 gap-2">
             <StorKnapp variant={historikVal === "ja" ? "primar" : "sekundar"} onClick={() => setHistorikVal("ja")}>
               Ja — kontrollerad
@@ -1038,7 +1115,7 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
             }}
           />
           <TextFalt label="Observation (valfritt)" varde={resultat} satt={setResultat} rost />
-          <StorKnapp onClick={() => filRef.current?.click()}>📷 Ta foto — verifierar kontrollen</StorKnapp>
+          <StorKnapp onClick={() => filRef.current?.click()}><IkonKamera /> Ta foto — verifierar kontrollen</StorKnapp>
           <p className="mt-2 text-[12px] text-[#707070]">Denna kontroll verifieras med foto.</p>
         </>
       ) : (
@@ -1134,7 +1211,7 @@ const DOKTYPER = [
   { id: "observation", label: "Observation" },
   { id: "matvarde", label: "Mätvärde" },
   { id: "foto", label: "Foto" },
-  { id: "instrument", label: "📷 Instrument" },
+  { id: "instrument", label: "Instrument" },
   { id: "hypotes", label: "Hypotes" },
   { id: "kommentar", label: "Kommentar" },
 ] as const;
@@ -1305,7 +1382,7 @@ function SnabbDokumentation({
         <div className="mt-3">
           {typ === "hypotes" && (
             <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">
-              🔴 En hypotes är en möjlig felorsak som kräver verifiering — den loggas aldrig som ett konstaterat fel.
+              <IkonPunkt farg="#8B1A1A" /> En hypotes är en möjlig felorsak som kräver verifiering — den loggas aldrig som ett konstaterat fel.
             </p>
           )}
           <TextFalt
@@ -1371,7 +1448,7 @@ function OverlamningDialog({
         </pre>
         {aiLage === "vilar" && (
           <StorKnapp variant="sekundar" className="mb-3" onClick={komplettera}>
-            ✨ Komplettera analysen: risker &amp; osäkerheter
+            Komplettera analysen: risker &amp; osäkerheter
           </StorKnapp>
         )}
         {aiLage === "arbetar" && <p className="mb-3 animate-pulse font-semibold text-[#00437A]">Systemet sammanfattar …</p>}
@@ -1439,7 +1516,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
           uppdatera();
         }}
       >
-        🔗 Delningslänkar (kund/partner/intern)
+        <IkonLank /> Delningslänkar (kund/partner/intern)
       </StorKnapp>
     );
   }
@@ -1579,7 +1656,7 @@ function BriefFlik({
             </div>
           )}
           <StorKnapp variant="sekundar" disabled={granskning === "arbetar"} onClick={granska}>
-            🔍 Granska underlaget
+            <IkonSok /> Granska underlaget
           </StorKnapp>
         </Panel>
       )}
@@ -1603,7 +1680,7 @@ function BriefFlik({
         {b.utfordaKontroller.map((k, i) =>
           k.undantag ? (
             <p key={i} className="py-0.5 text-[14px] text-[#9A6700]">
-              ⚠ {k.text} — underlag saknas: {k.undantag}
+              <IkonVarning /> {k.text} — underlag saknas: {k.undantag}
             </p>
           ) : (
             <p key={i} className="py-0.5 text-[14px]">
@@ -1724,7 +1801,7 @@ function RapportFlik({
           <div key={rad.id} className="border-b border-[#EBEBEB] py-1 last:border-0">
             <p className="text-[13px]">
               <span className={rad.ok ? "text-[#1E6B34]" : rad.kravs ? "text-[#8B1A1A]" : "text-[#9A6700]"}>
-                {rad.ok ? "✅" : rad.kravs ? "❌" : "⚠️"}
+                {rad.ok ? <IkonCheck /> : rad.kravs ? <IkonKryss /> : <IkonVarning />}
               </span>{" "}
               {rad.rubrik}
               {!rad.kravs && <span className="text-[11px] text-[#707070]"> (rekommenderas)</span>}
@@ -1734,7 +1811,7 @@ function RapportFlik({
         ))}
         {!godkand && (
           <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">
-            Rapporten kan inte genereras förrän varje ❌ har evidens eller ett dokumenterat undantag
+            Rapporten kan inte genereras förrän varje underkänd rad har evidens eller ett dokumenterat undantag
             (”Underlag kan inte tas fram” i guiden).
           </p>
         )}
@@ -1753,7 +1830,7 @@ function RapportFlik({
           </StorKnapp>
         </div>
         <Link to={`/felsokning/dela/${arende.id}`} className="mt-2 block">
-          <StorKnapp variant="sekundar">🟢 Öppna Live Share-vy</StorKnapp>
+          <StorKnapp variant="sekundar"><IkonPunkt farg="#1E6B34" /> Öppna Live Share-vy</StorKnapp>
         </Link>
         {plattformAktiv() ? (
           <DelningsHanterare arende={arende} skicka={skicka} />
@@ -1767,7 +1844,7 @@ function RapportFlik({
                 skicka({ typ: "kommentar", text: "Delningslänk kopierad för extern mottagare." });
               }}
             >
-              🔗 Kopiera delningslänk
+              <IkonLank /> Kopiera delningslänk
             </StorKnapp>
           )
         )}

@@ -77,6 +77,48 @@ export function arAvslutat(arende: Arende): boolean {
   return arende.handelser.some((p) => p.handelse.typ === "arende_avslutat");
 }
 
+// Fordonshistorik: tidigare ärenden på samma objekt (regnr/VIN) med deras
+// dokumenterade felorsaker — grunden för pre-diagnostikens historiksteg
+// och orsakskedjan. Lokal variant; i plattformsläge svarar servern på
+// samma fråga över hela organisationen.
+export interface HistorikArende {
+  id: string;
+  nummer: number;
+  skapad: string;
+  avslutat: boolean;
+  felbeskrivning?: string;
+  felorsaker: { avvikelse: string; orsaker: string[]; atgard: string }[];
+}
+
+export function lokalFordonshistorik(
+  arenden: Record<string, Arende>,
+  identifierare: string,
+  exkluderaId?: string,
+): HistorikArende[] {
+  const ident = identifierare.trim().toUpperCase();
+  if (!ident) return [];
+  const resultat: HistorikArende[] = [];
+  for (const arende of Object.values(arenden)) {
+    if (arende.id === exkluderaId) continue;
+    const o = objekt(arende);
+    if (!o || o.identifierare.toUpperCase() !== ident) continue;
+    const felorsaker: HistorikArende["felorsaker"] = [];
+    for (const post of arende.handelser) {
+      const h = post.handelse;
+      if (h.typ === "felorsak") felorsaker.push({ avvikelse: h.avvikelse, orsaker: h.orsaker, atgard: h.atgard });
+    }
+    resultat.push({
+      id: arende.id,
+      nummer: arende.nummer,
+      skapad: arende.skapad,
+      avslutat: arAvslutat(arende),
+      felbeskrivning: felbeskrivning(arende),
+      felorsaker,
+    });
+  }
+  return resultat.sort((a, b) => b.skapad.localeCompare(a.skapad)).slice(0, 20);
+}
+
 export interface UtfordKontroll {
   text: string;
   resultat?: string;
@@ -269,7 +311,7 @@ export function overlamningstext(arende: Arende, metodik: Metodik, nu?: string):
   rader.push("Utförda kontroller:");
   if (b.utfordaKontroller.length === 0) rader.push("  (inga ännu)");
   for (const k of b.utfordaKontroller)
-    rader.push(k.undantag ? `  ⚠ ${k.text} — underlag saknas: ${k.undantag}` : `  ✓ ${k.text}${k.resultat ? ` — ${k.resultat}` : ""}`);
+    rader.push(k.undantag ? `  ! ${k.text} — underlag saknas: ${k.undantag}` : `  ✓ ${k.text}${k.resultat ? ` — ${k.resultat}` : ""}`);
   rader.push("");
   rader.push("Observationer:");
   if (b.observationer.length === 0) rader.push("  (inga ännu)");
