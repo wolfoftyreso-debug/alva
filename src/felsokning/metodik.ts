@@ -121,6 +121,18 @@ export const GENERISK_METODIK: Metodik = {
           svarstyp: "val",
           val: ["Alltid", "Ibland", "Endast under drift", "Endast vid start"],
         },
+        {
+          id: "var",
+          text: "Var upplevs felet?",
+          svarstyp: "val",
+          val: ["Fram", "Bak", "Höger", "Vänster", "Motor/drivkälla", "Kupé/förarplats", "Okänt"],
+        },
+        {
+          id: "hur",
+          text: "Hur upplevs felet?",
+          svarstyp: "val",
+          val: ["Skakar/vibrerar", "Missljud (knack/gnissel/vinande)", "Rycker", "Tappar kraft", "Stannar helt", "Annat"],
+        },
         { id: "forlopp", text: "Beskriv förloppet när felet uppstår", svarstyp: "text" },
         { id: "forandring", text: "Har något förändrats nyligen (service, reparation, miljö)?", svarstyp: "text" },
       ],

@@ -189,3 +189,68 @@ describe("Traceability Engine + ärendeidentitet", () => {
     expect(evidensNiva(demo)).toBe("E6");
   });
 });
+
+describe("Felorsaksanalys (Root Cause Analysis)", () => {
+  it("kvalitetsregeln avvisar generella formuleringar utan förklaring", async () => {
+    const { granskaAvvikelse } = await import("../ecm");
+    for (const daligt of ["Trasig.", "defekt", "Sliten", "Behöver bytas", "kort"]) {
+      expect(granskaAvvikelse(daligt), daligt).not.toBeNull();
+    }
+    expect(
+      granskaAvvikelse("Startmotorn aktiverar inte trots korrekt matningsspänning och god jordförbindelse."),
+    ).toBeNull();
+  });
+
+  it("valda evidenskällor måste finnas i loggen", async () => {
+    const { underlagFinns } = await import("../ecm");
+    const utanFoto = byggArende([OBJEKT, { typ: "matvarde", beskrivning: "U", varde: "12" }]);
+    expect(underlagFinns(utanFoto, "Foto")).toBe(false);
+    expect(underlagFinns(utanFoto, "Mätresultat")).toBe(true);
+    expect(underlagFinns(utanFoto, "Servicehistorik")).toBe(false);
+    const medHistorik = byggArende([{ typ: "historik_kontrollerad", kontrollerad: true }]);
+    expect(underlagFinns(medHistorik, "Servicehistorik")).toBe(true);
+  });
+
+  it("avslut kräver reproducering och felorsak — grinden blir obligatorisk vid stängning", () => {
+    const stangdUtan = byggArende([OBJEKT, ...PREDIAG, { typ: "arende_avslutat" }]);
+    const rader = kvalitetsgrind(stangdUtan, VIBRATION_METODIK);
+    expect(rader.find((r) => r.id === "svp")?.kravs).toBe(true);
+    expect(rader.find((r) => r.id === "svp")?.ok).toBe(false);
+    expect(rader.find((r) => r.id === "felorsak")?.ok).toBe(false);
+
+    const stangdMed = byggArende([
+      OBJEKT,
+      ...PREDIAG,
+      { typ: "reproducering", status: "nej", beskrivning: "Felet uppträdde inte vid provkörning; fordonet var varmt." },
+      {
+        typ: "felorsak",
+        avvikelse: "Ingen avvikelse kunde konstateras vid undersökningen trots systematisk genomgång.",
+        orsaker: ["Okänd orsak"],
+        underlag: ["Direkt observation"],
+        sakerhet: "lag",
+        atgard: "Återkom vid kall motor så att symptomet kan reproduceras.",
+        motivering: "Symptomet kunde inte reproduceras under rådande förhållanden.",
+      },
+      { typ: "observation", text: "Systematisk genomgång utan anmärkning" },
+      { typ: "arende_avslutat" },
+    ]);
+    const rader2 = kvalitetsgrind(stangdMed, VIBRATION_METODIK);
+    expect(rader2.find((r) => r.id === "svp")?.ok).toBe(true);
+    expect(rader2.find((r) => r.id === "svp")?.detalj).toContain("kunde inte reproduceras");
+    expect(rader2.find((r) => r.id === "felorsak")?.ok).toBe(true);
+  });
+
+  it("rapportformuleringen skiljer reproducerat från ej reproducerat", async () => {
+    const { reproduceringsText } = await import("../ecm");
+    expect(reproduceringsText("ja")).toContain("reproducerades");
+    expect(reproduceringsText("nej")).toContain("kunde inte reproduceras under de förhållanden");
+  });
+
+  it("demoärendet bär hela beviskedjan: reproducering + felorsak med underlag", () => {
+    const demo = byggDemoArende(1);
+    const repro = demo.handelser.find((p) => p.handelse.typ === "reproducering");
+    expect(repro).toBeDefined();
+    const orsak = demo.handelser.find((p) => p.handelse.typ === "felorsak");
+    expect(orsak?.handelse.typ === "felorsak" && orsak.handelse.underlag.length > 0).toBe(true);
+  });
+});

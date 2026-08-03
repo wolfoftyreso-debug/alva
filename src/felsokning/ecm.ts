@@ -121,6 +121,98 @@ export const MARKOR_FELBESKRIVNING_VERIFIERAD = "Kundens felbeskrivning verifier
 export const MARKOR_INGA_TIDIGA_OBSERVATIONER = "Inga ytterligare observationer vid mottagandet";
 export const MARKOR_TIDIGA_OBSERVATIONER_KLARA = "Tidiga observationer vid mottagandet dokumenterade";
 
+// -- Felorsaksanalys (Root Cause Analysis) --
+// Ett ärende avslutas aldrig med enbart "komponent trasig, byt komponent":
+// varje konstaterat fel kräver avvikelse, bedömd grundorsak, underlag och
+// säkerhetsnivå — eller en motivering till varför orsaken inte fastställts.
+
+export const ORSAKSKATEGORIER = [
+  "Normalt slitage",
+  "Ålder",
+  "Körsträcka",
+  "Materialutmattning",
+  "Tillverkningsfel",
+  "Bristande underhåll",
+  "Felaktig tidigare reparation",
+  "Yttre påverkan",
+  "Korrosion",
+  "Överhettning",
+  "Förorening",
+  "Felaktig användning",
+  "Modifiering",
+  "Olycka eller skada",
+  "Okänd orsak",
+];
+
+export const UNDERLAGSKALLOR = [
+  "Foto",
+  "Video",
+  "Mätresultat",
+  "Diagnosutläsning",
+  "Tidigare historik",
+  "Servicehistorik",
+  "Teknisk dokumentation",
+  "Direkt observation",
+];
+
+// Kvalitetsregeln: generella formuleringar utan förklaring avvisas.
+const GENERISKA_FRASER = /^(trasig|defekt|sliten|utsliten|kass|död|behöver bytas|byt(es)?( ut)?|fungerar inte|går sönder|sönder)[.!]?$/i;
+
+export function granskaAvvikelse(text: string): string | null {
+  const ren = text.trim();
+  if (ren.length < 20 || GENERISKA_FRASER.test(ren)) {
+    return "Felorsak saknas. Beskriv den konstaterade avvikelsen — inte bara komponenten. Exempel: ”Startmotorn aktiverar inte trots korrekt matningsspänning och god jordförbindelse.”";
+  }
+  return null;
+}
+
+// Underlaget måste finnas: en vald evidenskälla godtas bara om loggen
+// faktiskt innehåller den sortens evidens.
+export function underlagFinns(arende: Arende, kalla: string): boolean {
+  const h = arende.handelser.map((p) => p.handelse);
+  switch (kalla) {
+    case "Foto":
+      return h.some((x) => x.typ === "foto");
+    case "Mätresultat":
+      return h.some((x) => x.typ === "matvarde");
+    case "Diagnosutläsning":
+      return h.some((x) => x.typ === "foto" && /instrument|diagnos/i.test(x.beskrivning));
+    case "Tidigare historik":
+    case "Servicehistorik":
+      return h.some((x) => x.typ === "historik_kontrollerad" && x.kontrollerad);
+    case "Direkt observation":
+      return h.some((x) => x.typ === "observation" || x.typ === "kontroll_utford");
+    default:
+      // Video/teknisk dokumentation: kan ännu inte verifieras maskinellt.
+      return true;
+  }
+}
+
+export function felorsaker(arende: Arende) {
+  return arende.handelser.filter((p) => p.handelse.typ === "felorsak");
+}
+
+// -- Symptom Verification Protocol (SVP) --
+// Kundens beskrivning → förtydligande (metodikens symptomfrågor) →
+// reproducering (eller dokumenterat ej reproducerbar). Rapporten skiljer
+// alltid kundens upplevelse från teknikerns verifierade observationer.
+
+export function reproducering(arende: Arende) {
+  let senaste: { status: "ja" | "delvis" | "nej"; beskrivning: string } | undefined;
+  for (const post of arende.handelser) {
+    if (post.handelse.typ === "reproducering") senaste = post.handelse;
+  }
+  return senaste;
+}
+
+// Rapportformuleringen styrs av verifieringsläget — aldrig "felet
+// konstaterat" utan reproducering eller annan dokumenterad verifiering.
+export function reproduceringsText(status: "ja" | "delvis" | "nej"): string {
+  if (status === "ja") return "Symptomet reproducerades vid undersökningen.";
+  if (status === "delvis") return "Symptomet kunde delvis reproduceras vid undersökningen.";
+  return "Kundens beskrivning kunde inte reproduceras under de förhållanden som rådde vid undersökningen.";
+}
+
 // ---- 3. Compliance Engine ---------------------------------------------
 
 // Ärendetypen styr vilka dokumentationskrav som gäller utöver metodiken.
@@ -313,6 +405,33 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     ok: felb.klar,
     kravs: false,
     detalj: felb.klar ? undefined : "Bekräfta att kundens beskrivning är korrekt återgiven.",
+  });
+
+  // SVP: symptomet reproducerat eller dokumenterat ej reproducerbart —
+  // obligatoriskt innan ärendet avslutas.
+  const repro = reproducering(arende);
+  rader.push({
+    id: "svp",
+    rubrik: "Symptomverifiering: reproducerat eller dokumenterat ej reproducerbart",
+    ok: !!repro,
+    kravs: avslutat,
+    detalj: repro
+      ? reproduceringsText(repro.status)
+      : "Dokumentera reproduceringen (Ja/Delvis/Nej med motivering) innan ärendet avslutas.",
+  });
+
+  // Felorsaksanalys: minst en dokumenterad felorsak (eller motiverad
+  // okänd orsak) krävs för att avsluta — aldrig bara komponent + åtgärd.
+  const orsaker = felorsaker(arende);
+  rader.push({
+    id: "felorsak",
+    rubrik: "Felorsaksanalys dokumenterad",
+    ok: orsaker.length > 0,
+    kravs: avslutat,
+    detalj:
+      orsaker.length > 0
+        ? undefined
+        : "Beskriv varför felet uppstått — eller ange varför orsaken inte kunnat fastställas.",
   });
 
   // Utgående mätarställning: obligatorisk först när ärendet avslutas.

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { Arende, Handelse, TidKategori } from "@/felsokning/domain";
-import { TIDKATEGORI_LABEL, handelseRubrik } from "@/felsokning/domain";
+import type { Arende, Handelse, TidKategori, Tillforlitlighet } from "@/felsokning/domain";
+import { TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
 import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
 import {
@@ -42,12 +42,19 @@ import {
   MARKOR_FELBESKRIVNING_VERIFIERAD,
   MARKOR_INGA_TIDIGA_OBSERVATIONER,
   MARKOR_TIDIGA_OBSERVATIONER_KLARA,
+  ORSAKSKATEGORIER,
   UNDANTAGSORSAKER,
+  UNDERLAGSKALLOR,
   arendetyp,
+  felorsaker,
+  granskaAvvikelse,
   grindGodkand,
   kvalitetsgrind,
   preDiagnostik,
+  reproducering,
+  reproduceringsText,
   sparbarhetspaket,
+  underlagFinns,
 } from "@/felsokning/ecm";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto, tidKlockslag } from "@/felsokning/format";
@@ -417,6 +424,204 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
   );
 }
 
+// Symptom Verification Protocol: kundens beskrivning blir aldrig ett
+// konstaterat fel förrän den reproducerats — eller dokumenterats som ej
+// reproducerbar med obligatorisk motivering.
+function ReproduceringPanel({ skicka }: { skicka: (h: Handelse) => void }) {
+  const [status, setStatus] = useState<"" | "ja" | "delvis" | "nej">("");
+  const [text, setText] = useState("");
+  const etikett =
+    status === "ja"
+      ? "Hur reproducerades felet? (förhållanden, hastighet, temperatur, belastning …)"
+      : status === "delvis"
+        ? "Vad kunde respektive kunde inte reproduceras?"
+        : "Motivering (obligatorisk) — varför kunde felet inte reproduceras?";
+  return (
+    <Panel rubrik="Symptomverifiering — reproducering">
+      <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+        Har kundens fel kunnat reproduceras?
+      </p>
+      <div className="mb-2 grid grid-cols-3 gap-2">
+        {(["ja", "delvis", "nej"] as const).map((val) => (
+          <StorKnapp key={val} variant={status === val ? "primar" : "sekundar"} onClick={() => setStatus(val)}>
+            {val === "ja" ? "Ja" : val === "delvis" ? "Delvis" : "Nej"}
+          </StorKnapp>
+        ))}
+      </div>
+      {status && (
+        <>
+          <TextFalt label={etikett} varde={text} satt={setText} flerRad rost
+            platshallare={status === "ja" ? "T.ex. Reproducerad tre gånger vid 92–108 km/h på plan väg, varm motor" : ""} />
+          <StorKnapp
+            disabled={!text.trim()}
+            onClick={() => {
+              skicka({ typ: "reproducering", status, beskrivning: text.trim() });
+              setStatus("");
+              setText("");
+            }}
+          >
+            Dokumentera reproducering
+          </StorKnapp>
+        </>
+      )}
+    </Panel>
+  );
+}
+
+// Felorsaksanalys (Root Cause Analysis): vad är avvikelsen, varför har
+// den uppstått, vilket underlag stöder bedömningen och hur säker är den.
+// Kvalitetsregeln avvisar generella formuleringar ("trasig", "defekt")
+// och evidenskällor som inte finns i loggen.
+function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
+  const dokumenterade = felorsaker(arende);
+  const [oppen, setOppen] = useState(false);
+  const [avvikelse, setAvvikelse] = useState("");
+  const [orsaker, setOrsaker] = useState<string[]>([]);
+  const [underlag, setUnderlag] = useState<string[]>([]);
+  const [sakerhet, setSakerhet] = useState<Tillforlitlighet>("hog");
+  const [atgard, setAtgard] = useState("");
+  const [motivering, setMotivering] = useState("");
+  const [ytterligare, setYtterligare] = useState("");
+  const [fel, setFel] = useState("");
+
+  const vaxla = (lista: string[], satt: (v: string[]) => void, val: string) =>
+    satt(lista.includes(val) ? lista.filter((v) => v !== val) : [...lista, val]);
+
+  const spara = () => {
+    const avvikelseFel = granskaAvvikelse(avvikelse);
+    if (avvikelseFel) return setFel(avvikelseFel);
+    if (orsaker.length === 0) return setFel("Välj minst en orsakskategori.");
+    if (underlag.length === 0) return setFel("Koppla minst en evidenskälla till bedömningen.");
+    const saknat = underlag.find((k) => !underlagFinns(arende, k));
+    if (saknat) return setFel(`Underlaget ”${saknat}” finns inte i ärendets logg — dokumentera det först eller välj en annan källa.`);
+    if (orsaker.includes("Okänd orsak") && !motivering.trim())
+      return setFel("Okänd orsak kräver en motivering till varför orsaken inte kunnat fastställas.");
+    if (sakerhet !== "hog" && !ytterligare.trim())
+      return setFel("Vid medel/låg säkerhet: ange vilka ytterligare kontroller som skulle stärka bedömningen.");
+    if (!atgard.trim()) return setFel("Ange rekommenderad åtgärd.");
+    skicka({
+      typ: "felorsak",
+      avvikelse: avvikelse.trim(),
+      orsaker,
+      underlag,
+      sakerhet,
+      atgard: atgard.trim(),
+      motivering: motivering.trim() || undefined,
+      ytterligareKontroller: ytterligare.trim() || undefined,
+    });
+    setOppen(false);
+    setAvvikelse("");
+    setOrsaker([]);
+    setUnderlag([]);
+    setSakerhet("hog");
+    setAtgard("");
+    setMotivering("");
+    setYtterligare("");
+    setFel("");
+  };
+
+  return (
+    <Panel rubrik="Felorsaksanalys — obligatorisk före avslut">
+      {dokumenterade.map((p) => {
+        const h = p.handelse;
+        if (h.typ !== "felorsak") return null;
+        return (
+          <div key={p.id} className="mb-2 border-b border-[#EBEBEB] pb-2 text-[13px] last:border-0">
+            <p className="font-semibold">{h.avvikelse}</p>
+            <p className="text-[#4A5560]">
+              Orsak: {h.orsaker.join(", ")} · Underlag: {h.underlag.join(", ")} · Säkerhet: {TILLFORLITLIGHET_LABEL[h.sakerhet]}
+            </p>
+            <p>Åtgärd: {h.atgard}</p>
+          </div>
+        );
+      })}
+      {!oppen ? (
+        <StorKnapp variant="sekundar" onClick={() => setOppen(true)}>
+          + Dokumentera felorsak
+        </StorKnapp>
+      ) : (
+        <div>
+          <TextFalt
+            label="1. Konstaterad avvikelse (inte bara komponenten)"
+            varde={avvikelse}
+            satt={setAvvikelse}
+            flerRad
+            rost
+            platshallare="T.ex. Startmotorn aktiverar inte trots korrekt matningsspänning och god jordförbindelse."
+          />
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">2. Mest sannolik orsak (en eller flera)</p>
+          <div className="mb-3 grid grid-cols-2 gap-1 sm:grid-cols-3">
+            {ORSAKSKATEGORIER.map((o) => (
+              <button
+                key={o}
+                onClick={() => vaxla(orsaker, setOrsaker, o)}
+                className={`min-h-8 rounded border px-1.5 text-[12px] font-medium ${
+                  orsaker.includes(o) ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
+                }`}
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">3. Underlag som stöder bedömningen</p>
+          <div className="mb-3 grid grid-cols-2 gap-1 sm:grid-cols-4">
+            {UNDERLAGSKALLOR.map((k) => (
+              <button
+                key={k}
+                onClick={() => vaxla(underlag, setUnderlag, k)}
+                className={`min-h-8 rounded border px-1.5 text-[12px] font-medium ${
+                  underlag.includes(k) ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
+                }`}
+              >
+                {k}
+              </button>
+            ))}
+          </div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">4. Säkerhet i bedömningen</p>
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            {(["hog", "medel", "lag"] as const).map((n) => (
+              <button
+                key={n}
+                onClick={() => setSakerhet(n)}
+                className={`min-h-9 rounded border text-[12px] font-semibold ${
+                  sakerhet === n ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
+                }`}
+              >
+                {TILLFORLITLIGHET_LABEL[n]}
+              </button>
+            ))}
+          </div>
+          {sakerhet !== "hog" && (
+            <TextFalt
+              label="Vilka ytterligare kontroller skulle stärka bedömningen?"
+              varde={ytterligare}
+              satt={setYtterligare}
+              rost
+            />
+          )}
+          {orsaker.includes("Okänd orsak") && (
+            <TextFalt
+              label="Motivering — varför kunde orsaken inte fastställas?"
+              varde={motivering}
+              satt={setMotivering}
+              flerRad
+              rost
+            />
+          )}
+          <TextFalt label="Rekommenderad åtgärd" varde={atgard} satt={setAtgard} rost platshallare="T.ex. Balansera framhjulen och genomför ny provkörning." />
+          {fel && <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">{fel}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => setOppen(false)}>
+              Avbryt
+            </StorKnapp>
+            <StorKnapp onClick={spara}>Spara felorsak</StorKnapp>
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 // Navigationsträd (vänsterkolumnen): ärendets vyer plus metodikens steg
 // med status — som en mappstruktur i ett klassiskt verkstadssystem.
 function VyTrad({
@@ -609,6 +814,9 @@ function GuideFlik({
 
   const senasteAiSvar = [...arende.handelser].reverse().find((p) => p.handelse.typ === "ai_svar");
 
+  // Avslut kräver SVP (reproducering dokumenterad) + felorsaksanalys.
+  const kanAvslutas = !!reproducering(arende) && felorsaker(arende).length > 0;
+
   if (avslutat) {
     return (
       <Panel rubrik="Felsökningen är avslutad">
@@ -642,9 +850,14 @@ function GuideFlik({
               Om felorsaken inte är verifierad: dokumentera en hypotes och utöka felsökningen, eller avsluta ärendet
               med rekommenderade nästa steg.
             </p>
-            <StorKnapp variant="fara" onClick={() => skicka({ typ: "arende_avslutat" })}>
+            <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat" })}>
               Avsluta felsökning
             </StorKnapp>
+            {!kanAvslutas && (
+              <p className="mt-2 text-[12px] font-semibold text-[#9A6700]">
+                Avslut kräver dokumenterad symptomverifiering och felorsaksanalys — se panelerna nedan.
+              </p>
+            )}
           </>
         ) : steg.fraga ? (
           <FrageKort key={`${steg.steg.id}/${steg.fraga.id}`} steg={steg} skicka={skicka} />
@@ -683,6 +896,15 @@ function GuideFlik({
 
       <SnabbDokumentation skicka={skicka} paSparad={fragaAiOmDokumentation} />
 
+      {/* SVP: symptomet ska reproduceras — eller dokumenteras som ej
+          reproducerbart med motivering — innan ärendet kan avslutas. */}
+      {!reproducering(arende) && <ReproduceringPanel skicka={skicka} />}
+
+      {/* Felorsaksanalys: aldrig bara "komponent trasig, byt komponent" —
+          varje konstaterat fel kräver avvikelse, orsak, underlag och
+          säkerhetsnivå. Obligatorisk för avslut. */}
+      <FelorsaksPanel arende={arende} skicka={skicka} />
+
       {/* Utgående mätarställning: obligatorisk för kvalitetsgrinden när
           ärendet avslutas — erbjuds så fort metodiken är genomarbetad. */}
       {!arende.handelser.some((p) => p.handelse.typ === "matarstallning" && p.handelse.lage === "utgaende") && (
@@ -691,11 +913,16 @@ function GuideFlik({
         </Panel>
       )}
 
+      {!kanAvslutas && (
+        <p className="mb-2 text-[12px] font-semibold text-[#9A6700]">
+          Avslut kräver dokumenterad symptomverifiering och felorsaksanalys — annars är slutsatsen inte spårbar.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
           Lämna över arbete
         </StorKnapp>
-        <StorKnapp variant="sekundar" onClick={() => skicka({ typ: "arende_avslutat" })}>
+        <StorKnapp variant="sekundar" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat" })}>
           Avsluta felsökning
         </StorKnapp>
       </div>
@@ -1445,6 +1672,8 @@ function RapportFlik({
   const fordelning = tidsfordelningsRader(arende, nu);
   const idn = arendeidentitet(arende);
   const typ = arendetyp(arende);
+  const repro = reproducering(arende);
+  const orsakerLista = felorsaker(arende);
   let matIn: string | undefined;
   let matUt: string | undefined;
   for (const p of arende.handelser) {
@@ -1566,9 +1795,43 @@ function RapportFlik({
           ["Kund", idn.kund],
         ])}
       </Panel>
+      {/* Beviskedjan: kundens upplevelse, teknikerns verifiering och den
+          tekniska slutsatsen hålls strikt åtskilda och spårbara. */}
+      <Panel rubrik="Kundens beskrivning">
+        <p className="text-[14px]">{b.felbeskrivning ? `”${b.felbeskrivning}”` : "—"}</p>
+      </Panel>
+      <Panel rubrik="Verifierad observation">
+        {repro ? (
+          <>
+            <p className="text-[14px] font-semibold">{reproduceringsText(repro.status)}</p>
+            <p className="text-[13px] text-[#4A5560]">{repro.beskrivning}</p>
+          </>
+        ) : (
+          <p className="text-[14px] text-[#4A5560]">Reproducering ej dokumenterad ännu.</p>
+        )}
+      </Panel>
+      <Panel rubrik="Felorsaksanalys">
+        {orsakerLista.length === 0 && <p className="text-[14px] text-[#4A5560]">Felorsaksanalys ej dokumenterad ännu.</p>}
+        {orsakerLista.map((p) => {
+          const h = p.handelse;
+          if (h.typ !== "felorsak") return null;
+          return (
+            <div key={p.id} className="mb-3 border-b border-[#EBEBEB] pb-2 last:mb-0 last:border-0">
+              <p className="text-[14px] font-semibold">{h.avvikelse}</p>
+              {identitetsRader([
+                ["Bedömd grundorsak", h.orsaker.join(", ")],
+                ["Underlag för bedömningen", h.underlag.join(", ")],
+                ["Säkerhetsnivå", TILLFORLITLIGHET_LABEL[h.sakerhet]],
+                ["Rekommenderad åtgärd", h.atgard],
+                ["Motivering", h.motivering],
+                ["Stärkande kontroller", h.ytterligareKontroller],
+              ])}
+            </div>
+          );
+        })}
+      </Panel>
       <Panel rubrik="Sammanfattning">
-        {b.felbeskrivning && <p className="text-[14px]">Felbeskrivning: ”{b.felbeskrivning}”</p>}
-        <p className="mt-1 text-[14px]">Total arbetstid: <span className="font-semibold">{b.totalArbetstid}</span></p>
+        <p className="text-[14px]">Total arbetstid: <span className="font-semibold">{b.totalArbetstid}</span></p>
         {fordelning.length > 0 && (
           <div className="mt-2">
             {fordelning.map((r) => (

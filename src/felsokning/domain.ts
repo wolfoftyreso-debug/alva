@@ -80,6 +80,23 @@ export type Handelse =
   | { typ: "historik_kontrollerad"; kontrollerad: boolean; kommentar?: string }
   // Officiell mätarställning in/ut, normalt med foto av instrumentpanelen.
   | { typ: "matarstallning"; lage: "ingaende" | "utgaende"; varde: string; dataUrl?: string; undantag?: string }
+  // Symptomverifiering (SVP): kundens beskrivning är inte ett konstaterat
+  // fel förrän den reproducerats — eller dokumenterats som ej
+  // reproducerbar med motivering.
+  | { typ: "reproducering"; status: "ja" | "delvis" | "nej"; beskrivning: string }
+  // Felorsaksanalys: varje konstaterat fel kräver avvikelse, bedömd
+  // grundorsak, underlag och säkerhetsnivå — eller motivering till
+  // varför orsaken inte kunnat fastställas.
+  | {
+      typ: "felorsak";
+      avvikelse: string;
+      orsaker: string[];
+      underlag: string[];
+      sakerhet: Tillforlitlighet;
+      atgard: string;
+      motivering?: string;
+      ytterligareKontroller?: string;
+    }
   | { typ: "export_skapad"; format: string; version: number }
   | {
       typ: "ai_svar";
@@ -162,6 +179,14 @@ export function handelseRubrik(post: LoggPost): string {
     case "matarstallning":
       if (h.undantag) return `Mätarställning (${h.lage === "ingaende" ? "in" : "ut"}) kunde inte dokumenteras: ${h.undantag}`;
       return `Mätarställning ${h.lage === "ingaende" ? "in" : "ut"}: ${h.varde}`;
+    case "reproducering":
+      return h.status === "ja"
+        ? `Symptomet reproducerat: ${h.beskrivning}`
+        : h.status === "delvis"
+          ? `Symptomet delvis reproducerat: ${h.beskrivning}`
+          : `Symptomet kunde inte reproduceras — ${h.beskrivning}`;
+    case "felorsak":
+      return `Felorsak (${TILLFORLITLIGHET_LABEL[h.sakerhet]}): ${h.avvikelse} — ${h.orsaker.join(", ")}`;
     case "export_skapad":
       return `Export skapad: ${h.format}, version ${h.version}`;
     case "ai_svar": {

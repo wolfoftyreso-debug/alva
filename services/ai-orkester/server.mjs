@@ -33,6 +33,7 @@ Absoluta regler:
   - "rekommendation": nästa verifierbara kontroll eller mätning.
 - Om underlaget är otillräckligt: säg det uttryckligen i en observation och rekommendera vad som behöver dokumenteras.
 - Skriv aldrig "OK", "kontrollerad", "inga fel" eller "åtgärdad" om evidens saknas i underlaget — skriv i stället "Evidens saknas" och begär rätt underlag: foto för det synliga, video med ljud för det som låter, video för det som rör sig, mätvärde för det som mäts, foto av skärmen när ett instrument eller en diagnosdator visar informationen.
+- Skriv aldrig "felet konstaterat" om symptomet varken reproducerats eller verifierats med dokumentation — skriv då "Kundens beskrivning kunde inte reproduceras under de förhållanden som rådde vid undersökningen."
 - Svara på svenska, konsekvent, kortfattat och metodiskt. "nastaSteg" är EN konkret, verifierbar åtgärd.`;
 
 const SVARS_SCHEMA = {

@@ -105,6 +105,20 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
     post(82, { typ: "matvarde", beskrivning: "Obalans höger framhjul", varde: "38", enhet: "g" }),
     post(83, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "balansering", text: "Kontrollera hjulbalansering", resultat: "38 g obalans höger fram — en balansvikt saknas. Övriga hjul inom 5 g." }),
     post(85, { typ: "observation", text: "Spår efter lossnad klistervikt på höger framfälgs insida" }),
+    post(85, {
+      typ: "reproducering",
+      status: "ja",
+      beskrivning: "Reproducerad vid provkörning på plan väg: vibrationen återskapades tre gånger mellan 92 och 108 km/h, tydligast i ratten.",
+    }),
+    post(86, {
+      typ: "felorsak",
+      avvikelse: "Framhjulen uppvisar obalans (38 g höger fram). Ingen deformation av fälgar eller däck kunde konstateras.",
+      orsaker: ["Yttre påverkan"],
+      underlag: ["Mätresultat", "Foto", "Direkt observation"],
+      sakerhet: "medel",
+      atgard: "Balansera framhjulen och genomför ny provkörning i 80–100 km/h.",
+      ytterligareKontroller: "Ny provkörning efter balansering bekräftar att symptomet är åtgärdat.",
+    }),
     // Exempel på AI-handledning, märkt "demo" — riktiga svar kräver API-nyckel.
     post(86, {
       typ: "ai_svar",

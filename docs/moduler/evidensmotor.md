@@ -104,6 +104,49 @@ dokumenterat motiverade — metodiken låses upp först därefter:
 **Utgående mätarställning** fotograferas inför avslut och blir
 obligatorisk i grinden när ärendet stängs. Rapporten visar in/ut.
 
+## Symptom Verification Protocol (SVP)
+
+Ett fel diagnostiseras aldrig direkt från en vag kundbeskrivning.
+Kedjan är alltid: **dokumenterats → förtydligats → reproducerats eller
+dokumenterats som ej reproducerbart.**
+
+- Kundens beskrivning registreras ordagrant vid ärendestart och
+  verifieras i pre-diagnostiken; nya symptom blir separata observationer.
+- Förtydligandet sker genom metodikens symptomfrågor (när/var/hur/
+  förhållanden/frekvens — generiska metodiken har hela SVP-frågesetet).
+- **Reproducering** (Ja/Delvis/Nej) dokumenteras innan avslut: Ja kräver
+  hur och under vilka förhållanden; Delvis vad som kunde respektive inte
+  kunde återskapas; Nej kräver motivering. Systemet skriver aldrig
+  "felet konstaterat" utan reproducering eller annan verifiering — i
+  stället: *"Kundens beskrivning kunde inte reproduceras under de
+  förhållanden som rådde vid undersökningen."* (kodat även i orkesterns
+  grundprompt).
+- Rapportens beviskedja skiljer alltid: kundens beskrivning →
+  verifierad observation → felorsaksanalys → rekommenderad åtgärd.
+
+## Felorsaksanalys (Root Cause Analysis)
+
+Ett ärende avslutas aldrig med enbart "komponent defekt, byt komponent".
+Varje konstaterat fel kräver fyra obligatoriska svar:
+
+1. **Konstaterad avvikelse** — kvalitetsregeln avvisar generella
+   formuleringar ("trasig", "defekt", "sliten", "behöver bytas") utan
+   förklaring.
+2. **Mest sannolik orsak** — en eller flera kategorier (normalt slitage,
+   materialutmattning, tillverkningsfel, bristande underhåll, felaktig
+   tidigare reparation, yttre påverkan, korrosion, överhettning,
+   modifiering … samt *Okänd orsak*, som kräver motivering).
+3. **Underlag** — minst en evidenskälla, och källan valideras mot
+   loggen: "Foto" godtas bara om ett foto faktiskt finns.
+4. **Säkerhetsnivå** — hög/medel/låg; vid medel/låg krävs vilka
+   ytterligare kontroller som skulle stärka bedömningen.
+
+Avslutsknappen är spärrad tills SVP + felorsaksanalys är dokumenterade,
+och kvalitetsgrinden gör båda obligatoriska när ärendet stängs. Efter
+tusentals ärenden ger orsakskategorierna dessutom flottdata: vilka
+komponenter fallerar av slitage, vilka efter tidigare reparationer,
+vilka tyder på konstruktionsproblem.
+
 ## Ärendeidentitet (Case Identity & Vehicle Context)
 
 Fordonsobjektet är den röda tråden: identiteten registreras **en gång**
