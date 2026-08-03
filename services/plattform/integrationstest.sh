@@ -194,6 +194,65 @@ REGLER=$(curl -s "$BAS/api/ecm/regler" -H "Authorization: Bearer $TOKEN_J")
 kontroll "regelpaketet serveras" "$(echo "$REGLER" | falt .version)" "2.0"
 kontroll "regelpaketet innehåller garantiregler" "$(echo "$REGLER" | falt '.arendetypRegler.Garanti.length')" "3"
 
+# 10c. Publikt kundgodkännande — den enda skrivande publika vägen
+# Ärendets ursprungliga delningskod saknar registrerad nivå och får
+# därför aldrig svara (bara riktiga kundlänkar duger).
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/delad/delkod123/beslut" \
+  -H 'Content-Type: application/json' -d '{"beslut":"godkant"}')
+kontroll "legacy-delningskod kan inte svara" "$KOD" "404"
+
+# Kundlänk utan åtgärdsförslag: inget att svara på
+KUNDKOD=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"niva":"kund"}' | falt .kod)
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/delad/$KUNDKOD/beslut" \
+  -H 'Content-Type: application/json' -d '{"beslut":"godkant"}')
+kontroll "beslut utan åtgärdsförslag avvisas" "$KOD" "409"
+
+# Lägg in ett åtgärdsförslag
+curl -s -X POST "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"h-forslag","tidpunkt":"2026-08-03T08:06:00Z","anvandare":"Anna","handelse":{"typ":"atgardsforslag","beskrivning":"Byt reläet i kupémodulen.","uppskattadKostnad":"1 450 kr"}}]}' >/dev/null
+
+# Partnerlänk får INTE svara åt kunden
+PKOD=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"niva":"partner"}' | falt .kod)
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/delad/$PKOD/beslut" \
+  -H 'Content-Type: application/json' -d '{"beslut":"godkant"}')
+kontroll "partnerlänk kan inte svara åt kunden" "$KOD" "404"
+
+# Ogiltigt beslutsvärde avvisas
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/delad/$KUNDKOD/beslut" \
+  -H 'Content-Type: application/json' -d '{"beslut":"kanske"}')
+kontroll "ogiltigt beslutsvärde avvisas" "$KOD" "400"
+
+# Kunden godkänner via sin länk
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/delad/$KUNDKOD/beslut" \
+  -H 'Content-Type: application/json' -d '{"beslut":"godkant","kommentar":"Kör på."}')
+kontroll "kunden kan godkänna via sin länk" "$KOD" "200"
+BESLUT=$(curl -s "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  | falt '.handelser.filter(h=>h.handelse.typ==="kundbeslut").map(h=>h.handelse.kanal+"/"+h.anvandare).join(",")')
+kontroll "beskedet loggas med kanal och avsändare" "$BESLUT" "Delningslänk/Kund via delningslänk"
+
+# Ett beslut per ärende — svaret kan inte ändras i efterhand
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/delad/$KUNDKOD/beslut" \
+  -H 'Content-Type: application/json' -d '{"beslut":"avbojt"}')
+kontroll "beskedet kan inte ändras i efterhand" "$KOD" "409"
+
+# Återkallad delning kan inte svara
+curl -s -X POST "$BAS/api/delningar/$KUNDKOD/aterkalla" -H "Authorization: Bearer $TOKEN_A" >/dev/null
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/delad/$KUNDKOD/beslut" \
+  -H 'Content-Type: application/json' -d '{"beslut":"godkant"}')
+kontroll "återkallad länk kan inte svara" "$KOD" "404"
+
+# Takt-begränsning slår till efter upprepade försök
+NYKOD=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"niva":"kund"}' | falt .kod)
+SISTA=""
+for i in 1 2 3 4 5 6 7; do
+  SISTA=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/delad/$NYKOD/beslut" \
+    -H 'Content-Type: application/json' -d '{"beslut":"godkant"}')
+done
+kontroll "takt-begränsning stoppar upprepade försök" "$SISTA" "429"
+
 # 11. API-first: OpenAPI-specen serveras live, utan inloggning
 SPEC=$(curl -s "$BAS/api/openapi.yaml")
 case "$SPEC" in

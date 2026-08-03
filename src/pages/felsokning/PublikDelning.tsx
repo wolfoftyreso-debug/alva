@@ -99,12 +99,40 @@ export default function PublikDelning() {
     );
   }
 
+  // Kunden kan svara på ett åtgärdsförslag direkt i sin länk. Endast
+  // kundnivån får svara — servern gör samma kontroll igen.
+  const skickaBeslut =
+    niva === "kund" && kod
+      ? async (beslut: "godkant" | "avbojt", kommentar: string) => {
+          const { plattformAktiv, PLATTFORM_URL } = await import("@/felsokning/plattform");
+          if (!plattformAktiv()) return "Beskedet kan inte lämnas här — kontakta verkstaden.";
+          try {
+            const res = await fetch(`${PLATTFORM_URL}/api/delad/${kod}/beslut`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ beslut, kommentar }),
+            });
+            if (!res.ok) {
+              const data = (await res.json().catch(() => ({}))) as { error?: string };
+              return data.error ?? "Beskedet kunde inte registreras — försök igen.";
+            }
+            // Hämta om direkt så kvittensen syns.
+            const uppdaterat = await hamtaDelat(kod);
+            if (uppdaterat) setArende(uppdaterat.arende);
+            return null;
+          } catch {
+            return "Beskedet kunde inte skickas — kontrollera anslutningen.";
+          }
+        }
+      : undefined;
+
   return (
     <DelatArendeVy
       arende={arende}
       nu={nu}
       notis={NIVA_NOTIS[niva] ?? NIVA_NOTIS.kund}
       redanFiltrerad
+      vidBeslut={skickaBeslut}
     />
   );
 }

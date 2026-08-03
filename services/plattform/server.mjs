@@ -40,6 +40,23 @@ const ROLLER = ["tekniker", "arbetsledare", "admin"];
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 
+// Enkel takt-begränsning för den publika beslutsendpointen (per
+// delningskod, i minnet). Räcker för en enda pod; bakom flera repliker
+// kompletteras den av databasspärren "ett beslut per förslag".
+const BESLUT_TAK = 5;
+const BESLUT_FONSTER_MS = 60_000;
+const beslutsForsok = new Map();
+
+function forTataForsok(kod) {
+  const nu = Date.now();
+  const forsok = (beslutsForsok.get(kod) ?? []).filter((t) => nu - t < BESLUT_FONSTER_MS);
+  forsok.push(nu);
+  beslutsForsok.set(kod, forsok);
+  // Enkel städning så kartan inte växer obegränsat.
+  if (beslutsForsok.size > 5000) beslutsForsok.clear();
+  return forsok.length > BESLUT_TAK;
+}
+
 // ---- JWT (HS256, utan beroenden) --------------------------------------
 
 const b64url = (data) => Buffer.from(data).toString("base64url");
@@ -239,6 +256,69 @@ export function skapaServer() {
           [arendeId, bortfiltrerat],
         );
         return svara(res, 200, { arende: arende.rows[0], handelser: handelser.rows, niva });
+      }
+
+      // -- Publikt kundgodkännande (den enda skrivande publika vägen) --
+      //
+      // Kunden svarar på ett åtgärdsförslag via sin delningslänk. Spärrar:
+      //   1. endast delningar på kundnivå (partner/intern får inte svara
+      //      åt kunden), och aldrig återkallade
+      //   2. det måste finnas ett åtgärdsförslag att svara på
+      //   3. ett beslut per ärende — svaret kan inte ändras i efterhand
+      //   4. takt-begränsning per kod
+      //   5. beslutet får bara vara godkant/avbojt/delvis + kort kommentar;
+      //      inget annat kan skrivas till loggen den här vägen
+      const beslutVag = vag.match(/^\/api\/delad\/([A-Za-z0-9_-]+)\/beslut$/);
+      if (req.method === "POST" && beslutVag) {
+        const kod = beslutVag[1];
+        if (forTataForsok(kod)) return svara(res, 429, { error: "För många försök — vänta en stund." });
+
+        const delning = await pool.query(
+          `select arende_id, niva from delningar where kod = $1 and aterkallad is null`,
+          [kod],
+        );
+        if (delning.rowCount === 0 || delning.rows[0].niva !== "kund") {
+          return svara(res, 404, { error: "Delningen är inte tillgänglig." });
+        }
+        const arendeId = delning.rows[0].arende_id;
+
+        const { beslut, kommentar } = await lasKropp(req);
+        if (!["godkant", "avbojt", "delvis"].includes(beslut)) {
+          return svara(res, 400, { error: "Ogiltigt beslut." });
+        }
+        if (kommentar !== undefined && (typeof kommentar !== "string" || kommentar.length > 500)) {
+          return svara(res, 400, { error: "Kommentaren är för lång." });
+        }
+
+        const forslag = await pool.query(
+          `select 1 from felsokning_handelser
+           where arende_id = $1 and handelse->>'typ' = 'atgardsforslag' limit 1`,
+          [arendeId],
+        );
+        if (forslag.rowCount === 0) {
+          return svara(res, 409, { error: "Det finns inget åtgärdsförslag att svara på." });
+        }
+        const tidigare = await pool.query(
+          `select 1 from felsokning_handelser
+           where arende_id = $1 and handelse->>'typ' = 'kundbeslut' limit 1`,
+          [arendeId],
+        );
+        if (tidigare.rowCount > 0) {
+          return svara(res, 409, { error: "Ett besked är redan registrerat — kontakta verkstaden." });
+        }
+
+        const handelse = {
+          typ: "kundbeslut",
+          beslut,
+          kanal: "Delningslänk",
+          ...(kommentar?.trim() ? { kommentar: kommentar.trim() } : {}),
+        };
+        await pool.query(
+          `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
+           values ($1, $2, now(), $3, $4)`,
+          [`kb-${nyKod()}`, arendeId, "Kund via delningslänk", handelse],
+        );
+        return svara(res, 200, { ok: true });
       }
 
       // -- Skyddade endpoints (organisationsknutna) --

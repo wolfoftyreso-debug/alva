@@ -4,13 +4,74 @@
 // hypoteser) ingår aldrig i underlaget som når hit externt, och filtreras
 // bort även lokalt.
 
+import { useState } from "react";
 import type { Arende } from "./domain";
 import { KUNDBESLUT_LABEL, handelseRubrik } from "./domain";
 import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader, videor } from "./projektioner";
 import { metodikForArende } from "./store";
 import { tidDatum, tidKlockslag } from "./format";
-import { FelsokningSkal, Panel } from "./ui";
+import { FelsokningSkal, Panel, StorKnapp } from "./ui";
 import { IkonCheck, IkonKlocka, IkonUppdatera } from "./ikoner";
+
+// Kundens svar på åtgärdsförslaget — den enda skrivande åtgärden i hela
+// delningsvyn. Beskedet kan lämnas en gång och kan inte ändras här.
+function BeslutsKnappar({
+  vidBeslut,
+}: {
+  vidBeslut: (beslut: "godkant" | "avbojt", kommentar: string) => Promise<string | null>;
+}) {
+  const [val, setVal] = useState<"" | "godkant" | "avbojt">("");
+  const [kommentar, setKommentar] = useState("");
+  const [skickar, setSkickar] = useState(false);
+  const [fel, setFel] = useState("");
+
+  return (
+    <div className="mt-2 border-t border-[#DDDDDD] pt-2 print:hidden">
+      <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+        Ditt besked till verkstaden
+      </p>
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        <StorKnapp variant={val === "godkant" ? "primar" : "sekundar"} onClick={() => setVal("godkant")}>
+          Godkänn åtgärden
+        </StorKnapp>
+        <StorKnapp variant={val === "avbojt" ? "fara" : "sekundar"} onClick={() => setVal("avbojt")}>
+          Avböj
+        </StorKnapp>
+      </div>
+      {val && (
+        <>
+          <label className="mb-2 block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
+              {val === "avbojt" ? "Kort motivering (valfritt)" : "Kommentar (valfritt)"}
+            </span>
+            <input
+              value={kommentar}
+              maxLength={500}
+              onChange={(e) => setKommentar(e.target.value)}
+              className="w-full rounded border border-[#ADADAD] bg-white px-2.5 py-1.5 text-[13px] focus:border-[#00437A] focus:outline-none"
+            />
+          </label>
+          {fel && <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">{fel}</p>}
+          <StorKnapp
+            disabled={skickar}
+            onClick={async () => {
+              setSkickar(true);
+              setFel("");
+              const felmeddelande = await vidBeslut(val, kommentar);
+              if (felmeddelande) setFel(felmeddelande);
+              setSkickar(false);
+            }}
+          >
+            {skickar ? "Skickar …" : "Skicka besked"}
+          </StorKnapp>
+          <p className="mt-1 text-[11px] text-[#707070]">
+            Beskedet registreras i ärendet och kan inte ändras här — kontakta verkstaden om du ändrar dig.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
 
 function IdentitetsPanel({ arende, avslutat }: { arende: Arende; avslutat: boolean }) {
   const idn = arendeidentitet(arende);
@@ -45,10 +106,14 @@ export function DelatArendeVy({
   nu,
   notis,
   redanFiltrerad = false,
+  vidBeslut,
 }: {
   arende: Arende;
   nu: string;
   notis: string;
+  // Satt endast på den publika kundlänken: kunden kan svara på ett
+  // åtgärdsförslag. Utan den är vyn helt skrivskyddad.
+  vidBeslut?: (beslut: "godkant" | "avbojt", kommentar: string) => Promise<string | null>;
   // Sant när servern redan filtrerat per behörighetsnivå (publik delning) —
   // då renderas händelserna som de kom, inklusive t.ex. hypoteser på
   // partner-/internnivå.
@@ -116,6 +181,8 @@ export function DelatArendeVy({
               Ditt besked: {KUNDBESLUT_LABEL[beslut.handelse.beslut]}{" "}
               <span className="font-normal text-[#4A5560]">(registrerat via {beslut.handelse.kanal})</span>
             </p>
+          ) : vidBeslut ? (
+            <BeslutsKnappar vidBeslut={vidBeslut} />
           ) : (
             <p className="mt-2 border-t border-[#DDDDDD] pt-2 text-[12px] text-[#707070]">
               Inväntar ditt besked — kontakta verkstaden för att godkänna eller avböja.

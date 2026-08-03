@@ -229,6 +229,46 @@ paths:
         "401": { $ref: "#/components/responses/Fel" }
         "403": { $ref: "#/components/responses/Fel" }
 
+  /api/delad/{delningskod}/beslut:
+    post:
+      tags: [Delning]
+      summary: Kundens besked på ett åtgärdsförslag
+      description: >
+        Den enda skrivande publika vägen. Endast delningar på **kundnivå**
+        som inte återkallats får svara, det måste finnas ett
+        åtgärdsförslag, och **ett besked per ärende** — svaret kan inte
+        ändras i efterhand. Takt-begränsad per delningskod. Beskedet
+        loggas som `kundbeslut` med kanal `Delningslänk`.
+      security: []
+      parameters:
+        - name: delningskod
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [beslut]
+              properties:
+                beslut: { type: string, enum: [godkant, avbojt, delvis] }
+                kommentar: { type: string, maxLength: 500 }
+      responses:
+        "200":
+          description: Beskedet registrerat.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "400": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+        "409": { $ref: "#/components/responses/Fel" }
+        "429": { $ref: "#/components/responses/Fel" }
+
   /api/organisation:
     get:
       tags: [Organisation]

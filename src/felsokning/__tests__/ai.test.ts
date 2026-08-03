@@ -81,6 +81,7 @@ describe("AI-orkestern", () => {
       ["/api/statistik/felorsaker", "/api/statistik/felorsaker"],
       ["/api/oversikt", "/api/oversikt"],
       ["/api/delad/{delningskod}", "delad"],
+      ["/api/delad/{delningskod}/beslut", "beslut"],
     ];
     for (const [iSpec, iServer] of vagar) {
       expect(spec).toContain(`${iSpec}:`);

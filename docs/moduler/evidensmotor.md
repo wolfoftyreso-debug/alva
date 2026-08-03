@@ -181,9 +181,24 @@ registrerat och spårbart:
   flaggar konflikten *"Utfört arbete trots avböjt åtgärdsförslag"* som
   ett hårt fel.
 
-Avgränsning: kunden godkänner i dagsläget genom kontakt med verkstaden —
-plattformen registrerar beskedet. Publikt godkännande direkt i
-delningslänken kräver en skrivande publik endpoint och hanteras separat.
+**Kunden kan svara direkt i sin delningslänk** (`POST /api/delad/{kod}/beslut`)
+— den enda skrivande publika vägen i hela API:t, med sex spärrar som var
+och en verifieras i integrationstestet:
+
+1. Endast delningar på **kundnivå** (partner-/internlänkar får aldrig
+   svara åt kunden) och aldrig återkallade.
+2. Ärendets ursprungliga delningskod saknar registrerad nivå och kan inte
+   heller svara.
+3. Det måste finnas ett åtgärdsförslag att svara på.
+4. **Ett besked per ärende** — svaret kan inte ändras i efterhand
+   (kontakta verkstaden i stället).
+5. Endast `godkant`/`avbojt`/`delvis` plus en kommentar på högst 500
+   tecken; inget annat kan skrivas till loggen den vägen.
+6. Takt-begränsning per delningskod.
+
+Beskedet loggas som `kundbeslut` med kanal `Delningslänk` och avsändaren
+"Kund via delningslänk" — verkstadens egna registreringar (telefon, på
+plats …) fungerar precis som förut.
 
 ## Åtgärdsfasen (Repair & Verification)
 
