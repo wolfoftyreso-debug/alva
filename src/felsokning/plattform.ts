@@ -5,7 +5,15 @@
 export const PLATTFORM_URL = (import.meta.env.VITE_PLATTFORM_URL as string | undefined)?.replace(/\/$/, "");
 
 const TOKEN_NYCKEL = "gf-plattform-token";
-const NAMN_NYCKEL = "gf-plattform-namn";
+const KONTO_NYCKEL = "gf-plattform-konto";
+
+export type PlattformRoll = "tekniker" | "arbetsledare" | "admin";
+
+export interface PlattformKonto {
+  namn: string;
+  roll: PlattformRoll;
+  organisation: string;
+}
 
 export function plattformAktiv(): boolean {
   return !!PLATTFORM_URL;
@@ -15,16 +23,22 @@ export function plattformToken(): string | null {
   return localStorage.getItem(TOKEN_NYCKEL);
 }
 
-export function plattformNamn(): string | null {
-  return localStorage.getItem(NAMN_NYCKEL);
+export function plattformKonto(): PlattformKonto | null {
+  const rad = localStorage.getItem(KONTO_NYCKEL);
+  if (!rad || !plattformToken()) return null;
+  try {
+    return JSON.parse(rad) as PlattformKonto;
+  } catch {
+    return null;
+  }
 }
 
 export function loggaUtPlattform(): void {
   localStorage.removeItem(TOKEN_NYCKEL);
-  localStorage.removeItem(NAMN_NYCKEL);
+  localStorage.removeItem(KONTO_NYCKEL);
 }
 
-async function authAnrop(vag: string, kropp: object): Promise<string> {
+async function authAnrop(vag: string, kropp: object): Promise<PlattformKonto> {
   const res = await fetch(`${PLATTFORM_URL}${vag}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -32,18 +46,56 @@ async function authAnrop(vag: string, kropp: object): Promise<string> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error ?? `Fel ${res.status}`);
-  const { token, namn } = data as { token: string; namn: string };
+  const { token, namn, roll, organisation } = data as PlattformKonto & { token: string };
   localStorage.setItem(TOKEN_NYCKEL, token);
-  localStorage.setItem(NAMN_NYCKEL, namn);
-  return namn;
+  const konto: PlattformKonto = { namn, roll, organisation };
+  localStorage.setItem(KONTO_NYCKEL, JSON.stringify(konto));
+  return konto;
 }
 
-export function loggaInPlattform(epost: string, losenord: string): Promise<string> {
+export function loggaInPlattform(epost: string, losenord: string): Promise<PlattformKonto> {
   return authAnrop("/api/auth/logga-in", { epost, losenord });
 }
 
-export function registreraPlattform(epost: string, losenord: string, namn: string): Promise<string> {
-  return authAnrop("/api/auth/registrera", { epost, losenord, namn });
+// Registrering skapar en ny organisation med användaren som
+// systemadministratör; övriga användare skapas av admin.
+export function registreraPlattform(
+  epost: string,
+  losenord: string,
+  namn: string,
+  organisation: string,
+): Promise<PlattformKonto> {
+  return authAnrop("/api/auth/registrera", { epost, losenord, namn, organisation });
+}
+
+// Användarhantering (kräver admin-roll; servern verifierar).
+export interface PlattformAnvandare {
+  id: string;
+  epost: string;
+  namn: string;
+  roll: PlattformRoll;
+}
+
+export async function hamtaAnvandare(): Promise<PlattformAnvandare[]> {
+  const res = await plattformFetch("/api/anvandare");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { anvandare: PlattformAnvandare[] }).anvandare;
+}
+
+export async function skapaAnvandare(
+  epost: string,
+  losenord: string,
+  namn: string,
+  roll: PlattformRoll,
+): Promise<void> {
+  const res = await plattformFetch("/api/anvandare", {
+    method: "POST",
+    body: JSON.stringify({ epost, losenord, namn, roll }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Fel ${res.status}`);
+  }
 }
 
 // Autentiserat anrop mot plattformen. En utgången token rensas (401) så

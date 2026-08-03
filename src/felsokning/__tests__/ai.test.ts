@@ -50,11 +50,15 @@ describe("AI-orkestern", () => {
     }
     // API:t exponerar medvetet inga update/delete-operationer.
     expect(plattform).not.toMatch(/\b(update|delete)\s+felsokning_handelser/i);
+    // Multi-tenant: all ärendedata är organisationsknuten.
+    expect(plattform).toContain("organisation_id");
+    expect(plattform).toContain("arendeIOrg");
 
-    const postgres = readFileSync("infra/k8s/postgres.yaml", "utf8");
-    expect(postgres).toContain("before update or delete on felsokning_handelser");
-    expect(postgres).toContain("before update or delete on felsokning_arenden");
-    expect(postgres).toContain("append-only");
+    const schema = readFileSync("infra/k8s/postgres-init.sql", "utf8");
+    expect(schema).toContain("before update or delete on felsokning_handelser");
+    expect(schema).toContain("before update or delete on felsokning_arenden");
+    expect(schema).toContain("create table if not exists organisationer");
+    expect(schema).toContain("check (roll in ('tekniker', 'arbetsledare', 'admin'))");
   });
 
   it("endpointen kodar AI-reglerna i grundprompten", () => {

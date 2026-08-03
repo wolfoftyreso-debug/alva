@@ -19,7 +19,7 @@ flowchart LR
 | Komponent | Vad | Var |
 | --- | --- | --- |
 | `web` | SPA:n bakom oprivilegierad nginx (`Dockerfile`, `docker/nginx.conf`) | Deployment + Service + HPA + PDB |
-| `plattform` | Självhostad backend (`services/plattform`): inloggning (bcrypt via pgcrypto, HS256-JWT), append-only händelse-API för synken, publik delningsendpoint för Live Share | Deployment + Service + HPA + PDB |
+| `plattform` | Självhostad backend (`services/plattform`): **multi-tenant** — registrering skapar organisation + systemadministratör, admin hanterar användare (tekniker/arbetsledare/admin), all ärendedata organisationsisolerad. Inloggning (bcrypt via pgcrypto, HS256-JWT med roll + org i anspråken), append-only händelse-API, publik delningsendpoint | Deployment + Service + HPA + PDB |
 | `ai-orkester` | AI-orkestern (`services/ai-orkester`): fyra uppgifter routade till Sonnet 5 / Opus 5 / Haiku 4.5 — verifierar plattformens JWT (delad hemlighet) | Deployment + Service + HPA + PDB |
 | `postgres` | Händelselogg + användare; **append-only garanterat med databastriggers** — historik kan inte ändras eller raderas oavsett roll | StatefulSet + PVC (10 Gi). Produktion: CloudNativePG-operatorn för backup/failover/PITR |
 | Hemligheter | `anthropic-api-key`, `jwt-secret` (delas av plattform + orkester), `postgres-losenord` | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
@@ -53,7 +53,18 @@ kubectl -n guidad-felsokning get pods
 curl https://app.exempel.se/halsa       # → {"status":"ok"} (plattformen)
 ```
 
-Byt domän och cert-issuer i `infra/k8s/ingress.yaml`. Självregistrering är öppen i beta — stäng med `REGISTRERING_OPPEN=false` på plattformens Deployment när organisationsstyrd användarhantering införs.
+Byt domän och cert-issuer i `infra/k8s/ingress.yaml`. Att skapa nya organisationer är öppet i beta — stäng med `REGISTRERING_OPPEN=false` på plattformens Deployment; användare inom en organisation skapas alltid av dess systemadministratör.
+
+## Multi-tenant och roller
+
+Enligt Master Prompt: varje kund är en egen tenant, ingen data blandas mellan kunder.
+
+- **Registrering skapar organisationen** och gör användaren till systemadministratör.
+- **Admin skapar användare** (tekniker/arbetsledare/admin) i sin organisation — via UI:t eller `POST /api/anvandare`.
+- **All ärendedata är organisationsknuten**: ärenden skapas i användarens organisation och händelse-API:t verifierar organisationstillhörighet på varje anrop — en annan organisations ärenden ger 404.
+- **Rollen ligger i JWT:n** och verifieras på servern; klienten anpassar bara UI:t.
+
+Integrationstestet (`services/plattform/integrationstest.sh`, körs även i CI mot riktig Postgres) verifierar hela kedjan: registrering, synk, idempotens, append-only-triggern, organisationsisolering, delningsfiltrering och rollstyrning.
 
 ## Säkerhet och robusthet
 

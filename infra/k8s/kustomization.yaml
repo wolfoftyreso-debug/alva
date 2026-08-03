@@ -9,3 +9,9 @@ resources:
   - ingress.yaml
 # hemligheter.exempel.yaml appliceras medvetet inte — skapa secret:en
 # separat (se kommentaren i den filen).
+
+configMapGenerator:
+  - name: postgres-init
+    namespace: guidad-felsokning
+    files:
+      - init.sql=postgres-init.sql

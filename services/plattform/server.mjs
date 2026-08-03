@@ -1,15 +1,17 @@
 // Plattformstjänsten — självhostad backend för Guidad Felsökning.
 //
-// Ersätter Supabase i klustret: egen inloggning (HS256-JWT, lösenord
-// hashade med pgcrypto/bcrypt i Postgres), händelse-API för synken och
-// publik delningsendpoint för Live Share. Händelseloggen är append-only
-// även i databasen (triggers) — den här tjänsten exponerar medvetet inga
-// update/delete-operationer.
+// Multi-tenant: varje organisation är en egen tenant. Registrering skapar
+// en organisation med en systemadministratör; admin skapar övriga
+// användare (tekniker/arbetsledare) i sin organisation. All ärendedata
+// är organisationsknuten — API:t släpper aldrig data över gränsen.
+//
+// Händelseloggen är append-only även i databasen (triggers) — den här
+// tjänsten exponerar medvetet inga update/delete-operationer.
 //
 // Miljövariabler:
 //   DATABASE_URL        Postgres-anslutning (krävs)
 //   JWT_SECRET          HS256-hemlighet, delas med ai-orkestern (krävs)
-//   REGISTRERING_OPPEN  "false" stänger självregistrering (default öppen, beta)
+//   REGISTRERING_OPPEN  "false" stänger nya organisationer (default öppen, beta)
 //   PORT                default 8080
 
 import { createServer } from "node:http";
@@ -19,6 +21,7 @@ import pg from "pg";
 const PORT = Number(process.env.PORT ?? 8080);
 const MAX_KROPP = 4 * 1024 * 1024;
 const TOKEN_LIVSTID_S = 12 * 60 * 60;
+const ROLLER = ["tekniker", "arbetsledare", "admin"];
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 
@@ -77,9 +80,27 @@ function kravAuth(req, hemlighet) {
   return token ? verifieraJwt(token, hemlighet) : null;
 }
 
+// Verifierar att ärendet tillhör användarens organisation.
+async function arendeIOrg(arendeId, organisationId) {
+  const rader = await pool.query(
+    `select 1 from felsokning_arenden where id = $1 and organisation_id = $2`,
+    [arendeId, organisationId],
+  );
+  return rader.rowCount > 0;
+}
+
 // ---- Server -----------------------------------------------------------
 
 export function skapaServer() {
+  function loggaIn(res, rad, hemlighet) {
+    const nu = Math.floor(Date.now() / 1000);
+    const token = skapaJwt(
+      { sub: rad.id, namn: rad.namn, org: rad.organisation_id, roll: rad.roll, iat: nu, exp: nu + TOKEN_LIVSTID_S },
+      hemlighet,
+    );
+    return svara(res, 200, { token, namn: rad.namn, roll: rad.roll, organisation: rad.org_namn });
+  }
+
   return createServer(async (req, res) => {
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
@@ -100,31 +121,51 @@ export function skapaServer() {
       const hemlighet = process.env.JWT_SECRET;
       if (!hemlighet) return svara(res, 503, { error: "Tjänsten är inte konfigurerad." });
 
-      // -- Auth (öppna endpoints) --
+      // -- Registrering: skapar organisation + systemadministratör --
       if (req.method === "POST" && vag === "/api/auth/registrera") {
         if (process.env.REGISTRERING_OPPEN === "false") {
-          return svara(res, 403, { error: "Registrering är stängd." });
+          return svara(res, 403, { error: "Registrering är stängd — kontakta er administratör." });
         }
-        const { epost, losenord, namn } = await lasKropp(req);
-        if (!epost?.includes("@") || !losenord || losenord.length < 8 || !namn?.trim()) {
-          return svara(res, 400, { error: "Ogiltig e-post, namn eller för kort lösenord (minst 8 tecken)." });
+        const { epost, losenord, namn, organisation } = await lasKropp(req);
+        if (!epost?.includes("@") || !losenord || losenord.length < 8 || !namn?.trim() || !organisation?.trim()) {
+          return svara(res, 400, {
+            error: "Ange organisation, namn, e-post och lösenord (minst 8 tecken).",
+          });
         }
-        const rader = await pool.query(
-          `insert into anvandare (epost, losen_hash, namn)
-           values (lower($1), crypt($2, gen_salt('bf')), $3)
-           on conflict (epost) do nothing
-           returning id, namn`,
-          [epost.trim(), losenord, namn.trim()],
-        );
-        if (rader.rowCount === 0) return svara(res, 409, { error: "E-postadressen är redan registrerad." });
-        return loggaIn(res, rader.rows[0], hemlighet);
+        const klientDb = await pool.connect();
+        try {
+          await klientDb.query("begin");
+          const org = await klientDb.query(
+            `insert into organisationer (namn) values ($1) returning id, namn`,
+            [organisation.trim()],
+          );
+          const rad = await klientDb.query(
+            `insert into anvandare (organisation_id, epost, losen_hash, namn, roll)
+             values ($1, lower($2), crypt($3, gen_salt('bf')), $4, 'admin')
+             on conflict (epost) do nothing
+             returning id, namn, organisation_id, roll`,
+            [org.rows[0].id, epost.trim(), losenord, namn.trim()],
+          );
+          if (rad.rowCount === 0) {
+            await klientDb.query("rollback");
+            return svara(res, 409, { error: "E-postadressen är redan registrerad." });
+          }
+          await klientDb.query("commit");
+          return loggaIn(res, { ...rad.rows[0], org_namn: org.rows[0].namn }, hemlighet);
+        } catch (fel) {
+          await klientDb.query("rollback");
+          throw fel;
+        } finally {
+          klientDb.release();
+        }
       }
 
       if (req.method === "POST" && vag === "/api/auth/logga-in") {
         const { epost, losenord } = await lasKropp(req);
         const rader = await pool.query(
-          `select id, namn from anvandare
-           where epost = lower($1) and losen_hash = crypt($2, losen_hash)`,
+          `select a.id, a.namn, a.organisation_id, a.roll, o.namn as org_namn
+           from anvandare a join organisationer o on o.id = a.organisation_id
+           where a.epost = lower($1) and a.losen_hash = crypt($2, a.losen_hash)`,
           [epost ?? "", losenord ?? ""],
         );
         if (rader.rowCount === 0) return svara(res, 401, { error: "Fel e-post eller lösenord." });
@@ -148,9 +189,45 @@ export function skapaServer() {
         return svara(res, 200, { arende: arende.rows[0], handelser: handelser.rows });
       }
 
-      // -- Skyddade endpoints --
+      // -- Skyddade endpoints (organisationsknutna) --
       const anspr = kravAuth(req, hemlighet);
-      if (!anspr) return svara(res, 401, { error: "Inloggning krävs." });
+      if (!anspr?.org) return svara(res, 401, { error: "Inloggning krävs." });
+
+      // Användarhantering: endast systemadministratör, endast egen org.
+      if (vag === "/api/anvandare") {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        if (req.method === "GET") {
+          const rader = await pool.query(
+            `select id, epost, namn, roll from anvandare where organisation_id = $1 order by namn`,
+            [anspr.org],
+          );
+          return svara(res, 200, { anvandare: rader.rows });
+        }
+        if (req.method === "POST") {
+          const { epost, losenord, namn, roll } = await lasKropp(req);
+          if (!epost?.includes("@") || !losenord || losenord.length < 8 || !namn?.trim() || !ROLLER.includes(roll)) {
+            return svara(res, 400, { error: "Ange namn, e-post, roll och lösenord (minst 8 tecken)." });
+          }
+          const rad = await pool.query(
+            `insert into anvandare (organisation_id, epost, losen_hash, namn, roll)
+             values ($1, lower($2), crypt($3, gen_salt('bf')), $4, $5)
+             on conflict (epost) do nothing
+             returning id, epost, namn, roll`,
+            [anspr.org, epost.trim(), losenord, namn.trim(), roll],
+          );
+          if (rad.rowCount === 0) return svara(res, 409, { error: "E-postadressen är redan registrerad." });
+          return svara(res, 200, rad.rows[0]);
+        }
+      }
+
+      if (req.method === "GET" && vag === "/api/arenden") {
+        const rader = await pool.query(
+          `select id, nummer, skapad, delningskod, metodik_id from felsokning_arenden
+           where organisation_id = $1 order by skapad desc limit 200`,
+          [anspr.org],
+        );
+        return svara(res, 200, { arenden: rader.rows });
+      }
 
       if (req.method === "POST" && vag === "/api/arenden") {
         const { id, nummer, skapad, delningskod, metodikId } = await lasKropp(req);
@@ -158,40 +235,46 @@ export function skapaServer() {
           return svara(res, 400, { error: "Ogiltigt ärende." });
         }
         await pool.query(
-          `insert into felsokning_arenden (id, nummer, skapad, delningskod, metodik_id, skapad_av)
-           values ($1, $2, $3, $4, $5, $6) on conflict (id) do nothing`,
-          [id, nummer, skapad, delningskod ?? null, metodikId ?? null, anspr.sub],
+          `insert into felsokning_arenden (id, organisation_id, nummer, skapad, delningskod, metodik_id, skapad_av)
+           values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing`,
+          [id, anspr.org, nummer, skapad, delningskod ?? null, metodikId ?? null, anspr.sub],
         );
         return svara(res, 200, { ok: true });
       }
 
       const handelserVag = vag.match(/^\/api\/arenden\/([A-Za-z0-9_-]+)\/handelser$/);
-      if (handelserVag && req.method === "GET") {
-        const rader = await pool.query(
-          `select id, tidpunkt, anvandare, handelse from felsokning_handelser
-           where arende_id = $1 order by tidpunkt, id`,
-          [handelserVag[1]],
-        );
-        return svara(res, 200, { handelser: rader.rows });
-      }
-      if (handelserVag && req.method === "POST") {
-        const { handelser } = await lasKropp(req);
-        if (!Array.isArray(handelser) || handelser.length > 500) {
-          return svara(res, 400, { error: "Ogiltig händelselista." });
+      if (handelserVag) {
+        // Organisationsgränsen: ärendet måste tillhöra användarens org.
+        if (!(await arendeIOrg(handelserVag[1], anspr.org))) {
+          return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
         }
-        for (const post of handelser) {
-          if (typeof post?.id !== "string" || !post.tidpunkt || typeof post.anvandare !== "string" || !post.handelse) {
-            return svara(res, 400, { error: "Ogiltig händelse." });
-          }
-          // Append-only: on conflict do nothing — en befintlig händelse
-          // skrivs aldrig över, och databastriggern stoppar allt annat.
-          await pool.query(
-            `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
-             values ($1, $2, $3, $4, $5) on conflict (id) do nothing`,
-            [post.id, handelserVag[1], post.tidpunkt, post.anvandare, post.handelse],
+        if (req.method === "GET") {
+          const rader = await pool.query(
+            `select id, tidpunkt, anvandare, handelse from felsokning_handelser
+             where arende_id = $1 order by tidpunkt, id`,
+            [handelserVag[1]],
           );
+          return svara(res, 200, { handelser: rader.rows });
         }
-        return svara(res, 200, { ok: true });
+        if (req.method === "POST") {
+          const { handelser } = await lasKropp(req);
+          if (!Array.isArray(handelser) || handelser.length > 500) {
+            return svara(res, 400, { error: "Ogiltig händelselista." });
+          }
+          for (const post of handelser) {
+            if (typeof post?.id !== "string" || !post.tidpunkt || typeof post.anvandare !== "string" || !post.handelse) {
+              return svara(res, 400, { error: "Ogiltig händelse." });
+            }
+            // Append-only: on conflict do nothing — en befintlig händelse
+            // skrivs aldrig över, och databastriggern stoppar allt annat.
+            await pool.query(
+              `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
+               values ($1, $2, $3, $4, $5) on conflict (id) do nothing`,
+              [post.id, handelserVag[1], post.tidpunkt, post.anvandare, post.handelse],
+            );
+          }
+          return svara(res, 200, { ok: true });
+        }
       }
 
       return svara(res, 404, { error: "Okänd resurs." });
@@ -200,15 +283,6 @@ export function skapaServer() {
       return svara(res, 500, { error: "Förfrågan misslyckades." });
     }
   });
-
-  function loggaIn(res, anvandare, hemlighet) {
-    const nu = Math.floor(Date.now() / 1000);
-    const token = skapaJwt(
-      { sub: anvandare.id, namn: anvandare.namn, iat: nu, exp: nu + TOKEN_LIVSTID_S },
-      hemlighet,
-    );
-    return svara(res, 200, { token, namn: anvandare.namn });
-  }
 }
 
 if (process.env.NODE_ENV !== "test") {

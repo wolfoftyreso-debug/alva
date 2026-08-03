@@ -18,6 +18,21 @@ jobs:
       - run: npx vitest run
       - run: npm run build
 
+  integrationstest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update && sudo apt-get install -y postgresql
+      - run: npm install --no-audit --no-fund
+        working-directory: services/plattform
+      # Kör hela flödet mot riktig Postgres: organisationer, roller,
+      # append-only-triggern, isolering och publik delning.
+      - run: sudo bash integrationstest.sh
+        working-directory: services/plattform
+
   container-byggen:
     runs-on: ubuntu-latest
     steps:
