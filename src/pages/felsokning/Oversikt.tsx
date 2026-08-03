@@ -44,13 +44,13 @@ function Omfordela({ rad, vidKlar }: { rad: OversiktsRad; vidKlar: () => void })
     );
   }
   return (
-    <div className="col-span-2 rounded-lg border-2 border-zinc-700 bg-zinc-950 p-2">
-      <p className="mb-2 text-sm font-bold uppercase text-zinc-400">Ny ansvarig tekniker</p>
+    <div className="col-span-2 rounded border border-[#C6C6C6] bg-white p-2">
+      <p className="mb-2 text-[12px] font-semibold uppercase text-[#4A5560]">Ny ansvarig tekniker</p>
       <div className="grid grid-cols-2 gap-2">
         {personer.map((person) => (
           <button
             key={person.id}
-            className="min-h-12 rounded-lg border-2 border-zinc-600 font-extrabold text-zinc-200 hover:border-amber-400"
+            className="min-h-9 rounded border border-[#ADADAD] font-semibold text-[#333333] hover:border-[#00437A]"
             onClick={async () => {
               const post = nyLoggPost(konto?.namn ?? "arbetsledare", {
                 typ: "ansvarig_satt",
@@ -68,7 +68,7 @@ function Omfordela({ rad, vidKlar }: { rad: OversiktsRad; vidKlar: () => void })
           </button>
         ))}
         <button
-          className="min-h-12 rounded-lg border-2 border-zinc-600 font-bold text-zinc-400"
+          className="min-h-9 rounded border border-[#ADADAD] font-semibold text-[#4A5560]"
           onClick={() => setOppen(false)}
         >
           Avbryt
@@ -97,7 +97,7 @@ export default function Oversikt() {
     return (
       <FelsokningSkal rubrik="Organisationsöversikt" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
         <Panel>
-          <p className="text-lg text-zinc-300">
+          <p className="text-[14px] text-[#333333]">
             Översikten kräver arbetsledar- eller administratörsbehörighet på plattformen.
           </p>
         </Panel>
@@ -149,55 +149,55 @@ export default function Oversikt() {
     <FelsokningSkal
       rubrik="Organisationsöversikt"
       tillbaka={{ till: "/felsokning", text: "Ärenden" }}
-      hoger={<span className="text-sm font-bold text-zinc-400">{konto?.organisation}</span>}
+      hoger={<span className="text-[12px] font-semibold text-[#A9C3DE]">{konto?.organisation}</span>}
     >
-      {fel && <p className="mb-3 font-bold text-red-400">{fel}</p>}
-      {!rader && !fel && <p className="animate-pulse text-lg text-zinc-400">Hämtar …</p>}
+      {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
+      {!rader && !fel && <p className="animate-pulse text-[14px] text-[#4A5560]">Hämtar …</p>}
 
       {rader && (
         <>
           <Panel rubrik="Statistik">
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
-                <p className="text-3xl font-extrabold">{rader.length}</p>
-                <p className="text-sm font-bold uppercase text-zinc-400">Totalt</p>
+                <p className="text-[20px] font-semibold">{rader.length}</p>
+                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">Totalt</p>
               </div>
               <div>
-                <p className="text-3xl font-extrabold text-amber-400">{pagaende.length}</p>
-                <p className="text-sm font-bold uppercase text-zinc-400">Pågående</p>
+                <p className="text-[20px] font-semibold text-[#00437A]">{pagaende.length}</p>
+                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">Pågående</p>
               </div>
               <div>
-                <p className="text-3xl font-extrabold">{avslutade.length}</p>
-                <p className="text-sm font-bold uppercase text-zinc-400">Avslutade</p>
+                <p className="text-[20px] font-semibold">{avslutade.length}</p>
+                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">Avslutade</p>
               </div>
             </div>
             {avslutade.length > 0 && (
-              <p className="mt-3 text-center text-zinc-300">
-                Genomsnittlig ledtid för avslutade: <span className="font-extrabold">{formateraTid(medelLedtidMs)}</span>
+              <p className="mt-3 text-center text-[#333333]">
+                Genomsnittlig ledtid för avslutade: <span className="font-semibold">{formateraTid(medelLedtidMs)}</span>
               </p>
             )}
           </Panel>
 
-          {rader.length === 0 && <p className="text-center text-lg text-zinc-400">Inga ärenden i organisationen ännu.</p>}
+          {rader.length === 0 && <p className="text-center text-[14px] text-[#4A5560]">Inga ärenden i organisationen ännu.</p>}
 
           {rader.map((rad) => (
-            <div key={rad.id} className="mb-3 rounded-lg border-2 border-zinc-700 bg-zinc-900 p-4">
+            <div key={rad.id} className="mb-3 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-extrabold uppercase tracking-widest text-zinc-400">
+                <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">
                   Ärende #{rad.nummer}
                 </span>
                 <span
-                  className={`rounded px-2 py-0.5 text-xs font-extrabold uppercase ${
-                    rad.avslutat ? "bg-zinc-700 text-zinc-300" : "bg-amber-400 text-zinc-950"
+                  className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase ${
+                    rad.avslutat ? "bg-[#8A94A0] text-white" : "bg-[#00437A] text-white"
                   }`}
                 >
                   {rad.avslutat ? "Avslutat" : "Pågående"}
                 </span>
               </div>
-              <p className="mt-1 text-xl font-extrabold">{rad.objekt ?? "Okänt objekt"}</p>
-              {rad.felbeskrivning && <p className="text-lg text-zinc-200">”{rad.felbeskrivning}”</p>}
-              <p className="mt-1 text-sm text-zinc-500">
-                Ansvarig: <span className="font-bold text-zinc-300">{rad.ansvarig ?? rad.skapare ?? "—"}</span>
+              <p className="mt-1 text-[15px] font-semibold">{rad.objekt ?? "Okänt objekt"}</p>
+              {rad.felbeskrivning && <p className="text-[14px] text-[#333333]">”{rad.felbeskrivning}”</p>}
+              <p className="mt-1 text-[12px] text-[#707070]">
+                Ansvarig: <span className="font-semibold text-[#333333]">{rad.ansvarig ?? rad.skapare ?? "—"}</span>
                 {` · ${rad.antal_handelser} händelser`}
                 {rad.senaste ? ` · senast ${tidDatum(rad.senaste)} ${tidKlockslag(rad.senaste)}` : ""}
               </p>

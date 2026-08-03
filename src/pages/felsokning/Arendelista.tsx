@@ -43,12 +43,12 @@ function PlattformInloggning() {
       <>
         <Panel rubrik="Plattformskonto">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-lg">
-              <span className="font-extrabold">{konto.namn}</span> · {ROLL_LABEL[konto.roll]} ·{" "}
+            <p className="text-[14px]">
+              <span className="font-semibold">{konto.namn}</span> · {ROLL_LABEL[konto.roll]} ·{" "}
               {konto.organisation} — synk och AI aktiva.
             </p>
             <button
-              className="whitespace-nowrap rounded-lg border-2 border-zinc-600 px-4 py-2 font-bold text-zinc-300 hover:border-zinc-400"
+              className="whitespace-nowrap rounded border border-[#ADADAD] px-4 py-2 font-semibold text-[#333333] hover:border-[#8FA8C0]"
               onClick={() => {
                 loggaUtPlattform();
                 setKonto(null);
@@ -77,7 +77,7 @@ function PlattformInloggning() {
     <Panel rubrik="Plattformskonto">
       {lage === "stangd" ? (
         <>
-          <p className="mb-2 text-zinc-300">
+          <p className="mb-2 text-[#333333]">
             Logga in för synk mellan enheter, samarbete i ärenden och AI-stöd. Utan inloggning
             arbetar appen i lokalt läge. Ny organisation? Skapa konto — du blir systemadministratör.
           </p>
@@ -112,7 +112,7 @@ function PlattformInloggning() {
           )}
           <TextFalt label="E-post" varde={epost} satt={setEpost} platshallare="anna@verkstaden.se" />
           <TextFalt label="Lösenord (minst 8 tecken)" varde={losenord} satt={setLosenord} losenord />
-          {fel && <p className="mb-3 font-bold text-red-400">{fel}</p>}
+          {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setLage("stangd")}>
               Avbryt
@@ -172,9 +172,9 @@ function AnvandarAdmin() {
   return (
     <Panel rubrik="Användare">
       {lista.map((anv) => (
-        <p key={anv.id} className="border-b border-zinc-800 py-1 text-lg last:border-0">
-          <span className="font-extrabold">{anv.namn}</span> · {ROLL_LABEL[anv.roll]}{" "}
-          <span className="text-zinc-500">{anv.epost}</span>
+        <p key={anv.id} className="border-b border-[#DDDDDD] py-1 text-[14px] last:border-0">
+          <span className="font-semibold">{anv.namn}</span> · {ROLL_LABEL[anv.roll]}{" "}
+          <span className="text-[#707070]">{anv.epost}</span>
         </p>
       ))}
       <form
@@ -202,17 +202,17 @@ function AnvandarAdmin() {
               key={valbar}
               type="button"
               onClick={() => setRoll(valbar)}
-              className={`min-h-12 rounded-lg border-2 text-sm font-extrabold ${
+              className={`min-h-9 rounded border text-[12px] font-semibold ${
                 roll === valbar
-                  ? "border-amber-400 bg-amber-400 text-zinc-950"
-                  : "border-zinc-600 bg-zinc-900 text-zinc-200"
+                  ? "border-[#00437A] bg-[#00437A] text-white"
+                  : "border-[#ADADAD] bg-[#F7F7F7] text-[#333333]"
               }`}
             >
               {ROLL_LABEL[valbar]}
             </button>
           ))}
         </div>
-        {fel && <p className="mb-3 font-bold text-red-400">{fel}</p>}
+        {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
         <StorKnapp type="submit" disabled={!epost.trim() || !namn.trim() || losenord.length < 8}>
           Skapa användare
         </StorKnapp>
@@ -232,7 +232,7 @@ export default function Arendelista() {
     return (
       <FelsokningSkal rubrik="Guidad Felsökning">
         <Panel rubrik="Vem arbetar?">
-          <p className="mb-3 text-lg text-zinc-300">
+          <p className="mb-3 text-[14px] text-[#333333]">
             Allt arbete loggas med användare och tidpunkt. Ange ditt namn för att börja.
           </p>
           <form
@@ -265,20 +265,20 @@ export default function Arendelista() {
   return (
     <FelsokningSkal
       rubrik="Guidad Felsökning"
-      hoger={<span className="text-sm font-bold text-zinc-400">{anvandare}</span>}
+      hoger={<span className="text-[12px] font-semibold text-[#A9C3DE]">{anvandare}</span>}
     >
       <Link to="/felsokning/nytt">
         <StorKnapp className="mb-4">+ Nytt ärende</StorKnapp>
       </Link>
 
       {alla.length > 0 && (
-        <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg border-2 border-zinc-700 bg-zinc-900 p-1">
+        <div className="mb-4 grid grid-cols-3 gap-1 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-1">
           {FILTER.map((f) => (
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
-              className={`min-h-12 rounded-md text-base font-extrabold transition-colors ${
-                filter === f.id ? "bg-amber-400 text-zinc-950" : "text-zinc-300 hover:bg-zinc-800"
+              className={`min-h-9 rounded text-[13px] font-semibold transition-colors ${
+                filter === f.id ? "bg-[#00437A] text-white" : "text-[#333333] hover:bg-[#E4E9EE]"
               }`}
             >
               {f.label} · {f.antal}
@@ -289,7 +289,7 @@ export default function Arendelista() {
 
       {alla.length === 0 && (
         <Panel rubrik="Kom igång">
-          <p className="mb-3 text-lg text-zinc-300">
+          <p className="mb-3 text-[14px] text-[#333333]">
             Inga ärenden ännu. Starta med att identifiera ett objekt — eller utforska ett färdigt demoärende
             med komplett arbetslogg, brief och kundrapport.
           </p>
@@ -300,7 +300,7 @@ export default function Arendelista() {
       )}
 
       {lista.length === 0 && alla.length > 0 && (
-        <p className="text-center text-lg text-zinc-400">Inga ärenden i det här filtret.</p>
+        <p className="text-center text-[14px] text-[#4A5560]">Inga ärenden i det här filtret.</p>
       )}
 
       {plattformAktiv() && <PlattformInloggning />}
@@ -312,7 +312,7 @@ export default function Arendelista() {
       )}
 
       <Panel rubrik="AI-stöd">
-        <p className="text-zinc-300">
+        <p className="text-[#333333]">
           När du är inloggad hjälper AI:n dig medan du arbetar: föreslår nästa steg utifrån det du
           dokumenterar, granskar hela ärendet på begäran och skriver utkast till överlämningen. Den
           skiljer alltid på verifierat och hypotes — och slår aldrig fast en felorsak som inte är
@@ -329,23 +329,23 @@ export default function Arendelista() {
         const b = brief(arende, metodikForArende(arende), new Date().toISOString());
         return (
           <Link key={arende.id} to={`/felsokning/arende/${arende.id}`} className="block">
-            <div className="mb-3 rounded-lg border-2 border-zinc-700 bg-zinc-900 p-4 transition-colors hover:border-amber-400">
+            <div className="mb-3 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-4 transition-colors hover:border-[#00437A]">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-extrabold uppercase tracking-widest text-zinc-400">
+                <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">
                   Ärende #{arende.nummer}
                 </span>
                 <span
-                  className={`rounded px-2 py-0.5 text-xs font-extrabold uppercase ${
-                    avslutat ? "bg-zinc-700 text-zinc-300" : "bg-amber-400 text-zinc-950"
+                  className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase ${
+                    avslutat ? "bg-[#8A94A0] text-white" : "bg-[#00437A] text-white"
                   }`}
                 >
                   {avslutat ? "Avslutat" : "Pågående"}
                 </span>
               </div>
-              <p className="mt-1 text-xl font-extrabold">{o ? o.beskrivning : "Okänt objekt"}</p>
-              {o && <p className="text-sm font-bold text-zinc-400">{o.identifierare}{o.kund ? ` · ${o.kund}` : ""}</p>}
-              {fel && <p className="mt-2 text-lg text-zinc-200">”{fel}”</p>}
-              <p className="mt-2 text-sm text-zinc-500">
+              <p className="mt-1 text-[15px] font-semibold">{o ? o.beskrivning : "Okänt objekt"}</p>
+              {o && <p className="text-[12px] font-semibold text-[#4A5560]">{o.identifierare}{o.kund ? ` · ${o.kund}` : ""}</p>}
+              {fel && <p className="mt-2 text-[14px] text-[#333333]">”{fel}”</p>}
+              <p className="mt-2 text-[12px] text-[#707070]">
                 {sista ? `Senaste aktivitet ${tidDatum(sista.tidpunkt)} ${tidKlockslag(sista.tidpunkt)}` : ""}
                 {" · "}
                 {b.totalArbetstid}

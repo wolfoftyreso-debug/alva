@@ -57,9 +57,9 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
     post(0, {
       typ: "objekt_identifierat",
       objekt: {
-        typ: "Fordon",
+        typ: "Personbil",
         identifierare: "ABC123",
-        identifieringsmetod: "Registreringsnummer",
+        identifieringsmetod: "Regnr",
         beskrivning: "Volvo XC60 D4 2019",
         kund: "Anders Svensson",
       },

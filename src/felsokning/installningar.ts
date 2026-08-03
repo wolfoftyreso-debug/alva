@@ -7,7 +7,7 @@
 import { plattformAktiv, plattformFetch, plattformToken } from "./plattform";
 
 export const ALLA_OBJEKTTYPER = [
-  "Fordon",
+  "Personbil",
   "Lastbil/Buss",
   "Entreprenadmaskin",
   "Industrimaskin",
@@ -17,7 +17,7 @@ export const ALLA_OBJEKTTYPER = [
 ];
 
 export const ALLA_IDENTIFIERINGSMETODER = [
-  "Registreringsnummer",
+  "Regnr",
   "VIN",
   "Serienummer",
   "Maskinnummer",

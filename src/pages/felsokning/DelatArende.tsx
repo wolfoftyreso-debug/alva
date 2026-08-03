@@ -21,7 +21,7 @@ export default function DelatArende() {
   if (!arende) {
     return (
       <FelsokningSkal rubrik="Delat ärende">
-        <p className="text-lg text-zinc-300">Ärendet är inte tillgängligt.</p>
+        <p className="text-[14px] text-[#333333]">Ärendet är inte tillgängligt.</p>
       </FelsokningSkal>
     );
   }

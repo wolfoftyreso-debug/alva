@@ -32,10 +32,10 @@ function Vallista({
           <button
             key={val}
             onClick={() => vidByte(aktiv ? valda.filter((v) => v !== val) : [...valda, val])}
-            className={`min-h-14 rounded-lg border-2 px-2 font-extrabold transition-colors ${
+            className={`min-h-10 rounded border px-2 font-semibold transition-colors ${
               aktiv
-                ? "border-amber-400 bg-amber-400 text-zinc-950"
-                : "border-zinc-600 bg-zinc-900 text-zinc-400"
+                ? "border-[#00437A] bg-[#00437A] text-white"
+                : "border-[#ADADAD] bg-[#F7F7F7] text-[#4A5560]"
             }`}
           >
             {aktiv ? "✓ " : ""}
@@ -64,7 +64,7 @@ export default function Installningar() {
     return (
       <FelsokningSkal rubrik="Inställningar" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
         <Panel>
-          <p className="text-lg text-zinc-300">
+          <p className="text-[14px] text-[#333333]">
             Organisationens inställningar hanteras av er systemadministratör.
           </p>
         </Panel>
@@ -97,7 +97,7 @@ export default function Installningar() {
   return (
     <FelsokningSkal rubrik="Inställningar" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
       <Panel>
-        <p className="text-zinc-300">
+        <p className="text-[#333333]">
           Välj vad som visas när ett nytt ärende startas.{" "}
           {inloggad
             ? "Valet gäller alla i organisationen."
@@ -121,8 +121,8 @@ export default function Installningar() {
         />
       </Panel>
 
-      {status === "fel" && <p className="mb-3 font-bold text-red-400">{felText}</p>}
-      {status === "sparat" && <p className="mb-3 font-bold text-green-400">✓ Sparat</p>}
+      {status === "fel" && <p className="mb-3 font-semibold text-[#8B1A1A]">{felText}</p>}
+      {status === "sparat" && <p className="mb-3 font-semibold text-[#1E6B34]">✓ Sparat</p>}
       <StorKnapp disabled={status === "sparar"} onClick={spara}>
         {status === "sparar" ? "Sparar …" : "Spara inställningar"}
       </StorKnapp>

@@ -32,7 +32,7 @@ export const TIDKATEGORI_LABEL: Record<TidKategori, string> = {
 export interface Objekt {
   typ: string; // t.ex. "Fordon", "Industrimaskin"
   identifierare: string; // reg.nr, VIN, serienummer …
-  identifieringsmetod: string; // "Registreringsnummer", "VIN", "Serienummer", "Manuell inmatning"
+  identifieringsmetod: string; // "Regnr", "VIN", "Serienummer", "Manuell inmatning"
   beskrivning: string; // t.ex. "Volvo XC60 D4 2019"
   kund?: string;
 }

@@ -17,10 +17,10 @@ describe("organisationsinställningar", () => {
 
   it("okända värden filtreras bort och ordningen följer standardlistan", () => {
     const inst = normalisera({
-      objekttyper: ["Hydraulik", "Påhittad typ", "Fordon"],
+      objekttyper: ["Hydraulik", "Påhittad typ", "Personbil"],
       identifieringsmetoder: ["VIN"],
     });
-    expect(inst.objekttyper).toEqual(["Fordon", "Hydraulik"]);
+    expect(inst.objekttyper).toEqual(["Personbil", "Hydraulik"]);
     expect(inst.identifieringsmetoder).toEqual(["VIN"]);
   });
 

@@ -40,31 +40,31 @@ export function DelatArendeVy({
       rubrik={b.objekt?.beskrivning ?? "Ärende"}
       hoger={
         <span
-          className={`rounded px-3 py-1 text-sm font-extrabold uppercase ${
-            avslutat ? "bg-zinc-700 text-zinc-200" : "bg-green-500 text-zinc-950"
+          className={`rounded px-3 py-1 text-[12px] font-semibold uppercase ${
+            avslutat ? "bg-[#3E5A78] text-white" : "bg-[#1E6B34] text-white"
           }`}
         >
           {avslutat ? "Avslutat" : "🟢 Felsökning pågår"}
         </span>
       }
     >
-      <p className="mb-4 rounded-lg border-2 border-zinc-700 bg-zinc-900 p-3 text-sm text-zinc-400 print:hidden">
+      <p className="mb-4 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-3 text-[12px] text-[#4A5560] print:hidden">
         {notis}
       </p>
 
       {b.felbeskrivning && (
         <Panel rubrik="Kundens felbeskrivning">
-          <p className="text-lg">”{b.felbeskrivning}”</p>
+          <p className="text-[14px]">”{b.felbeskrivning}”</p>
         </Panel>
       )}
 
       <Panel rubrik="Aktuell status">
         {b.utfordaKontroller.map((k, i) => (
-          <p key={`u${i}`} className="py-0.5 text-lg">✔ {k.text}</p>
+          <p key={`u${i}`} className="py-0.5 text-[14px]">✔ {k.text}</p>
         ))}
-        {!avslutat && pagaende && <p className="py-0.5 text-lg text-amber-400">🔄 {pagaende}</p>}
+        {!avslutat && pagaende && <p className="py-0.5 text-[14px] text-[#00437A]">🔄 {pagaende}</p>}
         {b.ejKontrollerat.slice(avslutat ? 0 : 1).map((e, i) => (
-          <p key={`e${i}`} className="py-0.5 text-lg text-zinc-400">⏳ {e}</p>
+          <p key={`e${i}`} className="py-0.5 text-[14px] text-[#4A5560]">⏳ {e}</p>
         ))}
       </Panel>
 
@@ -73,8 +73,8 @@ export function DelatArendeVy({
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
-                <img src={bild.dataUrl} alt={bild.beskrivning} className="rounded border border-zinc-700" />
-                <figcaption className="mt-1 text-xs text-zinc-400">{bild.beskrivning}</figcaption>
+                <img src={bild.dataUrl} alt={bild.beskrivning} className="rounded border border-[#C6C6C6]" />
+                <figcaption className="mt-1 text-[11px] text-[#4A5560]">{bild.beskrivning}</figcaption>
               </figure>
             ))}
           </div>
@@ -83,15 +83,15 @@ export function DelatArendeVy({
 
       {matvarden.length > 0 && (
         <Panel rubrik="Mätvärden">
-          <table className="w-full text-lg">
+          <table className="w-full text-[14px]">
             <tbody>
               {matvarden.map((p) => {
                 const h = p.handelse;
                 if (h.typ !== "matvarde") return null;
                 return (
-                  <tr key={p.id} className="border-b border-zinc-800 last:border-0">
-                    <td className="py-1 pr-3 text-zinc-300">{h.beskrivning}</td>
-                    <td className="py-1 font-bold">
+                  <tr key={p.id} className="border-b border-[#DDDDDD] last:border-0">
+                    <td className="py-1 pr-3 text-[#333333]">{h.beskrivning}</td>
+                    <td className="py-1 font-semibold">
                       {h.varde}
                       {h.enhet ? ` ${h.enhet}` : ""}
                     </td>
@@ -105,8 +105,8 @@ export function DelatArendeVy({
 
       <Panel rubrik="Tidslinje">
         {kundposter.map((post) => (
-          <p key={post.id} className="py-0.5 text-base">
-            <span className="font-mono font-bold text-amber-400">{tidKlockslag(post.tidpunkt)}</span>{" "}
+          <p key={post.id} className="py-0.5 text-[13px]">
+            <span className="font-mono font-semibold text-[#00437A]">{tidKlockslag(post.tidpunkt)}</span>{" "}
             {handelseRubrik(post)}
           </p>
         ))}
@@ -114,20 +114,20 @@ export function DelatArendeVy({
 
       {!avslutat && pagaende && (
         <Panel rubrik="Rekommenderat nästa steg">
-          <p className="text-lg">{pagaende}</p>
+          <p className="text-[14px]">{pagaende}</p>
         </Panel>
       )}
 
       <Panel rubrik="Arbetstid">
-        <p className="text-2xl font-extrabold">{b.totalArbetstid}</p>
+        <p className="text-[17px] font-semibold">{b.totalArbetstid}</p>
         {tidsfordelningsRader(arende, nu).map((r) => (
-          <p key={r.label} className="text-zinc-300">
+          <p key={r.label} className="text-[#333333]">
             {r.label}: {r.tid}
           </p>
         ))}
       </Panel>
 
-      <p className="text-center text-xs text-zinc-600">
+      <p className="text-center text-[11px] text-[#8A8A8A]">
         Ärende #{arende.nummer} · startat {tidDatum(arende.skapad)} · genererad ur ärendets händelselogg
       </p>
     </FelsokningSkal>

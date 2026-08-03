@@ -18,7 +18,7 @@ function byggArende(poster: [string, Handelse][]): Arende {
 const OBJEKT: Handelse = {
   typ: "objekt_identifierat",
   objekt: {
-    typ: "Fordon",
+    typ: "Personbil",
     identifierare: "ABC123",
     identifieringsmetod: "Registreringsnummer",
     beskrivning: "Volvo XC60 D4 2019",

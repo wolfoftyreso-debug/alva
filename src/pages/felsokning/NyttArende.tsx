@@ -60,7 +60,7 @@ export default function NyttArende() {
               </StorKnapp>
             ))}
           </div>
-          <p className="mt-3 text-sm text-zinc-500">
+          <p className="mt-3 text-[12px] text-[#707070]">
             QR-kod, streckkod och OCR från typskylt tillkommer i senare version — ange identiteten manuellt.
           </p>
         </Panel>
@@ -80,11 +80,11 @@ export default function NyttArende() {
     return (
       <FelsokningSkal rubrik="Bekräfta objekt" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
         <Panel>
-          <p className="text-sm font-extrabold uppercase tracking-widest text-zinc-400">{objektet.typ}</p>
-          <p className="mt-1 text-3xl font-extrabold">{objektet.beskrivning}</p>
-          <p className="mt-1 text-xl font-bold text-amber-400">{objektet.identifierare}</p>
-          <p className="mt-1 text-sm text-zinc-400">Identifierad via: {objektet.identifieringsmetod}</p>
-          {objektet.kund && <p className="mt-1 text-lg text-zinc-200">Kund: {objektet.kund}</p>}
+          <p className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">{objektet.typ}</p>
+          <p className="mt-1 text-[20px] font-semibold">{objektet.beskrivning}</p>
+          <p className="mt-1 text-[15px] font-semibold text-[#00437A]">{objektet.identifierare}</p>
+          <p className="mt-1 text-[12px] text-[#4A5560]">Identifierad via: {objektet.identifieringsmetod}</p>
+          {objektet.kund && <p className="mt-1 text-[14px] text-[#333333]">Kund: {objektet.kund}</p>}
         </Panel>
         <div className="grid grid-cols-2 gap-2">
           <StorKnapp variant="sekundar" onClick={() => setSteg("identifiera")}>
@@ -110,8 +110,8 @@ export default function NyttArende() {
           rost
         />
         {metodik && (
-          <p className="mb-3 text-sm font-bold text-zinc-400">
-            Vald metodik: <span className="text-amber-400">{metodik.namn}</span>
+          <p className="mb-3 text-[12px] font-semibold text-[#4A5560]">
+            Vald metodik: <span className="text-[#00437A]">{metodik.namn}</span>
           </p>
         )}
         <StorKnapp

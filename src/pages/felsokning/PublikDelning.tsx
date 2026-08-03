@@ -89,7 +89,7 @@ export default function PublikDelning() {
     return (
       <FelsokningSkal rubrik="Delat ärende">
         <Panel>
-          <p className="text-lg text-zinc-300">
+          <p className="text-[14px] text-[#333333]">
             {status === "laddar"
               ? "Hämtar ärendet …"
               : "Ärendet är inte tillgängligt. Kontrollera länken med verkstaden — delningen kan ha stängts av."}

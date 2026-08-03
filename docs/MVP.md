@@ -41,7 +41,7 @@ Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på st
 - **Händelseloggen är enda sanningskällan.** `src/felsokning/domain.ts` definierar händelsetyperna; poster läggs endast till.
 - **Alla vyer är projektioner.** `src/felsokning/projektioner.ts` — brief, tidsfördelning, överlämningstext och kundrapport är rena funktioner av loggen och kan alltid regenereras. Testerna i `src/felsokning/__tests__/` låser detta.
 - **Metodikmotorn är deterministisk.** `src/felsokning/metodik.ts` — nästa steg härleds ur vad som redan dokumenterats. Det är här den framtida AI:n ansluter, utan att logg eller projektioner ändras.
-- **Fabriksverktygs-UI.** `src/felsokning/ui.tsx` — hög kontrast, minst 56 px höga knappar, få val per skärm.
+- **Industriellt verkstads-UI (ETKA-inspirerat).** `src/felsokning/ui.tsx` — plana ljusgrå ytor (#ECECEC/#F7F7F7), skarpa kanter, djup marinblå som primärfärg, tät typografi (11–15 px), rektangulära knappar (max 4 px radie), verktygsrad ~44 px. Ärendesidan har klassisk trekolumnslayout på skrivbord: navigationsträd (vyer + metodikstegens status) till vänster, arbetsyta i mitten, kontextpanel (teknisk information, tillförlitlighet, teknisk rekommendation) till höger; en kolumn med flikrad på smala skärmar.
 
 ## Medvetna avgränsningar
 
