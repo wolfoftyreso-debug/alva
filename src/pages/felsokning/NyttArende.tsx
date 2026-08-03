@@ -1,22 +1,31 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Objekt } from "@/felsokning/domain";
 import { useFelsokning } from "@/felsokning/store";
 import { valjMetodik } from "@/felsokning/metodik";
 import { valjMetodikMedAi } from "@/felsokning/ai";
+import { hamtaInstallningar, lastaInstallningar } from "@/felsokning/installningar";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 
-const IDENTIFIERINGSMETODER = ["Registreringsnummer", "VIN", "Serienummer", "Maskinnummer", "Manuell inmatning"];
-const OBJEKTTYPER = ["Fordon", "Lastbil/Buss", "Entreprenadmaskin", "Industrimaskin", "Elsystem", "Hydraulik", "Övrigt"];
-
 // Ingen felsökning börjar innan objektet identifierats och bekräftats.
+// Vilka objekttyper och identifieringsmetoder som visas styrs av
+// organisationens inställningar (systemadmin) — enhetens val i lokalt läge.
 export default function NyttArende() {
   const navigate = useNavigate();
   const skapaArende = useFelsokning((s) => s.skapaArende);
 
+  const [inst, setInst] = useState(lastaInstallningar());
   const [steg, setSteg] = useState<"identifiera" | "bekrafta" | "felbeskrivning">("identifiera");
-  const [metod, setMetod] = useState(IDENTIFIERINGSMETODER[0]);
-  const [typ, setTyp] = useState(OBJEKTTYPER[0]);
+  const [metod, setMetod] = useState(inst.identifieringsmetoder[0]);
+  const [typ, setTyp] = useState(inst.objekttyper[0]);
+
+  useEffect(() => {
+    hamtaInstallningar().then((farsk) => {
+      setInst(farsk);
+      setTyp((t) => (farsk.objekttyper.includes(t) ? t : farsk.objekttyper[0]));
+      setMetod((m) => (farsk.identifieringsmetoder.includes(m) ? m : farsk.identifieringsmetoder[0]));
+    });
+  }, []);
   const [identifierare, setIdentifierare] = useState("");
   const [beskrivning, setBeskrivning] = useState("");
   const [kund, setKund] = useState("");
@@ -36,7 +45,7 @@ export default function NyttArende() {
       <FelsokningSkal rubrik="Identifiera objekt" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
         <Panel rubrik="Objekttyp">
           <div className="grid grid-cols-2 gap-2">
-            {OBJEKTTYPER.map((t) => (
+            {inst.objekttyper.map((t) => (
               <StorKnapp key={t} variant={t === typ ? "primar" : "sekundar"} onClick={() => setTyp(t)}>
                 {t}
               </StorKnapp>
@@ -45,7 +54,7 @@ export default function NyttArende() {
         </Panel>
         <Panel rubrik="Identifieringsmetod">
           <div className="grid grid-cols-2 gap-2">
-            {IDENTIFIERINGSMETODER.map((m) => (
+            {inst.identifieringsmetoder.map((m) => (
               <StorKnapp key={m} variant={m === metod ? "primar" : "sekundar"} onClick={() => setMetod(m)}>
                 {m}
               </StorKnapp>

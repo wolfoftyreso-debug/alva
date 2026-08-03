@@ -147,6 +147,48 @@ paths:
         "403": { $ref: "#/components/responses/Fel" }
         "409": { $ref: "#/components/responses/Fel" }
 
+  /api/organisation:
+    get:
+      tags: [Organisation]
+      summary: Hämta organisationens namn och inställningar
+      description: >
+        Inställningarna styr vad som visas när ett ärende startas
+        (objekttyper och identifieringsmetoder). Alla inloggade läser.
+      responses:
+        "200":
+          description: Organisationen.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  namn: { type: string }
+                  installningar: { $ref: "#/components/schemas/OrganisationsInstallningar" }
+        "401": { $ref: "#/components/responses/Fel" }
+
+  /api/organisation/installningar:
+    post:
+      tags: [Organisation]
+      summary: Uppdatera organisationens inställningar
+      description: Kräver rollen `admin`. Minst ett alternativ per lista.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrganisationsInstallningar" }
+      responses:
+        "200":
+          description: Sparat.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "400": { $ref: "#/components/responses/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+
   /api/arenden:
     get:
       tags: [Ärenden]
@@ -456,6 +498,18 @@ components:
     Roll:
       type: string
       enum: [tekniker, arbetsledare, admin]
+    OrganisationsInstallningar:
+      type: object
+      required: [objekttyper, identifieringsmetoder]
+      properties:
+        objekttyper:
+          type: array
+          minItems: 1
+          items: { type: string }
+        identifieringsmetoder:
+          type: array
+          minItems: 1
+          items: { type: string }
     DelningsNiva:
       type: string
       enum: [kund, partner, intern]

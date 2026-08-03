@@ -20,6 +20,7 @@ import ArendeSida from "./pages/felsokning/ArendeSida";
 import DelatArende from "./pages/felsokning/DelatArende";
 import PublikDelning from "./pages/felsokning/PublikDelning";
 import Oversikt from "./pages/felsokning/Oversikt";
+import Installningar from "./pages/felsokning/Installningar";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ function AppContent() {
         <Route path="/felsokning/dela/:id" element={<DelatArende />} />
         <Route path="/felsokning/delad/:kod" element={<PublikDelning />} />
         <Route path="/felsokning/oversikt" element={<Oversikt />} />
+        <Route path="/felsokning/installningar" element={<Installningar />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

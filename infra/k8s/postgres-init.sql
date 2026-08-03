@@ -9,8 +9,12 @@ create extension if not exists pgcrypto;
 create table if not exists organisationer (
   id uuid primary key default gen_random_uuid(),
   namn text not null,
+  -- Vad som visas när ett ärende startas (objekttyper,
+  -- identifieringsmetoder) — sätts av systemadministratören.
+  installningar jsonb not null default '{}'::jsonb,
   skapad timestamptz not null default now()
 );
+alter table organisationer add column if not exists installningar jsonb not null default '{}'::jsonb;
 
 create table if not exists anvandare (
   id uuid primary key default gen_random_uuid(),

@@ -122,6 +122,23 @@ curl -s -X POST "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bea
   -d '{"handelser":[{"id":"h-omf","tidpunkt":"2026-08-03T08:05:00Z","anvandare":"Lisa","handelse":{"typ":"ansvarig_satt","ansvarig":"Johan"}}]}' >/dev/null
 kontroll "översikten visar ny ansvarig" "$(curl -s "$BAS/api/oversikt" -H "Authorization: Bearer $TOKEN_L" | falt '.arenden[0].ansvarig')" "Johan"
 
+# 9c. Organisationsinställningar: alla läser, bara admin ändrar
+INST=$(curl -s "$BAS/api/organisation" -H "Authorization: Bearer $TOKEN_J")
+kontroll "inloggad läser organisationen" "$(echo "$INST" | falt .namn)" "Verkstad A"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/organisation/installningar" \
+  -H "Authorization: Bearer $TOKEN_J" -H 'Content-Type: application/json' \
+  -d '{"objekttyper":["Fordon"],"identifieringsmetoder":["VIN"]}')
+kontroll "tekniker nekas ändra inställningar" "$KOD" "403"
+curl -s -X POST "$BAS/api/organisation/installningar" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"objekttyper":["Fordon","Hydraulik"],"identifieringsmetoder":["VIN","Manuell inmatning"]}' >/dev/null
+INST=$(curl -s "$BAS/api/organisation" -H "Authorization: Bearer $TOKEN_J")
+kontroll "inställningarna gäller hela organisationen" "$(echo "$INST" | falt '.installningar.objekttyper.join(",")')" "Fordon,Hydraulik"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/organisation/installningar" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"objekttyper":[],"identifieringsmetoder":["VIN"]}')
+kontroll "tomma listor avvisas" "$KOD" "400"
+
 # 10. Live Share-behörighetsnivåer: kund/partner/intern + återkallelse
 curl -s -X POST "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
   -d '{"handelser":[{"id":"h3","tidpunkt":"2026-08-03T08:03:00Z","anvandare":"Anna","handelse":{"typ":"hypotes","text":"Trasigt relä","niva":"lag"}}]}' >/dev/null

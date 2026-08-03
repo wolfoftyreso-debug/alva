@@ -62,6 +62,11 @@ function PlattformInloggning() {
               <StorKnapp variant="sekundar">📊 Organisationsöversikt</StorKnapp>
             </Link>
           )}
+          {konto.roll === "admin" && (
+            <Link to="/felsokning/installningar" className="mt-2 block">
+              <StorKnapp variant="sekundar">⚙️ Inställningar för organisationen</StorKnapp>
+            </Link>
+          )}
         </Panel>
         {konto.roll === "admin" && <AnvandarAdmin />}
       </>
@@ -299,6 +304,12 @@ export default function Arendelista() {
       )}
 
       {plattformAktiv() && <PlattformInloggning />}
+
+      {!plattformKonto() && (
+        <Link to="/felsokning/installningar" className="mb-4 block">
+          <StorKnapp variant="sekundar">⚙️ Inställningar</StorKnapp>
+        </Link>
+      )}
 
       <Panel rubrik="AI-stöd">
         <p className="text-zinc-300">

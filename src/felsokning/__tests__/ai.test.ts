@@ -71,6 +71,8 @@ describe("AI-orkestern", () => {
       ["/api/auth/registrera", "/api/auth/registrera"],
       ["/api/auth/logga-in", "/api/auth/logga-in"],
       ["/api/anvandare", "/api/anvandare"],
+      ["/api/organisation", "/api/organisation"],
+      ["/api/organisation/installningar", "/api/organisation/installningar"],
       ["/api/arenden", "/api/arenden"],
       ["/api/arenden/{arendeId}/handelser", "handelser"],
       ["/api/oversikt", "/api/oversikt"],

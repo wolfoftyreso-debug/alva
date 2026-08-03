@@ -266,6 +266,34 @@ export function skapaServer() {
         }
       }
 
+      // Organisationens inställningar: vad som visas när ett ärende
+      // startas (objekttyper, identifieringsmetoder). Alla inloggade
+      // läser; endast systemadministratören ändrar.
+      if (req.method === "GET" && vag === "/api/organisation") {
+        const rader = await pool.query(
+          `select namn, installningar from organisationer where id = $1`,
+          [anspr.org],
+        );
+        if (rader.rowCount === 0) return svara(res, 404, { error: "Organisationen finns inte." });
+        return svara(res, 200, rader.rows[0]);
+      }
+
+      if (req.method === "POST" && vag === "/api/organisation/installningar") {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        const { objekttyper, identifieringsmetoder } = await lasKropp(req);
+        const giltigLista = (lista) =>
+          Array.isArray(lista) && lista.length > 0 && lista.length <= 50 &&
+          lista.every((v) => typeof v === "string" && v.length <= 100);
+        if (!giltigLista(objekttyper) || !giltigLista(identifieringsmetoder)) {
+          return svara(res, 400, { error: "Ange minst en objekttyp och en identifieringsmetod." });
+        }
+        await pool.query(
+          `update organisationer set installningar = $2 where id = $1`,
+          [anspr.org, JSON.stringify({ objekttyper, identifieringsmetoder })],
+        );
+        return svara(res, 200, { ok: true });
+      }
+
       // Organisationsöversikt för arbetsledare/admin: alla ärenden med
       // status, deltagande tekniker och sammanfattning — härlett ur
       // händelseloggen, aldrig lagrat separat.
