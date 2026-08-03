@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useFelsokning, metodikForArende } from "@/felsokning/store";
 import { arAvslutat, felbeskrivning, objekt, sistaAktivitet, brief } from "@/felsokning/projektioner";
 import { byggDemoArende } from "@/felsokning/demo";
+import { AI_MODELL } from "@/felsokning/ai";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
 
@@ -11,9 +12,11 @@ type Filter = "alla" | "pagaende" | "klara";
 // Dashboard enligt direktivet: endast det viktigaste — mina ärenden,
 // pågående, klara och starta nytt ärende.
 export default function Arendelista() {
-  const { anvandare, arenden, sattAnvandare, laggInArende, nastaNummer } = useFelsokning();
+  const { anvandare, arenden, sattAnvandare, laggInArende, nastaNummer, aiNyckel, sattAiNyckel } = useFelsokning();
   const [namn, setNamn] = useState("");
   const [filter, setFilter] = useState<Filter>("alla");
+  const [visaAi, setVisaAi] = useState(false);
+  const [nyckel, setNyckel] = useState("");
 
   if (!anvandare) {
     return (
@@ -89,6 +92,42 @@ export default function Arendelista() {
       {lista.length === 0 && alla.length > 0 && (
         <p className="text-center text-lg text-zinc-400">Inga ärenden i det här filtret.</p>
       )}
+
+      <Panel rubrik="AI-handledning">
+        <p className="mb-2 text-zinc-300">
+          {aiNyckel
+            ? `Aktiv — Claude (${AI_MODELL}) svarar klassificerat på dokumenterade observationer och mätvärden.`
+            : "Inte aktiverad — den deterministiska metodiken guidar. Lägg till organisationens Claude API-nyckel för AI-handledning."}
+        </p>
+        {!visaAi ? (
+          <StorKnapp variant="sekundar" onClick={() => setVisaAi(true)}>
+            {aiNyckel ? "Ändra API-nyckel" : "Lägg till Claude API-nyckel"}
+          </StorKnapp>
+        ) : (
+          <>
+            <TextFalt label="Claude API-nyckel" varde={nyckel} satt={setNyckel} platshallare="sk-ant-…" losenord />
+            <p className="mb-3 text-sm text-zinc-500">
+              MVP: nyckeln sparas endast på den här enheten och anropen görs direkt från webbläsaren. I
+              produktionsversionen hanteras nycklar av plattformens backend.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <StorKnapp variant="sekundar" onClick={() => { setVisaAi(false); setNyckel(""); }}>
+                Avbryt
+              </StorKnapp>
+              <StorKnapp
+                disabled={!nyckel.trim() && !aiNyckel}
+                onClick={() => {
+                  sattAiNyckel(nyckel);
+                  setVisaAi(false);
+                  setNyckel("");
+                }}
+              >
+                {nyckel.trim() ? "Spara nyckel" : "Ta bort nyckel"}
+              </StorKnapp>
+            </div>
+          </>
+        )}
+      </Panel>
 
       {lista.map((arende) => {
         const o = objekt(arende);

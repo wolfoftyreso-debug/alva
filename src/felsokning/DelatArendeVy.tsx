@@ -18,7 +18,7 @@ export function DelatArendeVy({ arende, nu, notis }: { arende: Arende; nu: strin
   const bilder = foton(arende);
   const matvarden = arende.handelser.filter((p) => p.handelse.typ === "matvarde");
   const kundposter = arende.handelser.filter(
-    (p) => p.handelse.typ !== "kategori_byte" && p.handelse.typ !== "hypotes",
+    (p) => !["kategori_byte", "hypotes", "ai_svar"].includes(p.handelse.typ),
   );
   const pagaende = b.rekommenderatNastaSteg[0];
 

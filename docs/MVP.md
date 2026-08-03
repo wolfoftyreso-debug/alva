@@ -17,7 +17,7 @@ Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på st
 | Direktivets kärna | Status i MVP |
 | --- | --- |
 | Objektidentifiering först | ✅ Manuell inmatning (reg.nr/VIN/serienummer/maskinnummer) med bekräftelsesteg. QR/streckkod/OCR är markerade som kommande. |
-| AI-guidad felsökning | ✅ Deterministisk metodikmotor: en fråga i taget, stora knappar. Två metodiker (vibration + generisk) som väljs utifrån felbeskrivningen. LLM-integrationen ansluter i samma motor senare. |
+| AI-guidad felsökning | ✅ Deterministisk metodikmotor (en fråga i taget, tre metodiker) **plus Claude-handledning**: med organisationens Claude API-nyckel (läggs in på startsidan) svarar Claude Opus 5 skriftligt på varje bekräftad dokumentation — klassificerat som observation/verifierat/hypotes/rekommendation enligt AI-reglerna, schema-bundet så svaret aldrig kan läsas som fritext, med automatisk fallback till Anthropics rekommenderade reservmodell vid avböjd förfrågan. Svaren loggas som händelser (interna — delas aldrig i kundvyer). Utan nyckel guidar metodiken ensam. MVP: nyckeln lagras på enheten och anropet görs från webbläsaren; i produktion går det via backend. |
 | Arbetslogg | ✅ Append-only händelselogg med tidsstämpel och användare på varje post. Ingenting skrivs över. |
 | Tidredovisning | ✅ Kategorier (aktiv felsökning, väntetid, provkörning …) via kategoribyten i loggen; paus räknas inte i total tid. Inaktivitetsfråga efter 20 min utan händelser. |
 | Dokumentation | ✅ Observationer, mätvärden, foton (nedskalade), kommentarer och hypoteser. Hypoteser märks alltid 🔴 och kan aldrig loggas som konstaterade fel. |

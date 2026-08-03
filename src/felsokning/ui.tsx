@@ -92,6 +92,7 @@ export function TextFalt({
   platshallare,
   flerRad,
   rost,
+  losenord,
 }: {
   label: string;
   varde: string;
@@ -99,6 +100,7 @@ export function TextFalt({
   platshallare?: string;
   flerRad?: boolean;
   rost?: boolean;
+  losenord?: boolean;
 }) {
   // Tal-till-text skriver in i samma redigerbara fält — användaren
   // granskar och bekräftar alltid innan något sparas i loggen.
@@ -119,7 +121,13 @@ export function TextFalt({
       {flerRad ? (
         <textarea value={varde} onChange={(e) => satt(e.target.value)} placeholder={platshallare} rows={3} className={klass} />
       ) : (
-        <input value={varde} onChange={(e) => satt(e.target.value)} placeholder={platshallare} className={klass} />
+        <input
+          type={losenord ? "password" : "text"}
+          value={varde}
+          onChange={(e) => satt(e.target.value)}
+          placeholder={platshallare}
+          className={klass}
+        />
       )}
     </label>
   );

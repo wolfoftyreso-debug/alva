@@ -18,6 +18,7 @@ import {
 } from "@/felsokning/projektioner";
 import { metodikForArende, useFelsokning } from "@/felsokning/store";
 import { synkroniseraArende, type SynkStatus } from "@/felsokning/synk";
+import { AI_MODELL, AI_RADTYP_LABEL, fragaAi } from "@/felsokning/ai";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto, tidKlockslag } from "@/felsokning/format";
 
@@ -184,6 +185,25 @@ function GuideFlik({
 }) {
   const steg = useMemo(() => nastaSteg(arende, metodik), [arende, metodik]);
   const [visaOverlamning, setVisaOverlamning] = useState(false);
+  const aiNyckel = useFelsokning((s) => s.aiNyckel);
+  const [aiStatus, setAiStatus] = useState<"vilar" | "arbetar" | "fel">("vilar");
+
+  // AI:n svarar skriftligt på varje bekräftad dokumentation: klassificerat
+  // (observation/verifierat/hypotes/rekommendation) och loggat som händelse.
+  // Utan nyckel guidar den deterministiska metodiken ensam.
+  const fragaAiOmDokumentation = async (inmatning: string) => {
+    if (!aiNyckel) return;
+    setAiStatus("arbetar");
+    try {
+      const svar = await fragaAi(aiNyckel, brief(arende, metodik, nu), metodik.namn, inmatning);
+      skicka({ typ: "ai_svar", rader: svar.rader, nastaSteg: svar.nastaSteg, modell: AI_MODELL });
+      setAiStatus("vilar");
+    } catch {
+      setAiStatus("fel");
+    }
+  };
+
+  const senasteAiSvar = [...arende.handelser].reverse().find((p) => p.handelse.typ === "ai_svar");
 
   if (avslutat) {
     return (
@@ -217,7 +237,29 @@ function GuideFlik({
         ) : null}
       </Panel>
 
-      <SnabbDokumentation skicka={skicka} />
+      {(aiStatus !== "vilar" || senasteAiSvar) && (
+        <Panel rubrik={`AI-handledning (${AI_MODELL})`}>
+          {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-bold text-amber-400">AI analyserar …</p>}
+          {aiStatus === "fel" && (
+            <p className="mb-2 font-bold text-red-400">AI-svaret kunde inte hämtas — kontrollera nyckel och nät. Metodiken fortsätter som vanligt.</p>
+          )}
+          {senasteAiSvar && senasteAiSvar.handelse.typ === "ai_svar" && (
+            <>
+              {senasteAiSvar.handelse.rader.map((rad, i) => (
+                <p key={i} className="py-0.5 text-lg">
+                  <span className="font-extrabold text-zinc-400">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
+                </p>
+              ))}
+              <p className="mt-2 text-lg">
+                <span className="font-extrabold text-amber-400">Nästa steg:</span>{" "}
+                {senasteAiSvar.handelse.nastaSteg}
+              </p>
+            </>
+          )}
+        </Panel>
+      )}
+
+      <SnabbDokumentation skicka={skicka} paSparad={fragaAiOmDokumentation} />
 
       <div className="grid grid-cols-2 gap-2">
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
@@ -380,7 +422,15 @@ const DOKTYPER = [
 
 // Fri dokumentation vid sidan av guiden. Hypoteser märks alltid som
 // ej verifierade — de kan aldrig loggas som konstaterade fel.
-function SnabbDokumentation({ skicka }: { skicka: (h: Handelse) => void }) {
+// paSparad anropas med en textsammanfattning EFTER att användaren bekräftat
+// med Spara — det är den texten AI:n får (aldrig obekräftad inmatning).
+function SnabbDokumentation({
+  skicka,
+  paSparad,
+}: {
+  skicka: (h: Handelse) => void;
+  paSparad?: (sammanfattning: string) => void;
+}) {
   const [typ, setTyp] = useState<(typeof DOKTYPER)[number]["id"] | null>(null);
   const [text, setText] = useState("");
   const [varde, setVarde] = useState("");
@@ -394,10 +444,22 @@ function SnabbDokumentation({ skicka }: { skicka: (h: Handelse) => void }) {
 
   const spara = () => {
     const t = text.trim();
-    if (typ === "observation" && t) skicka({ typ: "observation", text: t });
-    if (typ === "kommentar" && t) skicka({ typ: "kommentar", text: t });
-    if (typ === "hypotes" && t) skicka({ typ: "hypotes", text: t, niva: "lag" });
-    if (typ === "matvarde" && t && varde.trim()) skicka({ typ: "matvarde", beskrivning: t, varde: varde.trim() });
+    if (typ === "observation" && t) {
+      skicka({ typ: "observation", text: t });
+      paSparad?.(`Observation: ${t}`);
+    }
+    if (typ === "kommentar" && t) {
+      skicka({ typ: "kommentar", text: t });
+      paSparad?.(t);
+    }
+    if (typ === "hypotes" && t) {
+      skicka({ typ: "hypotes", text: t, niva: "lag" });
+      paSparad?.(`Teknikerns hypotes (ej verifierad): ${t}`);
+    }
+    if (typ === "matvarde" && t && varde.trim()) {
+      skicka({ typ: "matvarde", beskrivning: t, varde: varde.trim() });
+      paSparad?.(`Mätvärde: ${t} = ${varde.trim()}`);
+    }
     aterstall();
   };
 
@@ -606,10 +668,10 @@ function RapportFlik({
   const b = brief(arende, metodik, nu);
   const bilder = foton(arende);
   const fordelning = tidsfordelningsRader(arende, nu);
-  // Kategoribyten är interna; hypoteser är arbetsmaterial och ingår inte
-  // i det som delas med kund.
+  // Kategoribyten är interna; hypoteser och AI-dialogen är arbetsmaterial
+  // och ingår inte i det som delas med kund.
   const kundposter = arende.handelser.filter(
-    (p) => p.handelse.typ !== "kategori_byte" && p.handelse.typ !== "hypotes",
+    (p) => !["kategori_byte", "hypotes", "ai_svar"].includes(p.handelse.typ),
   );
 
   // Alla exporter bygger på samma händelselogg och versionsmärks:

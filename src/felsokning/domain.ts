@@ -52,6 +52,12 @@ export type Handelse =
   | { typ: "inaktivitet_forklarad"; text: string; minuter: number }
   | { typ: "overlamning"; fran: string; till?: string }
   | { typ: "export_skapad"; format: string; version: number }
+  | {
+      typ: "ai_svar";
+      rader: { typ: "observation" | "verifierat" | "hypotes" | "rekommendation"; text: string }[];
+      nastaSteg: string;
+      modell: string;
+    }
   | { typ: "arende_avslutat" };
 
 export interface LoggPost {
@@ -112,6 +118,10 @@ export function handelseRubrik(post: LoggPost): string {
       return h.till ? `Arbete överlämnat från ${h.fran} till ${h.till}` : `Arbete överlämnat av ${h.fran}`;
     case "export_skapad":
       return `Export skapad: ${h.format}, version ${h.version}`;
+    case "ai_svar": {
+      const forsta = h.rader[0];
+      return `AI: ${forsta ? `${forsta.text} ` : ""}— Nästa steg: ${h.nastaSteg}`;
+    }
     case "arende_avslutat":
       return "Felsökning avslutad";
   }
