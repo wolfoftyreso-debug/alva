@@ -156,7 +156,9 @@ export function skapaServer() {
     }
 
     const apiNyckel = process.env.ANTHROPIC_API_KEY;
-    const jwtHemlighet = process.env.SUPABASE_JWT_SECRET;
+    // JWT_SECRET i självhostat läge (delas med plattformstjänsten);
+    // SUPABASE_JWT_SECRET när auth ligger hos Supabase.
+    const jwtHemlighet = process.env.JWT_SECRET ?? process.env.SUPABASE_JWT_SECRET;
     if (!apiNyckel || !jwtHemlighet) {
       return svara(res, 503, { error: "AI-tjänsten är inte konfigurerad." });
     }

@@ -1,4 +1,5 @@
-# Ingress med TLS (cert-manager): webben på /, AI-orkestern på /api/ai.
+# Ingress med TLS (cert-manager). Längsta prefix vinner:
+# /api/ai → AI-orkestern, övriga /api + /halsa → plattformen, / → webben.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -19,10 +20,14 @@ spec:
             pathType: Prefix
             backend:
               service: { name: ai-orkester, port: { number: 80 } }
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: { name: plattform, port: { number: 80 } }
           - path: /halsa
             pathType: Prefix
             backend:
-              service: { name: ai-orkester, port: { number: 80 } }
+              service: { name: plattform, port: { number: 80 } }
           - path: /
             pathType: Prefix
             backend:

@@ -26,3 +26,4 @@ jobs:
       # till registry sker i ett separat, behörighetsstyrt flöde.
       - run: docker build -t guidad-felsokning-web .
       - run: docker build -t guidad-felsokning-ai-orkester services/ai-orkester
+      - run: docker build -t guidad-felsokning-plattform services/plattform

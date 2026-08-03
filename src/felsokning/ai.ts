@@ -96,23 +96,36 @@ const ORKESTER_URL = (import.meta.env.VITE_AI_ORKESTER_URL as string | undefined
 // Returnerar null i lokalt läge (ej inloggad) — orkestern nås via
 // plattformens autentiserade backend.
 async function anropa(uppgift: AiUppgift, prompt: string): Promise<{ modell: string; svar: unknown } | null> {
-  const { supabase } = await import("@/integrations/supabase/client");
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) return null;
+  const { plattformAktiv, plattformToken, PLATTFORM_URL } = await import("./plattform");
+
+  let token: string | null = null;
+  if (plattformAktiv()) {
+    // Självhostat: plattformens egen JWT — samma hemlighet verifieras
+    // av AI-orkestern i klustret.
+    token = plattformToken();
+    if (!token) return null;
+  } else {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return null;
+    token = data.session.access_token;
+  }
 
   let resultat: unknown;
-  if (ORKESTER_URL) {
-    const res = await fetch(`${ORKESTER_URL}/api/ai`, {
+  const bas = ORKESTER_URL ?? (plattformAktiv() ? PLATTFORM_URL : undefined);
+  if (bas) {
+    const res = await fetch(`${bas}/api/ai`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${data.session.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ uppgift, prompt }),
     });
     if (!res.ok) throw new Error(`AI-orkestern svarade ${res.status}`);
     resultat = await res.json();
   } else {
+    const { supabase } = await import("@/integrations/supabase/client");
     const { data: svar, error } = await supabase.functions.invoke("felsokning-ai", {
       body: { uppgift, prompt },
     });

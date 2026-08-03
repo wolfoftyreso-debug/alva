@@ -36,6 +36,27 @@ describe("AI-orkestern", () => {
     }
   });
 
+  it("självhostade stacken: plattformstjänst + append-only i databasen", () => {
+    const plattform = readFileSync("services/plattform/server.mjs", "utf8");
+    for (const bit of [
+      "/api/auth/logga-in",
+      "/api/auth/registrera",
+      "/api/arenden",
+      String.raw`\/api\/delad\/`,
+      "gen_salt('bf')",
+      "JWT_SECRET",
+    ]) {
+      expect(plattform).toContain(bit);
+    }
+    // API:t exponerar medvetet inga update/delete-operationer.
+    expect(plattform).not.toMatch(/\b(update|delete)\s+felsokning_handelser/i);
+
+    const postgres = readFileSync("infra/k8s/postgres.yaml", "utf8");
+    expect(postgres).toContain("before update or delete on felsokning_handelser");
+    expect(postgres).toContain("before update or delete on felsokning_arenden");
+    expect(postgres).toContain("append-only");
+  });
+
   it("endpointen kodar AI-reglerna i grundprompten", () => {
     expect(ENDPOINT).toContain("Hitta aldrig på fakta");
     expect(ENDPOINT).toContain("aldrig en hypotes som ett konstaterat fel");

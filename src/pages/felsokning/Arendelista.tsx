@@ -3,10 +3,97 @@ import { Link } from "react-router-dom";
 import { useFelsokning, metodikForArende } from "@/felsokning/store";
 import { arAvslutat, felbeskrivning, objekt, sistaAktivitet, brief } from "@/felsokning/projektioner";
 import { byggDemoArende } from "@/felsokning/demo";
+import {
+  loggaInPlattform,
+  loggaUtPlattform,
+  plattformAktiv,
+  plattformNamn,
+  registreraPlattform,
+} from "@/felsokning/plattform";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
 
 type Filter = "alla" | "pagaende" | "klara";
+
+// Självhostat läge: inloggning mot plattformstjänsten i klustret.
+// Aktiverar synk, samarbete och AI-orkestern.
+function PlattformInloggning() {
+  const [namn, setNamn] = useState(plattformNamn());
+  const [lage, setLage] = useState<"stangd" | "loggaIn" | "registrera">("stangd");
+  const [epost, setEpost] = useState("");
+  const [losenord, setLosenord] = useState("");
+  const [nyttNamn, setNyttNamn] = useState("");
+  const [fel, setFel] = useState("");
+
+  if (namn) {
+    return (
+      <Panel rubrik="Plattformskonto">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-lg">
+            Inloggad som <span className="font-extrabold">{namn}</span> — synk och AI aktiva.
+          </p>
+          <button
+            className="whitespace-nowrap rounded-lg border-2 border-zinc-600 px-4 py-2 font-bold text-zinc-300 hover:border-zinc-400"
+            onClick={() => {
+              loggaUtPlattform();
+              setNamn(null);
+            }}
+          >
+            Logga ut
+          </button>
+        </div>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel rubrik="Plattformskonto">
+      {lage === "stangd" ? (
+        <>
+          <p className="mb-2 text-zinc-300">
+            Logga in för synk mellan enheter, samarbete i ärenden och AI-orkestern. Utan inloggning
+            arbetar appen i lokalt läge.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => setLage("registrera")}>
+              Skapa konto
+            </StorKnapp>
+            <StorKnapp onClick={() => setLage("loggaIn")}>Logga in</StorKnapp>
+          </div>
+        </>
+      ) : (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setFel("");
+            try {
+              const inloggadSom =
+                lage === "loggaIn"
+                  ? await loggaInPlattform(epost, losenord)
+                  : await registreraPlattform(epost, losenord, nyttNamn);
+              setNamn(inloggadSom);
+            } catch (misslyckande) {
+              setFel(misslyckande instanceof Error ? misslyckande.message : "Något gick fel.");
+            }
+          }}
+        >
+          {lage === "registrera" && <TextFalt label="Namn" varde={nyttNamn} satt={setNyttNamn} platshallare="T.ex. Anna" />}
+          <TextFalt label="E-post" varde={epost} satt={setEpost} platshallare="anna@verkstaden.se" />
+          <TextFalt label="Lösenord (minst 8 tecken)" varde={losenord} satt={setLosenord} losenord />
+          {fel && <p className="mb-3 font-bold text-red-400">{fel}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => setLage("stangd")}>
+              Avbryt
+            </StorKnapp>
+            <StorKnapp type="submit" disabled={!epost.trim() || losenord.length < 8 || (lage === "registrera" && !nyttNamn.trim())}>
+              {lage === "loggaIn" ? "Logga in" : "Skapa konto"}
+            </StorKnapp>
+          </div>
+        </form>
+      )}
+    </Panel>
+  );
+}
 
 // Dashboard enligt direktivet: endast det viktigaste — mina ärenden,
 // pågående, klara och starta nytt ärende.
@@ -89,6 +176,8 @@ export default function Arendelista() {
       {lista.length === 0 && alla.length > 0 && (
         <p className="text-center text-lg text-zinc-400">Inga ärenden i det här filtret.</p>
       )}
+
+      {plattformAktiv() && <PlattformInloggning />}
 
       <Panel rubrik="AI-orkestern">
         <p className="text-zinc-300">

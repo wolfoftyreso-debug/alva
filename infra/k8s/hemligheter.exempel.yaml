@@ -2,7 +2,8 @@
 #
 #   kubectl -n guidad-felsokning create secret generic felsokning-hemligheter \
 #     --from-literal=anthropic-api-key='sk-ant-…' \
-#     --from-literal=supabase-jwt-secret='…'
+#     --from-literal=jwt-secret="$(openssl rand -base64 48)" \
+#     --from-literal=postgres-losenord="$(openssl rand -base64 24)"
 #
 # I produktion: använd extern secrets-hantering (External Secrets Operator,
 # Sealed Secrets eller molnleverantörens secret manager).
@@ -14,4 +15,5 @@ metadata:
 type: Opaque
 stringData:
   anthropic-api-key: ERSATT-MIG
-  supabase-jwt-secret: ERSATT-MIG
+  jwt-secret: ERSATT-MIG
+  postgres-losenord: ERSATT-MIG

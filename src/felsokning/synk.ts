@@ -45,7 +45,50 @@ async function klient(): Promise<SupabaseClient | undefined> {
   }
 }
 
+// Självhostat läge: samma konfliktfria flätning, men mot plattformstjänsten.
+async function synkroniseraMotPlattform(arende: Arende): Promise<SynkResultat> {
+  const { plattformToken, plattformFetch } = await import("./plattform");
+  if (!plattformToken()) return { status: "lokal" };
+  try {
+    await plattformFetch("/api/arenden", {
+      method: "POST",
+      body: JSON.stringify({
+        id: arende.id,
+        nummer: arende.nummer,
+        skapad: arende.skapad,
+        delningskod: arende.delningskod,
+        metodikId: arende.metodikId,
+      }),
+    });
+    const hamtat = await plattformFetch(`/api/arenden/${arende.id}/handelser`);
+    if (!hamtat.ok) throw new Error(`Fel ${hamtat.status}`);
+    const { handelser: fjarrRader } = (await hamtat.json()) as { handelser: FjarrHandelseRad[] };
+    const fjarr: LoggPost[] = fjarrRader.map((rad) => ({
+      id: rad.id,
+      tidpunkt: new Date(rad.tidpunkt).toISOString(),
+      anvandare: rad.anvandare,
+      handelse: rad.handelse,
+    }));
+    const fjarrIds = new Set(fjarr.map((p) => p.id));
+    const nya = arende.handelser.filter((p) => !fjarrIds.has(p.id));
+    if (nya.length > 0) {
+      const skrivet = await plattformFetch(`/api/arenden/${arende.id}/handelser`, {
+        method: "POST",
+        body: JSON.stringify({ handelser: nya }),
+      });
+      if (!skrivet.ok) throw new Error(`Fel ${skrivet.status}`);
+    }
+    return { status: "synkad", handelser: flataIhop(arende.handelser, fjarr) };
+  } catch {
+    const { plattformToken: kvarToken } = await import("./plattform");
+    return { status: kvarToken() ? "offline" : "lokal" };
+  }
+}
+
 export async function synkroniseraArende(arende: Arende): Promise<SynkResultat> {
+  const { plattformAktiv } = await import("./plattform");
+  if (plattformAktiv()) return synkroniseraMotPlattform(arende);
+
   const supabase = await klient();
   if (!supabase) return { status: "lokal" };
   try {

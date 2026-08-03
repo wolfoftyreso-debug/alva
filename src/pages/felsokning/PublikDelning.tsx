@@ -15,11 +15,21 @@ interface DelatSvar {
 }
 
 async function hamtaDelat(kod: string): Promise<Arende | undefined> {
-  const { supabase } = await import("@/integrations/supabase/client");
-  const { data, error } = await (supabase as unknown as {
-    rpc: (fn: string, args: object) => Promise<{ data: unknown; error: unknown }>;
-  }).rpc("hamta_delat_arende", { kod });
-  if (error || !data) return undefined;
+  const { plattformAktiv, PLATTFORM_URL } = await import("@/felsokning/plattform");
+  let data: unknown;
+  if (plattformAktiv()) {
+    // Självhostat: publik delningsendpoint i plattformstjänsten.
+    const res = await fetch(`${PLATTFORM_URL}/api/delad/${kod}`);
+    if (!res.ok) return undefined;
+    data = await res.json();
+  } else {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data: rpcData, error } = await (supabase as unknown as {
+      rpc: (fn: string, args: object) => Promise<{ data: unknown; error: unknown }>;
+    }).rpc("hamta_delat_arende", { kod });
+    if (error || !rpcData) return undefined;
+    data = rpcData;
+  }
   const svar = data as DelatSvar;
   return {
     id: svar.arende.id,

@@ -1,68 +1,67 @@
-# Guidad Felsökning – Drift i Kubernetes
+# Guidad Felsökning – Drift i Kubernetes (helt självhostat)
 
-Målarkitekturen ur [Master Prompt](MASTER-PROMPT.md) som kod: allt körbart i kluster, med secrets för plattformsnycklarna och CI som verifierar både kod och containerbyggen.
+Målarkitekturen ur [Master Prompt](MASTER-PROMPT.md) som kod: hela stacken körbar i eget kluster — webb, AI-orkester, plattformsbackend (auth + händelse-API + Live Share) och Postgres. Inga externa tjänstberoenden utöver Anthropic-API:et för AI-anropen.
 
 ## Arkitektur
 
 ```mermaid
 flowchart LR
     T[Tekniker] -->|HTTPS| I[Ingress + TLS]
+    T2[Kund via delningslänk] -->|HTTPS| I
     I -->|/| W[web\n2–10 pods, HPA]
     I -->|/api/ai| A[ai-orkester\n2–10 pods, HPA]
+    I -->|/api, /halsa| P[plattform\n2–10 pods, HPA]
     A -->|Claude API| C[(Anthropic)]
-    W & A -.->|auth + data| S[(Supabase\nPostgres · Auth)]
-    K[Secret: felsokning-hemligheter] --> A
+    P --> DB[(Postgres\nStatefulSet + PVC)]
+    K[Secret: felsokning-hemligheter] --> A & P & DB
 ```
 
 | Komponent | Vad | Var |
 | --- | --- | --- |
 | `web` | SPA:n bakom oprivilegierad nginx (`Dockerfile`, `docker/nginx.conf`) | Deployment + Service + HPA + PDB |
-| `ai-orkester` | AI-orkestern som egen tjänst (`services/ai-orkester`) — samma routing som edge-funktionen, med egen JWT-verifiering och `/halsa` | Deployment + Service + HPA + PDB |
-| Hemligheter | `ANTHROPIC_API_KEY` + `SUPABASE_JWT_SECRET` | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
-| Databas & auth | Postgres (händelselogg, RLS, `hamta_delat_arende`) och inloggning | Supabase — managerad, eller självhostad Supabase i klustret när det steget tas |
+| `plattform` | Självhostad backend (`services/plattform`): inloggning (bcrypt via pgcrypto, HS256-JWT), append-only händelse-API för synken, publik delningsendpoint för Live Share | Deployment + Service + HPA + PDB |
+| `ai-orkester` | AI-orkestern (`services/ai-orkester`): fyra uppgifter routade till Sonnet 5 / Opus 5 / Haiku 4.5 — verifierar plattformens JWT (delad hemlighet) | Deployment + Service + HPA + PDB |
+| `postgres` | Händelselogg + användare; **append-only garanterat med databastriggers** — historik kan inte ändras eller raderas oavsett roll | StatefulSet + PVC (10 Gi). Produktion: CloudNativePG-operatorn för backup/failover/PITR |
+| Hemligheter | `anthropic-api-key`, `jwt-secret` (delas av plattform + orkester), `postgres-losenord` | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
 
-Klienten väljer AI-väg vid byggtillfället: med `VITE_AI_ORKESTER_URL` satt går anropen till orkestertjänsten i klustret; utan den används Supabase-edge-funktionen. Samma orkester (modeller, systemprompter, scheman) i båda.
+**Klienten har två driftlägen**, valda vid bygget: med `VITE_PLATTFORM_URL` går inloggning, synk, Live Share och AI mot klustret (helt självhostat); utan den används Supabase-läget (edge-funktion + managerad Postgres/Auth) som tidigare. Samma händelsemodell, samma orkester — låst av paritetstester.
 
 ## Driftsätta
 
 ```sh
 # 1. Bygg och publicera bilderna (ersätt registry i infra/k8s/*.yaml)
 docker build -t ghcr.io/ORG/guidad-felsokning-web \
-  --build-arg VITE_SUPABASE_URL=… \
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY=… \
-  --build-arg VITE_SUPABASE_PROJECT_ID=… \
-  --build-arg VITE_AI_ORKESTER_URL=https://app.exempel.se .
+  --build-arg VITE_PLATTFORM_URL=https://app.exempel.se .
 docker build -t ghcr.io/ORG/guidad-felsokning-ai-orkester services/ai-orkester
+docker build -t ghcr.io/ORG/guidad-felsokning-plattform services/plattform
 docker push ghcr.io/ORG/guidad-felsokning-web
 docker push ghcr.io/ORG/guidad-felsokning-ai-orkester
+docker push ghcr.io/ORG/guidad-felsokning-plattform
 
 # 2. Skapa secret:en (eller använd External Secrets/Sealed Secrets)
 kubectl create namespace guidad-felsokning
 kubectl -n guidad-felsokning create secret generic felsokning-hemligheter \
   --from-literal=anthropic-api-key='sk-ant-…' \
-  --from-literal=supabase-jwt-secret='…'
+  --from-literal=jwt-secret="$(openssl rand -base64 48)" \
+  --from-literal=postgres-losenord="$(openssl rand -base64 24)"
 
-# 3. Applicera manifesten
+# 3. Applicera manifesten (Postgres initieras med schema + append-only-triggers)
 kubectl apply -k infra/k8s
 
 # 4. Verifiera
 kubectl -n guidad-felsokning get pods
-curl https://app.exempel.se/halsa   # → {"status":"ok"}
+curl https://app.exempel.se/halsa       # → {"status":"ok"} (plattformen)
 ```
 
-Byt domän och cert-issuer i `infra/k8s/ingress.yaml`.
+Byt domän och cert-issuer i `infra/k8s/ingress.yaml`. Självregistrering är öppen i beta — stäng med `REGISTRERING_OPPEN=false` på plattformens Deployment när organisationsstyrd användarhantering införs.
 
-## Skalning och robusthet
+## Säkerhet och robusthet
 
-- **HPA** 2–10 pods per tjänst på 70 % CPU; **PDB** håller minst en pod uppe vid noddränering.
-- Båda containrarna kör **non-root** utan capabilities; orkestern dessutom med read-only rotfilsystem.
-- **Hälsokontroller**: nginx svarar på `/`, orkestern på `/halsa` (readiness + liveness + Docker HEALTHCHECK).
-- Orkestern **failar closed**: utan nyckel/JWT-hemlighet svarar den 503, utan giltig JWT 401.
+- **Append-only i tre lager:** klienten lägger bara till, API:t exponerar inga update/delete, och databastriggers avvisar ändringar även för en felkonfigurerad roll.
+- **JWT-flödet är verifierat tvärs tjänsterna:** plattformen signerar, orkestern verifierar samma hemlighet; fel hemlighet och utgångna tokens avvisas (testat).
+- Alla containrar kör **non-root** utan capabilities; backend-tjänsterna med read-only rotfilsystem. Båda failar closed utan sina hemligheter.
+- **HPA** 2–10 pods per tjänst på 70 % CPU; **PDB** minst en pod uppe vid noddränering; readiness/liveness-prober överallt (`pg_isready` för Postgres).
 
 ## CI
 
-`.github/workflows/ci.yml` kör tester + produktionsbygge och verifierar båda Dockerfilerna på varje push/PR. Publicering till registry och `kubectl apply` läggs i ett separat, behörighetsstyrt deploy-flöde (t.ex. environments med godkännande eller GitOps via Argo CD/Flux).
-
-## Kvar mot full självhostning
-
-Synk, Live Share-funktionen och inloggningen går fortfarande mot Supabase (managerad Postgres + Auth). Nästa steg för "allt i kluster" är självhostad Supabase eller ett eget API-lager över Postgres i klustret — händelsemodellen är redan API-klar, så det bytet påverkar inte klienten.
+`.github/workflows/ci.yml` kör tester + produktionsbygge och verifierar alla tre Dockerfilerna på varje push/PR. Publicering och `kubectl apply` läggs i ett separat behörighetsstyrt deploy-flöde (GitOps via Argo CD/Flux rekommenderas).

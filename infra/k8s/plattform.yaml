@@ -1,34 +1,34 @@
-# AI-orkestern: plattformens AI-endpoint. Claude API-nyckeln och
-# JWT-hemligheten kommer från secret:en felsokning-hemligheter —
-# de finns aldrig i bilder, manifest eller klient.
+# Plattformstjänsten: självhostad auth, händelse-API och Live Share-delning.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ai-orkester
+  name: plattform
   namespace: guidad-felsokning
-  labels: { app: ai-orkester }
+  labels: { app: plattform }
 spec:
   replicas: 2
   selector:
-    matchLabels: { app: ai-orkester }
+    matchLabels: { app: plattform }
   template:
     metadata:
-      labels: { app: ai-orkester }
+      labels: { app: plattform }
     spec:
       securityContext:
         runAsNonRoot: true
       containers:
-        - name: ai-orkester
-          image: ghcr.io/ORGANISATION/guidad-felsokning-ai-orkester:latest # ersätt med ert registry
+        - name: plattform
+          image: ghcr.io/ORGANISATION/guidad-felsokning-plattform:latest # ersätt med ert registry
           ports:
             - containerPort: 8080
           env:
-            - name: ANTHROPIC_API_KEY
-              valueFrom:
-                secretKeyRef: { name: felsokning-hemligheter, key: anthropic-api-key }
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef: { name: felsokning-hemligheter, key: jwt-secret }
+            - name: POSTGRES_LOSENORD
+              valueFrom:
+                secretKeyRef: { name: felsokning-hemligheter, key: postgres-losenord }
+            - name: DATABASE_URL
+              value: postgresql://plattform:$(POSTGRES_LOSENORD)@postgres:5432/felsokning
           resources:
             requests: { cpu: 100m, memory: 128Mi }
             limits: { cpu: "1", memory: 256Mi }
@@ -46,10 +46,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ai-orkester
+  name: plattform
   namespace: guidad-felsokning
 spec:
-  selector: { app: ai-orkester }
+  selector: { app: plattform }
   ports:
     - port: 80
       targetPort: 8080
@@ -57,10 +57,10 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: ai-orkester
+  name: plattform
   namespace: guidad-felsokning
 spec:
-  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: ai-orkester }
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: plattform }
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -72,9 +72,9 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: ai-orkester
+  name: plattform
   namespace: guidad-felsokning
 spec:
   minAvailable: 1
   selector:
-    matchLabels: { app: ai-orkester }
+    matchLabels: { app: plattform }
