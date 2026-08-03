@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
@@ -24,9 +24,13 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 const queryClient = new QueryClient();
 
+// Hash-baserad routing för miljöer utan SPA-rewrites (t.ex. förhandsvisning
+// på en statisk sida). Standard är vanlig historik-routing.
+const Router = import.meta.env.VITE_HASH_ROUTER ? HashRouter : BrowserRouter;
+
 function AppContent() {
   return (
-    <BrowserRouter>
+    <Router>
       <PaymentTestModeBanner />
       <Routes>
         <Route path="/" element={<Index />} />
@@ -48,7 +52,7 @@ function AppContent() {
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
