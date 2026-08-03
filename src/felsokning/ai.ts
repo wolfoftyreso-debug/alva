@@ -21,7 +21,13 @@ import { METODIKER } from "./metodik";
 import type { Brief } from "./projektioner";
 import { brief } from "./projektioner";
 
-export type AiUppgift = "handledning" | "granskning" | "sammanfattning" | "metodikval" | "dokumenttolkning";
+export type AiUppgift =
+  | "handledning"
+  | "granskning"
+  | "sammanfattning"
+  | "metodikval"
+  | "dokumenttolkning"
+  | "instrumentavlasning";
 
 export type AiRadTyp = "observation" | "verifierat" | "hypotes" | "rekommendation";
 
@@ -157,6 +163,53 @@ export async function tolkaArbetsorder(
 ): Promise<{ falt: TolkatFalt[]; modell: string } | null> {
   const resultat = await anropa("dokumenttolkning", ARBETSORDER_PROMPT, { bild: dataUrl });
   return resultat ? { falt: normaliseraArbetsorder(resultat.svar), modell: resultat.modell } : null;
+}
+
+// ---- Instrumentavläsning (visual-first) -------------------------------
+// Kameran är det universella gränssnittet: när ett instrument, en
+// diagnosdator eller ett dokument visar information fotograferas det —
+// systemet extraherar värden, enheter och felkoder med konfidens per
+// värde. Originalbilden bevaras alltid som evidens.
+
+export interface InstrumentVarde {
+  beskrivning: string;
+  varde: string;
+  enhet?: string;
+  konfidens: number; // 0–1
+}
+
+export interface InstrumentTolkning {
+  instrumenttyp: string;
+  varden: InstrumentVarde[];
+}
+
+export function normaliseraInstrument(data: unknown): InstrumentTolkning {
+  const d = data as Partial<InstrumentTolkning>;
+  if (!d || typeof d.instrumenttyp !== "string" || !Array.isArray(d.varden)) {
+    throw new Error("Oväntat avläsningsformat");
+  }
+  const varden: InstrumentVarde[] = [];
+  for (const rad of d.varden as Partial<InstrumentVarde>[]) {
+    if (typeof rad?.beskrivning !== "string" || typeof rad.varde !== "string" || !rad.varde.trim()) continue;
+    varden.push({
+      beskrivning: rad.beskrivning.trim(),
+      varde: rad.varde.trim(),
+      enhet: typeof rad.enhet === "string" && rad.enhet.trim() ? rad.enhet.trim() : undefined,
+      konfidens: typeof rad.konfidens === "number" ? Math.min(1, Math.max(0, rad.konfidens)) : 0,
+    });
+  }
+  return { instrumenttyp: d.instrumenttyp.trim() || "instrument", varden };
+}
+
+export async function lasAvInstrument(
+  dataUrl: string,
+): Promise<{ tolkning: InstrumentTolkning; modell: string } | null> {
+  const resultat = await anropa(
+    "instrumentavlasning",
+    "Läs av instrumentet/skärmen i den bifogade bilden.",
+    { bild: dataUrl },
+  );
+  return resultat ? { tolkning: normaliseraInstrument(resultat.svar), modell: resultat.modell } : null;
 }
 
 // I Kubernetes-driften pekar VITE_AI_ORKESTER_URL på orkestertjänsten

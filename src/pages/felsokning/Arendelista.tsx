@@ -45,7 +45,7 @@ function PlattformInloggning() {
           <div className="flex items-center justify-between gap-3">
             <p className="text-[14px]">
               <span className="font-semibold">{konto.namn}</span> · {ROLL_LABEL[konto.roll]} ·{" "}
-              {konto.organisation} — synk och AI aktiva.
+              {konto.organisation} — synk och beslutsstöd aktiva.
             </p>
             <button
               className="whitespace-nowrap rounded border border-[#ADADAD] px-4 py-2 font-semibold text-[#333333] hover:border-[#8FA8C0]"
@@ -78,7 +78,7 @@ function PlattformInloggning() {
       {lage === "stangd" ? (
         <>
           <p className="mb-2 text-[#333333]">
-            Logga in för synk mellan enheter, samarbete i ärenden och AI-stöd. Utan inloggning
+            Logga in för synk mellan enheter, samarbete i ärenden och beslutsstöd. Utan inloggning
             arbetar appen i lokalt läge. Ny organisation? Skapa konto — du blir systemadministratör.
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -317,9 +317,9 @@ export default function Arendelista() {
         </Link>
       )}
 
-      <Panel rubrik="AI-stöd">
+      <Panel rubrik="Beslutsstöd">
         <p className="text-[#333333]">
-          När du är inloggad hjälper AI:n dig medan du arbetar: föreslår nästa steg utifrån det du
+          När du är inloggad hjälper systemet dig medan du arbetar: föreslår nästa steg utifrån det du
           dokumenterar, granskar hela ärendet på begäran och skriver utkast till överlämningen. Den
           skiljer alltid på verifierat och hypotes — och slår aldrig fast en felorsak som inte är
           bekräftad. Inget att installera eller ställa in; allt ingår i tjänsten. Utan inloggning

@@ -32,6 +32,7 @@ Absoluta regler:
   - "hypotes": möjlig felorsak som KRÄVER verifiering — formulera alltid vad som skulle verifiera den.
   - "rekommendation": nästa verifierbara kontroll eller mätning.
 - Om underlaget är otillräckligt: säg det uttryckligen i en observation och rekommendera vad som behöver dokumenteras.
+- Skriv aldrig "OK", "kontrollerad", "inga fel" eller "åtgärdad" om evidens saknas i underlaget — skriv i stället "Evidens saknas" och begär rätt underlag: foto för det synliga, video med ljud för det som låter, video för det som rör sig, mätvärde för det som mäts, foto av skärmen när ett instrument eller en diagnosdator visar informationen.
 - Svara på svenska, konsekvent, kortfattat och metodiskt. "nastaSteg" är EN konkret, verifierbar åtgärd.`;
 
 const SVARS_SCHEMA = {
@@ -116,6 +117,40 @@ Regler:
 - Normalisera: registreringsnummer i versaler utan mellanslag, VIN med 17 tecken, datum som ÅÅÅÅ-MM-DD, mätarställning med enhet.
 - "felbeskrivning" är kundens beskrivna problem/arbetsbegäran om en sådan finns i dokumentet.`;
 
+
+// Visual-first: instrument och diagnosskärmar fotograferas i stället för
+// att integreras — kameran är det universella gränssnittet.
+const INSTRUMENT_SCHEMA = {
+  type: "object",
+  properties: {
+    instrumenttyp: { type: "string" },
+    varden: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          beskrivning: { type: "string" },
+          varde: { type: "string" },
+          enhet: { type: "string" },
+          konfidens: { type: "number", minimum: 0, maximum: 1 },
+        },
+        required: ["beskrivning", "varde", "konfidens"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["instrumenttyp", "varden"],
+  additionalProperties: false,
+};
+
+const INSTRUMENT_REGLER = `Du läser av ett foto av ett instrument eller en skärm i en fordonsverkstad: multimeter, diagnosdator, oscilloskop, batteritestare, mätarkluster, manometer, utskrift eller etikett.
+
+Regler:
+- Identifiera instrumenttypen och extrahera ENDAST värden som faktiskt går att läsa i bilden. Hitta aldrig på värden.
+- Varje värde får en beskrivning (t.ex. "Batterispänning", "Felkod P0301 – misständning cylinder 1"), värdet som text och enhet när den syns (V, A, Ω, bar, °C, rpm …).
+- Felkoder returneras som egna värden med kod och klartext om skärmen visar den.
+- "konfidens" är din läs-säkerhet 0–1; sänk vid oskarp bild, reflexer eller delvis skymda siffror.`;
+
 // Orkestern: en modell per uppgiftstyp (samma routing som edge-funktionen).
 const ORKESTER = {
   handledning: {
@@ -151,6 +186,15 @@ Gissa inte: välj "generisk" om beskrivningen inte tydligt hör till en specifik
   },
   // Ärendestart: teknikern fotograferar arbetsordern; vi läser dokumentet
   // och returnerar strukturerade fält med konfidens per värde.
+  // Visual-first: foto av instrument/diagnosskärm → strukturerade värden.
+  instrumentavlasning: {
+    modell: "claude-sonnet-5",
+    effort: "low",
+    maxTokens: 1024,
+    system: INSTRUMENT_REGLER,
+    schema: INSTRUMENT_SCHEMA,
+    bild: true,
+  },
   dokumenttolkning: {
     modell: "claude-sonnet-5",
     effort: "low",

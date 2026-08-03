@@ -40,6 +40,8 @@ export function arAvslutat(arende: Arende): boolean {
 export interface UtfordKontroll {
   text: string;
   resultat?: string;
+  // Satt när underlaget inte kunde tas fram (dokumenterad orsak).
+  undantag?: string;
   tidpunkt: string;
   anvandare: string;
 }
@@ -49,7 +51,7 @@ export function utfordaKontroller(arende: Arende): UtfordKontroll[] {
   for (const post of arende.handelser) {
     const h = post.handelse;
     if (h.typ === "kontroll_utford") {
-      resultat.push({ text: h.text, resultat: h.resultat, tidpunkt: post.tidpunkt, anvandare: post.anvandare });
+      resultat.push({ text: h.text, resultat: h.resultat, undantag: h.undantag, tidpunkt: post.tidpunkt, anvandare: post.anvandare });
     }
   }
   return resultat;
@@ -226,7 +228,8 @@ export function overlamningstext(arende: Arende, metodik: Metodik, nu?: string):
   rader.push("");
   rader.push("Utförda kontroller:");
   if (b.utfordaKontroller.length === 0) rader.push("  (inga ännu)");
-  for (const k of b.utfordaKontroller) rader.push(`  ✓ ${k.text}${k.resultat ? ` — ${k.resultat}` : ""}`);
+  for (const k of b.utfordaKontroller)
+    rader.push(k.undantag ? `  ⚠ ${k.text} — underlag saknas: ${k.undantag}` : `  ✓ ${k.text}${k.resultat ? ` — ${k.resultat}` : ""}`);
   rader.push("");
   rader.push("Observationer:");
   if (b.observationer.length === 0) rader.push("  (inga ännu)");

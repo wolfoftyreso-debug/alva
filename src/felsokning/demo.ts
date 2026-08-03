@@ -4,7 +4,7 @@
 // har verkligt innehåll direkt.
 
 import type { Arende, Handelse, LoggPost } from "./domain";
-import type { TolkatFalt } from "./ai";
+import type { InstrumentTolkning, TolkatFalt } from "./ai";
 import { nyLoggPost } from "./domain";
 
 // Enkla platshållarbilder ritade i canvas — ersätts av riktiga foton så
@@ -138,4 +138,16 @@ export function byggDemoTolkning(): TolkatFalt[] {
     { id: "ao_serviceradgivare", etikett: "Servicerådgivare", grupp: "Verkstad", varde: "M. Lindqvist", konfidens: 0.82 },
     { id: "felbeskrivning", etikett: "Felbeskrivning", grupp: "Ärende", varde: "Kunden upplever vibrationer i ratten vid ca 90 km/h", konfidens: 0.97, omrade: { x: 0.08, y: 0.45, bredd: 0.84, hojd: 0.07 } },
   ];
+}
+
+// Demo-avläsning av ett instrument — används i lokalt läge där
+// bildtolkningen inte kan nås. Märks alltid som demo i UI:t.
+export function byggDemoInstrument(): InstrumentTolkning {
+  return {
+    instrumenttyp: "multimeter",
+    varden: [
+      { beskrivning: "Batterispänning (vila)", varde: "12,4", enhet: "V", konfidens: 0.97 },
+      { beskrivning: "Spänning vid start", varde: "9,8", enhet: "V", konfidens: 0.84 },
+    ],
+  };
 }

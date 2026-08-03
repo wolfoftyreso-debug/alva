@@ -51,7 +51,9 @@ export type Handelse =
   | { typ: "arbetsorder_skannad"; falt: ArbetsorderFalt[]; dataUrl?: string }
   | { typ: "felbeskrivning"; text: string }
   | { typ: "fraga_besvarad"; stegId: string; frageId: string; fraga: string; svar: string }
-  | { typ: "kontroll_utford"; stegId: string; kontrollId: string; text: string; resultat?: string }
+  // undantag: underlaget kunde inte tas fram — obligatorisk orsak i stället
+  // för evidens. Kontrollen räknas som hanterad men flaggas i brief/rapport.
+  | { typ: "kontroll_utford"; stegId: string; kontrollId: string; text: string; resultat?: string; undantag?: string }
   | { typ: "observation"; text: string }
   | { typ: "matvarde"; beskrivning: string; varde: string; enhet?: string }
   | { typ: "hypotes"; text: string; niva: Exclude<Tillforlitlighet, "hog"> }
@@ -114,6 +116,7 @@ export function handelseRubrik(post: LoggPost): string {
     case "fraga_besvarad":
       return `${h.fraga} — ${h.svar}`;
     case "kontroll_utford":
+      if (h.undantag) return `${h.text} — underlag kunde inte tas fram: ${h.undantag}`;
       return h.resultat ? `${h.text} — ${h.resultat}` : `${h.text} — utförd`;
     case "observation":
       return `Observation: ${h.text}`;

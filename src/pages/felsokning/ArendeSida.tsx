@@ -26,7 +26,16 @@ import {
   type Delning,
   type DelningsNiva,
 } from "@/felsokning/plattform";
-import { AI_RADTYP_LABEL, fragaAi, granskaUnderlag, sammanfattaOverlamning } from "@/felsokning/ai";
+import {
+  AI_RADTYP_LABEL,
+  fragaAi,
+  granskaUnderlag,
+  lasAvInstrument,
+  sammanfattaOverlamning,
+  type InstrumentTolkning,
+} from "@/felsokning/ai";
+import { byggDemoInstrument } from "@/felsokning/demo";
+import { ECM_VERSION, UNDANTAGSORSAKER, grindGodkand, kvalitetsgrind } from "@/felsokning/ecm";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto, tidKlockslag } from "@/felsokning/format";
 
@@ -273,7 +282,7 @@ function KontextPanel({
             <span className="font-semibold text-[#00437A]">Nästa steg:</span> {senasteAi.handelse.nastaSteg}
           </p>
           <p className="mt-1 text-[10px] uppercase tracking-wide text-[#707070]">
-            AI-underlag · presenteras aldrig som konstaterat fel
+            Beslutsstöd · presenteras aldrig som konstaterat fel
           </p>
         </Panel>
       )}
@@ -387,13 +396,13 @@ function GuideFlik({
         <Panel
           rubrik={
             senasteAiSvar?.handelse.typ === "ai_svar"
-              ? `AI-handledning (${senasteAiSvar.handelse.modell})`
-              : "AI-handledning"
+              ? `Handledning (${senasteAiSvar.handelse.modell})`
+              : "Handledning"
           }
         >
-          {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">AI analyserar …</p>}
+          {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">Systemet analyserar …</p>}
           {aiStatus === "fel" && (
-            <p className="mb-2 font-semibold text-[#8B1A1A]">AI-svaret kunde inte hämtas — försök igen. Metodiken fortsätter som vanligt.</p>
+            <p className="mb-2 font-semibold text-[#8B1A1A]">Analysen kunde inte hämtas — försök igen. Metodiken fortsätter som vanligt.</p>
           )}
           {senasteAiSvar && senasteAiSvar.handelse.typ === "ai_svar" && (
             <>
@@ -560,7 +569,66 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
           </StorKnapp>
         </>
       )}
+      <Undantag
+        vidUndantag={(orsak) =>
+          skicka({
+            typ: "kontroll_utford",
+            stegId: steg.steg.id,
+            kontrollId: kontroll.id,
+            text: kontroll.text,
+            undantag: orsak,
+          })
+        }
+      />
     </>
+  );
+}
+
+// ECM-regeln: en kontroll kan bara slutföras med evidens ELLER ett
+// uttryckligt undantag — "underlaget kan inte tas fram" — där orsaken
+// alltid är obligatorisk och loggas i händelseloggen.
+function Undantag({ vidUndantag }: { vidUndantag: (orsak: string) => void }) {
+  const [oppen, setOppen] = useState(false);
+  const [orsak, setOrsak] = useState("");
+
+  if (!oppen) {
+    return (
+      <button
+        onClick={() => setOppen(true)}
+        className="mt-2 w-full py-1 text-[12px] font-medium text-[#707070] underline-offset-2 hover:text-[#8B1A1A] hover:underline print:hidden"
+      >
+        Underlag kan inte tas fram …
+      </button>
+    );
+  }
+  return (
+    <div className="mt-3 rounded border border-[#E0C36A] bg-[#FFF8E1] p-2">
+      <p className="mb-2 text-[12px] font-semibold text-[#9A6700]">
+        Kontrollen dokumenteras utan underlag — ange orsak (obligatoriskt). Detta flaggas i brief och rapport.
+      </p>
+      <div className="mb-2 grid grid-cols-1 gap-1">
+        {UNDANTAGSORSAKER.map((val) => (
+          <button
+            key={val}
+            onClick={() => setOrsak(val)}
+            className={`min-h-8 rounded border px-2 text-left text-[12px] font-medium ${
+              orsak === val ? "border-[#00437A] bg-[#D6E4F2]" : "border-[#C6C6C6] bg-white"
+            }`}
+          >
+            {val}
+          </button>
+        ))}
+      </div>
+      <TextFalt label="Eller egen orsak" varde={orsak && !UNDANTAGSORSAKER.includes(orsak) ? orsak : ""} satt={setOrsak} rost />
+      <div className="grid grid-cols-2 gap-2">
+        <StorKnapp variant="sekundar" onClick={() => setOppen(false)}>
+          Avbryt
+        </StorKnapp>
+        <StorKnapp variant="fara" disabled={!orsak.trim()} onClick={() => vidUndantag(orsak.trim())}>
+          Dokumentera undantag
+        </StorKnapp>
+      </div>
+    </div>
   );
 }
 
@@ -568,6 +636,7 @@ const DOKTYPER = [
   { id: "observation", label: "Observation" },
   { id: "matvarde", label: "Mätvärde" },
   { id: "foto", label: "Foto" },
+  { id: "instrument", label: "📷 Instrument" },
   { id: "hypotes", label: "Hypotes" },
   { id: "kommentar", label: "Kommentar" },
 ] as const;
@@ -587,11 +656,52 @@ function SnabbDokumentation({
   const [text, setText] = useState("");
   const [varde, setVarde] = useState("");
   const filRef = useRef<HTMLInputElement>(null);
+  const instRef = useRef<HTMLInputElement>(null);
+  const [avlasning, setAvlasning] = useState<{ foto: string; tolkning: InstrumentTolkning; demo?: boolean } | null>(null);
+  const [laserAv, setLaserAv] = useState(false);
 
   const aterstall = () => {
     setTyp(null);
     setText("");
     setVarde("");
+  };
+
+  // Visual-first: instrumentet/skärmen fotograferas, bildtolkningen
+  // extraherar värdena och teknikern bekräftar innan något loggas.
+  // Originalbilden bevaras alltid som evidens bredvid de strukturerade
+  // värdena. I lokalt läge visas en tydligt märkt demo-avläsning.
+  const lasAv = async (fil: File) => {
+    setLaserAv(true);
+    const foto = await skalaNerFoto(fil);
+    try {
+      const resultat = await lasAvInstrument(foto);
+      if (resultat && resultat.tolkning.varden.length > 0) {
+        setAvlasning({ foto, tolkning: resultat.tolkning });
+      } else if (!resultat) {
+        setAvlasning({ foto, tolkning: byggDemoInstrument(), demo: true });
+      } else {
+        skicka({ typ: "foto", beskrivning: "Instrumentfoto — inga värden kunde läsas", dataUrl: foto });
+      }
+    } catch {
+      skicka({ typ: "foto", beskrivning: "Instrumentfoto — avläsningen kunde inte nås", dataUrl: foto });
+    }
+    setLaserAv(false);
+  };
+
+  const sparaAvlasning = () => {
+    if (!avlasning) return;
+    // Originalet först, sedan varje bekräftat värde som eget mätvärde —
+    // strukturerad data ersätter aldrig originalevidensen.
+    skicka({ typ: "foto", beskrivning: `Instrumentavläsning (${avlasning.tolkning.instrumenttyp})`, dataUrl: avlasning.foto });
+    for (const v of avlasning.tolkning.varden) {
+      skicka({ typ: "matvarde", beskrivning: v.beskrivning, varde: v.varde, enhet: v.enhet });
+    }
+    paSparad?.(
+      `Instrumentavläsning (${avlasning.tolkning.instrumenttyp}): ${avlasning.tolkning.varden
+        .map((v) => `${v.beskrivning} = ${v.varde}${v.enhet ? ` ${v.enhet}` : ""}`)
+        .join("; ")}`,
+    );
+    setAvlasning(null);
   };
 
   const spara = () => {
@@ -621,7 +731,13 @@ function SnabbDokumentation({
         {DOKTYPER.map((d) => (
           <button
             key={d.id}
-            onClick={() => (d.id === "foto" ? filRef.current?.click() : setTyp(typ === d.id ? null : d.id))}
+            onClick={() =>
+              d.id === "foto"
+                ? filRef.current?.click()
+                : d.id === "instrument"
+                  ? instRef.current?.click()
+                  : setTyp(typ === d.id ? null : d.id)
+            }
             className={`min-h-9 rounded border text-[12px] font-semibold transition-colors ${
               typ === d.id
                 ? "border-[#00437A] bg-[#00437A] text-white"
@@ -646,7 +762,48 @@ function SnabbDokumentation({
           e.target.value = "";
         }}
       />
-      {typ && typ !== "foto" && (
+      <input
+        ref={instRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const fil = e.target.files?.[0];
+          if (fil) lasAv(fil);
+          e.target.value = "";
+        }}
+      />
+      {laserAv && <p className="mt-2 animate-pulse text-center text-[12px] font-semibold text-[#00437A]">Systemet läser av instrumentet …</p>}
+      {avlasning && (
+        <div className="mt-3 rounded border border-[#C6C6C6] bg-white p-2">
+          {avlasning.demo && (
+            <p className="mb-2 rounded border border-[#E0C36A] bg-[#FFF8E1] p-1.5 text-[11px] font-semibold text-[#9A6700]">
+              Demo-avläsning — bildtolkningen kräver inloggning. Värdena är exempeldata.
+            </p>
+          )}
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
+            Avläst: {avlasning.tolkning.instrumenttyp} — bekräfta innan något loggas
+          </p>
+          {avlasning.tolkning.varden.map((v, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
+              <span>
+                {v.beskrivning}: <span className="font-semibold">{v.varde}{v.enhet ? ` ${v.enhet}` : ""}</span>
+              </span>
+              <span className={`text-[11px] font-semibold ${v.konfidens >= 0.95 ? "text-[#1E6B34]" : v.konfidens >= 0.8 ? "text-[#9A6700]" : "text-[#8B1A1A]"}`}>
+                {v.konfidens >= 0.95 ? "✓" : `${Math.round(v.konfidens * 100)} %`}
+              </span>
+            </div>
+          ))}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => setAvlasning(null)}>
+              Förkasta
+            </StorKnapp>
+            <StorKnapp onClick={sparaAvlasning}>Spara foto + värden</StorKnapp>
+          </div>
+        </div>
+      )}
+      {typ && typ !== "foto" && typ !== "instrument" && (
         <div className="mt-3">
           {typ === "hypotes" && (
             <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">
@@ -716,10 +873,10 @@ function OverlamningDialog({
         </pre>
         {aiLage === "vilar" && (
           <StorKnapp variant="sekundar" className="mb-3" onClick={komplettera}>
-            ✨ AI-komplettera: risker &amp; osäkerheter
+            ✨ Komplettera analysen: risker &amp; osäkerheter
           </StorKnapp>
         )}
-        {aiLage === "arbetar" && <p className="mb-3 animate-pulse font-semibold text-[#00437A]">AI sammanfattar …</p>}
+        {aiLage === "arbetar" && <p className="mb-3 animate-pulse font-semibold text-[#00437A]">Systemet sammanfattar …</p>}
         {aiLage === "fel" && (
           <p className="mb-3 font-semibold text-[#8B1A1A]">Kunde inte hämtas — kräver inloggning. Överlämningen fungerar ändå.</p>
         )}
@@ -901,12 +1058,12 @@ function BriefFlik({
   return (
     <>
       {!b.avslutat && (
-        <Panel rubrik="AI-granskning">
+        <Panel rubrik="Granskning av underlaget">
           <p className="mb-2 text-[#333333]">
-            Låt AI:n gå igenom hela underlaget innan du lämnar det vidare: motsägelser mellan
+            Låt systemet gå igenom hela underlaget innan du lämnar det vidare: motsägelser mellan
             observationer, luckor i dokumentationen och slutsatser som saknar stöd.
           </p>
-          {granskning === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">AI granskar underlaget …</p>}
+          {granskning === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">Systemet granskar underlaget …</p>}
           {granskning === "fel" && (
             <p className="mb-2 font-semibold text-[#8B1A1A]">Granskningen kunde inte hämtas — kräver inloggning. Försök igen.</p>
           )}
@@ -920,11 +1077,11 @@ function BriefFlik({
               <p className="mt-1 text-[14px]">
                 <span className="font-semibold text-[#00437A]">Nästa steg:</span> {senasteAi.handelse.nastaSteg}
               </p>
-              <p className="mt-1 text-[11px] text-[#707070]">Senaste AI-svar ({senasteAi.handelse.modell})</p>
+              <p className="mt-1 text-[11px] text-[#707070]">Senaste analys ({senasteAi.handelse.modell})</p>
             </div>
           )}
           <StorKnapp variant="sekundar" disabled={granskning === "arbetar"} onClick={granska}>
-            🔍 AI-granska underlaget
+            🔍 Granska underlaget
           </StorKnapp>
         </Panel>
       )}
@@ -945,12 +1102,18 @@ function BriefFlik({
       </Panel>
       <Panel rubrik="Utförda kontroller">
         {b.utfordaKontroller.length === 0 && <p className="text-[#4A5560]">Inga ännu.</p>}
-        {b.utfordaKontroller.map((k, i) => (
-          <p key={i} className="py-0.5 text-[14px]">
-            ✓ {k.text}
-            {k.resultat && <span className="text-[#4A5560]"> — {k.resultat}</span>}
-          </p>
-        ))}
+        {b.utfordaKontroller.map((k, i) =>
+          k.undantag ? (
+            <p key={i} className="py-0.5 text-[14px] text-[#9A6700]">
+              ⚠ {k.text} — underlag saknas: {k.undantag}
+            </p>
+          ) : (
+            <p key={i} className="py-0.5 text-[14px]">
+              ✓ {k.text}
+              {k.resultat && <span className="text-[#4A5560]"> — {k.resultat}</span>}
+            </p>
+          ),
+        )}
       </Panel>
       <Panel rubrik="Observationer">
         {b.observationer.length === 0 && <p className="text-[#4A5560]">Inga ännu.</p>}
@@ -1035,15 +1198,41 @@ function RapportFlik({
     skicka({ typ: "export_skapad", format: "JSON", version });
   };
 
+  const grind = kvalitetsgrind(arende, metodik);
+  const godkand = grindGodkand(arende, metodik);
+
   return (
     <>
+      {/* ECM-kvalitetsgrinden: slutrapporten kan inte genereras förrän
+          varje obligatoriskt påstående har evidens eller dokumenterat
+          undantag i händelseloggen. */}
+      <Panel rubrik={`Kvalitetsgrind — ECM v${ECM_VERSION}`}>
+        {grind.map((rad) => (
+          <div key={rad.id} className="border-b border-[#EBEBEB] py-1 last:border-0">
+            <p className="text-[13px]">
+              <span className={rad.ok ? "text-[#1E6B34]" : rad.kravs ? "text-[#8B1A1A]" : "text-[#9A6700]"}>
+                {rad.ok ? "✅" : rad.kravs ? "❌" : "⚠️"}
+              </span>{" "}
+              {rad.rubrik}
+              {!rad.kravs && <span className="text-[11px] text-[#707070]"> (rekommenderas)</span>}
+            </p>
+            {rad.detalj && <p className="pl-6 text-[12px] text-[#707070]">{rad.detalj}</p>}
+          </div>
+        ))}
+        {!godkand && (
+          <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">
+            Rapporten kan inte genereras förrän varje ❌ har evidens eller ett dokumenterat undantag
+            (”Underlag kan inte tas fram” i guiden).
+          </p>
+        )}
+      </Panel>
       <Panel rubrik="Kundrapport">
         <p className="mb-2 text-[#333333]">
           Delningsbar sammanställning av utfört arbete. Granska innehållet innan rapporten delas — bilder kan
           innehålla uppgifter om andra kunder.
         </p>
         <div className="grid grid-cols-2 gap-2">
-          <StorKnapp variant="sekundar" onClick={() => window.print()}>
+          <StorKnapp variant="sekundar" disabled={!godkand} onClick={() => window.print()}>
             Skriv ut / PDF
           </StorKnapp>
           <StorKnapp variant="sekundar" onClick={exporteraJson}>
