@@ -3,8 +3,12 @@
  * variables (set by the CDK stack) — secrets never live here.
  */
 export const config = {
-  /** Number of free messages before the paywall is shown (~5–10 conversations). */
-  freeMessageLimit: Number(process.env.FREE_MESSAGE_LIMIT ?? '50'),
+  /**
+   * Abuse backstop, NOT the paywall. The paywall is intelligent: the model
+   * decides when an analysis is ready. This cap only bounds how many free
+   * messages a single user/device can send per reset window.
+   */
+  messageCap: Number(process.env.MESSAGE_CAP ?? '200'),
   /** Free-tier usage resets after this many days. */
   usageResetDays: Number(process.env.USAGE_RESET_DAYS ?? '30'),
   openAiModel: process.env.OPENAI_MODEL ?? 'gpt-4.1-mini',

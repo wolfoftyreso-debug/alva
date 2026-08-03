@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+import * as SecureStore from 'expo-secure-store';
 import { appConfig } from '../config';
 import { getAccessToken } from '../auth/session';
 
@@ -16,23 +18,38 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface ChatReply {
+  reply: string;
+  /** True when the backend judged the analysis ready — the paywall moment. */
+  paywall: boolean;
+}
+
 export interface Me {
   subscriptionStatus: 'free' | 'active';
   messagesUsed: number;
-  freeMessageLimit: number;
+  messageCap: number;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await getAccessToken();
-  if (!token) throw new ApiError(401, 'not_signed_in');
+const DEVICE_KEY = 'neurosemantics.device';
 
+/** Stable anonymous id so guests can chat before signing in. */
+async function getDeviceId(): Promise<string> {
+  let id = await SecureStore.getItemAsync(DEVICE_KEY);
+  if (!id) {
+    id = Crypto.randomUUID();
+    await SecureStore.setItemAsync(DEVICE_KEY, id);
+  }
+  return id;
+}
+
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  headers: Record<string, string> = {},
+): Promise<T> {
   const response = await fetch(`${appConfig.apiUrl}${path}`, {
     ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    headers: { 'Content-Type': 'application/json', ...headers },
   });
 
   if (!response.ok) {
@@ -47,21 +64,39 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function fetchMe(): Promise<Me> {
-  return request<Me>('/me');
+async function authHeader(): Promise<Record<string, string>> {
+  const token = await getAccessToken();
+  if (!token) throw new ApiError(401, 'not_signed_in');
+  return { Authorization: `Bearer ${token}` };
 }
 
-export function sendChat(messages: ChatMessage[]): Promise<{ reply: string }> {
-  return request<{ reply: string }>('/chat', {
-    method: 'POST',
-    body: JSON.stringify({ messages }),
-  });
+export async function fetchSuggestions(): Promise<string[]> {
+  const data = await request<{ suggestions: string[] }>('/suggestions');
+  return data.suggestions;
 }
 
-export function verifyPurchase(body: {
+/** Signed-in users chat via /chat; guests via /guest/chat with a device id. */
+export async function sendChat(messages: ChatMessage[]): Promise<ChatReply> {
+  const body = { method: 'POST', body: JSON.stringify({ messages }) };
+  const token = await getAccessToken();
+  if (token) {
+    return request<ChatReply>('/chat', body, { Authorization: `Bearer ${token}` });
+  }
+  return request<ChatReply>('/guest/chat', body, { 'X-Device-Id': await getDeviceId() });
+}
+
+export async function fetchMe(): Promise<Me> {
+  return request<Me>('/me', {}, await authHeader());
+}
+
+export async function verifyPurchase(body: {
   platform: 'ios' | 'android';
   productId: string;
   receipt: string;
 }): Promise<{ subscriptionStatus: 'free' | 'active' }> {
-  return request('/subscription/verify', { method: 'POST', body: JSON.stringify(body) });
+  return request(
+    '/subscription/verify',
+    { method: 'POST', body: JSON.stringify(body) },
+    await authHeader(),
+  );
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -9,47 +9,88 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { ApiError, sendChat, type ChatMessage } from '../api/client';
+import { fetchSuggestions, sendChat, type ChatMessage } from '../api/client';
 import { colors, spacing, type } from '../theme';
 
 interface Props {
-  onLimitReached: () => void;
+  messages: ChatMessage[];
+  setMessages: (messages: ChatMessage[]) => void;
+  /** The analysis is ready behind Premium; input is replaced by the unlock button. */
+  paywalled: boolean;
+  onPaywallTriggered: () => void;
+  onContinueWithPremium: () => void;
+  /** Set right after unlock: fetch the promised analysis automatically. */
+  deliverAnalysis: boolean;
+  onAnalysisDelivered: () => void;
 }
+
+const SUGGESTIONS_SHOWN = 4;
 
 /**
  * The whole product: one heading, the conversation, a text field and send.
- * Conversations live in memory only — nothing is stored.
+ * The user lands here directly — no registration before the first question.
+ * Conversations live in memory only; nothing is stored.
  */
-export function ChatScreen({ onLimitReached }: Props) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export function ChatScreen({
+  messages,
+  setMessages,
+  paywalled,
+  onPaywallTriggered,
+  onContinueWithPremium,
+  deliverAnalysis,
+  onAnalysisDelivered,
+}: Props) {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  async function send() {
-    const content = draft.trim();
-    if (!content || busy) return;
-    const next: ChatMessage[] = [...messages, { role: 'user', content }];
+  useEffect(() => {
+    fetchSuggestions()
+      .then((all) =>
+        setSuggestions([...all].sort(() => Math.random() - 0.5).slice(0, SUGGESTIONS_SHOWN)),
+      )
+      .catch(() => setSuggestions([]));
+  }, []);
+
+  // After unlocking Premium the transcript ends with the assistant's
+  // transition message; resend it so the backend delivers the full analysis.
+  useEffect(() => {
+    if (!deliverAnalysis || busy) return;
+    setBusy(true);
+    setError(null);
+    sendChat(messages)
+      .then(({ reply }) => {
+        setMessages([...messages, { role: 'assistant', content: reply }]);
+        onAnalysisDelivered();
+      })
+      .catch(() => setError('Something went wrong. Please try again.'))
+      .finally(() => setBusy(false));
+  }, [deliverAnalysis]);
+
+  async function send(content: string) {
+    const trimmed = content.trim();
+    if (!trimmed || busy || paywalled) return;
+    const next: ChatMessage[] = [...messages, { role: 'user', content: trimmed }];
     setMessages(next);
     setDraft('');
     setBusy(true);
     setError(null);
     try {
-      const { reply } = await sendChat(next);
+      const { reply, paywall } = await sendChat(next);
       setMessages([...next, { role: 'assistant', content: reply }]);
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 402) {
-        onLimitReached();
-      } else {
-        setError('Something went wrong. Please try again.');
-        setMessages(messages);
-        setDraft(content);
-      }
+      if (paywall) onPaywallTriggered();
+    } catch {
+      setError('Something went wrong. Please try again.');
+      setMessages(messages);
+      setDraft(trimmed);
     } finally {
       setBusy(false);
     }
   }
+
+  const showSuggestions = messages.length === 0 && suggestions.length > 0;
 
   return (
     <KeyboardAvoidingView
@@ -57,6 +98,15 @@ export function ChatScreen({ onLimitReached }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Text style={styles.heading}>NeuroSemantics AI</Text>
+      {showSuggestions ? (
+        <View style={styles.suggestions}>
+          {suggestions.map((s) => (
+            <Pressable key={s} style={styles.suggestion} onPress={() => send(s)} disabled={busy}>
+              <Text style={styles.suggestionText}>{s}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       <FlatList
         ref={listRef}
         style={styles.list}
@@ -74,24 +124,32 @@ export function ChatScreen({ onLimitReached }: Props) {
         )}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Write a message"
-          placeholderTextColor={colors.textMuted}
-          multiline
-          editable={!busy}
-        />
-        <Pressable
-          style={[styles.send, (!draft.trim() || busy) && styles.sendDisabled]}
-          onPress={send}
-          disabled={!draft.trim() || busy}
-        >
-          <Text style={styles.sendText}>{busy ? '…' : 'Send'}</Text>
-        </Pressable>
-      </View>
+      {paywalled ? (
+        <View style={styles.inputRow}>
+          <Pressable style={styles.unlock} onPress={onContinueWithPremium}>
+            <Text style={styles.unlockText}>Continue with Premium</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Write a message"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            editable={!busy}
+          />
+          <Pressable
+            style={[styles.send, (!draft.trim() || busy) && styles.sendDisabled]}
+            onPress={() => send(draft)}
+            disabled={!draft.trim() || busy}
+          >
+            <Text style={styles.sendText}>{busy ? '…' : 'Send'}</Text>
+          </Pressable>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -104,9 +162,19 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxl,
     paddingBottom: spacing.m,
   },
+  suggestions: { paddingHorizontal: spacing.l, gap: spacing.s, marginBottom: spacing.m },
+  suggestion: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: spacing.s + 2,
+    paddingHorizontal: spacing.m,
+  },
+  suggestionText: { ...type.body, color: colors.accent },
   list: { flex: 1 },
   listContent: { paddingHorizontal: spacing.l, paddingBottom: spacing.m, gap: spacing.s },
-  empty: { ...type.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
+  empty: { ...type.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xl },
   message: { maxWidth: '85%', borderRadius: 12, padding: spacing.m },
   user: { alignSelf: 'flex-end', backgroundColor: colors.accent },
   assistant: {
@@ -144,4 +212,12 @@ const styles = StyleSheet.create({
   },
   sendDisabled: { opacity: 0.4 },
   sendText: { ...type.heading, color: colors.accentText },
+  unlock: {
+    flex: 1,
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: spacing.m,
+    alignItems: 'center',
+  },
+  unlockText: { ...type.heading, color: colors.accentText },
 });

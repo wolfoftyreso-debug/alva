@@ -10,7 +10,7 @@ one dark blue-green accent. No animations, no gradients.
 ## System overview
 
 ```
-apps/mobile      Expo / React Native app (three views: Welcome, Chat, Paywall)
+apps/mobile      Expo / React Native app (two views: Chat, Paywall)
 services/api     One Lambda backend (chat, usage, subscription verification)
 infra            AWS CDK stack (the entire cloud environment)
 db/migrations    SQL schema (two tables: users, usage)
@@ -22,16 +22,42 @@ it is not built.
 
 ### Request flow
 
-1. The app signs in via the **Cognito** hosted UI (Apple / Google / email)
-   and receives a JWT.
-2. `POST /chat` goes through **API Gateway** (JWT authorizer) to the single
-   **Lambda**.
-3. The Lambda checks the free-tier quota in **PostgreSQL** (Aurora
-   Serverless v2). Over the limit and not subscribed → HTTP 402 → the app
-   shows the paywall.
-4. Otherwise it calls the **OpenAI Responses API** with the Markdown
-   knowledge base (`services/api/knowledge/`) as system instructions and
-   returns the reply.
+1. The user lands directly in the chat — no registration before the first
+   question. Guests are identified by an app-generated device id
+   (`POST /guest/chat`); dynamic conversation starters come from
+   `GET /suggestions` (both public routes). The suggestions live in
+   `services/api/suggestions.json` and can be updated with a deploy — no
+   app release needed.
+2. Requests go through **API Gateway** to the single **Lambda**; signed-in
+   users use `POST /chat` with a **Cognito** JWT (Apple / Google / email via
+   the hosted UI).
+3. The Lambda calls the **OpenAI Responses API** with the Markdown knowledge
+   base (`services/api/knowledge/`) as system instructions. The model
+   returns structured output: a reply plus an `analysis_ready` flag.
+4. Sign-in happens at the paywall, since a purchase must attach to an
+   account. Usage counters live in **PostgreSQL** (Aurora Serverless v2).
+
+### The intelligent paywall
+
+The paywall is not a hardcoded message count. Free conversations run in
+_discovery mode_: the model asks relevant follow-up questions, names
+patterns, shows understanding, and builds toward an analysis — without
+delivering the full solution. When the problem is described, the information
+is sufficient, and a concrete action plan is ready, the model signals
+`analysis_ready`, writes a calm transition ("…I have a concrete strategy I
+would recommend. Continue with Premium to see the analysis and the
+recommended steps."), and the conversation pauses.
+
+The instructions explicitly forbid manufactured urgency, emotional pressure,
+fake readiness, and stopping mid-answer — Premium should feel like the
+natural continuation of an already valuable dialogue.
+
+On unlock, the app resends the transcript; premium mode then delivers the
+full analysis, recommended strategies and concrete exercises immediately,
+and the dialogue continues without restriction.
+
+A generous `MESSAGE_CAP` (default 200 per 30 days) exists purely as an
+abuse backstop for the free tier — it is not the paywall.
 
 Conversations are never stored server-side; the client holds them in memory
 and sends the running transcript with each request. The database stores the
@@ -50,9 +76,6 @@ provider differs per platform behind one `PaymentProvider` interface:
 - **Web (future)** — a Stripe adapter slots into the same interface.
 
 Plans: Monthly and Yearly. Nothing else.
-
-Free tier: `FREE_MESSAGE_LIMIT` messages (default 50 ≈ 5–10 conversations),
-resetting every `USAGE_RESET_DAYS` days.
 
 ## Getting started
 
@@ -100,11 +123,18 @@ GitHub Actions: `ci.yml` lints, type-checks and tests every PR;
 
 ## Security
 
-- All traffic over HTTPS; every API route requires a Cognito JWT.
+- All traffic over HTTPS. Account routes require a Cognito JWT; the two
+  public routes (`/suggestions`, `/guest/chat`) carry no account data and
+  are bounded by the free-tier message cap.
 - Secrets live in AWS Secrets Manager only — no API keys in the client.
 - The Lambda runs in private subnets; the database is not publicly reachable.
 
 ## Product philosophy
+
+Every free user should leave the app feeling that the system understood
+their situation, that a concrete analysis is ready, and that the next step
+is available in Premium — never that they were held back by an artificial
+interruption.
 
 Every new feature must justify itself. The allowed AWS surface is
 API Gateway, Lambda, Cognito, S3, Secrets Manager and CloudWatch — and V1

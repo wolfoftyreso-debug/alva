@@ -1,5 +1,5 @@
 import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from 'aws-cdk-lib';
-import { HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpApi, HttpMethod, HttpNoneAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
@@ -141,7 +141,7 @@ export class NeuroSemanticsStack extends Stack {
         DB_SECRET_ARN: db.secret?.secretArn ?? '',
         DB_NAME,
         KNOWLEDGE_DIR: 'knowledge',
-        FREE_MESSAGE_LIMIT: '50',
+        MESSAGE_CAP: '200',
         USAGE_RESET_DAYS: '30',
       },
     });
@@ -160,6 +160,21 @@ export class NeuroSemanticsStack extends Stack {
     api.addRoutes({ path: '/me', methods: [HttpMethod.GET], integration });
     api.addRoutes({ path: '/chat', methods: [HttpMethod.POST], integration });
     api.addRoutes({ path: '/subscription/verify', methods: [HttpMethod.POST], integration });
+
+    // Public routes: the user meets the chat before any registration.
+    const publicAuthorizer = new HttpNoneAuthorizer();
+    api.addRoutes({
+      path: '/suggestions',
+      methods: [HttpMethod.GET],
+      integration,
+      authorizer: publicAuthorizer,
+    });
+    api.addRoutes({
+      path: '/guest/chat',
+      methods: [HttpMethod.POST],
+      integration,
+      authorizer: publicAuthorizer,
+    });
 
     new CfnOutput(this, 'ApiUrl', { value: api.apiEndpoint });
     new CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
