@@ -172,7 +172,10 @@ After the first deploy:
 GitHub Actions: `ci.yml` lints, type-checks and tests every PR;
 `deploy.yml` deploys the CDK stack on every push to `main` (set the
 `AWS_DEPLOY_ROLE_ARN` secret for OIDC). Store builds ship via EAS
-(`eas build`) when you choose to release.
+(`eas build`, profiles in `apps/mobile/eas.json`).
+
+The full path to the closed beta — AWS, stores, builds, testers — is in
+[LAUNCH.md](LAUNCH.md).
 
 ## Security
 
