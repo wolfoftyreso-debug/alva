@@ -219,3 +219,21 @@
     cursor: grab;
   }
 }
+
+/* Guidad Felsökning: utskriftsvänlig kundrapport — mörkt arbetsläge på
+   skärm, svart på vitt på papper. Interaktiva element döljs vid utskrift. */
+@media print {
+  .felsokning-print,
+  .felsokning-print * {
+    background: #fff !important;
+    color: #111 !important;
+    border-color: #d4d4d8 !important;
+    animation: none !important;
+  }
+  .felsokning-print nav,
+  .felsokning-print button,
+  .felsokning-print input,
+  .felsokning-print textarea {
+    display: none !important;
+  }
+}

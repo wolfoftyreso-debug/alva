@@ -648,6 +648,21 @@ function RapportFlik({
         <Link to={`/felsokning/dela/${arende.id}`} className="mt-2 block">
           <StorKnapp variant="sekundar">🟢 Öppna Live Share-vy</StorKnapp>
         </Link>
+        {arende.delningskod && (
+          <StorKnapp
+            variant="sekundar"
+            className="mt-2"
+            onClick={() => {
+              navigator.clipboard.writeText(`${window.location.origin}/felsokning/delad/${arende.delningskod}`);
+              skicka({ typ: "kommentar", text: "Delningslänk kopierad för extern mottagare." });
+            }}
+          >
+            🔗 Kopiera delningslänk
+          </StorKnapp>
+        )}
+        <p className="mt-2 text-sm text-zinc-500">
+          Delningslänken kräver att ärendet är synkat mot molnet (inloggad användare).
+        </p>
       </Panel>
       <Panel rubrik={`Ärende #${arende.nummer}`}>
         {b.objekt && (

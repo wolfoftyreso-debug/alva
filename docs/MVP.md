@@ -7,8 +7,10 @@ Första körbara versionen av kärnan i [Master Prompt v1.0](MASTER-PROMPT.md). 
 ```sh
 npm install
 npm run dev        # öppna http://localhost:8080/felsokning
-npm test           # projektionstester
+npm test           # projektions-, synk- och demotester
 ```
+
+Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på startsidan lägger in ett komplett vibrationsärende med 1 tim 35 min historik.
 
 ## Vad som ingår
 
@@ -27,7 +29,9 @@ npm test           # projektionstester
 | Export | ✅ Versionsmärkt JSON-export (version = antal händelser vid exporttillfället, med användare och tidpunkt); exporten loggas själv som händelse. PDF via utskrift. CSV och API i backend-fasen. |
 | Backend & synk | ✅ Databas-migration (`supabase/migrations/20260802230000_guidad_felsokning.sql`): ärenden + händelser med RLS, append-only även i databasen (inga update/delete-rättigheter). Synklager i klienten: konfliktfri ihopflätning av händelser per id (testad), push av lokala + pull av kollegors händelser var 15:e sekund. Utan inloggning arbetar appen i lokalt läge; status visas i ärendehuvudet. |
 | Metodiker | ✅ Tre: vibration, elsystem/strömförsörjning (relä-exemplet ur visionen) och generisk — vald automatiskt utifrån felbeskrivningen. |
-| Live Share | ✅ Skrivskyddad livevy per ärende (`/felsokning/dela/:id`): status ✔/🔄/⏳, bilder, mätvärdestabell, tidslinje, rekommenderat nästa steg. Uppdateras automatiskt, interna poster filtreras bort. Anonym extern åtkomst via delningskod är förberedd i databasen (security definer-funktion `hamta_delat_arende`); varje ärende får en slumpad delningskod vid skapande. Behörighetsnivåer (kund/intern/partner) i nästa fas. |
+| Live Share | ✅ Skrivskyddad livevy per ärende (`/felsokning/dela/:id`): status ✔/🔄/⏳, bilder, mätvärdestabell, tidslinje, rekommenderat nästa steg. Uppdateras automatiskt, interna poster filtreras bort. Publik delningssida (`/felsokning/delad/:kod`) läser via `hamta_delat_arende` utan inloggning och pollar för liveuppdatering; "Kopiera delningslänk" finns i rapportfliken. Behörighetsnivåer (kund/intern/partner) i nästa fas. |
+| Dashboard | ✅ Enligt direktivet: räknare och filter för Alla/Pågående/Klara plus Starta nytt ärende. |
+| Utskrift | ✅ Kundrapport och Live Share-vy skrivs ut svart på vitt; interaktiva element döljs automatiskt. |
 | Öppet API | 🔶 Datamodellen är API-klar (händelser som JSON i Postgres). REST/OpenAPI-lager i nästa fas. |
 
 ## Arkitekturprinciper i koden

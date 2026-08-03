@@ -1,0 +1,110 @@
+// Demoärende: vibrationsexemplet ur visionen, komplett med besvarade
+// symptomfrågor, verifierade kontroller, mätvärden, foton, kategoribyten
+// och en hypotes — så att brief, tidrapport, kundrapport och Live Share
+// har verkligt innehåll direkt.
+
+import type { Arende, Handelse, LoggPost } from "./domain";
+import { nyLoggPost } from "./domain";
+
+// Enkla platshållarbilder ritade i canvas — ersätts av riktiga foton så
+// fort en kamera används. Fallback (1×1) när canvas saknas (t.ex. tester).
+function demoFoto(text: string): string {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 480;
+    canvas.height = 360;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas saknas");
+    ctx.fillStyle = "#27272a";
+    ctx.fillRect(0, 0, 480, 360);
+    ctx.strokeStyle = "#52525b";
+    ctx.lineWidth = 22;
+    ctx.beginPath();
+    ctx.arc(240, 170, 110, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#a1a1aa";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(240, 170, 58, 0, Math.PI * 2);
+    ctx.stroke();
+    for (let i = 0; i < 5; i++) {
+      const v = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(240, 170);
+      ctx.lineTo(240 + Math.cos(v) * 58, 170 + Math.sin(v) * 58);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#fbbf24";
+    ctx.font = "bold 22px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(text, 240, 330);
+    ctx.fillStyle = "#71717a";
+    ctx.font = "14px sans-serif";
+    ctx.fillText("Demobild", 240, 26);
+    return canvas.toDataURL("image/jpeg", 0.7);
+  } catch {
+    return "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+  }
+}
+
+export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
+  const start = Date.now() - 97 * 60000; // 1 tim 37 min sedan
+  const vid = (minuter: number) => new Date(start + minuter * 60000).toISOString();
+  const post = (minuter: number, handelse: Handelse, vem = anvandare): LoggPost =>
+    nyLoggPost(vem, handelse, vid(minuter));
+
+  const handelser: LoggPost[] = [
+    post(0, {
+      typ: "objekt_identifierat",
+      objekt: {
+        typ: "Fordon",
+        identifierare: "ABC123",
+        identifieringsmetod: "Registreringsnummer",
+        beskrivning: "Volvo XC60 D4 2019",
+        kund: "Anders Svensson",
+      },
+    }),
+    post(2, { typ: "felbeskrivning", text: "Bilen vibrerar runt 88 km/h. Symptomet uppträder endast under körning." }),
+    post(4, { typ: "fraga_besvarad", stegId: "symptom", frageId: "hastighetsberoende", fraga: "Är vibrationen hastighetsberoende?", svar: "Ja" }),
+    post(5, { typ: "fraga_besvarad", stegId: "symptom", frageId: "var", fraga: "Var känns vibrationen?", svar: "I ratten" }),
+    post(6, { typ: "fraga_besvarad", stegId: "symptom", frageId: "nar", fraga: "När uppstår vibrationen?", svar: "Vid jämn fart" }),
+    post(8, { typ: "fraga_besvarad", stegId: "symptom", frageId: "intervall", fraga: "Försvinner den över eller under ett visst hastighetsintervall?", svar: "Märks tydligast 85–95 km/h, försvinner under 80" }),
+    post(12, { typ: "foto", beskrivning: "Fotografera vänster framhjul", dataUrl: demoFoto("Vänster framhjul") }),
+    post(12, { typ: "kontroll_utford", stegId: "visuell", kontrollId: "foto_vf", text: "Fotografera vänster framhjul" }),
+    post(14, { typ: "foto", beskrivning: "Fotografera höger framhjul", dataUrl: demoFoto("Höger framhjul") }),
+    post(14, { typ: "kontroll_utford", stegId: "visuell", kontrollId: "foto_hf", text: "Fotografera höger framhjul" }),
+    post(16, { typ: "foto", beskrivning: "Fotografera vänster bakhjul", dataUrl: demoFoto("Vänster bakhjul") }),
+    post(16, { typ: "kontroll_utford", stegId: "visuell", kontrollId: "foto_vb", text: "Fotografera vänster bakhjul" }),
+    post(18, { typ: "foto", beskrivning: "Fotografera höger bakhjul", dataUrl: demoFoto("Höger bakhjul") }),
+    post(18, { typ: "kontroll_utford", stegId: "visuell", kontrollId: "foto_hb", text: "Fotografera höger bakhjul" }),
+    post(22, { typ: "kontroll_utford", stegId: "visuell", kontrollId: "dot", text: "Dokumentera DOT-/tillverkningsdatum", resultat: "Fram: DOT 2318, bak: DOT 2318 — samtliga från vecka 23 2018" }),
+    post(26, { typ: "observation", text: "Höger framdäck visar ojämnt slitage på innerkanten" }),
+    post(26, { typ: "kontroll_utford", stegId: "visuell", kontrollId: "slitage", text: "Kontrollera däckslitage", resultat: "Ojämnt slitage höger fram, övriga ok" }),
+    post(31, { typ: "matvarde", beskrivning: "Lufttryck vänster fram", varde: "2,4", enhet: "bar" }),
+    post(32, { typ: "matvarde", beskrivning: "Lufttryck höger fram", varde: "2,1", enhet: "bar" }),
+    post(33, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "lufttryck", text: "Kontrollera lufttryck", resultat: "VF 2,4 / HF 2,1 / VB 2,4 / HB 2,4 bar — justerat till 2,4 runtom" }),
+    post(38, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "hjulmoment", text: "Kontrollera hjulmoment", resultat: "140 Nm samtliga hjul, ok" }),
+    post(40, { typ: "hypotes", text: "Obalans eller kast i höger framhjul", niva: "lag" }),
+    post(41, { typ: "kategori_byte", kategori: "provkorning" }),
+    post(55, { typ: "kontroll_utford", stegId: "provkorning", kontrollId: "pk_hastighet", text: "Hastighet där vibration uppstår", resultat: "Tydlig vibration 85–95 km/h, max vid 88" }),
+    post(56, { typ: "kontroll_utford", stegId: "provkorning", kontrollId: "pk_acc", text: "Förändring vid acceleration", resultat: "Ingen förändring vid acceleration" }),
+    post(57, { typ: "kontroll_utford", stegId: "provkorning", kontrollId: "pk_motorbroms", text: "Förändring vid motorbroms", resultat: "Ingen förändring vid motorbroms" }),
+    post(58, { typ: "kontroll_utford", stegId: "provkorning", kontrollId: "pk_var", text: "Om vibration känns i ratt eller kaross", resultat: "Endast i ratten" }),
+    post(60, { typ: "kategori_byte", kategori: "aktiv_felsokning" }),
+    post(75, { typ: "inaktivitet_forklarad", text: "Lyfte bilen och demonterade höger framhjul för kontroll i balanseringsmaskin.", minuter: 15 }),
+    post(82, { typ: "matvarde", beskrivning: "Obalans höger framhjul", varde: "38", enhet: "g" }),
+    post(83, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "balansering", text: "Kontrollera hjulbalansering", resultat: "38 g obalans höger fram — en balansvikt saknas. Övriga hjul inom 5 g." }),
+    post(85, { typ: "observation", text: "Spår efter lossnad klistervikt på höger framfälgs insida" }),
+    post(90, { typ: "overlamning", fran: anvandare, till: "Johan" }),
+    post(92, { typ: "kategori_byte", kategori: "administration" }, "Johan"),
+    post(95, { typ: "kommentar", text: "Balanserat om höger framhjul, ny provkörning planerad." }, "Johan"),
+  ];
+
+  return {
+    id: `arende-demo-${start.toString(36)}`,
+    nummer,
+    skapad: vid(0),
+    delningskod: `demo-${start.toString(36)}`,
+    handelser,
+  };
+}

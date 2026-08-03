@@ -18,6 +18,7 @@ import Arendelista from "./pages/felsokning/Arendelista";
 import NyttArende from "./pages/felsokning/NyttArende";
 import ArendeSida from "./pages/felsokning/ArendeSida";
 import DelatArende from "./pages/felsokning/DelatArende";
+import PublikDelning from "./pages/felsokning/PublikDelning";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ function AppContent() {
         <Route path="/felsokning/nytt" element={<NyttArende />} />
         <Route path="/felsokning/arende/:id" element={<ArendeSida />} />
         <Route path="/felsokning/dela/:id" element={<DelatArende />} />
+        <Route path="/felsokning/delad/:kod" element={<PublikDelning />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

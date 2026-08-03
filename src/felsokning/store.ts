@@ -20,6 +20,8 @@ interface FelsokningState {
   // Används endast av synken: ersätter listan med den ihopflätade versionen.
   // Semantiken är fortfarande append-only — flätningen lägger bara till.
   sammanfoga: (arendeId: string, handelser: LoggPost[]) => void;
+  // Lägger in ett färdigbyggt ärende (demoärende, importerat ärende).
+  laggInArende: (arende: Arende) => void;
 }
 
 function nyDelningskod(): string {
@@ -82,6 +84,13 @@ export const useFelsokning = create<FelsokningState>()(
             arenden: { ...s.arenden, [arendeId]: { ...arende, handelser } },
           };
         });
+      },
+
+      laggInArende: (arende) => {
+        set((s) => ({
+          arenden: { ...s.arenden, [arende.id]: arende },
+          nastaNummer: Math.max(s.nastaNummer, arende.nummer + 1),
+        }));
       },
     }),
     { name: "guidad-felsokning" },

@@ -20,8 +20,8 @@ export function FelsokningSkal({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50">
-      <header className="sticky top-0 z-20 border-b-2 border-zinc-700 bg-zinc-900 px-4 py-3">
+    <div className="felsokning-print min-h-screen bg-zinc-950 text-zinc-50">
+      <header className="sticky top-0 z-20 border-b-2 border-zinc-700 bg-zinc-900 px-4 py-3 print:static">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <div className="min-w-0">
             {tillbaka && (
@@ -65,7 +65,7 @@ export function StorKnapp({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`min-h-14 w-full rounded-lg px-5 py-3 text-lg font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${farg} ${className}`}
+      className={`min-h-14 w-full rounded-lg px-5 py-3 text-lg font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 print:hidden ${farg} ${className}`}
     >
       {children}
     </button>

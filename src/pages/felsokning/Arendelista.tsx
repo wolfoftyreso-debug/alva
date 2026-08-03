@@ -2,12 +2,18 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useFelsokning, metodikForArende } from "@/felsokning/store";
 import { arAvslutat, felbeskrivning, objekt, sistaAktivitet, brief } from "@/felsokning/projektioner";
+import { byggDemoArende } from "@/felsokning/demo";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
 
+type Filter = "alla" | "pagaende" | "klara";
+
+// Dashboard enligt direktivet: endast det viktigaste — mina ärenden,
+// pågående, klara och starta nytt ärende.
 export default function Arendelista() {
-  const { anvandare, arenden, sattAnvandare } = useFelsokning();
+  const { anvandare, arenden, sattAnvandare, laggInArende, nastaNummer } = useFelsokning();
   const [namn, setNamn] = useState("");
+  const [filter, setFilter] = useState<Filter>("alla");
 
   if (!anvandare) {
     return (
@@ -32,7 +38,16 @@ export default function Arendelista() {
     );
   }
 
-  const lista = Object.values(arenden).sort((a, b) => b.skapad.localeCompare(a.skapad));
+  const alla = Object.values(arenden).sort((a, b) => b.skapad.localeCompare(a.skapad));
+  const pagaende = alla.filter((a) => !arAvslutat(a));
+  const klara = alla.filter((a) => arAvslutat(a));
+  const lista = filter === "pagaende" ? pagaende : filter === "klara" ? klara : alla;
+
+  const FILTER: { id: Filter; label: string; antal: number }[] = [
+    { id: "alla", label: "Alla", antal: alla.length },
+    { id: "pagaende", label: "Pågående", antal: pagaende.length },
+    { id: "klara", label: "Klara", antal: klara.length },
+  ];
 
   return (
     <FelsokningSkal
@@ -40,13 +55,39 @@ export default function Arendelista() {
       hoger={<span className="text-sm font-bold text-zinc-400">{anvandare}</span>}
     >
       <Link to="/felsokning/nytt">
-        <StorKnapp className="mb-5">+ Nytt ärende</StorKnapp>
+        <StorKnapp className="mb-4">+ Nytt ärende</StorKnapp>
       </Link>
 
-      {lista.length === 0 && (
-        <p className="text-center text-lg text-zinc-400">
-          Inga ärenden ännu. Starta med att identifiera ett objekt.
-        </p>
+      {alla.length > 0 && (
+        <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg border-2 border-zinc-700 bg-zinc-900 p-1">
+          {FILTER.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`min-h-12 rounded-md text-base font-extrabold transition-colors ${
+                filter === f.id ? "bg-amber-400 text-zinc-950" : "text-zinc-300 hover:bg-zinc-800"
+              }`}
+            >
+              {f.label} · {f.antal}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {alla.length === 0 && (
+        <Panel rubrik="Kom igång">
+          <p className="mb-3 text-lg text-zinc-300">
+            Inga ärenden ännu. Starta med att identifiera ett objekt — eller utforska ett färdigt demoärende
+            med komplett arbetslogg, brief och kundrapport.
+          </p>
+          <StorKnapp variant="sekundar" onClick={() => laggInArende(byggDemoArende(nastaNummer, anvandare))}>
+            Skapa demoärende (Volvo XC60, vibration)
+          </StorKnapp>
+        </Panel>
+      )}
+
+      {lista.length === 0 && alla.length > 0 && (
+        <p className="text-center text-lg text-zinc-400">Inga ärenden i det här filtret.</p>
       )}
 
       {lista.map((arende) => {
