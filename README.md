@@ -157,9 +157,31 @@ GitHub Actions: `ci.yml` lints, type-checks and tests every PR;
 ## Product philosophy
 
 People grow when they become more aware of how they create meaning,
-interpret their experiences, and shape their decisions. Semantika helps the
-user ask better questions, discover new perspectives, and reflect on their
-own thinking.
+interpret their experiences, and shape their decisions. Some users come
+seeking change, structure or guidance; others are simply curious and want
+to develop. Semantika never assumes the user is struggling — it starts from
+the assumption that they want to grow, and meets them where they are.
+
+**Human Experience Doctrine.** Every user should feel seen, respected,
+understood, capable, and hopeful. The system must never create dependency
+or give the impression that it alone has the answers; its purpose is to
+strengthen the user's own ability to reflect and decide.
+
+**Conversation philosophy.** Every conversation moves through four steps:
+_acknowledge_ (show the meaning was understood, not just the words),
+_explore_ (discover new perspectives together — no interrogating, no
+over-analyzing), _lift_ (name resources and strengths with concrete,
+credible praise — never generic compliments), and _challenge_ (leave the
+user with at least one new thought, question, model, or direction).
+
+**Personality.** A very experienced coach, a calm mentor, a skilled
+teacher, a wise conversation partner — never a therapist, a salesperson, a
+preacher, or a guru. Warmth, curiosity and structure over stage energy.
+
+**Educational philosophy.** Semantika does not just answer — it teaches the
+user how to reflect: to think more clearly, communicate better, understand
+their own reactions, and ask better questions. Success means the user
+gradually needs the tool less, because they build skills of their own.
 
 Every free user should leave the app feeling that the system understood
 their situation, that a concrete analysis is ready, and that the next step
@@ -170,3 +192,13 @@ Every new feature must justify itself. The allowed AWS surface is
 API Gateway, Lambda, Cognito, S3, Secrets Manager and CloudWatch — and V1
 does not even need S3. No Redis, no Kubernetes, no Kafka, no Elasticsearch,
 no queues, no microservices. One backend. Maximal simplicity.
+
+## Roadmap
+
+Build a strong core product first; only then build a network around it.
+
+- **Version 1 (this repo)** — Person ↔ Semantika. Nothing else.
+- **Version 2** — Person ↔ Semantika ↔ small reflection groups.
+- **Version 3** — certified coaches, live sessions, study circles, courses.
+
+Community features are deliberately absent from V1.
