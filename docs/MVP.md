@@ -44,6 +44,7 @@ Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på st
 
 ## Medvetna avgränsningar
 
-- Ingen backend/multi-tenant ännu — datat bor per enhet. Append-only-modellen är vald just för att synkronisering (inkl. offline) blir konfliktfri när backend läggs till.
-- Ingen LLM-koppling — guidningen är regelstyrd metodik. Gränssnittet mot motorn (`nastaSteg`) är den framtida integrationspunkten.
-- Röst, bildanalys och tillverkarintegrationer ingår inte i MVP:t.
+- Omfördelning av ärenden (arbetsledare) är inte implementerad — överlämningshändelsen täcker handover tills en ansvarig-modell införs.
+- QR/streckkod/OCR för objektidentifiering, bildanalys och tillverkarintegrationer ingår inte ännu.
+- Live Share-behörighetsnivåerna (kund/intern/partner) är specificerade men inte byggda — dagens delningslänk motsvarar kundnivån.
+- OpenAPI-dokumentation av plattforms-API:t återstår (API-first-kravet).
