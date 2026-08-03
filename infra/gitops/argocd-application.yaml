@@ -1,0 +1,27 @@
+# Argo CD-applikationen: klustret följer git — appliceras EN gång i
+# argocd-namespacet, därefter sköter Argo CD all synk automatiskt.
+#
+#   kubectl apply -f infra/gitops/argocd-application.yaml
+#
+# prune tar bort resurser som försvunnit ur git; selfHeal återställer
+# manuella ändringar i klustret. Hemligheten felsokning-hemligheter
+# ligger medvetet utanför git och utanför synken.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guidad-felsokning
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ERSATT-MIG/ERSATT-MIG.git # ersätt med ert repo
+    targetRevision: main
+    path: infra/overlays/produktion
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true

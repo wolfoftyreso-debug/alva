@@ -1,0 +1,61 @@
+# CD-halvan av GitOps-flödet: varje push till main bygger och publicerar
+# de tre bilderna till GHCR taggade med git-SHA:t, och uppdaterar sedan
+# produktions-overlayens taggar i git. Argo CD ser ändringen och synkar
+# klustret — ingen kubectl-åtkomst från CI, klustret drar själv.
+name: Publicera
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "infra/overlays/**" # gitops-commiten ska inte trigga en ny publicering
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTER: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  publicera:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bygg och publicera web
+        run: |
+          docker build -t "$REGISTER/guidad-felsokning-web:${{ github.sha }}" \
+            --build-arg VITE_PLATTFORM_URL="${{ vars.PLATTFORM_URL }}" \
+            --build-arg VITE_AI_ORKESTER_URL="${{ vars.PLATTFORM_URL }}" .
+          docker push "$REGISTER/guidad-felsokning-web:${{ github.sha }}"
+      - name: Bygg och publicera ai-orkester
+        run: |
+          docker build -t "$REGISTER/guidad-felsokning-ai-orkester:${{ github.sha }}" services/ai-orkester
+          docker push "$REGISTER/guidad-felsokning-ai-orkester:${{ github.sha }}"
+      - name: Bygg och publicera plattform
+        run: |
+          docker build -t "$REGISTER/guidad-felsokning-plattform:${{ github.sha }}" services/plattform
+          docker push "$REGISTER/guidad-felsokning-plattform:${{ github.sha }}"
+
+      - name: Uppdatera produktions-overlayen (GitOps)
+        run: |
+          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz" | tar xz
+          cd infra/overlays/produktion
+          for tjanst in web ai-orkester plattform; do
+            ../../../kustomize edit set image \
+              "ghcr.io/ORGANISATION/guidad-felsokning-$tjanst=$REGISTER/guidad-felsokning-$tjanst:${{ github.sha }}"
+          done
+          ../../../kustomize build . > /dev/null # verifiera att overlayen fortfarande bygger
+      - name: Committa overlay-uppdateringen
+        run: |
+          git config user.name "gitops-bot"
+          git config user.email "gitops@users.noreply.github.com"
+          git add infra/overlays/produktion/kustomization.yaml
+          git diff --cached --quiet || git commit -m "gitops: driftsätt ${{ github.sha }} [skip ci]"
+          git push

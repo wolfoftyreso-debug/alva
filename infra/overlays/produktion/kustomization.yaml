@@ -1,0 +1,19 @@
+# Produktions-overlay — GitOps-sanningen för vad som kör i klustret.
+# Bildtaggarna uppdateras av publiceringsflödet (.github/workflows/
+# publicera.yml) med git-SHA:t för varje main-push; Argo CD synkar
+# klustret från den här katalogen. Ändra aldrig taggar för hand —
+# rulla tillbaka genom att revertera commiten.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../k8s
+images:
+  - name: ghcr.io/ORGANISATION/guidad-felsokning-web
+    newName: ghcr.io/ersatt-mig/guidad-felsokning-web
+    newTag: latest
+  - name: ghcr.io/ORGANISATION/guidad-felsokning-ai-orkester
+    newName: ghcr.io/ersatt-mig/guidad-felsokning-ai-orkester
+    newTag: latest
+  - name: ghcr.io/ORGANISATION/guidad-felsokning-plattform
+    newName: ghcr.io/ersatt-mig/guidad-felsokning-plattform
+    newTag: latest

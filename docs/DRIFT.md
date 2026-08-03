@@ -74,6 +74,22 @@ Integrationstestet (`services/plattform/integrationstest.sh`, körs även i CI m
 - Alla containrar kör **non-root** utan capabilities; backend-tjänsterna med read-only rotfilsystem. Båda failar closed utan sina hemligheter.
 - **HPA** 2–10 pods per tjänst på 70 % CPU; **PDB** minst en pod uppe vid noddränering; readiness/liveness-prober överallt (`pg_isready` för Postgres).
 
-## CI
+## CI/CD med GitOps
 
-`.github/workflows/ci.yml` kör tester + produktionsbygge och verifierar alla tre Dockerfilerna på varje push/PR. Publicering och `kubectl apply` läggs i ett separat behörighetsstyrt deploy-flöde (GitOps via Argo CD/Flux rekommenderas).
+**CI** (`.github/workflows/ci.yml`): tester, produktionsbygge, integrationstest mot riktig Postgres och verifierande containerbyggen på varje push/PR.
+
+**CD** (`.github/workflows/publicera.yml` + Argo CD): klustret följer git — ingen CI-process har kubectl-åtkomst.
+
+```mermaid
+flowchart LR
+    P[Push till main] --> B[Bygg + publicera\n3 bilder till GHCR\ntaggade med git-SHA]
+    B --> O[Uppdatera\ninfra/overlays/produktion\n+ commit till git]
+    O --> A[Argo CD ser ändringen] --> S[Synkar klustret\nprune + selfHeal]
+```
+
+1. Varje main-push bygger de tre bilderna, publicerar till GHCR (`GITHUB_TOKEN`, inga externa hemligheter) och uppdaterar produktions-overlayens taggar med `kustomize edit set image` — overlayen ombyggs som verifiering innan commiten.
+2. **Argo CD är enda vägen in i klustret.** Bootstrap en gång: installera Argo CD, ersätt repo-URL:en i `infra/gitops/argocd-application.yaml` och `kubectl apply -f` den. Därefter: `prune` tar bort det som försvinner ur git, `selfHeal` återställer manuella klusteravvikelser.
+3. **Rollback = `git revert`** av gitops-commiten — Argo CD synkar tillbaka föregående SHA-taggade bilder.
+4. Repo-variabeln `PLATTFORM_URL` (Settings → Variables) styr webbyggets `VITE_PLATTFORM_URL`/`VITE_AI_ORKESTER_URL`. Hemligheten `felsokning-hemligheter` ligger utanför både git och synken.
+
+Manuell `kubectl apply -k infra/k8s` (avsnittet Driftsätta ovan) fungerar fortfarande för miljöer utan Argo CD.
