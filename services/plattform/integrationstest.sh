@@ -112,4 +112,11 @@ kontroll "översikten härleder felbeskrivning" "$(echo "$OVERSIKT" | falt '.are
 kontroll "översikten härleder status" "$(echo "$OVERSIKT" | falt '.arenden[0].avslutat')" "false"
 kontroll "översikten räknar händelser" "$(echo "$OVERSIKT" | falt '.arenden[0].antal_handelser')" "2"
 
+# 10. API-first: OpenAPI-specen serveras live, utan inloggning
+SPEC=$(curl -s "$BAS/api/openapi.yaml")
+case "$SPEC" in
+  "openapi: 3.0.3"*) echo "✓ OpenAPI-specen serveras på /api/openapi.yaml" ;;
+  *) echo "✗ OpenAPI-specen saknas"; exit 1 ;;
+esac
+
 echo "Integrationstest: allt grönt"

@@ -16,7 +16,13 @@
 
 import { createServer } from "node:http";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import pg from "pg";
+
+// API-first: OpenAPI-specen är en versionerad artefakt och serveras live.
+const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "openapi.yaml"), "utf8");
 
 const PORT = Number(process.env.PORT ?? 8080);
 const MAX_KROPP = 4 * 1024 * 1024;
@@ -116,6 +122,13 @@ export function skapaServer() {
     try {
       if (req.method === "GET" && vag === "/halsa") {
         return svara(res, 200, { status: "ok" });
+      }
+      if (req.method === "GET" && vag === "/api/openapi.yaml") {
+        res.writeHead(200, {
+          "Content-Type": "application/yaml; charset=utf-8",
+          "Access-Control-Allow-Origin": "*",
+        });
+        return res.end(OPENAPI);
       }
 
       const hemlighet = process.env.JWT_SECRET;

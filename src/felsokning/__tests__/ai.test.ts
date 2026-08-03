@@ -61,6 +61,33 @@ describe("AI-orkestern", () => {
     expect(schema).toContain("check (roll in ('tekniker', 'arbetsledare', 'admin'))");
   });
 
+  it("OpenAPI-specen och plattformsservern täcker samma endpoints", () => {
+    const spec = readFileSync("services/plattform/openapi.yaml", "utf8");
+    const server = readFileSync("services/plattform/server.mjs", "utf8");
+    // Varje dokumenterad väg finns i servern …
+    const vagar: [string, string][] = [
+      ["/halsa", "/halsa"],
+      ["/api/openapi.yaml", "/api/openapi.yaml"],
+      ["/api/auth/registrera", "/api/auth/registrera"],
+      ["/api/auth/logga-in", "/api/auth/logga-in"],
+      ["/api/anvandare", "/api/anvandare"],
+      ["/api/arenden", "/api/arenden"],
+      ["/api/arenden/{arendeId}/handelser", "handelser"],
+      ["/api/oversikt", "/api/oversikt"],
+      ["/api/delad/{delningskod}", "delad"],
+    ];
+    for (const [iSpec, iServer] of vagar) {
+      expect(spec).toContain(`${iSpec}:`);
+      expect(server).toContain(iServer);
+    }
+    // … och AI-endpointen + händelsetyperna är dokumenterade.
+    expect(spec).toContain("/api/ai:");
+    expect(spec).toContain("append-only");
+    for (const typ of ["objekt_identifierat", "kontroll_utford", "ai_svar", "arende_avslutat"]) {
+      expect(spec).toContain(typ);
+    }
+  });
+
   it("endpointen kodar AI-reglerna i grundprompten", () => {
     expect(ENDPOINT).toContain("Hitta aldrig på fakta");
     expect(ENDPOINT).toContain("aldrig en hypotes som ett konstaterat fel");

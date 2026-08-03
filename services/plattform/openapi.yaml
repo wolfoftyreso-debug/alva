@@ -1,0 +1,465 @@
+openapi: 3.0.3
+info:
+  title: Guidad Felsökning – plattforms-API
+  version: 1.0.0
+  description: |
+    API-first-ytan för Guidad Felsökning: autentisering, organisationens
+    användare, ärenden med append-only händelselogg, arbetsledaröversikt,
+    publik Live Share-delning samt AI-orkestern.
+
+    **Händelseloggen är append-only.** Det finns inga update- eller
+    delete-operationer — historik kan aldrig ändras eller raderas, vilket
+    även garanteras av databastriggers. En händelse med redan känt `id`
+    ignoreras tyst (idempotent synk).
+
+    **Multi-tenant.** All ärendedata är organisationsknuten. Ett ärende i
+    en annan organisation ger `404`, som om det inte fanns.
+
+    Specen serveras live av tjänsten på `GET /api/openapi.yaml`.
+servers:
+  - url: https://app.exempel.se
+    description: Klustrets ingress (ersätt med er domän)
+tags:
+  - name: Auth
+  - name: Användare
+  - name: Ärenden
+  - name: Översikt
+  - name: Delning
+  - name: AI
+  - name: Drift
+
+paths:
+  /halsa:
+    get:
+      tags: [Drift]
+      summary: Hälsokontroll
+      security: []
+      responses:
+        "200":
+          description: Tjänsten svarar.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+
+  /api/openapi.yaml:
+    get:
+      tags: [Drift]
+      summary: Denna specifikation
+      security: []
+      responses:
+        "200":
+          description: OpenAPI-specen i YAML.
+          content:
+            application/yaml:
+              schema: { type: string }
+
+  /api/auth/registrera:
+    post:
+      tags: [Auth]
+      summary: Skapa organisation + systemadministratör
+      description: >
+        Registrerar en ny organisation (tenant) och dess första användare,
+        som blir systemadministratör. Kan stängas av driften
+        (REGISTRERING_OPPEN=false → 403).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [epost, losenord, namn, organisation]
+              properties:
+                epost: { type: string, format: email }
+                losenord: { type: string, minLength: 8 }
+                namn: { type: string }
+                organisation: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Inloggad" }
+        "400": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+        "409": { $ref: "#/components/responses/Fel" }
+
+  /api/auth/logga-in:
+    post:
+      tags: [Auth]
+      summary: Logga in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [epost, losenord]
+              properties:
+                epost: { type: string, format: email }
+                losenord: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Inloggad" }
+        "401": { $ref: "#/components/responses/Fel" }
+
+  /api/anvandare:
+    get:
+      tags: [Användare]
+      summary: Lista organisationens användare
+      description: Kräver rollen `admin`.
+      responses:
+        "200":
+          description: Användare i den egna organisationen.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  anvandare:
+                    type: array
+                    items: { $ref: "#/components/schemas/Anvandare" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+    post:
+      tags: [Användare]
+      summary: Skapa användare i den egna organisationen
+      description: Kräver rollen `admin`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [epost, losenord, namn, roll]
+              properties:
+                epost: { type: string, format: email }
+                losenord: { type: string, minLength: 8 }
+                namn: { type: string }
+                roll: { $ref: "#/components/schemas/Roll" }
+      responses:
+        "200":
+          description: Den skapade användaren.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Anvandare" }
+        "400": { $ref: "#/components/responses/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+        "409": { $ref: "#/components/responses/Fel" }
+
+  /api/arenden:
+    get:
+      tags: [Ärenden]
+      summary: Lista organisationens ärenden
+      responses:
+        "200":
+          description: Ärenden (senaste 200).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  arenden:
+                    type: array
+                    items: { $ref: "#/components/schemas/Arende" }
+        "401": { $ref: "#/components/responses/Fel" }
+    post:
+      tags: [Ärenden]
+      summary: Registrera ett ärende (idempotent)
+      description: >
+        Skapar ärendet i användarens organisation. Ett redan känt `id`
+        ignoreras tyst — ärenderaden ändras aldrig.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, nummer, skapad]
+              properties:
+                id: { type: string }
+                nummer: { type: integer }
+                skapad: { type: string, format: date-time }
+                delningskod: { type: string, nullable: true }
+                metodikId: { type: string, nullable: true }
+      responses:
+        "200":
+          description: Mottaget.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "400": { $ref: "#/components/responses/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+
+  /api/arenden/{arendeId}/handelser:
+    parameters:
+      - name: arendeId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Ärenden]
+      summary: Hämta ärendets händelselogg
+      responses:
+        "200":
+          description: Händelser i tidsordning.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  handelser:
+                    type: array
+                    items: { $ref: "#/components/schemas/LoggPost" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+    post:
+      tags: [Ärenden]
+      summary: Lägg till händelser (append-only, idempotent)
+      description: >
+        Lägger till händelser i loggen. Max 500 per anrop. En händelse med
+        redan känt `id` ignoreras tyst — befintliga händelser skrivs aldrig
+        över, och databastriggern stoppar alla ändringsförsök.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [handelser]
+              properties:
+                handelser:
+                  type: array
+                  maxItems: 500
+                  items: { $ref: "#/components/schemas/LoggPost" }
+      responses:
+        "200":
+          description: Mottaget.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "400": { $ref: "#/components/responses/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+
+  /api/oversikt:
+    get:
+      tags: [Översikt]
+      summary: Organisationsöversikt med status och statistikunderlag
+      description: >
+        Kräver rollen `arbetsledare` eller `admin`. Status, deltagande
+        tekniker och sammanfattning härleds ur händelseloggen.
+      responses:
+        "200":
+          description: Alla ärenden i organisationen med härledd status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  arenden:
+                    type: array
+                    items: { $ref: "#/components/schemas/OversiktsRad" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+
+  /api/delad/{delningskod}:
+    get:
+      tags: [Delning]
+      summary: Publik Live Share-vy via delningskod
+      description: >
+        Kräver ingen inloggning — delningskoden är nyckeln. Interna poster
+        (kategoribyten, hypoteser, AI-dialog) är bortfiltrerade.
+      security: []
+      parameters:
+        - name: delningskod
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-z0-9-]+$" }
+      responses:
+        "200":
+          description: Ärendet med kunddelbar händelselogg.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  arende:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      nummer: { type: integer }
+                      skapad: { type: string, format: date-time }
+                  handelser:
+                    type: array
+                    items: { $ref: "#/components/schemas/LoggPost" }
+        "404": { $ref: "#/components/responses/Fel" }
+
+  /api/ai:
+    post:
+      tags: [AI]
+      summary: AI-orkestern (separat tjänst bakom samma ingress)
+      description: >
+        Routas av ingressen till ai-orkester-tjänsten. Servern äger
+        modellval, effort, systemprompt och svarsschema per uppgift:
+        handledning (Claude Sonnet 5), granskning (Claude Opus 5),
+        sammanfattning (Claude Sonnet 5), metodikval (Claude Haiku 4.5).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [uppgift, prompt]
+              properties:
+                uppgift:
+                  type: string
+                  enum: [handledning, granskning, sammanfattning, metodikval]
+                prompt: { type: string, maxLength: 40000 }
+      responses:
+        "200":
+          description: Klassificerat AI-svar med modellen som svarade.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  modell: { type: string, example: claude-sonnet-5 }
+                  svar:
+                    oneOf:
+                      - $ref: "#/components/schemas/AiSvar"
+                      - type: object
+                        properties:
+                          metodikId:
+                            type: string
+                            enum: [vibration, elsystem, generisk]
+        "400": { $ref: "#/components/responses/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "502": { $ref: "#/components/responses/Fel" }
+        "503": { $ref: "#/components/responses/Fel" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        HS256-JWT från /api/auth/logga-in eller /api/auth/registrera.
+        Anspråk: sub (användar-id), namn, org (organisations-id),
+        roll, iat, exp (12 timmar).
+  responses:
+    Inloggad:
+      description: Inloggad — token + kontouppgifter.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              token: { type: string }
+              namn: { type: string }
+              roll: { $ref: "#/components/schemas/Roll" }
+              organisation: { type: string }
+    Fel:
+      description: Felsvar.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+  schemas:
+    Roll:
+      type: string
+      enum: [tekniker, arbetsledare, admin]
+    Anvandare:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        epost: { type: string, format: email }
+        namn: { type: string }
+        roll: { $ref: "#/components/schemas/Roll" }
+    Arende:
+      type: object
+      properties:
+        id: { type: string }
+        nummer: { type: integer }
+        skapad: { type: string, format: date-time }
+        delningskod: { type: string, nullable: true }
+        metodik_id: { type: string, nullable: true }
+    LoggPost:
+      type: object
+      required: [id, tidpunkt, anvandare, handelse]
+      properties:
+        id: { type: string }
+        tidpunkt: { type: string, format: date-time }
+        anvandare: { type: string }
+        handelse: { $ref: "#/components/schemas/Handelse" }
+    Handelse:
+      type: object
+      description: >
+        Diskriminerad på `typ`; fullständiga fältdefinitioner i klientens
+        domänmodell (src/felsokning/domain.ts).
+      required: [typ]
+      additionalProperties: true
+      properties:
+        typ:
+          type: string
+          enum:
+            - objekt_identifierat
+            - felbeskrivning
+            - fraga_besvarad
+            - kontroll_utford
+            - observation
+            - matvarde
+            - hypotes
+            - foto
+            - kommentar
+            - kategori_byte
+            - inaktivitet_forklarad
+            - overlamning
+            - export_skapad
+            - ai_svar
+            - arende_avslutat
+    OversiktsRad:
+      type: object
+      properties:
+        id: { type: string }
+        nummer: { type: integer }
+        skapad: { type: string, format: date-time }
+        delningskod: { type: string, nullable: true }
+        metodik_id: { type: string, nullable: true }
+        antal_handelser: { type: integer }
+        forsta: { type: string, format: date-time, nullable: true }
+        senaste: { type: string, format: date-time, nullable: true }
+        avslutat: { type: boolean }
+        objekt: { type: string, nullable: true }
+        felbeskrivning: { type: string, nullable: true }
+        tekniker:
+          type: array
+          items: { type: string }
+          nullable: true
+    AiSvar:
+      type: object
+      required: [rader, nastaSteg]
+      properties:
+        rader:
+          type: array
+          items:
+            type: object
+            required: [typ, text]
+            properties:
+              typ:
+                type: string
+                enum: [observation, verifierat, hypotes, rekommendation]
+              text: { type: string }
+        nastaSteg: { type: string }
+
+security:
+  - bearerAuth: []

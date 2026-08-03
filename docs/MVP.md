@@ -33,7 +33,7 @@ Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på st
 | Live Share | ✅ Skrivskyddad livevy per ärende (`/felsokning/dela/:id`): status ✔/🔄/⏳, bilder, mätvärdestabell, tidslinje, rekommenderat nästa steg. Uppdateras automatiskt, interna poster filtreras bort. Publik delningssida (`/felsokning/delad/:kod`) läser via `hamta_delat_arende` utan inloggning och pollar för liveuppdatering; "Kopiera delningslänk" finns i rapportfliken. Behörighetsnivåer (kund/intern/partner) i nästa fas. |
 | Dashboard | ✅ Enligt direktivet: räknare och filter för Alla/Pågående/Klara plus Starta nytt ärende. |
 | Utskrift | ✅ Kundrapport och Live Share-vy skrivs ut svart på vitt; interaktiva element döljs automatiskt. |
-| Öppet API | 🔶 Datamodellen är API-klar (händelser som JSON i Postgres). REST/OpenAPI-lager i nästa fas. |
+| Öppet API | ✅ Plattforms-API:t är dokumenterat med OpenAPI 3.0 (`services/plattform/openapi.yaml`) — auth, användare, ärenden/händelser (append-only), översikt, publik delning och AI-orkestern, med scheman för alla händelsetyper. Specen valideras maskinellt, paritetstestas mot serverns rutter och serveras live på `GET /api/openapi.yaml`. |
 
 ## Arkitekturprinciper i koden
 
@@ -47,4 +47,3 @@ Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på st
 - Omfördelning av ärenden (arbetsledare) är inte implementerad — överlämningshändelsen täcker handover tills en ansvarig-modell införs.
 - QR/streckkod/OCR för objektidentifiering, bildanalys och tillverkarintegrationer ingår inte ännu.
 - Live Share-behörighetsnivåerna (kund/intern/partner) är specificerade men inte byggda — dagens delningslänk motsvarar kundnivån.
-- OpenAPI-dokumentation av plattforms-API:t återstår (API-first-kravet).

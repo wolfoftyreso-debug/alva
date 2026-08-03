@@ -50,7 +50,8 @@ kubectl apply -k infra/k8s
 
 # 4. Verifiera
 kubectl -n guidad-felsokning get pods
-curl https://app.exempel.se/halsa       # → {"status":"ok"} (plattformen)
+curl https://app.exempel.se/halsa            # → {"status":"ok"} (plattformen)
+curl https://app.exempel.se/api/openapi.yaml # API-first: hela API-specen
 ```
 
 Byt domän och cert-issuer i `infra/k8s/ingress.yaml`. Att skapa nya organisationer är öppet i beta — stäng med `REGISTRERING_OPPEN=false` på plattformens Deployment; användare inom en organisation skapas alltid av dess systemadministratör.
