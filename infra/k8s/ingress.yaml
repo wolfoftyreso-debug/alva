@@ -7,6 +7,11 @@ metadata:
   namespace: guidad-felsokning
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt # ersätt med er issuer
+    # Teknikern dokumenterar med foto och video som följer med
+    # händelseloggen. Standardgränsen (1 MB) skulle avvisa
+    # dokumentationen vid dörren medan tjänsten själv tar 4 MB.
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120" # AI-svar kan ta tid
 spec:
   ingressClassName: nginx
   tls:

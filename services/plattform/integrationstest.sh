@@ -318,10 +318,14 @@ KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer/vol
   -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d '{"identifierare":"YV1DZ8256F2123456"}')
 kontroll "okonfigurerad koppling ger 404" "$KOD" "404"
 
-# Leverantören är onåbar i testmiljön — felet rapporteras ärligt, inte tyst
+# Bas-URL:en pekar inåt (127.0.0.1) — uppslaget får inte bli en väg in i
+# klustret. Anropet ska stoppas innan det görs och rapporteras ärligt.
+SVAR=$(curl -s -X POST "$BAS/api/integrationer/generisk_vin/uppslag" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d '{"identifierare":"YV1DZ8256F2123456"}')
 KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/integrationer/generisk_vin/uppslag" \
   -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d '{"identifierare":"YV1DZ8256F2123456"}')
-kontroll "onåbar leverantör rapporteras som 502" "$KOD" "502"
+kontroll "uppslag mot intern adress avvisas (502)" "$KOD" "502"
+kontroll "felet säger varför" "$(echo "$SVAR" | falt '.error.includes("intern adress")')" "true"
 STATUS=$(curl -s "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A" \
   | falt '.integrationer[0].senaste_status.slice(0,3)')
 kontroll "senaste testresultat sparas på kopplingen" "$STATUS" "fel"

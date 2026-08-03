@@ -22,9 +22,42 @@ flowchart LR
 | `plattform` | Självhostad backend (`services/plattform`): **multi-tenant** — registrering skapar organisation + systemadministratör, admin hanterar användare (tekniker/arbetsledare/admin), all ärendedata organisationsisolerad. Inloggning (bcrypt via pgcrypto, HS256-JWT med roll + org i anspråken), append-only händelse-API, publik delningsendpoint | Deployment + Service + HPA + PDB |
 | `ai-orkester` | AI-orkestern (`services/ai-orkester`): fyra uppgifter routade till Sonnet 5 / Opus 5 / Haiku 4.5 — verifierar plattformens JWT (delad hemlighet) | Deployment + Service + HPA + PDB |
 | `postgres` | Händelselogg + användare; **append-only garanterat med databastriggers** — historik kan inte ändras eller raderas oavsett roll | StatefulSet + PVC (10 Gi). Produktion: CloudNativePG-operatorn för backup/failover/PITR |
-| Hemligheter | `anthropic-api-key`, `jwt-secret` (delas av plattform + orkester), `postgres-losenord`, `integration-nyckel` (krypterar kundernas märkesspecifika credentials) | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
+| Hemligheter | `anthropic-api-key`, `jwt-secret` (delas av plattform + orkester), `postgres-losenord`, `integration-nyckel` (krypterar kundernas märkesspecifika credentials) |
+| Miljöflaggor | `TILLATNA_URSPRUNG` (CORS-lista; utelämnad = `*`), `TILLAT_INTERNA_UPPSLAG` (`true` tillåter leverantörsuppslag mot privata nät), `REGISTRERING_OPPEN`, `ECM_REGLER_FIL`, `INTEGRATIONER_FIL` | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
 
 **Klienten har två driftlägen**, valda vid bygget: med `VITE_PLATTFORM_URL` går inloggning, synk, Live Share och AI mot klustret (helt självhostat); utan den används Supabase-läget (edge-funktion + managerad Postgres/Auth) som tidigare. Samma händelsemodell, samma orkester — låst av paritetstester.
+
+## Infrastrukturen som kod
+
+`infra/terraform` är systemets definition — läs [README:n där](../infra/terraform/README.md).
+Börja i `karta.tf`: hela systemet beskrivet en gång som data (tjänster,
+portar, routing, hemligheter, dataflöden, gränser). `terraform output
+karta` skriver ut samma sak i klartext.
+
+`infra/k8s` + `infra/overlays` + `infra/gitops` beskriver samma system i
+kustomize, synkat av Argo CD. **Kör inte båda mot samma kluster** — Argo
+CD:s `selfHeal` återställer det Terraform ändrar och `prune` tar bort det
+Terraform skapar. Terraform-vägen har dessutom nätverkspolicyer och
+säkerhetskontext på databasen, vilket kustomize-vägen saknar.
+
+## Nätverksgränser
+
+Terraform-vägen stänger namnrymden och öppnar bara de faktiska flödena:
+
+| Från | Till | Varför |
+| --- | --- | --- |
+| ingress-kontrollern | web, plattform, ai-orkester :8080 | den enda vägen in |
+| plattform | postgres :5432 | händelseloggen |
+| plattform | internet :443 utom privata nät | kundernas leverantörer |
+| ai-orkester | internet :443 utom privata nät | Claude |
+| web, postgres | — | ringer ingenting |
+
+Undantagen för privata nät (10/8, 172.16/12, 192.168/16, 169.254/16,
+127/8, 100.64/10) är samma gräns som koden själv upprätthåller i
+`pekarInat` — två oberoende spärrar mot att ett kundkonfigurerat uppslag
+används för att nå klustrets insida eller molnets metadatatjänst.
+Kräver en CNI som tillämpar NetworkPolicy; annars är reglerna
+dokumentation, inte skydd.
 
 ## Driftsätta
 
@@ -55,7 +88,9 @@ curl https://app.exempel.se/halsa            # → {"status":"ok"} (plattformen)
 curl https://app.exempel.se/api/openapi.yaml # API-first: hela API-specen
 ```
 
-Byt domän och cert-issuer i `infra/k8s/ingress.yaml`. Att skapa nya organisationer är öppet i beta — stäng med `REGISTRERING_OPPEN=false` på plattformens Deployment; användare inom en organisation skapas alltid av dess systemadministratör.
+Med Terraform i stället: `cd infra/terraform && terraform apply -var bildtagg=<git-sha>`.
+
+Byt domän och cert-issuer i `infra/k8s/ingress.yaml` (eller `var.doman` i Terraform). Att skapa nya organisationer är öppet i beta — stäng med `REGISTRERING_OPPEN=false` på plattformens Deployment; användare inom en organisation skapas alltid av dess systemadministratör.
 
 ## Märkesspecifika kopplingar
 

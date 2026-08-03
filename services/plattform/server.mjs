@@ -12,11 +12,16 @@
 //   DATABASE_URL        Postgres-anslutning (krävs)
 //   JWT_SECRET          HS256-hemlighet, delas med ai-orkestern (krävs)
 //   REGISTRERING_OPPEN  "false" stänger nya organisationer (default öppen, beta)
+//   INTEGRATION_NYCKEL  32 byte (hex/base64) — krypterar kundernas leverantörsuppgifter
+//   TILLATNA_URSPRUNG   kommaseparerade ursprung för CORS (utelämnad = "*")
+//   TILLAT_INTERNA_UPPSLAG  "true" tillåter leverantörsuppslag mot privata nät
+//   ECM_REGLER_FIL / INTEGRATIONER_FIL  sökvägar till utbytbar konfiguration
 //   PORT                default 8080
 
 import { createServer } from "node:http";
 import crypto, { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { lookup } from "node:dns/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
@@ -49,6 +54,21 @@ const TOKEN_LIVSTID_S = 12 * 60 * 60;
 const ROLLER = ["tekniker", "arbetsledare", "admin"];
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
+
+// Vilka ursprung som får anropa API:t från en webbläsare. I klusterdriften
+// serveras klienten från samma domän som API:t, så listan kan hållas kort.
+// TILLATNA_URSPRUNG="https://app.exempel.se,https://demo.exempel.se" —
+// utelämnad betyder "*" (öppet), vilket bara hör hemma i utveckling.
+const TILLATNA_URSPRUNG = (process.env.TILLATNA_URSPRUNG ?? "")
+  .split(",")
+  .map((u) => u.trim())
+  .filter(Boolean);
+
+function ursprungFor(req) {
+  const ursprung = req.headers.origin;
+  if (TILLATNA_URSPRUNG.length === 0) return "*";
+  return ursprung && TILLATNA_URSPRUNG.includes(ursprung) ? ursprung : TILLATNA_URSPRUNG[0];
+}
 
 // Enkel takt-begränsning för den publika beslutsendpointen (per
 // delningskod, i minnet). Räcker för en enda pod; bakom flera repliker
@@ -134,12 +154,60 @@ function leverantorsDef(id) {
   return INTEGRATIONER.leverantorer.find((l) => l.id === id);
 }
 
+// ---- Delningsfilter: tillåtelselista, inte nekalista ------------------
+//
+// Vilka händelsetyper som får lämna verkstaden är en integritetsgräns.
+// Med en nekalista blir varje NY händelsetyp automatiskt synlig för
+// kunden tills någon kommer ihåg att neka den — fel håll att fela åt.
+// Här listas i stället uttryckligen vad som får delas; allt annat är
+// internt tills det aktivt släpps fram. Testet i delning.test.ts kräver
+// att varje händelsetyp i domänmodellen är klassificerad.
+export const DELBART_KUND = [
+  "objekt_identifierat",
+  "arendetyp_satt",
+  "felbeskrivning",
+  "fraga_besvarad",
+  "kontroll_utford",
+  "observation",
+  "matvarde",
+  "foto",
+  "video",
+  "kommentar",
+  "inaktivitet_forklarad",
+  "overlamning",
+  "historik_kontrollerad",
+  "matarstallning",
+  "reproducering",
+  "felorsak",
+  "atgardsforslag",
+  "kundbeslut",
+  "atgard_utford",
+  "kvalitetskontroll",
+  "export_skapad",
+  "arende_avslutat",
+];
+
+// Extern partner (försäkringsbolag, tillverkare) ser dessutom hypoteser
+// — alltid märkta som ej verifierade.
+export const DELBART_PARTNER = [...DELBART_KUND, "hypotes"];
+
+// Aldrig utanför organisationen: arbetsledning, arbetsmaterial och
+// underlag som kan läsas som konstateranden.
+export const ENDAST_INTERNT = ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"];
+
+export function synligaTyper(niva) {
+  if (niva === "intern") return null; // full insyn — ingen filtrering
+  return niva === "partner" ? DELBART_PARTNER : DELBART_KUND;
+}
+
 // ---- Hjälpare ---------------------------------------------------------
 
 function svara(res, status, kropp) {
   res.writeHead(status, {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
+    // Ursprunget sätts en gång per anrop i hanteraren nedan.
+    "Access-Control-Allow-Origin": res.ursprung ?? "*",
+    Vary: "Origin",
     "Access-Control-Allow-Headers": "authorization, content-type",
   });
   res.end(JSON.stringify(kropp));
@@ -177,6 +245,58 @@ async function arendeIOrg(arendeId, organisationId) {
   return rader.rowCount > 0;
 }
 
+// Adresser som aldrig får nås utifrån ett kundkonfigurerat uppslag:
+// loopback, privata nät, link-local (inkl. molnens metadatatjänst),
+// CGNAT och IPv6-motsvarigheterna.
+export function arPrivatAdress(adress) {
+  const v4 = adress.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const [a, b] = v4.slice(1).map(Number);
+    return (
+      a === 0 || a === 10 || a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      a >= 224
+    );
+  }
+  const v6 = adress.toLowerCase().replace(/^\[|\]$/g, "");
+  if (v6 === "::1" || v6 === "::") return true;
+  // Unika lokala adresser (fc00::/7), link-local (fe80::/10) och
+  // IPv4-mappade adresser som ::ffff:127.0.0.1.
+  if (/^f[cd]/.test(v6) || /^fe[89ab]/.test(v6)) return true;
+  const mappad = v6.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  return mappad ? arPrivatAdress(mappad[1]) : false;
+}
+
+// Slår upp värdnamnet och avgör om något av svaren pekar inåt. Namn som
+// resolvar till interna adresser fångas också — inte bara IP-literaler.
+export async function pekarInat(url, slaUpp = lookup) {
+  let vard;
+  try {
+    vard = new URL(url).hostname;
+  } catch {
+    return "ogiltig URL";
+  }
+  const bar = vard.replace(/^\[|\]$/g, "");
+  if (/^[\d.]+$/.test(bar) || bar.includes(":")) {
+    return arPrivatAdress(bar) ? bar : null;
+  }
+  if (bar === "localhost" || bar.endsWith(".localhost") || bar.endsWith(".internal") || bar.endsWith(".local")) {
+    return bar;
+  }
+  try {
+    const traffar = await slaUpp(bar, { all: true });
+    const intern = traffar.find((t) => arPrivatAdress(t.address));
+    return intern ? intern.address : null;
+  } catch {
+    // Namnet går inte att slå upp — låt anropet självt misslyckas i
+    // stället för att påstå något om var det pekar.
+    return null;
+  }
+}
+
 // Generiskt uppslag mot en leverantör. All variation ligger i registret
 // (URL-mall, autentiseringstyp, svarsmappning) — inga leverantörs-
 // specifika kodgrenar.
@@ -187,6 +307,16 @@ export async function gorUppslag(def, uppgifter, identifierare, hamtare = fetch)
     return { ok: false, fel: "Bas-URL saknas eller är ogiltig." };
   }
   let url = mall.replace(/\{vin\}/gi, encodeURIComponent(identifierare)).replace(/\{regnr\}/gi, encodeURIComponent(identifierare));
+
+  // Bas-URL:en sätts av kundens administratör men anropet görs av vår
+  // server. Utan spärr blir det en väg in i klustrets interna nät och
+  // molnets metadatatjänst (169.254.169.254) — tenantens administratör
+  // är inte infrastrukturens ägare. Interna mål tillåts bara när driften
+  // uttryckligen öppnat för det (verkstäder med OEM-server på egna nätet).
+  if (process.env.TILLAT_INTERNA_UPPSLAG !== "true") {
+    const internt = await pekarInat(url);
+    if (internt) return { ok: false, fel: `Bas-URL:en pekar på en intern adress (${internt}) och tillåts inte.` };
+  }
   const headers = { Accept: "application/json" };
 
   if (u.auth === "bearer") headers.Authorization = `Bearer ${uppgifter[u.authFalt]}`;
@@ -228,11 +358,13 @@ export function skapaServer() {
   }
 
   return createServer(async (req, res) => {
+    res.ursprung = ursprungFor(req);
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": res.ursprung,
+        Vary: "Origin",
         "Access-Control-Allow-Headers": "authorization, content-type",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
       });
       return res.end();
     }
@@ -246,7 +378,7 @@ export function skapaServer() {
       if (req.method === "GET" && vag === "/api/openapi.yaml") {
         res.writeHead(200, {
           "Content-Type": "application/yaml; charset=utf-8",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": res.ursprung,
         });
         return res.end(OPENAPI);
       }
@@ -335,14 +467,19 @@ export function skapaServer() {
           `select id, nummer, skapad from felsokning_arenden where id = $1`,
           [arendeId],
         );
-        const bortfiltrerat =
-          niva === "intern" ? [] : niva === "partner" ? ["kategori_byte", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"] : ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"];
-        const handelser = await pool.query(
-          `select id, tidpunkt, anvandare, handelse from felsokning_handelser
-           where arende_id = $1 and not (handelse->>'typ' = any($2))
-           order by tidpunkt, id`,
-          [arendeId, bortfiltrerat],
-        );
+        const synliga = synligaTyper(niva);
+        const handelser = synliga
+          ? await pool.query(
+              `select id, tidpunkt, anvandare, handelse from felsokning_handelser
+               where arende_id = $1 and handelse->>'typ' = any($2)
+               order by tidpunkt, id`,
+              [arendeId, synliga],
+            )
+          : await pool.query(
+              `select id, tidpunkt, anvandare, handelse from felsokning_handelser
+               where arende_id = $1 order by tidpunkt, id`,
+              [arendeId],
+            );
         return svara(res, 200, { arende: arende.rows[0], handelser: handelser.rows, niva });
       }
 
@@ -447,7 +584,7 @@ export function skapaServer() {
       if (req.method === "GET" && vag === "/api/ecm/regler") {
         res.writeHead(200, {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": res.ursprung,
         });
         return res.end(ECM_REGLER);
       }
