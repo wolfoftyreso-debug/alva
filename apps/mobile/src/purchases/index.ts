@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import {
   endConnection,
   getAvailablePurchases,
+  getSubscriptions,
   initConnection,
   requestSubscription,
   type SubscriptionPurchase,
@@ -10,6 +11,17 @@ import { verifyPurchase } from '../api/client';
 import { appConfig } from '../config';
 
 export type Plan = 'monthly' | 'yearly';
+
+export interface PlanPrices {
+  monthly: string;
+  yearly: string;
+}
+
+/** Shown until the store answers; real localized prices come from the store. */
+export const DEFAULT_PRICES: PlanPrices = {
+  monthly: '$5.99 / month',
+  yearly: '$49.99 / year',
+};
 
 const platform: 'ios' | 'android' = Platform.OS === 'ios' ? 'ios' : 'android';
 
@@ -31,6 +43,39 @@ async function withConnection<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } finally {
     await endConnection();
+  }
+}
+
+function priceOf(product: unknown): string | undefined {
+  if (!product) return undefined;
+  // iOS exposes localizedPrice; Android nests it in the first offer's pricing phases.
+  const p = product as {
+    localizedPrice?: string;
+    subscriptionOfferDetails?: {
+      pricingPhases?: { pricingPhaseList?: { formattedPrice?: string }[] };
+    }[];
+  };
+  return (
+    p.localizedPrice ??
+    p.subscriptionOfferDetails?.[0]?.pricingPhases?.pricingPhaseList?.[0]?.formattedPrice
+  );
+}
+
+/** Localized prices from the store, falling back to the defaults. */
+export async function getPrices(): Promise<PlanPrices> {
+  try {
+    return await withConnection(async () => {
+      const products = await getSubscriptions({
+        skus: [productIdFor('monthly'), productIdFor('yearly')],
+      });
+      const find = (plan: Plan) => products.find((p) => p.productId === productIdFor(plan));
+      return {
+        monthly: priceOf(find('monthly')) ?? DEFAULT_PRICES.monthly,
+        yearly: priceOf(find('yearly')) ?? DEFAULT_PRICES.yearly,
+      };
+    });
+  } catch {
+    return DEFAULT_PRICES;
   }
 }
 

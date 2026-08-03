@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getAccessToken, signIn, type Provider } from '../auth/session';
-import { purchase, restore, type Plan } from '../purchases';
+import {
+  DEFAULT_PRICES,
+  getPrices,
+  purchase,
+  restore,
+  type Plan,
+  type PlanPrices,
+} from '../purchases';
 import { colors, spacing, type } from '../theme';
 
 interface Props {
@@ -9,17 +16,26 @@ interface Props {
   onDismiss: () => void;
 }
 
+const PREMIUM_INCLUDES = [
+  'Unlimited conversations',
+  'Unlimited analyses',
+  'Personalised guidance',
+  'Future feature updates',
+];
+
 /**
  * Shown when the backend has a complete analysis ready. Guests sign in
  * first (purchases must attach to an account), then choose a plan.
  */
 export function PaywallScreen({ onSubscribed, onDismiss }: Props) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [prices, setPrices] = useState<PlanPrices>(DEFAULT_PRICES);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getAccessToken().then((token) => setSignedIn(token !== null));
+    getPrices().then(setPrices);
   }, []);
 
   async function handleSignIn(provider: Provider) {
@@ -59,9 +75,16 @@ export function PaywallScreen({ onSubscribed, onDismiss }: Props) {
       <View style={styles.top}>
         <Text style={styles.title}>Continue your journey</Text>
         <Text style={styles.subtitle}>
-          Your analysis and recommended steps are ready. Premium unlocks them and lets the
-          conversation continue without limits.
+          Your full analysis and personalised action plan are ready. Premium is the natural next
+          step of the conversation you have already started.
         </Text>
+        <View style={styles.includes}>
+          {PREMIUM_INCLUDES.map((item) => (
+            <Text key={item} style={styles.includesItem}>
+              {item}
+            </Text>
+          ))}
+        </View>
       </View>
       <View style={styles.actions}>
         {signedIn === false ? (
@@ -92,9 +115,11 @@ export function PaywallScreen({ onSubscribed, onDismiss }: Props) {
           <>
             <Pressable style={styles.primaryButton} onPress={() => buy('monthly')} disabled={busy}>
               <Text style={styles.primaryButtonText}>Monthly</Text>
+              <Text style={styles.priceText}>{prices.monthly}</Text>
             </Pressable>
             <Pressable style={styles.primaryButton} onPress={() => buy('yearly')} disabled={busy}>
               <Text style={styles.primaryButtonText}>Yearly</Text>
+              <Text style={styles.priceText}>{prices.yearly}</Text>
             </Pressable>
             <Pressable style={styles.textButton} onPress={() => run(restore)} disabled={busy}>
               <Text style={styles.textButtonText}>Restore Purchase</Text>
@@ -133,6 +158,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButtonText: { ...type.heading, color: colors.accentText },
+  priceText: { ...type.caption, color: colors.accentText, marginTop: 2 },
+  includes: { marginTop: spacing.l, gap: spacing.xs },
+  includesItem: { ...type.caption, textAlign: 'center' },
   secondaryButton: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

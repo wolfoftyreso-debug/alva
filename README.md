@@ -71,18 +71,32 @@ it is not built.
 
 ### The intelligent paywall
 
+**Monetization philosophy.** The goal is not to interrupt the conversation
+— the goal is to build trust. The free experience should make the user feel
+understood, respected, and curious to continue; only when the conversation
+has reached a meaningful point is Premium introduced. The rule given to the
+model, verbatim: _"Never manufacture suspense. Create genuine curiosity by
+helping the user reach a meaningful insight, then offer a deeper level of
+analysis in Premium."_
+
 The paywall is not a hardcoded message count. Free conversations run in
 _discovery mode_: the model asks relevant follow-up questions, names
-patterns, shows understanding, and builds toward an analysis — without
-delivering the full solution. When the problem is described, the information
-is sufficient, and a concrete action plan is ready, the model signals
-`analysis_ready`, writes a calm transition ("…I have a concrete strategy I
-would recommend. Continue with Premium to see the analysis and the
-recommended steps."), and the conversation pauses.
+patterns, shows understanding, and helps the user reach a meaningful
+insight of their own. When the conversation has reached that point and the
+natural next step is a complete analysis, a structured framework, a
+personalised strategy, practical exercises, or a step-by-step action plan,
+the model pauses immediately _before_ delivering it — never mid-sentence,
+never in the middle of an explanation — signals `analysis_ready`, and
+writes a calm transition: "I think I understand the core pattern behind
+what you've described. There are a few recurring themes that stand out, and
+I have a structured way of working through them with you. Unlock Premium to
+continue with the full analysis and your personalised action plan."
 
-The instructions explicitly forbid manufactured urgency, emotional pressure,
-fake readiness, and stopping mid-answer — Premium should feel like the
-natural continuation of an already valuable dialogue.
+**Product feeling.** Every interaction should leave the user thinking
+"this understands me". Every Premium conversion should feel like "I
+genuinely want to continue this conversation" — never "they stopped me just
+to make me pay". Manufactured urgency, emotional pressure and fake
+readiness are explicitly forbidden in the instructions.
 
 On unlock, the app resends the transcript; premium mode then delivers the
 full analysis, recommended strategies and concrete exercises immediately,
@@ -108,6 +122,13 @@ provider differs per platform behind one `PaymentProvider` interface:
 - **Web (future)** — a Stripe adapter slots into the same interface.
 
 Plans: Monthly and Yearly. Nothing else.
+
+**Pricing.** $5.99/month, $49.99/year (≈30 % below the monthly rate).
+Premium includes unlimited conversations, unlimited analyses, personalised
+guidance, and future feature updates. Prices are configured in App Store
+Connect / Play Console on the products `semantika_monthly` and
+`semantika_yearly`; the paywall fetches localized prices from the store and
+falls back to these defaults until the store answers.
 
 ## Getting started
 
