@@ -33,6 +33,23 @@ jobs:
       - run: sudo bash integrationstest.sh
         working-directory: services/plattform
 
+  # Kontrollerar infrastrukturens definition utan kluster: formatering,
+  # leverantörer, typer och referenser — och att alla tre databaslägena
+  # går att planera.
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+
   container-byggen:
     runs-on: ubuntu-latest
     steps:

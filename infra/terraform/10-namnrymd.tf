@@ -25,7 +25,12 @@ resource "kubernetes_secret_v1" "hemligheter" {
 
 # Databasschemat körs vid databasens första start. Samma fil används av
 # integrationstestet, så schemat kan aldrig glida isär från det som testas.
+# I inbyggt läge körs schemat av postgres-bilden vid första starten, i
+# cnpg-läget av operatorn via postInitApplicationSQLRefs. I externt läge
+# ansvarar ni för att köra filen mot er databas.
 resource "kubernetes_config_map_v1" "postgres_init" {
+  count = local.extern_databas ? 0 : 1
+
   metadata {
     name      = "postgres-init"
     namespace = kubernetes_namespace_v1.denna.metadata[0].name
@@ -33,6 +38,6 @@ resource "kubernetes_config_map_v1" "postgres_init" {
   }
 
   data = {
-    "init.sql" = file("${path.module}/../k8s/postgres-init.sql")
+    "init.sql" = file("${path.module}/../postgres-init.sql")
   }
 }

@@ -46,10 +46,15 @@ locals {
       utat    = ["api.anthropic.com"]
     }
     postgres = {
-      roll    = "Händelseloggen — systemets enda sanningskälla. Append-only garanteras av databastriggers, inte bara av API:t."
-      bild    = "postgres:17-alpine"
+      roll = join(" ", [
+        "Händelseloggen — systemets enda sanningskälla. Append-only garanteras av databastriggers, inte bara av API:t.",
+        var.databas_lage == "extern" ? "Läge: extern managerad Postgres — leverantören sköter backup och PITR." :
+        var.databas_lage == "cnpg" ? "Läge: CloudNativePG i klustret — basbackup, WAL-arkivering, PITR och failover." :
+        "Läge: inbyggd StatefulSet UTAN säkerhetskopiering — endast prov och demo."
+      ])
+      bild    = var.databas_lage == "cnpg" ? "ghcr.io/cloudnative-pg/postgresql:17.2" : var.databas_lage == "extern" ? "(utanför klustret)" : "postgres:17-alpine"
       hemligt = ["postgres-losenord"]
-      utat    = []
+      utat    = var.databas_lage == "cnpg" ? ["objektlagringen för backup och WAL-arkiv"] : []
     }
   }
 
@@ -79,8 +84,6 @@ locals {
     )
   }
 
-  databas_url = "postgresql://plattform:${local.hemligheter["postgres-losenord"]}@postgres:5432/felsokning"
-
   # ---- Dataflöden -----------------------------------------------------
   #
   # Det som är värt att förstå innan man ändrar något: vad som rör sig
@@ -102,13 +105,15 @@ locals {
 
   # ---- Det som medvetet inte ingår ------------------------------------
 
-  avgransningar = [
-    "Säkerhetskopiering av databasen. StatefulSet + PVC är inte backup — sätt CloudNativePG eller motsvarande innan skarp drift.",
-    "Objektlagring. Foton och video ligger som data-URL:er i händelseloggen, vilket gör volymen stor och tung att säkerhetskopiera.",
-    "Observability. Ingen metrikexport, ingen tracing — bara containerloggar.",
-    "Takt-begränsning på inloggning. Endast den publika beslutsvägen är begränsad, och bara per pod.",
-    "Återkallelse av utfärdade JWT. En token gäller sin livstid ut även om användaren tas bort.",
-  ]
+  avgransningar = concat(
+    var.databas_lage == "inbyggd" ? ["INGEN SÄKERHETSKOPIERING — läget inbyggd har en volym och inget mer. Endast prov och demo."] : [],
+    [
+      "Objektlagring. Foton och video ligger som data-URL:er i händelseloggen, vilket gör volymen stor och tung att säkerhetskopiera.",
+      "Observability. Ingen metrikexport, ingen tracing — bara containerloggar.",
+      "Takt-begränsning på inloggning. Endast den publika beslutsvägen är begränsad, och bara per pod.",
+      "Återkallelse av utfärdade JWT. En token gäller sin livstid ut även om användaren tas bort.",
+    ],
+  )
 }
 
 # Genereras bara när motsvarande variabel lämnats tom.

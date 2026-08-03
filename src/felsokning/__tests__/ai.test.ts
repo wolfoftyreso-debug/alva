@@ -55,7 +55,7 @@ describe("AI-orkestern", () => {
     expect(plattform).toContain("organisation_id");
     expect(plattform).toContain("arendeIOrg");
 
-    const schema = readFileSync("infra/k8s/postgres-init.sql", "utf8");
+    const schema = readFileSync("infra/postgres-init.sql", "utf8");
     expect(schema).toContain("before update or delete on felsokning_handelser");
     expect(schema).toContain("before update or delete on felsokning_arenden");
     expect(schema).toContain("create table if not exists organisationer");

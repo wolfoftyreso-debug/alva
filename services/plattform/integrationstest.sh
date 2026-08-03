@@ -27,7 +27,7 @@ su postgres -c "$PGBIN/initdb -D '$DATADIR' -A trust" >/dev/null
 su postgres -c "$PGBIN/pg_ctl -D '$DATADIR' -o '-p $PGPORT -k /tmp -c listen_addresses=127.0.0.1' -l '$DATADIR/logg' start" >/dev/null
 su postgres -c "$PGBIN/psql -h /tmp -p $PGPORT -d postgres -qc \"create role plattform login password 'test'\""
 su postgres -c "$PGBIN/psql -h /tmp -p $PGPORT -d postgres -qc 'create database felsokning owner plattform'"
-PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning -q -f ../../infra/k8s/postgres-init.sql
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning -q -f ../../infra/postgres-init.sql
 
 # ---- Tjänsten upp ----
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \

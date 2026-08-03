@@ -1,17 +1,15 @@
-# CD-halvan av GitOps-flödet: varje push till main bygger och publicerar
-# de tre bilderna till GHCR taggade med git-SHA:t, och uppdaterar sedan
-# produktions-overlayens taggar i git. Argo CD ser ändringen och synkar
-# klustret — ingen kubectl-åtkomst från CI, klustret drar själv.
+# Bygger och publicerar de tre bilderna till GHCR, taggade med git-SHA:t.
+# Driftsättningen sker i ett eget flöde (driftsatt.yml) som kör
+# terraform apply mot en miljö med godkännandekrav — en bild som ligger i
+# registret är alltså inte samma sak som en bild som kör.
 name: Publicera
 
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "infra/overlays/**" # gitops-commiten ska inte trigga en ny publicering
 
 permissions:
-  contents: write
+  contents: read
   packages: write
 
 env:
@@ -28,34 +26,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Klientens API-adress bakas in vid bygget (Vite), så bilden är
+      # miljöbunden — en bild byggd mot en domän pekar på fel API i en
+      # annan miljö.
       - name: Bygg och publicera web
         run: |
           docker build -t "$REGISTER/guidad-felsokning-web:${{ github.sha }}" \
             --build-arg VITE_PLATTFORM_URL="${{ vars.PLATTFORM_URL }}" \
             --build-arg VITE_AI_ORKESTER_URL="${{ vars.PLATTFORM_URL }}" .
           docker push "$REGISTER/guidad-felsokning-web:${{ github.sha }}"
+
       - name: Bygg och publicera ai-orkester
         run: |
           docker build -t "$REGISTER/guidad-felsokning-ai-orkester:${{ github.sha }}" services/ai-orkester
           docker push "$REGISTER/guidad-felsokning-ai-orkester:${{ github.sha }}"
+
       - name: Bygg och publicera plattform
         run: |
           docker build -t "$REGISTER/guidad-felsokning-plattform:${{ github.sha }}" services/plattform
           docker push "$REGISTER/guidad-felsokning-plattform:${{ github.sha }}"
 
-      - name: Uppdatera produktions-overlayen (GitOps)
+      - name: Sammanfatta
         run: |
-          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz" | tar xz
-          cd infra/overlays/produktion
-          for tjanst in web ai-orkester plattform; do
-            ../../../kustomize edit set image \
-              "ghcr.io/ORGANISATION/guidad-felsokning-$tjanst=$REGISTER/guidad-felsokning-$tjanst:${{ github.sha }}"
-          done
-          ../../../kustomize build . > /dev/null # verifiera att overlayen fortfarande bygger
-      - name: Committa overlay-uppdateringen
-        run: |
-          git config user.name "gitops-bot"
-          git config user.email "gitops@users.noreply.github.com"
-          git add infra/overlays/produktion/kustomization.yaml
-          git diff --cached --quiet || git commit -m "gitops: driftsätt ${{ github.sha }} [skip ci]"
-          git push
+          {
+            echo "### Publicerat"
+            echo ""
+            echo '```'
+            echo "bildtagg: ${{ github.sha }}"
+            echo '```'
+            echo ""
+            echo "Driftsätt med flödet **Driftsätt** och den taggen."
+          } >> "$GITHUB_STEP_SUMMARY"

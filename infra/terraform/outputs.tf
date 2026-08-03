@@ -29,10 +29,24 @@ output "karta" {
     gränser    = local.granser
 
     databas = {
+      läge     = var.databas_lage
       motor    = "PostgreSQL 17"
-      volym    = var.databas_storlek
       säkerhet = "append-only via triggers — historik kan inte ändras eller raderas av någon roll"
-      backup   = "INGEN i den här definitionen — se avgränsningar"
+
+      backup = (
+        var.databas_lage == "extern"
+        ? "Leverantörens — verifiera att PITR faktiskt är påslaget."
+        : var.databas_lage == "cnpg"
+        ? "Basbackup 02:30 + kontinuerlig WAL-arkivering till ${var.backup.mal}, ${var.backup.behall_dagar} dagars retention. PITR möjlig."
+        : "INGEN. Går volymen förlorad är händelseloggen borta."
+      )
+
+      volym = var.databas_lage == "extern" ? "(leverantörens)" : var.databas_storlek
+      instanser = (
+        var.databas_lage == "cnpg"
+        ? "${var.databas_instanser} (failover)"
+        : var.databas_lage == "extern" ? "(leverantörens)" : "1 (ingen failover)"
+      )
     }
 
     drift = {

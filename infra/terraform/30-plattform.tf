@@ -72,20 +72,26 @@ resource "kubernetes_deployment_v1" "plattform" {
             }
           }
 
-          env {
-            name = "POSTGRES_LOSENORD"
+          # Lösenordet expanderas in i DATABASE_URL nedan. I externt läge
+          # står hela anslutningen i variabeln och behövs inte här.
+          dynamic "env" {
+            for_each = local.extern_databas ? [] : [1]
 
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret_v1.hemligheter.metadata[0].name
-                key  = "postgres-losenord"
+            content {
+              name = "POSTGRES_LOSENORD"
+
+              value_from {
+                secret_key_ref {
+                  name = kubernetes_secret_v1.hemligheter.metadata[0].name
+                  key  = "postgres-losenord"
+                }
               }
             }
           }
 
           env {
             name  = "DATABASE_URL"
-            value = "postgresql://plattform:$(POSTGRES_LOSENORD)@postgres:5432/felsokning"
+            value = local.databas_anslutning
           }
 
           # Klienten serveras från samma domän som API:t, så CORS behöver

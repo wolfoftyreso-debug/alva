@@ -169,6 +169,79 @@ variable "max_repliker" {
   }
 }
 
+# ---- Databas -----------------------------------------------------------
+
+variable "databas_lage" {
+  description = <<-TEXT
+    Hur händelseloggen lagras. Inget standardvärde: valet avgör om det
+    finns säkerhetskopiering, och det är inte ett val någon ska göra av
+    misstag.
+
+      "extern"   Managerad Postgres utanför klustret (Cloud SQL, RDS,
+                 Neon, Azure Flexible Server). Leverantören sköter
+                 backup, PITR, failover och kryptering. REKOMMENDERAT
+                 i produktion. Kräver databas_url.
+
+      "cnpg"     CloudNativePG i klustret: basbackup, WAL-arkivering och
+                 PITR mot objektlagring. Kräver att operatorn redan är
+                 installerad — Terraform slår upp dess CRD vid plan.
+                 Kräver backup-uppgifterna nedan.
+
+      "inbyggd"  En StatefulSet med en volym. INGEN säkerhetskopiering.
+                 Går volymen förlorad är händelseloggen borta, och den
+                 är hela produktens bevisvärde. Endast för prov och demo.
+  TEXT
+  type        = string
+
+  validation {
+    condition     = contains(["extern", "cnpg", "inbyggd"], var.databas_lage)
+    error_message = "databas_lage måste vara \"extern\", \"cnpg\" eller \"inbyggd\"."
+  }
+}
+
+variable "databas_url" {
+  description = "Anslutning till den externa databasen. Krävs när databas_lage = \"extern\"."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "backup" {
+  description = <<-TEXT
+    Objektlagring för CloudNativePG:s basbackup och WAL-arkiv. Används
+    bara när databas_lage = "cnpg". mal är en S3-URL, t.ex.
+    s3://verkstad-backup/felsokning.
+  TEXT
+  type = object({
+    mal          = string
+    endpoint     = optional(string, "")
+    behall_dagar = optional(number, 30)
+  })
+  default = {
+    mal = ""
+  }
+}
+
+variable "backup_nyckel_id" {
+  description = "Åtkomstnyckel till objektlagringen (databas_lage = \"cnpg\")."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "backup_nyckel" {
+  description = "Hemlig nyckel till objektlagringen (databas_lage = \"cnpg\")."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "databas_instanser" {
+  description = "Antal Postgres-instanser i CloudNativePG-klustret. 3 ger failover utan dataförlust."
+  type        = number
+  default     = 3
+}
+
 variable "databas_storlek" {
   description = "Volymstorlek för händelseloggen. Foton och video ligger inline i loggen."
   type        = string

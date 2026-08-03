@@ -27,6 +27,30 @@ registrering_oppen = false
 # adresser. Sätt bara true om verkstaden har en OEM-server på eget nät.
 tillat_interna_uppslag = false
 
+# --- Databasen ---------------------------------------------------------
+#
+# Inget standardvärde: valet avgör om det finns säkerhetskopiering.
+#
+#   "extern"   managerad Postgres — leverantören sköter backup och PITR
+#              (rekommenderat i produktion). Kräver databas_url.
+#   "cnpg"     CloudNativePG i klustret — basbackup, WAL-arkiv, failover.
+#              Kräver att operatorn är installerad och backup-uppgifter.
+#   "inbyggd"  en volym, ingen backup. Endast prov och demo — går inte
+#              att kombinera med miljo = "produktion".
+
+databas_lage = "extern"
+databas_url  = "postgresql://plattform:...@db.exempel.internal:5432/felsokning"
+
+# Används bara när databas_lage = "cnpg":
+# backup = {
+#   mal          = "s3://verkstad-backup/felsokning"
+#   endpoint     = ""   # sätts för S3-kompatibel lagring som inte är AWS
+#   behall_dagar = 30
+# }
+# backup_nyckel_id  = ""
+# backup_nyckel     = ""
+# databas_instanser = 3
+
 databas_storlek = "50Gi"
 # lagringsklass = "premium-rwo"
 

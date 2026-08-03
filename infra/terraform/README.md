@@ -9,7 +9,7 @@ begripliga att läsa:
 | `variables.tf` | Allt som skiljer en installation från en annan |
 | `karta.tf` | **Systemet som data** — tjänster, portar, routing, hemligheter, dataflöden, gränser |
 | `10-namnrymd.tf` | Namnrymd, hemligheten, databasschemat |
-| `20-databas.tf` | Postgres — händelseloggen |
+| `20-databas.tf` | Händelseloggen — tre lägen, se nedan |
 | `30-plattform.tf` | Backend: auth, händelse-API, delning, integrationer |
 | `40-orkester.tf` | AI-orkestern |
 | `50-web.tf` | Klienten |
@@ -45,41 +45,51 @@ terraform validate                # typer och referenser
 `terraform validate` kräver att leverantörerna hämtats från
 registry.terraform.io.
 
-## Förhållandet till kustomize och Argo CD
+## Databasen: tre lägen
 
-`infra/k8s` + `infra/overlays` + `infra/gitops` beskriver **samma system**
-i kustomize, synkat av Argo CD. Det är en historisk parallell väg.
+`var.databas_lage` saknar standardvärde med flit. Valet avgör om det
+finns säkerhetskopiering, och det ska inte kunna bli fel av slentrian.
 
-**Välj en.** Kör båda mot samma kluster och de motarbetar varandra: Argo
-CD:s `selfHeal` återställer det Terraform just ändrat, och `prune` tar
-bort det Terraform skapat.
+| Läge | Backup | Failover | Använd när |
+| --- | --- | --- | --- |
+| `extern` | Leverantörens, med PITR | Leverantörens | **Produktion.** Cloud SQL, RDS, Neon, Azure Flexible Server |
+| `cnpg` | Basbackup 02:30 + WAL-arkiv → objektlagring, PITR | Ja, `databas_instanser` styr | Produktion när databasen måste ligga i klustret |
+| `inbyggd` | **Ingen** | Nej | Prov och demo. Blockeras av en precondition när `miljo = "produktion"` |
 
-Rekommendationen är Terraform, av tre skäl:
+Går händelseloggen förlorad är det inte "data" som försvinner utan varje
+ärendes bevisvärde: vad som kontrollerades, av vem, när, med vilken
+evidens. Det går inte att återskapa i efterhand.
 
-1. Nätverkspolicyer, genererade hemligheter och (senare) molnresurser
-   som databas, DNS och objektlagring hör hemma här.
-2. Kartan blir läsbar — `karta.tf` och `terraform output` finns inte i
-   kustomize-varianten.
-3. Kustomize-vägen saknar i dag nätverkspolicyer och kör Postgres utan
-   säkerhetskontext.
+`cnpg` kräver att CloudNativePG-operatorn redan är installerad —
+Terraform slår upp dess CRD vid plan:
 
-Byter ni: ta bort Argo CD-applikationen (`kubectl -n argocd delete
-application guidad-felsokning`) **innan** första `terraform apply`, och
-importera befintliga resurser med `terraform import` om ni vill undvika
-omstart. Behåller ni Argo CD i stället: applicera nätverkspolicyerna och
-ingressens kroppsgräns därifrån också.
+```sh
+kubectl apply --server-side -f \
+  https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.25/releases/cnpg-1.25.0.yaml
+```
 
-Bildtaggen kommer från publiceringsflödet oavsett väg — kör
-`terraform apply -var bildtagg=<git-sha>` i stället för att låta CI
-skriva i git.
+I `extern` läge ansvarar ni själva för att köra
+`infra/postgres-init.sql` mot databasen. Det är samma fil som
+integrationstestet kör, så schemat kan inte glida isär från det som
+testas.
+
+## Driftsättning
+
+Bilderna byggs av `publicera.yml` vid varje push till main och taggas med
+git-SHA:t. Driftsättningen är ett eget flöde, `driftsatt.yml`, som
+startas för hand med en tagg och kör mot GitHub-miljön `produktion` — den
+kan kräva godkännande. Rollback är att köra flödet igen med en tidigare
+tagg.
+
+Kustomize- och Argo CD-vägen är borttagen. Den beskrev samma system en
+gång till och kunde inte köras samtidigt som Terraform utan att de
+motarbetade varandra (`selfHeal` återställde det Terraform ändrade,
+`prune` tog bort det Terraform skapade).
 
 ## Det som medvetet inte ingår
 
 Står också i `terraform output karta` under `avgränsningar`:
 
-- **Säkerhetskopiering.** En StatefulSet med en PVC är inte backup. Sätt
-  CloudNativePG (basbackup, WAL-arkivering, PITR, failover) innan skarp
-  drift och peka `DATABASE_URL` på dess tjänst.
 - **Objektlagring.** Foton och video ligger som data-URL:er i
   händelseloggen. Det gör loggen till systemets enda sanningskälla, men
   också stor och tung att säkerhetskopiera.

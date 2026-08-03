@@ -21,7 +21,7 @@ flowchart LR
 | `web` | SPA:n bakom oprivilegierad nginx (`Dockerfile`, `docker/nginx.conf`) | Deployment + Service + HPA + PDB |
 | `plattform` | Självhostad backend (`services/plattform`): **multi-tenant** — registrering skapar organisation + systemadministratör, admin hanterar användare (tekniker/arbetsledare/admin), all ärendedata organisationsisolerad. Inloggning (bcrypt via pgcrypto, HS256-JWT med roll + org i anspråken), append-only händelse-API, publik delningsendpoint | Deployment + Service + HPA + PDB |
 | `ai-orkester` | AI-orkestern (`services/ai-orkester`): fyra uppgifter routade till Sonnet 5 / Opus 5 / Haiku 4.5 — verifierar plattformens JWT (delad hemlighet) | Deployment + Service + HPA + PDB |
-| `postgres` | Händelselogg + användare; **append-only garanterat med databastriggers** — historik kan inte ändras eller raderas oavsett roll | StatefulSet + PVC (10 Gi). Produktion: CloudNativePG-operatorn för backup/failover/PITR |
+| `postgres` | Händelselogg + användare; **append-only garanterat med databastriggers** — historik kan inte ändras eller raderas oavsett roll | Tre lägen: extern managerad Postgres (rekommenderat), CloudNativePG i klustret, eller en enkel StatefulSet utan backup för prov |
 | Hemligheter | `anthropic-api-key`, `jwt-secret` (delas av plattform + orkester), `postgres-losenord`, `integration-nyckel` (krypterar kundernas märkesspecifika credentials) |
 | Miljöflaggor | `TILLATNA_URSPRUNG` (CORS-lista; utelämnad = `*`), `TILLAT_INTERNA_UPPSLAG` (`true` tillåter leverantörsuppslag mot privata nät), `REGISTRERING_OPPEN`, `ECM_REGLER_FIL`, `INTEGRATIONER_FIL` | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
 
@@ -34,11 +34,11 @@ Börja i `karta.tf`: hela systemet beskrivet en gång som data (tjänster,
 portar, routing, hemligheter, dataflöden, gränser). `terraform output
 karta` skriver ut samma sak i klartext.
 
-`infra/k8s` + `infra/overlays` + `infra/gitops` beskriver samma system i
-kustomize, synkat av Argo CD. **Kör inte båda mot samma kluster** — Argo
-CD:s `selfHeal` återställer det Terraform ändrar och `prune` tar bort det
-Terraform skapar. Terraform-vägen har dessutom nätverkspolicyer och
-säkerhetskontext på databasen, vilket kustomize-vägen saknar.
+Definitionen omfattar hemligheter, databasschema, nätverksgränser och
+alla tre databaslägena. Kustomize- och Argo CD-vägen är borttagen —
+`infra/postgres-init.sql` är det enda som blivit kvar utanför Terraform,
+och den läses av både Terraform och integrationstestet så att schemat
+inte kan glida isär från det som testas.
 
 ## Nätverksgränser
 
@@ -61,59 +61,52 @@ dokumentation, inte skydd.
 
 ## Driftsätta
 
+Allt går genom Terraform — hemligheter, schema och nätverksgränser
+ingår. Det finns ingen `kubectl apply` att komma ihåg.
+
 ```sh
-# 1. Bygg och publicera bilderna (ersätt registry i infra/k8s/*.yaml)
-docker build -t ghcr.io/ORG/guidad-felsokning-web \
-  --build-arg VITE_PLATTFORM_URL=https://app.exempel.se .
-docker build -t ghcr.io/ORG/guidad-felsokning-ai-orkester services/ai-orkester
-docker build -t ghcr.io/ORG/guidad-felsokning-plattform services/plattform
-docker push ghcr.io/ORG/guidad-felsokning-web
-docker push ghcr.io/ORG/guidad-felsokning-ai-orkester
-docker push ghcr.io/ORG/guidad-felsokning-plattform
+cd infra/terraform
+cp terraform.tfvars.exempel terraform.tfvars   # domän, register, databasläge, nycklar
+terraform init
+terraform plan
+terraform apply -var bildtagg=<git-sha>
 
-# 2. Skapa secret:en (eller använd External Secrets/Sealed Secrets)
-kubectl create namespace guidad-felsokning
-kubectl -n guidad-felsokning create secret generic felsokning-hemligheter \
-  --from-literal=anthropic-api-key='sk-ant-…' \
-  --from-literal=jwt-secret="$(openssl rand -base64 48)" \
-  --from-literal=postgres-losenord="$(openssl rand -base64 24)" \
-  --from-literal=integration-nyckel="$(openssl rand -hex 32)"
-
-# 3. Applicera manifesten (Postgres initieras med schema + append-only-triggers)
-kubectl apply -k infra/k8s
-
-# 4. Verifiera
-kubectl -n guidad-felsokning get pods
-curl https://app.exempel.se/halsa            # → {"status":"ok"} (plattformen)
-curl https://app.exempel.se/api/openapi.yaml # API-first: hela API-specen
+terraform output karta       # hela systemet i klartext
+terraform output endpoints   # adresser att kontrollera
 ```
 
-Med Terraform i stället: `cd infra/terraform && terraform apply -var bildtagg=<git-sha>`.
+Sedan:
 
-Byt domän och cert-issuer i `infra/k8s/ingress.yaml` (eller `var.doman` i Terraform). Att skapa nya organisationer är öppet i beta — stäng med `REGISTRERING_OPPEN=false` på plattformens Deployment; användare inom en organisation skapas alltid av dess systemadministratör.
+```sh
+curl https://app.exempel.se/halsa            # → {"status":"ok"}
+curl https://app.exempel.se/api/openapi.yaml # hela API-specen
+```
 
-## Märkesspecifika kopplingar
+Klustret behöver: en CNI som tillämpar NetworkPolicy, ingress-nginx,
+cert-manager, en metrics-server och en StorageClass med ReadWriteOnce.
 
-Varje verkstad har sina egna avtal med tillverkare och dataleverantörer.
-Kopplingarna konfigureras därför av kunden själv under **Inställningar →
-Märkesspecifika kopplingar**: systemadministratören väljer leverantör och
-fyller i sina credentials.
+Att skapa nya organisationer är stängt som standard
+(`registrering_oppen = false`); användare inom en organisation skapas
+alltid av dess systemadministratör.
 
-* **Uppgifterna når aldrig webbläsaren.** De krypteras med AES-256-GCM
-  (`INTEGRATION_NYCKEL`, 32 byte hex eller base64) innan de skrivs till
-  tabellen `integrationer`, och API:t returnerar hemliga fält maskerade
-  (`••••3456`). Alla uppslag mot leverantören görs av servern.
-* **Fail closed.** Saknas `INTEGRATION_NYCKEL` sparas ingenting — API:t
-  svarar 503 och inställningssidan säger varför. Inga uppgifter hamnar
-  någonsin i klartext.
-* **Leverantörer är data, inte kod.** Registret ligger i
-  `services/plattform/integrationer.json` och kan bytas mot en
-  ConfigMap-mount via `INTEGRATIONER_FIL`. Nya märken läggs till genom
-  att beskriva URL-mall, autentiseringstyp och svarsmappning — ingen
-  ombyggnad av applikationen krävs.
-* **Testresultat loggas på kopplingen.** Varje uppslag skriver
-  `senast_testad` och `senaste_status`, så ett trasigt abonnemang syns i
-  inställningarna i stället för att tyst ge tomma svar.
+## Databasen: valet som avgör om det finns backup
+
+`databas_lage` saknar standardvärde med flit.
+
+| Läge | Backup | Failover | Använd när |
+| --- | --- | --- | --- |
+| `extern` | Leverantörens, med PITR | Leverantörens | **Produktion.** Cloud SQL, RDS, Neon, Azure |
+| `cnpg` | Basbackup 02:30 + WAL-arkiv → objektlagring, PITR | Ja | Produktion när databasen måste ligga i klustret |
+| `inbyggd` | **Ingen** | Nej | Prov och demo — spärras när `miljo = "produktion"` |
+
+Går händelseloggen förlorad är det inte "data" som försvinner utan varje
+ärendes bevisvärde: vad som kontrollerades, av vem, när, med vilken
+evidens. Det går inte att återskapa i efterhand.
+
+`cnpg` kräver CloudNativePG-operatorn installerad först — Terraform slår
+upp dess CRD redan vid plan. I `extern` läge kör ni
+`infra/postgres-init.sql` mot databasen själva; det är samma fil som
+integrationstestet kör.
 
 ## Multi-tenant och roller
 
@@ -137,18 +130,19 @@ Integrationstestet (`services/plattform/integrationstest.sh`, körs även i CI m
 
 **CI** (`.github/workflows/ci.yml`): tester, produktionsbygge, integrationstest mot riktig Postgres och verifierande containerbyggen på varje push/PR.
 
-**CD** (`.github/workflows/publicera.yml` + Argo CD): klustret följer git — ingen CI-process har kubectl-åtkomst.
+**CD** — två flöden, medvetet åtskilda: en bild i registret är inte samma sak som en bild som kör.
 
 ```mermaid
 flowchart LR
-    P[Push till main] --> B[Bygg + publicera\n3 bilder till GHCR\ntaggade med git-SHA]
-    B --> O[Uppdatera\ninfra/overlays/produktion\n+ commit till git]
-    O --> A[Argo CD ser ändringen] --> S[Synkar klustret\nprune + selfHeal]
+    P[Push till main] --> B[Publicera:\nbygger 3 bilder\ntaggade med git-SHA] --> G[(GHCR)]
+    G -.-> D[Driftsätt:\nstartas för hand\nmed en tagg]
+    D --> M[miljö: produktion\ngodkännande] --> T[terraform apply] --> K[Klustret]
+    T --> R[Rökkontroll\nhälsa + API-spec]
 ```
 
-1. Varje main-push bygger de tre bilderna, publicerar till GHCR (`GITHUB_TOKEN`, inga externa hemligheter) och uppdaterar produktions-overlayens taggar med `kustomize edit set image` — overlayen ombyggs som verifiering innan commiten.
-2. **Argo CD är enda vägen in i klustret.** Bootstrap en gång: installera Argo CD, ersätt repo-URL:en i `infra/gitops/argocd-application.yaml` och `kubectl apply -f` den. Därefter: `prune` tar bort det som försvinner ur git, `selfHeal` återställer manuella klusteravvikelser.
-3. **Rollback = `git revert`** av gitops-commiten — Argo CD synkar tillbaka föregående SHA-taggade bilder.
-4. Repo-variabeln `PLATTFORM_URL` (Settings → Variables) styr webbyggets `VITE_PLATTFORM_URL`/`VITE_AI_ORKESTER_URL`. Hemligheten `felsokning-hemligheter` ligger utanför både git och synken.
+1. **Publicera** vid varje main-push: bygger de tre bilderna och taggar med git-SHA:t (`GITHUB_TOKEN`, inga externa hemligheter).
+2. **Driftsätt** startas för hand med en tagg, mot GitHub-miljön `produktion` som kan kräva godkännande. Kör `fmt`, `init`, `validate`, `plan`, `apply`, skriver ut kartan och rökkontrollerar hälsa och API-spec. `bara_plan` visar planen utan att applicera.
+3. **Rollback** = kör Driftsätt igen med en tidigare tagg.
 
-Manuell `kubectl apply -k infra/k8s` (avsnittet Driftsätta ovan) fungerar fortfarande för miljöer utan Argo CD.
+Kustomize- och Argo CD-vägen är borttagen. Den beskrev samma system en gång till och kunde inte köras samtidigt som Terraform utan att de motarbetade varandra — `selfHeal` återställde det Terraform ändrade och `prune` tog bort det Terraform skapade.
+

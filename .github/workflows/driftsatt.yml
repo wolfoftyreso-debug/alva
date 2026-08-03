@@ -1,0 +1,103 @@
+# Driftsättning: terraform apply mot klustret.
+#
+# Startas för hand med en bildtagg från publiceringsflödet. Det är
+# avsiktligt — driftsättning är ett beslut, och miljön `produktion` kan
+# kräva godkännande i GitHub innan jobbet får köra.
+#
+# Rollback = kör flödet igen med en tidigare tagg.
+#
+# Krävs på miljön `produktion`:
+#   secrets  KUBE_CONFIG (base64), TF_API_TOKEN eller backend-uppgifter,
+#            ANTHROPIC_API_NYCKEL, DATABAS_URL
+#   vars     DOMAN, REGISTER, DATABAS_LAGE
+name: Driftsätt
+
+on:
+  workflow_dispatch:
+    inputs:
+      bildtagg:
+        description: "Bildtagg att driftsätta (git-SHA från Publicera)"
+        required: true
+        type: string
+      bara_plan:
+        description: "Visa bara planen, applicera inte"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  driftsatt:
+    runs-on: ubuntu-latest
+    environment: produktion
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Formatering
+        run: terraform fmt -check -recursive
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Validering
+        run: terraform validate
+
+      - name: Plan
+        run: terraform plan -input=false -out=plan.tfplan
+        env:
+          TF_VAR_bildtagg: ${{ inputs.bildtagg }}
+          TF_VAR_doman: ${{ vars.DOMAN }}
+          TF_VAR_register: ${{ vars.REGISTER }}
+          TF_VAR_databas_lage: ${{ vars.DATABAS_LAGE }}
+          TF_VAR_databas_url: ${{ secrets.DATABAS_URL }}
+          TF_VAR_anthropic_api_nyckel: ${{ secrets.ANTHROPIC_API_NYCKEL }}
+          TF_VAR_jwt_hemlighet: ${{ secrets.JWT_HEMLIGHET }}
+          TF_VAR_postgres_losenord: ${{ secrets.POSTGRES_LOSENORD }}
+          TF_VAR_integration_nyckel: ${{ secrets.INTEGRATION_NYCKEL }}
+
+      - name: Applicera
+        if: ${{ !inputs.bara_plan }}
+        run: terraform apply -input=false plan.tfplan
+
+      - name: Kartan efter driftsättning
+        if: ${{ !inputs.bara_plan }}
+        run: |
+          {
+            echo "### Driftsatt \`${{ inputs.bildtagg }}\`"
+            echo ""
+            echo '```'
+            terraform output -no-color karta
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Rök: klienten, API-specen och hälsokontrollen ska svara.
+      - name: Rökkontroll
+        if: ${{ !inputs.bara_plan }}
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS "https://${{ vars.DOMAN }}/halsa" > /dev/null; then
+              echo "hälsokontrollen svarar"
+              curl -fsS "https://${{ vars.DOMAN }}/api/openapi.yaml" | head -1
+              exit 0
+            fi
+            echo "väntar på att tjänsten ska svara ($i/10)"
+            sleep 15
+          done
+          echo "tjänsten svarade inte inom 150 s"
+          exit 1
