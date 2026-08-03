@@ -16,7 +16,7 @@ export const config = {
   appSecretArn: process.env.APP_SECRET_ARN ?? '',
   /** ARN of the RDS-managed database credentials secret. */
   dbSecretArn: process.env.DB_SECRET_ARN ?? '',
-  dbName: process.env.DB_NAME ?? 'neurosemantics',
+  dbName: process.env.DB_NAME ?? 'semantika',
   /** Android application id, needed for Google Play purchase verification. */
-  androidPackageName: process.env.ANDROID_PACKAGE_NAME ?? 'com.neurosemantics.app',
+  androidPackageName: process.env.ANDROID_PACKAGE_NAME ?? 'com.semantika.app',
 };

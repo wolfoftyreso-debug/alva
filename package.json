@@ -1,9 +1,9 @@
 {
-  "name": "neurosemantics-ai",
+  "name": "semantika",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A minimalist AI conversation partner specialized in neurosemantics and NLP.",
+  "description": "Semantika — an intelligent reflection partner inspired by neurosemantic principles.",
   "workspaces": [
     "apps/mobile",
     "services/api",

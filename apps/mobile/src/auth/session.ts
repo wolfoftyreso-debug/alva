@@ -19,7 +19,7 @@ interface StoredSession {
   expiresAt: number; // epoch ms
 }
 
-const STORE_KEY = 'neurosemantics.session';
+const STORE_KEY = 'semantika.session';
 
 const discovery: DiscoveryDocument = {
   authorizationEndpoint: `${appConfig.cognitoDomain}/oauth2/authorize`,
@@ -27,7 +27,7 @@ const discovery: DiscoveryDocument = {
   revocationEndpoint: `${appConfig.cognitoDomain}/oauth2/revoke`,
 };
 
-const redirectUri = makeRedirectUri({ scheme: 'neurosemantics', path: 'redirect' });
+const redirectUri = makeRedirectUri({ scheme: 'semantika', path: 'redirect' });
 
 /** Maps our provider names to Cognito hosted UI identity providers. */
 const IDP: Record<Provider, string | undefined> = {

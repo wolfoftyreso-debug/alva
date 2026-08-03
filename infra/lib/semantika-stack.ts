@@ -15,14 +15,14 @@ import { dirname, join } from 'node:path';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-const DB_NAME = 'neurosemantics';
-const APP_SCHEME_REDIRECT = 'neurosemantics://redirect';
+const DB_NAME = 'semantika';
+const APP_SCHEME_REDIRECT = 'semantika://redirect';
 
 /**
  * The entire system: one HTTP API, one Lambda, one database, one user pool,
  * one application secret. CloudWatch logging comes with Lambda by default.
  */
-export class NeuroSemanticsStack extends Stack {
+export class SemantikaStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
@@ -46,9 +46,8 @@ export class NeuroSemanticsStack extends Stack {
 
     // --- Application secret (filled in manually after first deploy) ---
     const appSecret = new secretsmanager.Secret(this, 'AppSecret', {
-      secretName: 'neurosemantics/app',
-      description:
-        'OPENAI_API_KEY, APPLE_SHARED_SECRET, GOOGLE_SERVICE_ACCOUNT_JSON for NeuroSemantics AI',
+      secretName: 'semantika/app',
+      description: 'OPENAI_API_KEY, APPLE_SHARED_SECRET, GOOGLE_SERVICE_ACCOUNT_JSON for Semantika',
     });
 
     // --- Authentication: Cognito with Apple, Google and email ---
@@ -61,7 +60,7 @@ export class NeuroSemanticsStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
 
-    const domainPrefix = this.node.tryGetContext('cognitoDomainPrefix') ?? 'neurosemantics';
+    const domainPrefix = this.node.tryGetContext('cognitoDomainPrefix') ?? 'semantika';
     const domain = userPool.addDomain('Domain', { cognitoDomain: { domainPrefix } });
 
     // Apple/Google federation requires developer credentials; provide them via
@@ -91,7 +90,7 @@ export class NeuroSemanticsStack extends Stack {
     if (appleTeamId && appleKeyId && applePrivateKeySecretName) {
       new cognito.UserPoolIdentityProviderApple(this, 'Apple', {
         userPool,
-        clientId: 'com.neurosemantics.app.signin',
+        clientId: 'com.semantika.app.signin',
         teamId: appleTeamId,
         keyId: appleKeyId,
         privateKeyValue: secretsmanager.Secret.fromSecretNameV2(

@@ -97,7 +97,7 @@ export function ChatScreen({
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.heading}>NeuroSemantics AI</Text>
+      <Text style={styles.heading}>Semantika</Text>
       {showSuggestions ? (
         <View style={styles.suggestions}>
           {suggestions.map((s) => (

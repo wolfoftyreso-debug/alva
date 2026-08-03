@@ -30,7 +30,7 @@ export interface Me {
   messageCap: number;
 }
 
-const DEVICE_KEY = 'neurosemantics.device';
+const DEVICE_KEY = 'semantika.device';
 
 /** Stable anonymous id so guests can chat before signing in. */
 async function getDeviceId(): Promise<string> {

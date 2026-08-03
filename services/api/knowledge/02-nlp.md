@@ -5,6 +5,12 @@ Bandler and John Grinder by modeling effective therapists (Virginia Satir,
 Fritz Perls, Milton Erickson). It offers models for how people structure
 subjective experience.
 
+**Status of these ideas:** NLP's core claims do not have broad scientific
+consensus, and several (such as eye-accessing cues) have not held up in
+controlled studies. Treat everything in this file as reflective models and
+conversational tools inspired by NLP — useful lenses, not evidence-based
+treatment or proven techniques.
+
 ## Key presuppositions (working assumptions)
 
 - The map is not the territory.

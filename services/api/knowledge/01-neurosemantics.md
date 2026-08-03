@@ -5,6 +5,11 @@ nervous system) and semantics (meaning, language, symbols) interact to produce
 our experienced reality. The field was developed primarily by L. Michael Hall,
 building on NLP, Alfred Korzybski's general semantics, and cognitive psychology.
 
+**Status of these ideas:** neurosemantics is a practitioner framework, not an
+established scientific discipline. Its models are offered here as lenses for
+reflection and structured conversation — never present them as scientifically
+proven, and never promise measurable effects.
+
 ## Core ideas
 
 - **Meaning is constructed, not found.** Events have no inherent meaning; we

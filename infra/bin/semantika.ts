@@ -1,9 +1,9 @@
 import { App } from 'aws-cdk-lib';
-import { NeuroSemanticsStack } from '../lib/neurosemantics-stack.js';
+import { SemantikaStack } from '../lib/semantika-stack.js';
 
 const app = new App();
 
-new NeuroSemanticsStack(app, 'NeuroSemantics', {
+new SemantikaStack(app, 'Semantika', {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: process.env.CDK_DEFAULT_REGION ?? 'eu-north-1',

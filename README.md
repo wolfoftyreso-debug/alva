@@ -1,11 +1,36 @@
-# NeuroSemantics AI
+# Semantika
 
-A minimalist mobile app for iOS and Android. The product is one thing only:
-an intelligent conversation partner with a specialized knowledge base in
-neurosemantics and NLP. No course portal, no CRM, no community.
+**Think Beyond Thought.**
 
-Design language: calm, simple, clear. Off-white background, near-black text,
-one dark blue-green accent. No animations, no gradients.
+The world's first NeuroSemantic conversation platform. Semantika helps people
+explore how they create meaning, interpret their experiences, and communicate
+with themselves and others — through structured conversations inspired by
+neurosemantic principles.
+
+## Brand
+
+- **Core promise** — Discover the meaning behind your thinking.
+- **Mission** — Helping people create better meaning.
+- **Vision** — To make NeuroSemantic thinking accessible to everyone.
+
+**Positioning.** Semantika is not therapy, not self-help, and not a course.
+It is an intelligent reflection partner that uses neurosemantic models to
+help the user explore thinking patterns, communication, and perspective.
+Instead of quick advice, Semantika starts by helping the user explore how
+they interpret their situation — supporting reflection and
+perspective-taking, not delivering finished answers.
+
+**Honest claims.** Neurosemantics and NLP are presented as inspiration and
+models for reflection, never as scientifically proven methods. This is
+enforced in the system instructions and the knowledge base; copy in the app
+and the stores must follow the same rule.
+
+**Tone.** Never judging, dramatic, overenthusiastic, or preaching. Always
+calm, curious, clear, respectful, structured, thoughtful.
+
+**Design.** Scandinavian, clinical, quiet, precise, minimal. Off-white
+background, near-black text, one dark blue-green accent. Generous white
+space. No animations, no gradients.
 
 ## System overview
 
@@ -106,7 +131,7 @@ npx cdk deploy
 
 After the first deploy:
 
-1. Put values into the `neurosemantics/app` secret in Secrets Manager:
+1. Put values into the `semantika/app` secret in Secrets Manager:
    `OPENAI_API_KEY`, `APPLE_SHARED_SECRET`, `GOOGLE_SERVICE_ACCOUNT_JSON`.
 2. Run `db/migrations/001_init.sql` against the cluster (credentials are in
    the RDS-managed secret).
@@ -130,6 +155,11 @@ GitHub Actions: `ci.yml` lints, type-checks and tests every PR;
 - The Lambda runs in private subnets; the database is not publicly reachable.
 
 ## Product philosophy
+
+People grow when they become more aware of how they create meaning,
+interpret their experiences, and shape their decisions. Semantika helps the
+user ask better questions, discover new perspectives, and reflect on their
+own thinking.
 
 Every free user should leave the app feeling that the system understood
 their situation, that a concrete analysis is ready, and that the next step
