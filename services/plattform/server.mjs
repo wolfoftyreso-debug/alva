@@ -220,6 +220,35 @@ export function skapaServer() {
         }
       }
 
+      // Organisationsöversikt för arbetsledare/admin: alla ärenden med
+      // status, deltagande tekniker och sammanfattning — härlett ur
+      // händelseloggen, aldrig lagrat separat.
+      if (req.method === "GET" && vag === "/api/oversikt") {
+        if (anspr.roll !== "arbetsledare" && anspr.roll !== "admin") {
+          return svara(res, 403, { error: "Kräver arbetsledar- eller administratörsbehörighet." });
+        }
+        const rader = await pool.query(
+          `select a.id, a.nummer, a.skapad, a.delningskod, a.metodik_id,
+                  count(h.id)::int as antal_handelser,
+                  min(h.tidpunkt) as forsta,
+                  max(h.tidpunkt) as senaste,
+                  coalesce(bool_or(h.handelse->>'typ' = 'arende_avslutat'), false) as avslutat,
+                  (array_agg(h.handelse->'objekt'->>'beskrivning')
+                     filter (where h.handelse->>'typ' = 'objekt_identifierat'))[1] as objekt,
+                  (array_agg(h.handelse->>'text')
+                     filter (where h.handelse->>'typ' = 'felbeskrivning'))[1] as felbeskrivning,
+                  array_agg(distinct h.anvandare) filter (where h.anvandare is not null) as tekniker
+           from felsokning_arenden a
+           left join felsokning_handelser h on h.arende_id = a.id
+           where a.organisation_id = $1
+           group by a.id
+           order by max(h.tidpunkt) desc nulls last
+           limit 200`,
+          [anspr.org],
+        );
+        return svara(res, 200, { arenden: rader.rows });
+      }
+
       if (req.method === "GET" && vag === "/api/arenden") {
         const rader = await pool.query(
           `select id, nummer, skapad, delningskod, metodik_id from felsokning_arenden

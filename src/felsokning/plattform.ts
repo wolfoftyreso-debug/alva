@@ -98,6 +98,28 @@ export async function skapaAnvandare(
   }
 }
 
+// Organisationsöversikt (arbetsledare/admin; servern verifierar).
+export interface OversiktsRad {
+  id: string;
+  nummer: number;
+  skapad: string;
+  delningskod: string | null;
+  metodik_id: string | null;
+  antal_handelser: number;
+  forsta: string | null;
+  senaste: string | null;
+  avslutat: boolean;
+  objekt: string | null;
+  felbeskrivning: string | null;
+  tekniker: string[] | null;
+}
+
+export async function hamtaOversikt(): Promise<OversiktsRad[]> {
+  const res = await plattformFetch("/api/oversikt");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { arenden: OversiktsRad[] }).arenden;
+}
+
 // Autentiserat anrop mot plattformen. En utgången token rensas (401) så
 // att appen faller tillbaka till lokalt läge tills nästa inloggning.
 export async function plattformFetch(vag: string, init?: RequestInit): Promise<Response> {

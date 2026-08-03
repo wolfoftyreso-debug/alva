@@ -99,4 +99,17 @@ kontroll "org A har två användare" "$ANTAL_ANV" "2"
 ANTAL=$(curl -s "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_J" | falt .handelser.length)
 kontroll "tekniker i samma org når ärendet" "$ANTAL" "2"
 
+# 9. Organisationsöversikten: tekniker nekas; arbetsledare får status ur loggen
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/oversikt" -H "Authorization: Bearer $TOKEN_J")
+kontroll "tekniker nekas översikten" "$KOD" "403"
+curl -s -X POST "$BAS/api/anvandare" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"epost":"lisa@a.se","losenord":"hemligt123","namn":"Lisa","roll":"arbetsledare"}' >/dev/null
+TOKEN_L=$(curl -s -X POST "$BAS/api/auth/logga-in" -H 'Content-Type: application/json' \
+  -d '{"epost":"lisa@a.se","losenord":"hemligt123"}' | falt .token)
+OVERSIKT=$(curl -s "$BAS/api/oversikt" -H "Authorization: Bearer $TOKEN_L")
+kontroll "arbetsledaren ser organisationens ärenden" "$(echo "$OVERSIKT" | falt .arenden.length)" "1"
+kontroll "översikten härleder felbeskrivning" "$(echo "$OVERSIKT" | falt '.arenden[0].felbeskrivning')" "Startar inte"
+kontroll "översikten härleder status" "$(echo "$OVERSIKT" | falt '.arenden[0].avslutat')" "false"
+kontroll "översikten räknar händelser" "$(echo "$OVERSIKT" | falt '.arenden[0].antal_handelser')" "2"
+
 echo "Integrationstest: allt grönt"

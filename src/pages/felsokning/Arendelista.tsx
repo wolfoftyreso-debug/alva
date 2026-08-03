@@ -57,6 +57,11 @@ function PlattformInloggning() {
               Logga ut
             </button>
           </div>
+          {(konto.roll === "arbetsledare" || konto.roll === "admin") && (
+            <Link to="/felsokning/oversikt" className="mt-3 block">
+              <StorKnapp variant="sekundar">📊 Organisationsöversikt</StorKnapp>
+            </Link>
+          )}
         </Panel>
         {konto.roll === "admin" && <AnvandarAdmin />}
       </>
