@@ -1,0 +1,17 @@
+# EXEMPEL — checka aldrig in riktiga värden. Skapa hellre direkt:
+#
+#   kubectl -n guidad-felsokning create secret generic felsokning-hemligheter \
+#     --from-literal=anthropic-api-key='sk-ant-…' \
+#     --from-literal=supabase-jwt-secret='…'
+#
+# I produktion: använd extern secrets-hantering (External Secrets Operator,
+# Sealed Secrets eller molnleverantörens secret manager).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: felsokning-hemligheter
+  namespace: guidad-felsokning
+type: Opaque
+stringData:
+  anthropic-api-key: ERSATT-MIG
+  supabase-jwt-secret: ERSATT-MIG

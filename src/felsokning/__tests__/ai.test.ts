@@ -19,6 +19,23 @@ describe("AI-orkestern", () => {
     expect(ENDPOINT).toContain("ANTHROPIC_API_KEY");
   });
 
+  it("K8s-tjänsten (services/ai-orkester) kör samma orkester som edge-funktionen", () => {
+    const tjanst = readFileSync("services/ai-orkester/server.mjs", "utf8");
+    for (const bit of [
+      '"claude-sonnet-5"',
+      '"claude-opus-5"',
+      '"claude-haiku-4-5"',
+      "handledning:",
+      "granskning:",
+      "sammanfattning:",
+      "metodikval:",
+      "Hitta aldrig på fakta",
+      "SUPABASE_JWT_SECRET",
+    ]) {
+      expect(tjanst).toContain(bit);
+    }
+  });
+
   it("endpointen kodar AI-reglerna i grundprompten", () => {
     expect(ENDPOINT).toContain("Hitta aldrig på fakta");
     expect(ENDPOINT).toContain("aldrig en hypotes som ett konstaterat fel");

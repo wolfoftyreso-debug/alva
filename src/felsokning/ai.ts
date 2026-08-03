@@ -89,6 +89,10 @@ export function tolkaAiSvar(data: unknown): AiSvar {
   return { rader, nastaSteg: svar.nastaSteg };
 }
 
+// I Kubernetes-driften pekar VITE_AI_ORKESTER_URL på orkestertjänsten
+// (services/ai-orkester); utan den används Supabase-edge-funktionen.
+const ORKESTER_URL = (import.meta.env.VITE_AI_ORKESTER_URL as string | undefined)?.replace(/\/$/, "");
+
 // Returnerar null i lokalt läge (ej inloggad) — orkestern nås via
 // plattformens autentiserade backend.
 async function anropa(uppgift: AiUppgift, prompt: string): Promise<{ modell: string; svar: unknown } | null> {
@@ -96,10 +100,25 @@ async function anropa(uppgift: AiUppgift, prompt: string): Promise<{ modell: str
   const { data } = await supabase.auth.getSession();
   if (!data.session) return null;
 
-  const { data: resultat, error } = await supabase.functions.invoke("felsokning-ai", {
-    body: { uppgift, prompt },
-  });
-  if (error) throw error;
+  let resultat: unknown;
+  if (ORKESTER_URL) {
+    const res = await fetch(`${ORKESTER_URL}/api/ai`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${data.session.access_token}`,
+      },
+      body: JSON.stringify({ uppgift, prompt }),
+    });
+    if (!res.ok) throw new Error(`AI-orkestern svarade ${res.status}`);
+    resultat = await res.json();
+  } else {
+    const { data: svar, error } = await supabase.functions.invoke("felsokning-ai", {
+      body: { uppgift, prompt },
+    });
+    if (error) throw error;
+    resultat = svar;
+  }
   const { modell, svar } = resultat as { modell?: string; svar?: unknown };
   if (typeof modell !== "string") throw new Error("Oväntat svar från AI-endpointen");
   return { modell, svar };

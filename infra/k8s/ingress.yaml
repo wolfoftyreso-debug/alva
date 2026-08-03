@@ -1,0 +1,29 @@
+# Ingress med TLS (cert-manager): webben på /, AI-orkestern på /api/ai.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: guidad-felsokning
+  namespace: guidad-felsokning
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt # ersätt med er issuer
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [app.exempel.se] # ersätt med er domän
+      secretName: guidad-felsokning-tls
+  rules:
+    - host: app.exempel.se # ersätt med er domän
+      http:
+        paths:
+          - path: /api/ai
+            pathType: Prefix
+            backend:
+              service: { name: ai-orkester, port: { number: 80 } }
+          - path: /halsa
+            pathType: Prefix
+            backend:
+              service: { name: ai-orkester, port: { number: 80 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: web, port: { number: 80 } }
