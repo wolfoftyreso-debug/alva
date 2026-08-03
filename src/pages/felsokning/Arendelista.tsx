@@ -73,7 +73,7 @@ function PlattformInloggning() {
       {lage === "stangd" ? (
         <>
           <p className="mb-2 text-zinc-300">
-            Logga in för synk mellan enheter, samarbete i ärenden och AI-orkestern. Utan inloggning
+            Logga in för synk mellan enheter, samarbete i ärenden och AI-stöd. Utan inloggning
             arbetar appen i lokalt läge. Ny organisation? Skapa konto — du blir systemadministratör.
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -300,13 +300,13 @@ export default function Arendelista() {
 
       {plattformAktiv() && <PlattformInloggning />}
 
-      <Panel rubrik="AI-orkestern">
+      <Panel rubrik="AI-stöd">
         <p className="text-zinc-300">
-          Ingår i tjänsten och drivs av plattformen — flera Claude-modeller med olika roller: handledning i
-          realtid på varje dokumentation, djupgranskning av hela underlaget, överlämningssammanfattning och
-          metodikklassificering. Anropen går via plattformens backend; inga AI-nycklar hanteras av
-          verkstaden. Aktiveras automatiskt för inloggade användare; i lokalt läge guidar den deterministiska
-          metodiken ensam.
+          När du är inloggad hjälper AI:n dig medan du arbetar: föreslår nästa steg utifrån det du
+          dokumenterar, granskar hela ärendet på begäran och skriver utkast till överlämningen. Den
+          skiljer alltid på verifierat och hypotes — och slår aldrig fast en felorsak som inte är
+          bekräftad. Inget att installera eller ställa in; allt ingår i tjänsten. Utan inloggning
+          guidar checklistan dig steg för steg.
         </p>
       </Panel>
 

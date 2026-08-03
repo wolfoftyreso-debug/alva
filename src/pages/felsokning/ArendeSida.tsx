@@ -765,8 +765,8 @@ function BriefFlik({
       {!b.avslutat && (
         <Panel rubrik="AI-granskning">
           <p className="mb-2 text-zinc-300">
-            Låt orkesterns djupaste modell granska hela underlaget: motsägelser mellan observationer,
-            luckor i dokumentationen och slutsatser som saknar stöd.
+            Låt AI:n gå igenom hela underlaget innan du lämnar det vidare: motsägelser mellan
+            observationer, luckor i dokumentationen och slutsatser som saknar stöd.
           </p>
           {granskning === "arbetar" && <p className="mb-2 animate-pulse font-bold text-amber-400">AI granskar underlaget …</p>}
           {granskning === "fel" && (
