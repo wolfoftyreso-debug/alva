@@ -335,3 +335,31 @@ describe("Fordonshistorik (lokal projektion)", () => {
     expect(lokalFordonshistorik({ [tidigare.id]: tidigare }, "ZZZ111")).toHaveLength(0);
   });
 });
+
+describe("Videoevidens (E3) och signerat avslut", () => {
+  it("video höjer evidensnivån till E3 och räknas som oberoende källa", () => {
+    const medVideo = byggArende([{ typ: "video", beskrivning: "Motorljud vid tomgång", dataUrl: "data:video/webm;base64,x" }]);
+    expect(evidensNiva(medVideo)).toBe("E3");
+    expect(evidensposter(medVideo)[0].kategori).toBe("video");
+    const tvaKallor = byggArende([
+      { typ: "video", beskrivning: "Motorljud", dataUrl: "data:video/webm;base64,x" },
+      { typ: "matvarde", beskrivning: "Oljetryck", varde: "3,1", enhet: "bar" },
+    ]);
+    expect(evidensNiva(tvaKallor)).toBe("E6");
+  });
+
+  it("underlagskällan Video valideras mot loggen i felorsaksanalysen", async () => {
+    const { underlagFinns } = await import("../ecm");
+    expect(underlagFinns(byggArende([OBJEKT]), "Video")).toBe(false);
+    expect(underlagFinns(byggArende([{ typ: "video", beskrivning: "x", dataUrl: "data:" }]), "Video")).toBe(true);
+  });
+
+  it("avslutet signeras och grinden redovisar signaturen", async () => {
+    const { handelseRubrik, nyLoggPost: ny } = await import("../domain");
+    expect(handelseRubrik(ny("Erik", { typ: "arende_avslutat", signatur: "Erik" }))).toContain("signerad av Erik");
+    const stangd = byggArende([OBJEKT, ...PREDIAG, { typ: "arende_avslutat", signatur: "Erik" }]);
+    const rad = kvalitetsgrind(stangd, VIBRATION_METODIK).find((r) => r.id === "signering");
+    expect(rad?.ok).toBe(true);
+    expect(rad?.detalj).toContain("Erik");
+  });
+});

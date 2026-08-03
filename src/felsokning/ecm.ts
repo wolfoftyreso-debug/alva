@@ -77,6 +77,7 @@ export function evidensposter(arende: Arende): Evidenspost[] {
   for (const post of arende.handelser) {
     const h = post.handelse;
     if (h.typ === "foto") lagg(post, "foto", "E2", h.beskrivning);
+    if (h.typ === "video") lagg(post, "video", "E3", h.beskrivning);
     if (h.typ === "matvarde") lagg(post, "mätvärde", "E4", `${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""}`);
     if (h.typ === "matarstallning" && !h.undantag) lagg(post, "mätarställning", "E2", `${h.lage === "ingaende" ? "In" : "Ut"}: ${h.varde}`);
     if (h.typ === "arbetsorder_skannad") lagg(post, "dokument", "E5", `Arbetsorder, ${h.falt.length} fält`);
@@ -90,10 +91,11 @@ export function evidensposter(arende: Arende): Evidenspost[] {
 export function evidensNiva(arende: Arende): EvidensNiva {
   const poster = evidensposter(arende);
   const har = (n: string) => poster.some((p) => p.niva === n);
-  const kallor = [har("E2"), har("E4"), har("E5")].filter(Boolean).length;
+  const kallor = [har("E2"), har("E3"), har("E4"), har("E5")].filter(Boolean).length;
   if (kallor >= 2) return "E6";
   if (har("E5")) return "E5";
   if (har("E4")) return "E4";
+  if (har("E3")) return "E3";
   if (har("E2")) return "E2";
   if (har("E1")) return "E1";
   return "E0";
@@ -173,6 +175,8 @@ export function underlagFinns(arende: Arende, kalla: string): boolean {
   switch (kalla) {
     case "Foto":
       return h.some((x) => x.typ === "foto");
+    case "Video":
+      return h.some((x) => x.typ === "video");
     case "Mätresultat":
       return h.some((x) => x.typ === "matvarde");
     case "Diagnosutläsning":
@@ -183,7 +187,7 @@ export function underlagFinns(arende: Arende, kalla: string): boolean {
     case "Direkt observation":
       return h.some((x) => x.typ === "observation" || x.typ === "kontroll_utford");
     default:
-      // Video/teknisk dokumentation: kan ännu inte verifieras maskinellt.
+      // Teknisk dokumentation: kan ännu inte verifieras maskinellt.
       return true;
   }
 }
@@ -584,6 +588,20 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
       detalj: ok ? undefined : regel.detaljVidBrist,
     });
   }
+
+  const avslutEvent = handelser.find((h) => h.typ === "arende_avslutat");
+  rader.push({
+    id: "signering",
+    rubrik: "Teknikerns slutsats signerad",
+    ok: !avslutat || (avslutEvent?.typ === "arende_avslutat" && !!avslutEvent.signatur),
+    kravs: false,
+    detalj:
+      avslutat && avslutEvent?.typ === "arende_avslutat" && avslutEvent.signatur
+        ? `Signerad av ${avslutEvent.signatur}.`
+        : avslutat
+          ? "Avslutet saknar signatur (äldre ärende)."
+          : "Signeras automatiskt när ärendet avslutas.",
+  });
 
   const hypoteser = handelser.filter((h) => h.typ === "hypotes").length;
   rader.push({

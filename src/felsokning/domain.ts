@@ -67,6 +67,10 @@ export type Handelse =
   | { typ: "matvarde"; beskrivning: string; varde: string; enhet?: string }
   | { typ: "hypotes"; text: string; niva: Exclude<Tillforlitlighet, "hog"> }
   | { typ: "foto"; beskrivning: string; dataUrl: string }
+  // Video med ljud (E3-evidens): för det som låter eller rör sig —
+  // motorljud, hjullager, fjädringsrörelse. Kort och komprimerad;
+  // originalfilen bevaras som evidens precis som foton.
+  | { typ: "video"; beskrivning: string; dataUrl: string }
   | { typ: "kommentar"; text: string }
   | { typ: "kategori_byte"; kategori: TidKategori }
   | { typ: "inaktivitet_forklarad"; text: string; minuter: number }
@@ -104,7 +108,8 @@ export type Handelse =
       nastaSteg: string;
       modell: string;
     }
-  | { typ: "arende_avslutat" };
+  // Avslutet signeras av teknikern — slutsatsen får en ansvarig avsändare.
+  | { typ: "arende_avslutat"; signatur?: string };
 
 export interface LoggPost {
   id: string;
@@ -160,6 +165,8 @@ export function handelseRubrik(post: LoggPost): string {
       return `Hypotes (${TILLFORLITLIGHET_LABEL[h.niva]}): ${h.text}`;
     case "foto":
       return `Foto: ${h.beskrivning}`;
+    case "video":
+      return `Video: ${h.beskrivning}`;
     case "kommentar":
       return h.text;
     case "kategori_byte":
@@ -194,6 +201,6 @@ export function handelseRubrik(post: LoggPost): string {
       return `AI: ${forsta ? `${forsta.text} ` : ""}— Nästa steg: ${h.nastaSteg}`;
     }
     case "arende_avslutat":
-      return "Felsökning avslutad";
+      return h.signatur ? `Felsökning avslutad — signerad av ${h.signatur}` : "Felsökning avslutad";
   }
 }

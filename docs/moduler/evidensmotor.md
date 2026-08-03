@@ -23,7 +23,7 @@ omöjligt.
 | E0 | Inget underlag | 0 % |
 | E1 | Teknikerns observation | Lågt |
 | E2 | Foto | Medel |
-| E3 | Video | Högt |
+| E3 | Video (med ljud — för det som låter eller rör sig) | Högt |
 | E4 | Mätvärde | Högt |
 | E5 | Diagnosdata/dokument | Mycket högt |
 | E6 | Flera oberoende källor | Högsta |
@@ -80,6 +80,7 @@ alla obligatoriska rader är gröna:
 | Metodikens kontroller: evidens eller dokumenterat undantag | Obligatorisk |
 | Foton för fotokrävande kontroller | Obligatorisk |
 | Ärendetypens compliance-krav | Obligatoriska |
+| Teknikerns slutsats signerad | Automatisk vid avslut |
 | Evidensnivå över E0 | Obligatorisk |
 
 ### 6. Traceability Engine

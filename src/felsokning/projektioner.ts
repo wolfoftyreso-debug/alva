@@ -182,6 +182,16 @@ export function foton(arende: Arende): { beskrivning: string; dataUrl: string; t
   return resultat;
 }
 
+export function videor(arende: Arende): { beskrivning: string; dataUrl: string; tidpunkt: string }[] {
+  const resultat: { beskrivning: string; dataUrl: string; tidpunkt: string }[] = [];
+  for (const post of arende.handelser) {
+    if (post.handelse.typ === "video") {
+      resultat.push({ beskrivning: post.handelse.beskrivning, dataUrl: post.handelse.dataUrl, tidpunkt: post.tidpunkt });
+    }
+  }
+  return resultat;
+}
+
 // Tidsredovisning: varje intervall mellan två händelser tillhör den kategori
 // som var aktiv när intervallet började. Kategori styrs av kategori_byte-
 // händelser; standard är aktiv felsökning. Paus räknas inte in i total tid.

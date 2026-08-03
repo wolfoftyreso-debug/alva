@@ -11,6 +11,7 @@ import {
   felbeskrivning,
   formateraTid,
   foton,
+  videor,
   lokalFordonshistorik,
   objekt,
   overlamningstext,
@@ -58,7 +59,7 @@ import {
   underlagFinns,
 } from "@/felsokning/ecm";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
-import { skalaNerFoto, tidDatum, tidKlockslag } from "@/felsokning/format";
+import { lasVideo, skalaNerFoto, tidDatum, tidKlockslag } from "@/felsokning/format";
 import { IkonCheck, IkonKamera, IkonKryss, IkonLank, IkonPunkt, IkonSok, IkonVarning } from "@/felsokning/ikoner";
 
 const FLIKAR = [
@@ -872,6 +873,7 @@ function GuideFlik({
   nu: string;
 }) {
   const steg = useMemo(() => nastaSteg(arende, metodik), [arende, metodik]);
+  const anvandare = useFelsokning((s) => s.anvandare);
   const [visaOverlamning, setVisaOverlamning] = useState(false);
   const [aiStatus, setAiStatus] = useState<"vilar" | "arbetar" | "fel">("vilar");
 
@@ -929,7 +931,7 @@ function GuideFlik({
               Om felorsaken inte är verifierad: dokumentera en hypotes och utöka felsökningen, eller avsluta ärendet
               med rekommenderade nästa steg.
             </p>
-            <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat" })}>
+            <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare })}>
               Avsluta felsökning
             </StorKnapp>
             {!kanAvslutas && (
@@ -1001,7 +1003,7 @@ function GuideFlik({
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
           Lämna över arbete
         </StorKnapp>
-        <StorKnapp variant="sekundar" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat" })}>
+        <StorKnapp variant="sekundar" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare })}>
           Avsluta felsökning
         </StorKnapp>
       </div>
@@ -1211,6 +1213,7 @@ const DOKTYPER = [
   { id: "observation", label: "Observation" },
   { id: "matvarde", label: "Mätvärde" },
   { id: "foto", label: "Foto" },
+  { id: "video", label: "Video" },
   { id: "instrument", label: "Instrument" },
   { id: "hypotes", label: "Hypotes" },
   { id: "kommentar", label: "Kommentar" },
@@ -1232,6 +1235,9 @@ function SnabbDokumentation({
   const [varde, setVarde] = useState("");
   const filRef = useRef<HTMLInputElement>(null);
   const instRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
+  const [video, setVideo] = useState<{ dataUrl: string; beskrivning: string } | null>(null);
+  const [videoFel, setVideoFel] = useState("");
   const [avlasning, setAvlasning] = useState<{ foto: string; tolkning: InstrumentTolkning; demo?: boolean } | null>(null);
   const [laserAv, setLaserAv] = useState(false);
 
@@ -1309,9 +1315,11 @@ function SnabbDokumentation({
             onClick={() =>
               d.id === "foto"
                 ? filRef.current?.click()
-                : d.id === "instrument"
-                  ? instRef.current?.click()
-                  : setTyp(typ === d.id ? null : d.id)
+                : d.id === "video"
+                  ? videoRef.current?.click()
+                  : d.id === "instrument"
+                    ? instRef.current?.click()
+                    : setTyp(typ === d.id ? null : d.id)
             }
             className={`min-h-9 rounded border text-[12px] font-semibold transition-colors ${
               typ === d.id
@@ -1349,6 +1357,52 @@ function SnabbDokumentation({
           e.target.value = "";
         }}
       />
+      <input
+        ref={videoRef}
+        type="file"
+        accept="video/*"
+        capture="environment"
+        className="hidden"
+        onChange={async (e) => {
+          const fil = e.target.files?.[0];
+          e.target.value = "";
+          if (!fil) return;
+          setVideoFel("");
+          try {
+            setVideo({ dataUrl: await lasVideo(fil), beskrivning: "" });
+          } catch (misslyckande) {
+            setVideoFel(misslyckande instanceof Error ? misslyckande.message : "Videon kunde inte läsas.");
+          }
+        }}
+      />
+      {videoFel && <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">{videoFel}</p>}
+      {video && (
+        <div className="mt-3 rounded border border-[#C6C6C6] bg-white p-2">
+          <video src={video.dataUrl} controls className="mb-2 max-h-48 w-full rounded border border-[#C6C6C6]" />
+          <TextFalt
+            label="Vad visar videon? (obligatoriskt — det som låter eller rör sig)"
+            varde={video.beskrivning}
+            satt={(beskrivning) => setVideo((v) => (v ? { ...v, beskrivning } : v))}
+            platshallare="T.ex. Motorljud vid tomgång — tickande från topplocket"
+            rost
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => setVideo(null)}>
+              Förkasta
+            </StorKnapp>
+            <StorKnapp
+              disabled={!video.beskrivning.trim()}
+              onClick={() => {
+                skicka({ typ: "video", beskrivning: video.beskrivning.trim(), dataUrl: video.dataUrl });
+                paSparad?.(`Video dokumenterad: ${video.beskrivning.trim()}`);
+                setVideo(null);
+              }}
+            >
+              Spara video
+            </StorKnapp>
+          </div>
+        </div>
+      )}
       {laserAv && <p className="mt-2 animate-pulse text-center text-[12px] font-semibold text-[#00437A]">Systemet läser av instrumentet …</p>}
       {avlasning && (
         <div className="mt-3 rounded border border-[#C6C6C6] bg-white p-2">
@@ -1594,6 +1648,9 @@ function LoggFlik({ arende }: { arende: Arende }) {
               {post.handelse.typ === "foto" && (
                 <img src={post.handelse.dataUrl} alt={post.handelse.beskrivning} className="mt-1 max-h-40 rounded border border-[#C6C6C6]" />
               )}
+              {post.handelse.typ === "video" && (
+                <video src={post.handelse.dataUrl} controls className="mt-1 max-h-40 rounded border border-[#C6C6C6]" />
+              )}
             </div>
           </li>
         ))}
@@ -1748,6 +1805,7 @@ function RapportFlik({
   const anvandare = useFelsokning((s) => s.anvandare);
   const b = brief(arende, metodik, nu);
   const bilder = foton(arende);
+  const klipp = videor(arende);
   const fordelning = tidsfordelningsRader(arende, nu);
   const idn = arendeidentitet(arende);
   const typ = arendetyp(arende);
@@ -1927,6 +1985,16 @@ function RapportFlik({
           </p>
         ))}
       </Panel>
+      {klipp.length > 0 && (
+        <Panel rubrik="Dokumenterad video">
+          {klipp.map((v, i) => (
+            <figure key={i} className="mb-2">
+              <video src={v.dataUrl} controls className="w-full rounded border border-[#C6C6C6]" />
+              <figcaption className="mt-1 text-[11px] text-[#4A5560]">{v.beskrivning}</figcaption>
+            </figure>
+          ))}
+        </Panel>
+      )}
       {bilder.length > 0 && (
         <Panel rubrik="Dokumenterade bilder">
           <div className="grid grid-cols-2 gap-2">

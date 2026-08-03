@@ -6,7 +6,7 @@
 
 import type { Arende } from "./domain";
 import { handelseRubrik } from "./domain";
-import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader } from "./projektioner";
+import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader, videor } from "./projektioner";
 import { metodikForArende } from "./store";
 import { tidDatum, tidKlockslag } from "./format";
 import { FelsokningSkal, Panel } from "./ui";
@@ -58,6 +58,7 @@ export function DelatArendeVy({
   const b = brief(arende, metodik, nu);
   const avslutat = arAvslutat(arende);
   const bilder = foton(arende);
+  const klipp = videor(arende);
   const matvarden = arende.handelser.filter((p) => p.handelse.typ === "matvarde");
   const kundposter = redanFiltrerad
     ? arende.handelser
@@ -102,6 +103,16 @@ export function DelatArendeVy({
         ))}
       </Panel>
 
+      {klipp.length > 0 && (
+        <Panel rubrik="Video">
+          {klipp.map((v, i) => (
+            <figure key={i} className="mb-2">
+              <video src={v.dataUrl} controls className="w-full rounded border border-[#C6C6C6]" />
+              <figcaption className="mt-1 text-[11px] text-[#4A5560]">{v.beskrivning}</figcaption>
+            </figure>
+          ))}
+        </Panel>
+      )}
       {bilder.length > 0 && (
         <Panel rubrik="Bilder">
           <div className="grid grid-cols-2 gap-2">

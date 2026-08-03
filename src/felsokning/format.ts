@@ -29,3 +29,20 @@ export function skalaNerFoto(fil: File, maxSida = 1024): Promise<string> {
     lasare.readAsDataURL(fil);
   });
 }
+
+// Video läses rå (ingen transkodning i webbläsaren) — därför hård
+// storleksgräns: kort och komprimerad klipp, ca 10–15 sekunder.
+export const MAX_VIDEO_BYTE = 2_500_000;
+
+export function lasVideo(fil: File): Promise<string> {
+  return new Promise((los, avvisa) => {
+    if (fil.size > MAX_VIDEO_BYTE) {
+      avvisa(new Error("Videon är för stor — spela in ett kort klipp (ca 10–15 sekunder)."));
+      return;
+    }
+    const lasare = new FileReader();
+    lasare.onload = () => los(lasare.result as string);
+    lasare.onerror = () => avvisa(new Error("Videon kunde inte läsas."));
+    lasare.readAsDataURL(fil);
+  });
+}
