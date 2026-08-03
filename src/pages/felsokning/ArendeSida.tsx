@@ -6,6 +6,7 @@ import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
 import {
   arAvslutat,
+  arendeidentitet,
   brief,
   felbeskrivning,
   formateraTid,
@@ -35,7 +36,19 @@ import {
   type InstrumentTolkning,
 } from "@/felsokning/ai";
 import { byggDemoInstrument } from "@/felsokning/demo";
-import { ECM_VERSION, UNDANTAGSORSAKER, grindGodkand, kvalitetsgrind } from "@/felsokning/ecm";
+import {
+  ARENDETYPER,
+  ECM_VERSION,
+  MARKOR_FELBESKRIVNING_VERIFIERAD,
+  MARKOR_INGA_TIDIGA_OBSERVATIONER,
+  MARKOR_TIDIGA_OBSERVATIONER_KLARA,
+  UNDANTAGSORSAKER,
+  arendetyp,
+  grindGodkand,
+  kvalitetsgrind,
+  preDiagnostik,
+  sparbarhetspaket,
+} from "@/felsokning/ecm";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto, tidKlockslag } from "@/felsokning/format";
 
@@ -127,6 +140,10 @@ export default function ArendeSida() {
         </div>
       }
     >
+      {/* Ärendeidentiteten: registreras en gång, alltid synlig — det ska
+          aldrig råda tvekan om vilket fordon och ärende som avses. */}
+      <IdentitetsRad arende={arende} skicka={skicka} />
+
       {/* Klassisk trekolumnslayout på skrivbord: navigationsträd till
           vänster, arbetsyta i mitten, kontextpanel till höger. På smala
           skärmar: flikrad + en kolumn. */}
@@ -165,6 +182,238 @@ export default function ArendeSida() {
         </aside>
       </div>
     </FelsokningSkal>
+  );
+}
+
+// Nyckel/värde-rader för identitetspanelerna (rapport + delade vyer).
+function identitetsRader(rader: [string, string | undefined][]) {
+  return rader
+    .filter(([, varde]) => varde)
+    .map(([etikett, varde]) => (
+      <div key={etikett} className="flex justify-between gap-2 border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
+        <span className="text-[#4A5560]">{etikett}</span>
+        <span className="text-right font-medium">{varde}</span>
+      </div>
+    ));
+}
+
+// Ärendeidentiteten (Case Identity): kompakt rad med fordonsobjektet och
+// ärendereferenserna — alltid synlig i arbetsytan. Ärendetypen väljs här
+// och styr vilka dokumentationskrav ECM ställer.
+function IdentitetsRad({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
+  const idn = arendeidentitet(arende);
+  const typ = arendetyp(arende);
+  const del = (etikett: string, varde?: string) =>
+    varde ? (
+      <span className="whitespace-nowrap">
+        {etikett && <span className="text-[#707070]">{etikett} </span>}
+        <span className="font-semibold text-[#1A1A1A]">{varde}</span>
+      </span>
+    ) : null;
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 text-[12px] print:hidden">
+      {del("AO", idn.arbetsorder)}
+      {del("Claim", idn.claim)}
+      {del("Skadenr", idn.skadenummer)}
+      {del("", idn.beskrivning)}
+      {del("Regnr", idn.identifierare)}
+      {del("VIN", idn.vin)}
+      {del("Miltal", idn.miltal)}
+      {del("Ansvarig", idn.ansvarig)}
+      <label className="ml-auto flex items-center gap-1">
+        <span className="text-[#707070]">Ärendetyp</span>
+        <select
+          value={typ}
+          disabled={idn.avslutat}
+          onChange={(e) => skicka({ typ: "arendetyp_satt", arendetyp: e.target.value })}
+          className="rounded border border-[#ADADAD] bg-white px-1.5 py-0.5 text-[12px] focus:border-[#00437A] focus:outline-none"
+        >
+          {ARENDETYPER.map((t) => (
+            <option key={t}>{t}</option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+// Mätarställning in/ut: instrumentpanelen fotograferas, bildtolkningen
+// föreslår värdet och teknikern bekräftar. Fotot blir den officiella
+// mätarställningen (E2-evidens). Undantag kräver dokumenterad orsak.
+function MatarstallningSteg({ lage, skicka }: { lage: "ingaende" | "utgaende"; skicka: (h: Handelse) => void }) {
+  const filRef = useRef<HTMLInputElement>(null);
+  const [foto, setFoto] = useState<string | null>(null);
+  const [varde, setVarde] = useState("");
+  const [laser, setLaser] = useState(false);
+  const [demo, setDemo] = useState(false);
+
+  const fota = async (fil: File) => {
+    setLaser(true);
+    const dataUrl = await skalaNerFoto(fil);
+    setFoto(dataUrl);
+    try {
+      const res = await lasAvInstrument(dataUrl);
+      const km = res?.tolkning.varden.find((v) => /mätar|odo|km|mil/i.test(`${v.beskrivning} ${v.enhet ?? ""}`)) ?? res?.tolkning.varden[0];
+      if (km) setVarde(`${km.varde}${km.enhet ? ` ${km.enhet}` : ""}`);
+      if (!res) {
+        setDemo(true);
+        setVarde(lage === "ingaende" ? "84 320 km" : "84 512 km");
+      }
+    } catch {
+      // Avläsningen kunde inte nås — värdet anges manuellt.
+    }
+    setLaser(false);
+  };
+
+  return (
+    <div>
+      <input
+        ref={filRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const fil = e.target.files?.[0];
+          if (fil) fota(fil);
+          e.target.value = "";
+        }}
+      />
+      {!foto && !laser && (
+        <StorKnapp variant="sekundar" onClick={() => filRef.current?.click()}>
+          📷 Fotografera instrumentpanelen
+        </StorKnapp>
+      )}
+      {laser && <p className="animate-pulse py-1 text-center text-[12px] font-semibold text-[#00437A]">Systemet läser av mätarställningen …</p>}
+      {foto && !laser && (
+        <div className="mt-2">
+          {demo && (
+            <p className="mb-2 rounded border border-[#E0C36A] bg-[#FFF8E1] p-1.5 text-[11px] font-semibold text-[#9A6700]">
+              Demo-avläsning — bildtolkningen kräver inloggning. Kontrollera värdet.
+            </p>
+          )}
+          <img src={foto} alt="Instrumentpanel" className="mb-2 max-h-40 rounded border border-[#C6C6C6]" />
+          <TextFalt label={`Mätarställning (${lage === "ingaende" ? "ingående" : "utgående"})`} varde={varde} satt={setVarde} platshallare="T.ex. 84 320 km" />
+          <StorKnapp
+            disabled={!varde.trim()}
+            onClick={() => {
+              skicka({ typ: "matarstallning", lage, varde: varde.trim(), dataUrl: foto });
+              setFoto(null);
+              setVarde("");
+            }}
+          >
+            Spara mätarställning
+          </StorKnapp>
+        </div>
+      )}
+      <Undantag vidUndantag={(orsak) => skicka({ typ: "matarstallning", lage, varde: "", undantag: orsak })} />
+    </div>
+  );
+}
+
+// Pre-Diagnostic Validation: ingen felsökning påbörjas förrän
+// grundkontrollerna är genomförda — eller dokumenterat motiverade.
+function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
+  const rader = preDiagnostik(arende);
+  const rad = (id: string) => rader.find((r) => r.id === id)!;
+  const [historikVal, setHistorikVal] = useState<"" | "ja" | "nej">("");
+  const [historikText, setHistorikText] = useState("");
+  const fb = felbeskrivning(arende);
+  const harTidiga = arende.handelser.some((p) => p.handelse.typ === "observation" || p.handelse.typ === "foto");
+
+  return (
+    <Panel rubrik="Pre-diagnostik — innan felsökningen börjar">
+      {rader.map((r) => (
+        <p key={r.id} className="py-0.5 text-[13px]">
+          <span className={r.klar ? "text-[#1E6B34]" : "text-[#8B1A1A]"}>{r.klar ? "✅" : "☐"}</span> {r.rubrik}
+          {r.varning && <span className="ml-1 text-[11px] font-semibold text-[#9A6700]">⚠ {r.varning}</span>}
+        </p>
+      ))}
+
+      {!rad("historik").klar && (
+        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+            Har fordonets historik kontrollerats? (tidigare arbeten, återkommande fel, TSB, kampanjer)
+          </p>
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            <StorKnapp variant={historikVal === "ja" ? "primar" : "sekundar"} onClick={() => setHistorikVal("ja")}>
+              Ja — kontrollerad
+            </StorKnapp>
+            <StorKnapp variant={historikVal === "nej" ? "fara" : "sekundar"} onClick={() => setHistorikVal("nej")}>
+              Nej
+            </StorKnapp>
+          </div>
+          {historikVal && (
+            <>
+              <TextFalt
+                label={historikVal === "ja" ? "Relevanta tidigare arbeten (valfritt — orsakskedja)" : "Orsak till att historiken inte kontrollerats (obligatoriskt)"}
+                varde={historikText}
+                satt={setHistorikText}
+                platshallare={historikVal === "ja" ? "T.ex. Vattenpump bytt för 8 mån sedan — misstänkt läckage samma område" : ""}
+                rost
+              />
+              <StorKnapp
+                disabled={historikVal === "nej" && !historikText.trim()}
+                onClick={() => {
+                  skicka({ typ: "historik_kontrollerad", kontrollerad: historikVal === "ja", kommentar: historikText.trim() || undefined });
+                  setHistorikVal("");
+                  setHistorikText("");
+                }}
+              >
+                Dokumentera
+              </StorKnapp>
+            </>
+          )}
+        </div>
+      )}
+
+      {!rad("matarstallning_in").klar && (
+        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+            Ingående mätarställning — fotografera instrumentpanelen
+          </p>
+          <MatarstallningSteg lage="ingaende" skicka={skicka} />
+        </div>
+      )}
+
+      {!rad("felbeskrivning").klar && (
+        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+            Är kundens felbeskrivning korrekt återgiven?
+          </p>
+          {fb && <p className="mb-2 text-[13px]">”{fb}”</p>}
+          <StorKnapp variant="sekundar" onClick={() => skicka({ typ: "kommentar", text: `${MARKOR_FELBESKRIVNING_VERIFIERAD}.` })}>
+            Stämmer — verifierad
+          </StorKnapp>
+          <p className="mt-1 text-[11px] text-[#707070]">
+            Ytterligare symptom dokumenteras som separata observationer — blanda dem inte med kundens beskrivning.
+          </p>
+        </div>
+      )}
+
+      {!rad("tidiga_observationer").klar && (
+        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+            Något ytterligare vid mottagandet? (reparationsspår, modifieringar, skador, läckage, korrosion …)
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => skicka({ typ: "kommentar", text: `${MARKOR_INGA_TIDIGA_OBSERVATIONER}.` })}>
+              Inga ytterligare observationer
+            </StorKnapp>
+            <StorKnapp
+              variant="sekundar"
+              disabled={!harTidiga}
+              onClick={() => skicka({ typ: "kommentar", text: `${MARKOR_TIDIGA_OBSERVATIONER_KLARA}.` })}
+            >
+              Observationerna är dokumenterade
+            </StorKnapp>
+          </div>
+          <p className="mt-1 text-[11px] text-[#707070]">
+            Dokumentera med foto eller observation i panelen nedan — knappen låses upp när något loggats.
+          </p>
+        </div>
+      )}
+    </Panel>
   );
 }
 
@@ -370,6 +619,18 @@ function GuideFlik({
     );
   }
 
+  // Pre-Diagnostic Validation: metodiken öppnas först när grund-
+  // kontrollerna är genomförda eller dokumenterat motiverade.
+  if (!preDiagnostik(arende).every((r) => r.klar)) {
+    return (
+      <>
+        <KategoriRad arende={arende} skicka={skicka} />
+        <PreDiagnostikPanel arende={arende} skicka={skicka} />
+        <SnabbDokumentation skicka={skicka} paSparad={fragaAiOmDokumentation} />
+      </>
+    );
+  }
+
   return (
     <>
       <KategoriRad arende={arende} skicka={skicka} />
@@ -421,6 +682,14 @@ function GuideFlik({
       )}
 
       <SnabbDokumentation skicka={skicka} paSparad={fragaAiOmDokumentation} />
+
+      {/* Utgående mätarställning: obligatorisk för kvalitetsgrinden när
+          ärendet avslutas — erbjuds så fort metodiken är genomarbetad. */}
+      {!arende.handelser.some((p) => p.handelse.typ === "matarstallning" && p.handelse.lage === "utgaende") && (
+        <Panel rubrik="Utgående mätarställning — inför avslut">
+          <MatarstallningSteg lage="utgaende" skicka={skicka} />
+        </Panel>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
@@ -1174,6 +1443,17 @@ function RapportFlik({
   const b = brief(arende, metodik, nu);
   const bilder = foton(arende);
   const fordelning = tidsfordelningsRader(arende, nu);
+  const idn = arendeidentitet(arende);
+  const typ = arendetyp(arende);
+  let matIn: string | undefined;
+  let matUt: string | undefined;
+  for (const p of arende.handelser) {
+    const h = p.handelse;
+    if (h.typ === "matarstallning" && !h.undantag) {
+      if (h.lage === "ingaende") matIn = h.varde;
+      else matUt = h.varde;
+    }
+  }
   // Kategoribyten är interna; hypoteser och AI-dialogen är arbetsmaterial
   // och ingår inte i det som delas med kund.
   const kundposter = arende.handelser.filter(
@@ -1181,11 +1461,13 @@ function RapportFlik({
   );
 
   // Alla exporter bygger på samma händelselogg och versionsmärks:
-  // version = antal händelser vid exporttillfället.
+  // version = antal händelser vid exporttillfället. Spårbarhetspaketet
+  // (ECM-version, evidensposter med hash, grindstatus) följer med.
   const exporteraJson = () => {
     const version = arende.handelser.length;
     const data = {
       export: { format: "JSON", version, exporteradAv: anvandare, tidpunkt: new Date().toISOString() },
+      ecm: sparbarhetspaket(arende, metodik),
       arende,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -1262,13 +1544,30 @@ function RapportFlik({
           Delningslänken kräver att ärendet är synkat mot molnet (inloggad användare).
         </p>
       </Panel>
-      <Panel rubrik={`Ärende #${arende.nummer}`}>
-        {b.objekt && (
-          <p className="text-[14px] font-semibold">
-            {b.objekt.beskrivning} · {b.objekt.identifierare}
-          </p>
-        )}
-        {b.felbeskrivning && <p className="mt-1 text-[14px]">Felbeskrivning: ”{b.felbeskrivning}”</p>}
+      {/* Rapportens första sida: ärendeidentiteten — registrerad en gång,
+          återanvänd här automatiskt. */}
+      <Panel rubrik="Ärendeinformation">
+        {identitetsRader([
+          ["Ärende", `#${arende.nummer}`],
+          ["Arbetsorder", idn.arbetsorder],
+          ["Claim-/garantinr", idn.claim],
+          ["Skadenummer", idn.skadenummer],
+          ["Ärendetyp", typ],
+          ["Ansvarig tekniker", idn.ansvarig],
+        ])}
+      </Panel>
+      <Panel rubrik="Fordonsinformation">
+        {identitetsRader([
+          ["Fordon", idn.beskrivning],
+          ["Regnr", idn.identifierare],
+          ["VIN", idn.vin],
+          ["Mätarställning in", matIn],
+          ["Mätarställning ut", matUt],
+          ["Kund", idn.kund],
+        ])}
+      </Panel>
+      <Panel rubrik="Sammanfattning">
+        {b.felbeskrivning && <p className="text-[14px]">Felbeskrivning: ”{b.felbeskrivning}”</p>}
         <p className="mt-1 text-[14px]">Total arbetstid: <span className="font-semibold">{b.totalArbetstid}</span></p>
         {fordelning.length > 0 && (
           <div className="mt-2">

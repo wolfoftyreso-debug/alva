@@ -1,22 +1,31 @@
 // Evidence & Compliance Matrix (ECM) — plattformens regelmotor.
 //
-// Grundprincip: varje påstående måste kunna härledas till evidens i
-// händelseloggen. Systemet får aldrig skriva "kontrollerad", "OK" eller
-// "inga fel" utan underlag — utan evidens skrivs "Evidens saknas".
+// ECM är ett eget subsystem, inte en tabell i databasen: den avgör vilken
+// dokumentation som krävs, när dokumentation saknas, vilken bevisnivå som
+// uppnåtts, vilka regler som gäller (per ärendetyp) och om ett ärende kan
+// avslutas. Systemet kan aldrig skriva en slutsats som ECM inte godkänt.
 //
-// Regelbiblioteket är versionshanterat och skilt från applikationslogiken:
-// evidensnivåer, krav och kvalitetsgrind ändras här (och i kommande
-// versioner via serverdistribuerade regler) utan att vyerna byggs om.
-// Vyerna anropar bara de rena funktionerna nedan.
+// Sex motorer:
+//   1. Evidence Engine      — katalogiserar all bevisning ur loggen
+//   2. Rule Engine          — dokumentationskraven (metodik + automatiska regler)
+//   3. Compliance Engine    — vilka regler som gäller per ärendetyp
+//   4. Validation Engine    — inga påståenden utan underlag ("Evidens saknas")
+//   5. Completion Engine    — kvalitetsgrind: får ärendet avslutas/rapporteras?
+//   6. Traceability Engine  — varje evidenspost hash:as och versionsmärks
+//
+// Regelbiblioteket är versionshanterat och skilt från applikationslogiken;
+// vyerna anropar bara de rena funktionerna nedan. Nästa steg är server-
+// distribuerade regelpaket (garantivillkor per tillverkare, försäkrings-
+// krav, reklamationsregler) som laddas dynamiskt utan appändring.
 
-import type { Arende } from "./domain";
+import type { Arende, LoggPost } from "./domain";
 import type { Metodik } from "./metodik";
 
-export const ECM_VERSION = "1.0";
+export const ECM_VERSION = "2.0";
+
+// ---- 1. Evidence Engine -----------------------------------------------
 
 // Evidensnivåer: bevisvärdet för ett påstående, härlett ur loggen.
-//   E0 inget underlag · E1 teknikerns observation · E2 foto · E3 video
-//   E4 mätvärde · E5 diagnosdata/dokument · E6 flera oberoende källor
 export type EvidensNiva = "E0" | "E1" | "E2" | "E3" | "E4" | "E5" | "E6";
 
 export const EVIDENS_LABEL: Record<EvidensNiva, string> = {
@@ -29,8 +38,76 @@ export const EVIDENS_LABEL: Record<EvidensNiva, string> = {
   E6: "E6 · Flera oberoende källor",
 };
 
-// Godkända orsaker när underlag inte kan tas fram. Fri text tillåts
-// också — men en orsak är alltid obligatorisk.
+export interface Evidenspost {
+  id: string;
+  tidpunkt: string;
+  tekniker: string;
+  kategori: string;
+  niva: Exclude<EvidensNiva, "E0" | "E6">;
+  sammanfattning: string;
+  // Innehållshash för spårbarhet: samma post ger alltid samma hash,
+  // varje ändringsförsök syns (loggen är dessutom append-only i DB:n).
+  hash: string;
+}
+
+// FNV-1a — snabb, deterministisk innehållshash (spårbarhet, inte krypto;
+// manipulationsskyddet ligger i databasens append-only-triggers).
+export function innehallsHash(innehall: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < innehall.length; i++) {
+    h ^= innehall.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+// Katalogiserar varje evidenspost i loggen med nivå, kategori och hash.
+export function evidensposter(arende: Arende): Evidenspost[] {
+  const poster: Evidenspost[] = [];
+  const lagg = (post: LoggPost, kategori: string, niva: Evidenspost["niva"], sammanfattning: string) =>
+    poster.push({
+      id: post.id,
+      tidpunkt: post.tidpunkt,
+      tekniker: post.anvandare,
+      kategori,
+      niva,
+      sammanfattning,
+      hash: innehallsHash(JSON.stringify(post.handelse)),
+    });
+  for (const post of arende.handelser) {
+    const h = post.handelse;
+    if (h.typ === "foto") lagg(post, "foto", "E2", h.beskrivning);
+    if (h.typ === "matvarde") lagg(post, "mätvärde", "E4", `${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""}`);
+    if (h.typ === "matarstallning" && !h.undantag) lagg(post, "mätarställning", "E2", `${h.lage === "ingaende" ? "In" : "Ut"}: ${h.varde}`);
+    if (h.typ === "arbetsorder_skannad") lagg(post, "dokument", "E5", `Arbetsorder, ${h.falt.length} fält`);
+    if (h.typ === "observation") lagg(post, "observation", "E1", h.text);
+    if (h.typ === "kontroll_utford" && !h.undantag) lagg(post, "kontroll", "E1", h.text);
+  }
+  return poster;
+}
+
+// Ärendets samlade evidensnivå: starkaste kombination loggen innehåller.
+export function evidensNiva(arende: Arende): EvidensNiva {
+  const poster = evidensposter(arende);
+  const har = (n: string) => poster.some((p) => p.niva === n);
+  const kallor = [har("E2"), har("E4"), har("E5")].filter(Boolean).length;
+  if (kallor >= 2) return "E6";
+  if (har("E5")) return "E5";
+  if (har("E4")) return "E4";
+  if (har("E2")) return "E2";
+  if (har("E1")) return "E1";
+  return "E0";
+}
+
+// ---- 2. Rule Engine ---------------------------------------------------
+
+// Automatiska regler (kodade i orkesterns grundprompt och i metodikens
+// krav-fält): kan det fotograferas → begär foto; låter det → video med
+// ljud; rör det sig → video; mäts det → mätvärde; visar en display
+// informationen → fota displayen; finns ett dokument → fota dokumentet.
+
+// Godkända orsaker när underlag inte kan tas fram (fri text tillåts
+// också — men en orsak är alltid obligatorisk).
 export const UNDANTAGSORSAKER = [
   "Komponenten är oåtkomlig",
   "Fordonet kan inte lyftas säkert",
@@ -39,28 +116,141 @@ export const UNDANTAGSORSAKER = [
   "Utrustning saknas",
 ];
 
-// Evidensnivå för ärendet som helhet: den starkaste kombination som
-// loggen faktiskt innehåller.
-export function evidensNiva(arende: Arende): EvidensNiva {
-  let foto = false;
-  let matvarde = false;
-  let dokument = false;
-  let observation = false;
+// Markörtexter för pre-diagnostikens kvitteringar (loggas som kommentar).
+export const MARKOR_FELBESKRIVNING_VERIFIERAD = "Kundens felbeskrivning verifierad vid mottagandet";
+export const MARKOR_INGA_TIDIGA_OBSERVATIONER = "Inga ytterligare observationer vid mottagandet";
+export const MARKOR_TIDIGA_OBSERVATIONER_KLARA = "Tidiga observationer vid mottagandet dokumenterade";
+
+// ---- 3. Compliance Engine ---------------------------------------------
+
+// Ärendetypen styr vilka dokumentationskrav som gäller utöver metodiken.
+export const ARENDETYPER = [
+  "Privat kund",
+  "Företagskund",
+  "Garanti",
+  "Goodwill",
+  "Försäkring",
+  "Reklamation",
+  "Begagnatgaranti",
+  "Intern kvalitetskontroll",
+  "Teknisk utredning",
+] as const;
+
+export type Arendetyp = (typeof ARENDETYPER)[number];
+
+export function arendetyp(arende: Arende): Arendetyp {
+  let typ: Arendetyp = "Privat kund";
   for (const post of arende.handelser) {
     const h = post.handelse;
-    if (h.typ === "foto") foto = true;
-    if (h.typ === "matvarde") matvarde = true;
-    if (h.typ === "arbetsorder_skannad") dokument = true;
-    if (h.typ === "observation" || h.typ === "kontroll_utford") observation = true;
+    if (h.typ === "arendetyp_satt" && (ARENDETYPER as readonly string[]).includes(h.arendetyp)) {
+      typ = h.arendetyp as Arendetyp;
+    }
   }
-  const kallor = [foto, matvarde, dokument].filter(Boolean).length;
-  if (kallor >= 2) return "E6";
-  if (dokument) return "E5";
-  if (matvarde) return "E4";
-  if (foto) return "E2";
-  if (observation) return "E1";
-  return "E0";
+  return typ;
 }
+
+interface ComplianceKrav {
+  id: string;
+  rubrik: string;
+  uppfyllt: (arende: Arende) => boolean;
+  detaljVidBrist: string;
+}
+
+function objektFalt(arende: Arende, falt: "miltal" | "claim" | "skadenummer" | "arbetsorder"): string | undefined {
+  for (const post of arende.handelser) {
+    if (post.handelse.typ === "objekt_identifierat") return post.handelse.objekt[falt];
+  }
+  return undefined;
+}
+
+const harMatarstallning = (arende: Arende) =>
+  arende.handelser.some((p) => p.handelse.typ === "matarstallning" && !p.handelse.undantag) ||
+  !!objektFalt(arende, "miltal");
+const harHistorik = (arende: Arende) =>
+  arende.handelser.some((p) => p.handelse.typ === "historik_kontrollerad" && p.handelse.kontrollerad);
+const harFoto = (arende: Arende) => arende.handelser.some((p) => p.handelse.typ === "foto");
+
+// Regelpaket per ärendetyp — här ansluter framtida serverdistribuerade
+// regler (garantivillkor per tillverkare, försäkringsbolagens krav …).
+const COMPLIANCE_REGLER: Partial<Record<Arendetyp, ComplianceKrav[]>> = {
+  Garanti: [
+    { id: "garanti_miltal", rubrik: "Miltal dokumenterat", uppfyllt: harMatarstallning, detaljVidBrist: "Garantiärenden kräver dokumenterad mätarställning." },
+    { id: "garanti_historik", rubrik: "Servicehistorik kontrollerad", uppfyllt: harHistorik, detaljVidBrist: "Garantiärenden kräver kontrollerad servicehistorik." },
+    { id: "garanti_claim", rubrik: "Claim-/garantinummer registrerat", uppfyllt: (a) => !!objektFalt(a, "claim"), detaljVidBrist: "Ange claim-/garantinummer (läses ur arbetsordern)." },
+  ],
+  Goodwill: [
+    { id: "goodwill_miltal", rubrik: "Miltal dokumenterat", uppfyllt: harMatarstallning, detaljVidBrist: "Goodwillärenden kräver dokumenterad mätarställning." },
+    { id: "goodwill_historik", rubrik: "Servicehistorik kontrollerad", uppfyllt: harHistorik, detaljVidBrist: "Goodwillärenden kräver kontrollerad servicehistorik." },
+  ],
+  Försäkring: [
+    { id: "forsakring_skadenummer", rubrik: "Skadenummer registrerat", uppfyllt: (a) => !!objektFalt(a, "skadenummer"), detaljVidBrist: "Försäkringsärenden kräver skadenummer (läses ur arbetsordern)." },
+    { id: "forsakring_bildbevis", rubrik: "Bildbevis finns", uppfyllt: harFoto, detaljVidBrist: "Försäkringsärenden kräver bilddokumentation." },
+  ],
+  Reklamation: [
+    { id: "reklamation_historik", rubrik: "Historik och tidigare försök kontrollerade", uppfyllt: harHistorik, detaljVidBrist: "Reklamationer kräver kontrollerad historik (tidigare reparationer/försök)." },
+  ],
+  Begagnatgaranti: [
+    { id: "begagnat_miltal", rubrik: "Miltal dokumenterat", uppfyllt: harMatarstallning, detaljVidBrist: "Begagnatgaranti kräver dokumenterad mätarställning." },
+  ],
+};
+
+// ---- 4. Validation Engine ---------------------------------------------
+
+// Kärnprincipen — inga påståenden utan underlag — verkar i tre lager:
+//  (a) orkesterns grundprompt: aldrig "OK/kontrollerad/inga fel" utan
+//      evidens; skriv "Evidens saknas" och begär rätt underlag,
+//  (b) projektionerna: hypoteser kan aldrig bli konstaterade fel,
+//  (c) kvalitetsgrinden nedan: rapport/avslut blockeras tills varje
+//      obligatoriskt påstående har evidens eller dokumenterat undantag.
+
+// ---- Pre-Diagnostic Validation ----------------------------------------
+
+export interface PreDiagRad {
+  id: "historik" | "matarstallning_in" | "felbeskrivning" | "tidiga_observationer";
+  rubrik: string;
+  klar: boolean;
+  varning?: string;
+}
+
+// Ingen felsökning påbörjas förrän grundkontrollerna är genomförda —
+// eller dokumenterat motiverade. Allt härleds ur loggen.
+export function preDiagnostik(arende: Arende): PreDiagRad[] {
+  let historik: PreDiagRad = { id: "historik", rubrik: "Fordonshistorik kontrollerad", klar: false };
+  let matarstallning = false;
+  let felbeskrivningVerifierad = false;
+  let tidiga = false;
+  for (const post of arende.handelser) {
+    const h = post.handelse;
+    if (h.typ === "historik_kontrollerad") {
+      historik = {
+        id: "historik",
+        rubrik: "Fordonshistorik kontrollerad",
+        klar: true,
+        varning: h.kontrollerad ? undefined : `Ej kontrollerad — orsak: ${h.kommentar ?? "saknas"}`,
+      };
+    }
+    if (h.typ === "matarstallning" && h.lage === "ingaende") matarstallning = true;
+    if (h.typ === "kommentar" && h.text.startsWith(MARKOR_FELBESKRIVNING_VERIFIERAD)) felbeskrivningVerifierad = true;
+    if (
+      h.typ === "kommentar" &&
+      (h.text.startsWith(MARKOR_INGA_TIDIGA_OBSERVATIONER) || h.text.startsWith(MARKOR_TIDIGA_OBSERVATIONER_KLARA))
+    ) {
+      tidiga = true;
+    }
+  }
+  return [
+    historik,
+    { id: "matarstallning_in", rubrik: "Ingående mätarställning dokumenterad", klar: matarstallning },
+    { id: "felbeskrivning", rubrik: "Kundens felbeskrivning verifierad", klar: felbeskrivningVerifierad },
+    { id: "tidiga_observationer", rubrik: "Tidiga observationer hanterade", klar: tidiga },
+  ];
+}
+
+export function preDiagnostikKlar(arende: Arende): boolean {
+  return preDiagnostik(arende).every((rad) => rad.klar);
+}
+
+// ---- 5. Completion Engine ---------------------------------------------
 
 export interface GrindRad {
   id: string;
@@ -71,12 +261,13 @@ export interface GrindRad {
   detalj?: string;
 }
 
-// Kvalitetsgrind före slutrapport: varje rad är en verifierbar kontroll
-// mot händelseloggen. Rapporten kan inte genereras förrän alla
-// obligatoriska rader är gröna — evidens eller dokumenterat undantag.
+// Kvalitetsgrind före slutrapport/avslut. Varje rad är en verifierbar
+// regel mot händelseloggen; regel-id och ECM-version följer med i
+// exporten (Traceability Engine).
 export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const rader: GrindRad[] = [];
   const handelser = arende.handelser.map((p) => p.handelse);
+  const avslutat = handelser.some((h) => h.typ === "arende_avslutat");
 
   const objektFinns = handelser.some((h) => h.typ === "objekt_identifierat");
   rader.push({
@@ -87,13 +278,51 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     detalj: objektFinns ? undefined : "Evidens saknas — identifiera objektet.",
   });
 
-  const arbetsorder = handelser.some((h) => h.typ === "arbetsorder_skannad");
+  const arbetsorder = handelser.some((h) => h.typ === "arbetsorder_skannad") || !!objektFalt(arende, "arbetsorder");
   rader.push({
     id: "arbetsorder",
     rubrik: "Arbetsorder inläst",
     ok: arbetsorder,
     kravs: false,
     detalj: arbetsorder ? undefined : "Ärendet startades utan skannad arbetsorder.",
+  });
+
+  // Pre-diagnostiken ingår i grinden: historik + ingående mätarställning
+  // är obligatoriska (dokumenterade eller motiverade).
+  const pre = preDiagnostik(arende);
+  const historik = pre.find((r) => r.id === "historik")!;
+  rader.push({
+    id: "historik",
+    rubrik: "Fordonshistorik kontrollerad eller motiverad",
+    ok: historik.klar,
+    kravs: true,
+    detalj: historik.klar ? historik.varning : "Kontrollera historiken eller dokumentera varför det inte gått.",
+  });
+  const matIn = pre.find((r) => r.id === "matarstallning_in")!;
+  rader.push({
+    id: "matarstallning_in",
+    rubrik: "Ingående mätarställning dokumenterad",
+    ok: matIn.klar,
+    kravs: true,
+    detalj: matIn.klar ? undefined : "Fotografera instrumentpanelen (eller dokumentera undantag).",
+  });
+  const felb = pre.find((r) => r.id === "felbeskrivning")!;
+  rader.push({
+    id: "felbeskrivning_verifierad",
+    rubrik: "Kundens felbeskrivning verifierad",
+    ok: felb.klar,
+    kravs: false,
+    detalj: felb.klar ? undefined : "Bekräfta att kundens beskrivning är korrekt återgiven.",
+  });
+
+  // Utgående mätarställning: obligatorisk först när ärendet avslutas.
+  const matUt = handelser.some((h) => h.typ === "matarstallning" && h.lage === "utgaende");
+  rader.push({
+    id: "matarstallning_ut",
+    rubrik: "Utgående mätarställning dokumenterad",
+    ok: matUt,
+    kravs: avslutat,
+    detalj: matUt ? undefined : "Fotografera instrumentpanelen när arbetet är klart.",
   });
 
   // Metodikens kontroller: evidens eller dokumenterat undantag per kontroll.
@@ -134,6 +363,19 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     detalj: fotoKravUtanFoto > 0 ? `${fotoKravUtanFoto} fotokrävande kontroll(er) utan bild i loggen.` : undefined,
   });
 
+  // Compliance Engine: ärendetypens regelpaket.
+  const typ = arendetyp(arende);
+  for (const krav of COMPLIANCE_REGLER[typ] ?? []) {
+    const ok = krav.uppfyllt(arende);
+    rader.push({
+      id: krav.id,
+      rubrik: `${typ}: ${krav.rubrik}`,
+      ok,
+      kravs: true,
+      detalj: ok ? undefined : krav.detaljVidBrist,
+    });
+  }
+
   const hypoteser = handelser.filter((h) => h.typ === "hypotes").length;
   rader.push({
     id: "hypoteser",
@@ -158,4 +400,20 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
 // slutrapporten genereras.
 export function grindGodkand(arende: Arende, metodik: Metodik): boolean {
   return kvalitetsgrind(arende, metodik).every((rad) => rad.ok || !rad.kravs);
+}
+
+// ---- 6. Traceability Engine -------------------------------------------
+
+// Spårbarhetspaketet som följer med varje export: regelverkets version,
+// ärendets evidensnivå och samtliga evidensposter med innehållshash.
+// Tillsammans med den append-only-loggen kan varje slutsats härledas:
+// vilken bild, vilken mätning, vilken tekniker, vilken regel, när.
+export function sparbarhetspaket(arende: Arende, metodik: Metodik) {
+  return {
+    ecmVersion: ECM_VERSION,
+    arendetyp: arendetyp(arende),
+    evidensniva: evidensNiva(arende),
+    kvalitetsgrind: kvalitetsgrind(arende, metodik).map(({ id, rubrik, ok, kravs }) => ({ id, rubrik, ok, kravs })),
+    evidensposter: evidensposter(arende),
+  };
 }

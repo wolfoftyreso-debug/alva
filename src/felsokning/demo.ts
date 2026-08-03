@@ -63,9 +63,18 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
         identifieringsmetod: "Regnr",
         beskrivning: "Volvo XC60 D4 2019",
         kund: "Anders Svensson",
+        vin: "YV1DZ8256F2123456",
+        miltal: "8 432 mil",
+        arbetsorder: "AO-2496",
       },
     }),
     post(2, { typ: "felbeskrivning", text: "Bilen vibrerar runt 88 km/h. Symptomet uppträder endast under körning." }),
+    // Pre-diagnostiken: historik, ingående mätarställning, verifierad
+    // felbeskrivning och tidiga observationer — innan metodiken börjar.
+    post(3, { typ: "historik_kontrollerad", kontrollerad: true, kommentar: "Däck roterade vid service för 2 månader sedan" }),
+    post(3, { typ: "matarstallning", lage: "ingaende", varde: "84 320 km", dataUrl: demoFoto("Instrumentpanel 84 320 km") }),
+    post(4, { typ: "kommentar", text: "Kundens felbeskrivning verifierad vid mottagandet." }),
+    post(4, { typ: "kommentar", text: "Inga ytterligare observationer vid mottagandet." }),
     post(4, { typ: "fraga_besvarad", stegId: "symptom", frageId: "hastighetsberoende", fraga: "Är vibrationen hastighetsberoende?", svar: "Ja" }),
     post(5, { typ: "fraga_besvarad", stegId: "symptom", frageId: "var", fraga: "Var känns vibrationen?", svar: "I ratten" }),
     post(6, { typ: "fraga_besvarad", stegId: "symptom", frageId: "nar", fraga: "När uppstår vibrationen?", svar: "Vid jämn fart" }),

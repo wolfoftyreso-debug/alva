@@ -6,10 +6,38 @@
 
 import type { Arende } from "./domain";
 import { handelseRubrik } from "./domain";
-import { arAvslutat, brief, foton, tidsfordelningsRader } from "./projektioner";
+import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader } from "./projektioner";
 import { metodikForArende } from "./store";
 import { tidDatum, tidKlockslag } from "./format";
 import { FelsokningSkal, Panel } from "./ui";
+
+function IdentitetsPanel({ arende, avslutat }: { arende: Arende; avslutat: boolean }) {
+  const idn = arendeidentitet(arende);
+  const falt: [string, string | undefined][] = [
+    ["Arbetsorder", idn.arbetsorder],
+    ["Claim", idn.claim],
+    ["Skadenr", idn.skadenummer],
+    ["Regnr", idn.identifierare],
+    ["VIN", idn.vin],
+    ["Miltal", idn.miltal],
+    ["Ansvarig tekniker", idn.ansvarig],
+    ["Status", avslutat ? "Avslutat" : "Felsökning pågår"],
+  ];
+  return (
+    <div className="sticky top-11 z-10 mb-3 rounded border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.1)] print:static">
+      {idn.beskrivning && <p className="text-[13px] font-semibold">{idn.beskrivning}</p>}
+      <p className="flex flex-wrap gap-x-4 gap-y-0.5 text-[12px]">
+        {falt
+          .filter(([, varde]) => varde)
+          .map(([etikett, varde]) => (
+            <span key={etikett} className="whitespace-nowrap">
+              <span className="text-[#707070]">{etikett}:</span> <span className="font-medium">{varde}</span>
+            </span>
+          ))}
+      </p>
+    </div>
+  );
+}
 
 export function DelatArendeVy({
   arende,
@@ -48,6 +76,11 @@ export function DelatArendeVy({
         </span>
       }
     >
+      {/* Ärendeidentiteten: låst överst — mottagaren (kund, försäkrings-
+          handläggare, kollega) ska aldrig tveka om vilket fordon och
+          ärende vyn avser. Härledd ur det nivåfiltrerade underlaget. */}
+      <IdentitetsPanel arende={arende} avslutat={avslutat} />
+
       <p className="mb-4 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-3 text-[12px] text-[#4A5560] print:hidden">
         {notis}
       </p>

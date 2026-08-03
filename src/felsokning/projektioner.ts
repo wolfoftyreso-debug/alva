@@ -33,6 +33,46 @@ export function ansvarig(arende: Arende): string | undefined {
   return namn;
 }
 
+// Ärendeidentiteten (Case Identity): registreras en gång och återanvänds
+// i felsökningsvyn, Live Share, slutrapporten och exporten. Fordons-
+// objektet är den röda tråden — det ska alltid vara omedelbart tydligt
+// vilket fordon och vilket ärende informationen avser.
+export interface Arendeidentitet {
+  nummer: number;
+  arbetsorder?: string;
+  claim?: string;
+  skadenummer?: string;
+  identifierare?: string;
+  vin?: string;
+  beskrivning?: string;
+  miltal?: string;
+  kund?: string;
+  ansvarig?: string;
+  avslutat: boolean;
+}
+
+export function arendeidentitet(arende: Arende): Arendeidentitet {
+  const o = objekt(arende);
+  let miltal = o?.miltal;
+  for (const post of arende.handelser) {
+    const h = post.handelse;
+    if (h.typ === "matarstallning" && h.lage === "ingaende" && !h.undantag) miltal = h.varde;
+  }
+  return {
+    nummer: arende.nummer,
+    arbetsorder: o?.arbetsorder,
+    claim: o?.claim,
+    skadenummer: o?.skadenummer,
+    identifierare: o?.identifierare,
+    vin: o?.vin,
+    beskrivning: o?.beskrivning,
+    miltal,
+    kund: o?.kund,
+    ansvarig: ansvarig(arende),
+    avslutat: arAvslutat(arende),
+  };
+}
+
 export function arAvslutat(arende: Arende): boolean {
   return arende.handelser.some((p) => p.handelse.typ === "arende_avslutat");
 }

@@ -71,7 +71,7 @@ const ARBETSORDER_FALT_ID = [
   "fordon_regnr", "fordon_vin", "fordon_marke", "fordon_modell",
   "fordon_motor", "fordon_arsmodell", "fordon_matarstallning",
   "fordon_motorkod", "fordon_vaxellada",
-  "ao_nummer", "ao_referens", "ao_serviceradgivare", "ao_bokningsdatum",
+  "ao_nummer", "ao_claim", "ao_skadenummer", "ao_referens", "ao_serviceradgivare", "ao_bokningsdatum",
   "felbeskrivning",
 ];
 

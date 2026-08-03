@@ -128,6 +128,8 @@ export const ARBETSORDER_FALT: { id: string; grupp: ArbetsorderGrupp; etikett: s
   { id: "fordon_motorkod", grupp: "Fordon", etikett: "Motorkod" },
   { id: "fordon_vaxellada", grupp: "Fordon", etikett: "Växellåda" },
   { id: "ao_nummer", grupp: "Verkstad", etikett: "Arbetsordernr" },
+  { id: "ao_claim", grupp: "Verkstad", etikett: "Claim-/garantinr" },
+  { id: "ao_skadenummer", grupp: "Verkstad", etikett: "Skadenummer" },
   { id: "ao_referens", grupp: "Verkstad", etikett: "Intern referens" },
   { id: "ao_serviceradgivare", grupp: "Verkstad", etikett: "Servicerådgivare" },
   { id: "ao_bokningsdatum", grupp: "Verkstad", etikett: "Bokningsdatum" },

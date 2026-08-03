@@ -1,22 +1,22 @@
 # Modul: Evidensmotorn (ECM — Evidence & Compliance Matrix)
 
-**Version: ECM v1.0** · Regelbiblioteket är versionshanterat och skilt från
-applikationslogiken (`src/felsokning/ecm.ts`). Vyerna anropar bara motorns
-rena funktioner — regler kan uppdateras utan att applikationen byggs om.
+**Version: ECM v2.0** · ECM är ett eget subsystem — inte en tabell i
+databasen — och motorn som styr hela plattformen: den avgör vilken
+dokumentation som krävs, när dokumentation saknas, vilken bevisnivå som
+uppnåtts, vilka regler som gäller och om ett ärende kan avslutas.
+**Systemet kan aldrig skriva en slutsats som ECM inte har godkänt.**
 
-## Grundprincip
+Regelbiblioteket är versionshanterat och skilt från applikationslogiken
+(`src/felsokning/ecm.ts`); vyerna anropar bara motorns rena funktioner.
 
-**Inget underlag = ingen slutsats.**
+## De sex motorerna
 
-Systemet får aldrig anta att en kontroll är utförd eller påstå att
-dokumentation finns om den inte faktiskt är insamlad. Varje påstående i
-diagnos, brief och slutrapport ska kunna härledas till minst en
-evidenspost i händelseloggen. Systemet skriver aldrig "OK",
-"kontrollerad", "inga fel" eller "åtgärdad" utan evidens — i stället:
-**"Evidens saknas."** Regeln är kodad i orkesterns grundprompt och kan
-inte kringgås från klienten.
-
-## Evidensnivåer
+### 1. Evidence Engine
+Katalogiserar all bevisning ur händelseloggen. Varje evidenspost får
+id, tidpunkt, tekniker, kategori, evidensnivå, sammanfattning och
+**innehållshash** — samma post ger alltid samma hash, och den
+append-only-låsta loggen (databastriggers) gör varje ändringsförsök
+omöjligt.
 
 | Nivå | Typ | Bevisvärde |
 | --- | --- | --- |
@@ -25,70 +25,98 @@ inte kringgås från klienten.
 | E2 | Foto | Medel |
 | E3 | Video | Högt |
 | E4 | Mätvärde | Högt |
-| E5 | Diagnosdata/dokument (t.ex. skannad arbetsorder) | Mycket högt |
+| E5 | Diagnosdata/dokument | Mycket högt |
 | E6 | Flera oberoende källor | Högsta |
 
-Ärendets nivå härleds ur loggens faktiska innehåll (`evidensNiva`) och
-visas i kvalitetsgrinden.
+### 2. Rule Engine
+Dokumentationskraven: metodikens `krav`-fält per kontroll plus de
+automatiska reglerna — *kan det fotograferas → begär foto; låter det →
+video med ljud; rör det sig → video; mäts det → mätvärde; visar en
+display informationen → fota displayen; finns ett dokument → fota
+dokumentet.* Undantagsorsakerna ("Underlag kan inte tas fram") ligger
+här.
 
-## Fullbordansregler
+### 3. Compliance Engine
+Ärendetypen styr vilka regler som gäller utöver metodiken. Ärendetyp
+väljs i identitetsraden och loggas (`arendetyp_satt`):
 
-En kontrollpunkt kan bara slutföras när något av följande är sant:
+| Ärendetyp | Extra krav (v2.0) |
+| --- | --- |
+| Garanti | Miltal dokumenterat · servicehistorik kontrollerad · claim-/garantinummer |
+| Goodwill | Miltal · servicehistorik |
+| Försäkring | Skadenummer · bildbevis |
+| Reklamation | Historik och tidigare försök kontrollerade |
+| Begagnatgaranti | Miltal |
 
-1. **Krävd evidens är insamlad** — foto för det synliga, mätvärde för det
-   som mäts, kommentar där inget bättre är möjligt (metodikens
-   `krav`-fält per kontroll).
-2. **Teknikern dokumenterar ett undantag**: *"Underlag kan inte tas
-   fram"* med **obligatorisk orsak** (komponenten oåtkomlig, fordonet kan
-   inte lyftas säkert, kunden avböjde demontering, dålig sikt, utrustning
-   saknas — eller fri text). Undantaget loggas i händelseloggen och
-   flaggas ⚠ i brief, överlämning och rapport — det redovisas aldrig som
-   "utförd".
+Här ansluter det framtida **ECM Knowledge Library**: serverdistribuerade,
+versionerade regelpaket (garantivillkor per tillverkare, försäkringsbolagens
+krav, reklamationslagstiftning, OEM-kontrollpunkter) som laddas dynamiskt
+utan appändring.
 
-## Kvalitetsgrind före slutrapport
+### 4. Validation Engine
+Inga påståenden utan underlag, i tre lager: (a) orkesterns grundprompt —
+aldrig "OK/kontrollerad/inga fel/åtgärdad" utan evidens, i stället
+"Evidens saknas" plus begäran om rätt underlag; (b) projektionerna —
+hypoteser kan aldrig bli konstaterade fel; (c) kvalitetsgrinden nedan.
 
-Slutrapporten kan inte genereras förrän grinden är godkänd
-(`kvalitetsgrind`/`grindGodkand`):
+### 5. Completion Engine
+Kvalitetsgrinden före slutrapport/avslut — utskriften är spärrad tills
+alla obligatoriska rader är gröna:
 
 | Kontroll | Krav |
 | --- | --- |
 | Fordons-/objektidentifiering verifierad | Obligatorisk |
 | Arbetsorder inläst | Rekommenderas |
+| Fordonshistorik kontrollerad eller motiverad | Obligatorisk |
+| Ingående mätarställning dokumenterad | Obligatorisk |
+| Kundens felbeskrivning verifierad | Rekommenderas |
+| Utgående mätarställning | Obligatorisk vid avslut |
 | Metodikens kontroller: evidens eller dokumenterat undantag | Obligatorisk |
-| Foton finns för fotokrävande kontroller | Obligatorisk |
-| Hypoteser redovisas som ej verifierade | Informativ (alltid sant per konstruktion) |
+| Foton för fotokrävande kontroller | Obligatorisk |
+| Ärendetypens compliance-krav | Obligatoriska |
 | Evidensnivå över E0 | Obligatorisk |
 
-Utskriftsknappen är spärrad tills varje obligatorisk rad är grön; varje
-röd rad visar exakt vad som saknas.
+### 6. Traceability Engine
+Varje export bär ett spårbarhetspaket: ECM-version, ärendetyp,
+evidensnivå, grindstatus per regel-id och samtliga evidensposter med
+hash. Tillsammans med loggen kan varje slutsats härledas: vilken bild →
+vilken mätning → vilken tekniker → vilken regel → vilken regelverksversion
+→ när.
 
-## Visual-first: kameran är integrationslagret
+## Pre-Diagnostic Validation
 
-Plattformen prioriterar visuell insamling framför systemintegrationer.
-När information redan visas på en skärm, ett instrument, en utskrift
-eller en etikett fotograferas den — bildtolkningen extraherar, validerar
-och strukturerar informationen automatiskt. Ingen specialintegration
-behövs mot Bosch, TEXA, Autel, Launch, Hella Gutmann m.fl. så länge en
-människa kan läsa informationen.
+Ingen felsökning påbörjas förrän grundkontrollerna är genomförda eller
+dokumenterat motiverade — metodiken låses upp först därefter:
 
-- **Arbetsorder** → ärendestartens dokumenttolkning (fält + konfidens).
-- **Instrument/diagnosskärmar** → `📷 Instrument` i Dokumentera-panelen:
-  foto → typidentifiering (multimeter, diagnosdator, batteritestare,
-  mätarkluster, manometer …) → värden med enhet och konfidens → teknikern
-  bekräftar → **originalbilden loggas alltid tillsammans med de
-  strukturerade värdena** — strukturerad data ersätter aldrig
-  originalevidensen.
+1. **Fordonshistorik** — kontrollerad (tidigare arbeten, återkommande
+   fel, TSB, kampanjer; relevanta samband kan noteras som orsakskedja)
+   eller Nej med obligatorisk orsak → kvalitetsvarning.
+2. **Ingående mätarställning** — instrumentpanelen fotograferas;
+   bildtolkningen föreslår värdet, teknikern bekräftar. Fotot blir den
+   officiella ingående mätarställningen.
+3. **Kundens felbeskrivning verifierad** — ytterligare symptom
+   dokumenteras som separata observationer, aldrig hopblandade med
+   kundens beskrivning.
+4. **Tidiga observationer** — reparationsspår, modifieringar, skador,
+   läckage m.m. dokumenteras med foto/observation, eller kvitteras
+   "inga ytterligare".
 
-Värden med hög säkerhet godkänns automatiskt; osäkra markeras för
-granskning — samma konfidensmodell som arbetsorderskanningen
-(🟢 ≥95 %, 🟡 80–95 %, 🔴 <80 %).
+**Utgående mätarställning** fotograferas inför avslut och blir
+obligatorisk i grinden när ärendet stängs. Rapporten visar in/ut.
 
-## Spårbarhet
+## Ärendeidentitet (Case Identity & Vehicle Context)
 
-Varje evidenspost är en händelse i den append-only-loggen med tidpunkt,
-tekniker, ärende och innehåll — omöjlig att ändra i efterhand (triggers i
-databasen). Det ger varje slutsats juridiskt spårbart underlag för kund,
-försäkringsbolag eller domstol.
+Fordonsobjektet är den röda tråden: identiteten registreras **en gång**
+(normalt via arbetsorderskanningen, som nu även läser claim-/garantinummer
+och skadenummer) och återanvänds sedan överallt:
+
+- **Identitetsrad i arbetsytan** — AO, claim, skadenummer, fordon, regnr,
+  VIN, miltal, ansvarig tekniker + ärendetypsval.
+- **Live Share** — låst panel överst med fordon, referenser och status,
+  härledd ur det nivåfiltrerade underlaget.
+- **Slutrapportens första sida** — Ärendeinformation + Fordonsinformation
+  automatiskt.
+- **Exporten** — identitet + spårbarhetspaket i varje JSON.
 
 ## Terminologi
 
@@ -96,13 +124,4 @@ Produkten beskrivs aldrig som en "AI-app" utan som ett **evidensbaserat
 diagnossystem** / **intelligent beslutsstöd**. I användargränssnitt och
 dokument används *systemet, analysen, bedömningen, tolkningen,
 bildtolkningen, beslutsstödet, regelmotorn* — inte "AI", om det inte är
-tekniskt nödvändigt (t.ex. i arkitekturdokumentation om modellorkestern).
-
-## Kommande (regelbibliotekets väg framåt)
-
-- Områdesregler per komponent (däck: fyra bilder + DOT + dimension;
-  bromsar: närbild per ok; motorljud: video med ljud …) som
-  serverdistribuerade, versionerade regelpaket.
-- Video- och ljudevidens (E3) med analys.
-- Garanti-/försäkrings-/reklamationsprofiler med egna obligatoriska
-  fält i kvalitetsgrinden.
+tekniskt nödvändigt.

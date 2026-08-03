@@ -83,6 +83,12 @@ export default function NyttArende() {
       identifieringsmetod: regnr ? "Regnr" : vin ? "VIN" : "Manuell inmatning",
       beskrivning: beskr || "Se arbetsorder",
       kund: v("kund_namn"),
+      // Ärendeidentiteten: registreras en gång här, återanvänds i alla vyer.
+      vin: vin?.toUpperCase(),
+      miltal: v("fordon_matarstallning"),
+      arbetsorder: v("ao_nummer"),
+      claim: v("ao_claim"),
+      skadenummer: v("ao_skadenummer"),
     };
     const felText = v("felbeskrivning") ?? "Se skannad arbetsorder";
     let metodikId: string | undefined;

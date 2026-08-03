@@ -29,12 +29,21 @@ export const TIDKATEGORI_LABEL: Record<TidKategori, string> = {
   paus: "Paus",
 };
 
+// Fordonsobjektet är den röda tråden genom hela ärendet: identiteten
+// registreras en gång och återanvänds i felsökning, Live Share, rapport
+// och export. Ärendereferenserna (AO/claim/skadenummer) hör till objektet
+// så att de följer med i alla vyer utan att kunduppgifter läcker.
 export interface Objekt {
-  typ: string; // t.ex. "Fordon", "Industrimaskin"
+  typ: string; // t.ex. "Personbil", "Industrimaskin"
   identifierare: string; // reg.nr, VIN, serienummer …
   identifieringsmetod: string; // "Regnr", "VIN", "Serienummer", "Manuell inmatning"
   beskrivning: string; // t.ex. "Volvo XC60 D4 2019"
   kund?: string;
+  vin?: string;
+  miltal?: string;
+  arbetsorder?: string;
+  claim?: string;
+  skadenummer?: string;
 }
 
 // Ett fält tolkat ur en skannad arbetsorder, med AI:ns läs-säkerhet.
@@ -63,6 +72,14 @@ export type Handelse =
   | { typ: "inaktivitet_forklarad"; text: string; minuter: number }
   | { typ: "overlamning"; fran: string; till?: string }
   | { typ: "ansvarig_satt"; ansvarig: string }
+  // Ärendetypen styr vilka dokumentationskrav ECM ställer (garanti,
+  // försäkring, reklamation …).
+  | { typ: "arendetyp_satt"; arendetyp: string }
+  // Pre-diagnostik: fordonshistoriken kontrollerad — eller motiverat
+  // varför inte (kvalitetsvarning).
+  | { typ: "historik_kontrollerad"; kontrollerad: boolean; kommentar?: string }
+  // Officiell mätarställning in/ut, normalt med foto av instrumentpanelen.
+  | { typ: "matarstallning"; lage: "ingaende" | "utgaende"; varde: string; dataUrl?: string; undantag?: string }
   | { typ: "export_skapad"; format: string; version: number }
   | {
       typ: "ai_svar";
@@ -136,6 +153,15 @@ export function handelseRubrik(post: LoggPost): string {
       return h.till ? `Arbete överlämnat från ${h.fran} till ${h.till}` : `Arbete överlämnat av ${h.fran}`;
     case "ansvarig_satt":
       return `Ansvarig tekniker: ${h.ansvarig}`;
+    case "arendetyp_satt":
+      return `Ärendetyp: ${h.arendetyp}`;
+    case "historik_kontrollerad":
+      return h.kontrollerad
+        ? `Fordonshistorik kontrollerad${h.kommentar ? `: ${h.kommentar}` : ""}`
+        : `Fordonshistorik EJ kontrollerad — orsak: ${h.kommentar ?? "saknas"}`;
+    case "matarstallning":
+      if (h.undantag) return `Mätarställning (${h.lage === "ingaende" ? "in" : "ut"}) kunde inte dokumenteras: ${h.undantag}`;
+      return `Mätarställning ${h.lage === "ingaende" ? "in" : "ut"}: ${h.varde}`;
     case "export_skapad":
       return `Export skapad: ${h.format}, version ${h.version}`;
     case "ai_svar": {

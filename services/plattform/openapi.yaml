@@ -568,6 +568,9 @@ components:
             - overlamning
             - ansvarig_satt
             - arbetsorder_skannad
+            - arendetyp_satt
+            - historik_kontrollerad
+            - matarstallning
             - export_skapad
             - ai_svar
             - arende_avslutat
