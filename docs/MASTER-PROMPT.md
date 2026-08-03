@@ -10,9 +10,20 @@ Det här är ett produktdirektiv, inte en teknisk specifikation. Visionen och re
 
 Bygg en produktionsredo SaaS-plattform med namnet **Guidad Felsökning**.
 
-Plattformen är en AI-wrapper ovanpå Claude API (Anthropic) och fungerar som ett professionellt arbetsverktyg för mekaniker och servicetekniker. Standardmodell: Claude Opus 5 (`claude-opus-5`), med Anthropics rekommenderade reservmodell som automatisk fallback när en förfrågan avböjs av säkerhetsklassificerarna.
+Plattformen är en AI-wrapper ovanpå Claude API (Anthropic) och fungerar som ett professionellt arbetsverktyg för mekaniker och servicetekniker.
 
-**AI:n drivs av plattformen, inte av kunden.** Claude API-nycklarna är plattformshemligheter i backend och exponeras aldrig för kunder eller klienter — AI-handledningen ingår i tjänsten. Backend äger systemprompt, modellval och svarsschema, så AI-reglerna kan inte kringgås från klientsidan. Den ska inte ersätta teknisk kompetens eller tillverkarens dokumentation, utan vägleda användaren genom en strukturerad felsökningsprocess, dokumentera allt arbete och skapa full spårbarhet.
+**AI:n drivs av plattformen, inte av kunden.** Claude API-nycklarna är plattformshemligheter i backend och exponeras aldrig för kunder eller klienter — AI-handledningen ingår i tjänsten. Backend äger systemprompt, modellval och svarsschema, så AI-reglerna kan inte kringgås från klientsidan.
+
+**Modellorkestern.** Vi kör flera Claude-modeller i vår infrastruktur och routar per uppgift — backend äger routingtabellen, så den kan justeras utan klientändringar:
+
+| Uppgift | Modell | Motiv |
+| --- | --- | --- |
+| Handledning (svar på varje dokumentation) | Claude Sonnet 5 | Många anrop, latenskänsligt på verkstadsgolvet |
+| Granskning (motsägelser/luckor i hela underlaget) | Claude Opus 5, hög effort | Djupaste resonemanget — kvalitet före latens |
+| Överlämningssammanfattning (risker & osäkerheter) | Claude Sonnet 5, låg effort | Balans |
+| Metodikklassificering av felbeskrivning | Claude Haiku 4.5 | Ren klassificering — snabbast och billigast |
+
+Alla uppgifter delar samma grundregler (AI-reglerna nedan) och samma klassificerade svarsschema. Vid avböjd förfrågan faller anropet automatiskt tillbaka till Anthropics rekommenderade reservmodell. Den ska inte ersätta teknisk kompetens eller tillverkarens dokumentation, utan vägleda användaren genom en strukturerad felsökningsprocess, dokumentera allt arbete och skapa full spårbarhet.
 
 Målet är att lansera en stabil, enkel och köpvärdig beta-version.
 

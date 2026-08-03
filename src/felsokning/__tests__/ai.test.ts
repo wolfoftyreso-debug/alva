@@ -1,25 +1,29 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { AI_MODELL, byggAnvandarPrompt, tolkaAiSvar } from "../ai";
+import { byggAnvandarPrompt, byggGranskningsPrompt, tolkaAiSvar } from "../ai";
 import { VIBRATION_METODIK } from "../metodik";
 import { brief } from "../projektioner";
 import { byggDemoArende } from "../demo";
 
-describe("AI-motorn", () => {
-  it("använder Claude Opus 5", () => {
-    expect(AI_MODELL).toBe("claude-opus-5");
+const ENDPOINT = readFileSync("supabase/functions/felsokning-ai/index.ts", "utf8");
+
+describe("AI-orkestern", () => {
+  it("plattformens endpoint routar uppgifter till olika modeller", () => {
+    // Servern äger orkestern: modellval, effort, systemprompt och schema.
+    for (const uppgift of ["handledning:", "granskning:", "sammanfattning:", "metodikval:"]) {
+      expect(ENDPOINT).toContain(uppgift);
+    }
+    expect(ENDPOINT).toContain('"claude-sonnet-5"');
+    expect(ENDPOINT).toContain('"claude-opus-5"');
+    expect(ENDPOINT).toContain('"claude-haiku-4-5"');
+    expect(ENDPOINT).toContain("ANTHROPIC_API_KEY");
   });
 
-  it("plattformens AI-endpoint äger systemprompten och kodar AI-reglerna", () => {
-    // AI:n drivs av plattformen: systemprompt, modell och schema ligger i
-    // backend (edge-funktionen), inte i klienten.
-    const endpoint = readFileSync("supabase/functions/felsokning-ai/index.ts", "utf8");
-    expect(endpoint).toContain('const AI_MODELL = "claude-opus-5"');
-    expect(endpoint).toContain("Hitta aldrig på fakta");
-    expect(endpoint).toContain("aldrig en hypotes som ett konstaterat fel");
-    expect(endpoint).toContain("KRÄVER verifiering");
-    expect(endpoint).toContain("ANTHROPIC_API_KEY");
-    expect(endpoint).toContain('"json_schema"');
+  it("endpointen kodar AI-reglerna i grundprompten", () => {
+    expect(ENDPOINT).toContain("Hitta aldrig på fakta");
+    expect(ENDPOINT).toContain("aldrig en hypotes som ett konstaterat fel");
+    expect(ENDPOINT).toContain("KRÄVER verifiering");
+    expect(ENDPOINT).toContain('"json_schema"');
   });
 
   it("användarprompten byggs ur ärendebriefen och den nya inmatningen", () => {
@@ -34,6 +38,14 @@ describe("AI-motorn", () => {
     expect(prompt).toContain("Kontrollera lufttryck");
     expect(prompt).toContain("Ej kontrollerat enligt metodiken:");
     expect(prompt).toContain("Teknikerns nya inmatning: Reläet klickar inte.");
+  });
+
+  it("granskningsprompten innehåller hela arbetsloggen men ingen ny inmatning", () => {
+    const arende = byggDemoArende(1);
+    const prompt = byggGranskningsPrompt(arende, VIBRATION_METODIK);
+    expect(prompt).toContain("Fullständig arbetslogg:");
+    expect(prompt).toContain("Arbete överlämnat från Anna till Johan");
+    expect(prompt).not.toContain("Teknikerns nya inmatning");
   });
 
   it("tolkar giltiga svar och kastar på ogiltiga", () => {

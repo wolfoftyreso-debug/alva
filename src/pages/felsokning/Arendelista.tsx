@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useFelsokning, metodikForArende } from "@/felsokning/store";
 import { arAvslutat, felbeskrivning, objekt, sistaAktivitet, brief } from "@/felsokning/projektioner";
 import { byggDemoArende } from "@/felsokning/demo";
-import { AI_MODELL } from "@/felsokning/ai";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
 
@@ -91,12 +90,13 @@ export default function Arendelista() {
         <p className="text-center text-lg text-zinc-400">Inga ärenden i det här filtret.</p>
       )}
 
-      <Panel rubrik="AI-handledning">
+      <Panel rubrik="AI-orkestern">
         <p className="text-zinc-300">
-          Ingår i tjänsten och drivs av plattformen — Claude ({AI_MODELL}) svarar klassificerat på
-          dokumenterade observationer och mätvärden. Anropen går via plattformens backend; inga AI-nycklar
-          hanteras av verkstaden. Aktiveras automatiskt för inloggade användare; i lokalt läge guidar den
-          deterministiska metodiken ensam.
+          Ingår i tjänsten och drivs av plattformen — flera Claude-modeller med olika roller: handledning i
+          realtid på varje dokumentation, djupgranskning av hela underlaget, överlämningssammanfattning och
+          metodikklassificering. Anropen går via plattformens backend; inga AI-nycklar hanteras av
+          verkstaden. Aktiveras automatiskt för inloggade användare; i lokalt läge guidar den deterministiska
+          metodiken ensam.
         </p>
       </Panel>
 

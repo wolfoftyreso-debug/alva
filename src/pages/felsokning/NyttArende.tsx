@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Objekt } from "@/felsokning/domain";
 import { useFelsokning } from "@/felsokning/store";
 import { valjMetodik } from "@/felsokning/metodik";
+import { valjMetodikMedAi } from "@/felsokning/ai";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 
 const IDENTIFIERINGSMETODER = ["Registreringsnummer", "VIN", "Serienummer", "Maskinnummer", "Manuell inmatning"];
@@ -20,6 +21,7 @@ export default function NyttArende() {
   const [beskrivning, setBeskrivning] = useState("");
   const [kund, setKund] = useState("");
   const [fel, setFel] = useState("");
+  const [startar, setStartar] = useState(false);
 
   const objektet: Objekt = {
     typ,
@@ -96,6 +98,7 @@ export default function NyttArende() {
           satt={setFel}
           platshallare="T.ex. Bilen vibrerar runt 88 km/h"
           flerRad
+          rost
         />
         {metodik && (
           <p className="mb-3 text-sm font-bold text-zinc-400">
@@ -103,13 +106,20 @@ export default function NyttArende() {
           </p>
         )}
         <StorKnapp
-          disabled={!fel.trim()}
-          onClick={() => {
-            const id = skapaArende(objektet, fel.trim());
+          disabled={!fel.trim() || startar}
+          onClick={async () => {
+            setStartar(true);
+            // Träffar nyckelordsvalet ingen specifik metodik får orkesterns
+            // klassificerare (Haiku 4.5) välja; i lokalt läge blir det generisk.
+            let metodikId: string | undefined;
+            if (valjMetodik(fel).id === "generisk") {
+              metodikId = (await valjMetodikMedAi(fel.trim())) ?? undefined;
+            }
+            const id = skapaArende(objektet, fel.trim(), metodikId);
             navigate(`/felsokning/arende/${id}`);
           }}
         >
-          Starta arbetslogg
+          {startar ? "Startar …" : "Starta arbetslogg"}
         </StorKnapp>
       </Panel>
     </FelsokningSkal>

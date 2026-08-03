@@ -18,7 +18,7 @@ import {
 } from "@/felsokning/projektioner";
 import { metodikForArende, useFelsokning } from "@/felsokning/store";
 import { synkroniseraArende, type SynkStatus } from "@/felsokning/synk";
-import { AI_MODELL, AI_RADTYP_LABEL, fragaAi } from "@/felsokning/ai";
+import { AI_RADTYP_LABEL, fragaAi, granskaUnderlag, sammanfattaOverlamning } from "@/felsokning/ai";
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { skalaNerFoto, tidKlockslag } from "@/felsokning/format";
 
@@ -129,7 +129,7 @@ export default function ArendeSida() {
         <GuideFlik arende={arende} metodik={metodik} avslutat={avslutat} skicka={skicka} nu={nu} />
       )}
       {flik === "logg" && <LoggFlik arende={arende} />}
-      {flik === "brief" && <BriefFlik arende={arende} metodik={metodik} nu={nu} />}
+      {flik === "brief" && <BriefFlik arende={arende} metodik={metodik} nu={nu} skicka={skicka} />}
       {flik === "rapport" && <RapportFlik arende={arende} metodik={metodik} nu={nu} skicka={skicka} />}
     </FelsokningSkal>
   );
@@ -187,16 +187,15 @@ function GuideFlik({
   const [visaOverlamning, setVisaOverlamning] = useState(false);
   const [aiStatus, setAiStatus] = useState<"vilar" | "arbetar" | "fel">("vilar");
 
-  // AI:n drivs av plattformen och svarar skriftligt på varje bekräftad
-  // dokumentation: klassificerat (observation/verifierat/hypotes/
-  // rekommendation) och loggat som händelse. I lokalt läge (ej inloggad)
-  // guidar den deterministiska metodiken ensam.
+  // AI-orkestern drivs av plattformen: handledningen (Sonnet 5) svarar på
+  // varje bekräftad dokumentation, klassificerat och loggat som händelse.
+  // I lokalt läge (ej inloggad) guidar den deterministiska metodiken ensam.
   const fragaAiOmDokumentation = async (inmatning: string) => {
     setAiStatus("arbetar");
     try {
       const svar = await fragaAi(brief(arende, metodik, nu), metodik.namn, inmatning);
       if (svar) {
-        skicka({ typ: "ai_svar", rader: svar.rader, nastaSteg: svar.nastaSteg, modell: AI_MODELL });
+        skicka({ typ: "ai_svar", rader: svar.rader, nastaSteg: svar.nastaSteg, modell: svar.modell });
       }
       setAiStatus("vilar");
     } catch {
@@ -240,9 +239,11 @@ function GuideFlik({
 
       {(aiStatus !== "vilar" || senasteAiSvar) && (
         <Panel
-          rubrik={`AI-handledning (${
-            senasteAiSvar?.handelse.typ === "ai_svar" ? senasteAiSvar.handelse.modell : AI_MODELL
-          })`}
+          rubrik={
+            senasteAiSvar?.handelse.typ === "ai_svar"
+              ? `AI-handledning (${senasteAiSvar.handelse.modell})`
+              : "AI-handledning"
+          }
         >
           {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-bold text-amber-400">AI analyserar …</p>}
           {aiStatus === "fel" && (
@@ -538,7 +539,27 @@ function OverlamningDialog({
 }) {
   const anvandare = useFelsokning((s) => s.anvandare);
   const [till, setTill] = useState("");
+  const [aiLage, setAiLage] = useState<"vilar" | "arbetar" | "fel" | "klar">("vilar");
+  const [aiRader, setAiRader] = useState<{ typ: keyof typeof AI_RADTYP_LABEL; text: string }[]>([]);
   const text = overlamningstext(arende, metodik, nu);
+
+  // Orkesterns sammanfattningsuppgift: risker och osäkerheter som inte
+  // syns i checklistorna — loggas som AI-svar och visas i överlämningen.
+  const komplettera = async () => {
+    setAiLage("arbetar");
+    try {
+      const svar = await sammanfattaOverlamning(arende, metodik);
+      if (svar) {
+        skicka({ typ: "ai_svar", rader: svar.rader, nastaSteg: svar.nastaSteg, modell: svar.modell });
+        setAiRader(svar.rader);
+        setAiLage("klar");
+      } else {
+        setAiLage("vilar");
+      }
+    } catch {
+      setAiLage("fel");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
@@ -547,6 +568,24 @@ function OverlamningDialog({
         <pre className="mb-3 overflow-x-auto whitespace-pre-wrap rounded-lg bg-zinc-950 p-4 text-sm text-zinc-200">
           {text}
         </pre>
+        {aiLage === "vilar" && (
+          <StorKnapp variant="sekundar" className="mb-3" onClick={komplettera}>
+            ✨ AI-komplettera: risker &amp; osäkerheter
+          </StorKnapp>
+        )}
+        {aiLage === "arbetar" && <p className="mb-3 animate-pulse font-bold text-amber-400">AI sammanfattar …</p>}
+        {aiLage === "fel" && (
+          <p className="mb-3 font-bold text-red-400">Kunde inte hämtas — kräver inloggning. Överlämningen fungerar ändå.</p>
+        )}
+        {aiLage === "klar" && aiRader.length > 0 && (
+          <div className="mb-3 rounded-lg bg-zinc-950 p-4">
+            {aiRader.map((rad, i) => (
+              <p key={i} className="py-0.5 text-sm text-zinc-200">
+                <span className="font-extrabold text-zinc-400">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
+              </p>
+            ))}
+          </div>
+        )}
         <TextFalt label="Lämnas till (valfritt)" varde={till} satt={setTill} platshallare="T.ex. Johan" />
         <div className="grid grid-cols-2 gap-2">
           <StorKnapp variant="sekundar" onClick={stang}>
@@ -587,10 +626,64 @@ function LoggFlik({ arende }: { arende: Arende }) {
   );
 }
 
-function BriefFlik({ arende, metodik, nu }: { arende: Arende; metodik: Metodik; nu: string }) {
+function BriefFlik({
+  arende,
+  metodik,
+  nu,
+  skicka,
+}: {
+  arende: Arende;
+  metodik: Metodik;
+  nu: string;
+  skicka: (h: Handelse) => void;
+}) {
   const b = brief(arende, metodik, nu);
+  const [granskning, setGranskning] = useState<"vilar" | "arbetar" | "fel">("vilar");
+  const senasteAi = [...arende.handelser].reverse().find((p) => p.handelse.typ === "ai_svar");
+
+  // Djupgranskningen går till orkesterns tyngsta modell (Opus 5, hög
+  // effort): motsägelser, luckor och förhastade slutsatser i hela loggen.
+  const granska = async () => {
+    setGranskning("arbetar");
+    try {
+      const svar = await granskaUnderlag(arende, metodik);
+      if (svar) skicka({ typ: "ai_svar", rader: svar.rader, nastaSteg: svar.nastaSteg, modell: svar.modell });
+      setGranskning("vilar");
+    } catch {
+      setGranskning("fel");
+    }
+  };
+
   return (
     <>
+      {!b.avslutat && (
+        <Panel rubrik="AI-granskning">
+          <p className="mb-2 text-zinc-300">
+            Låt orkesterns djupaste modell granska hela underlaget: motsägelser mellan observationer,
+            luckor i dokumentationen och slutsatser som saknar stöd.
+          </p>
+          {granskning === "arbetar" && <p className="mb-2 animate-pulse font-bold text-amber-400">AI granskar underlaget …</p>}
+          {granskning === "fel" && (
+            <p className="mb-2 font-bold text-red-400">Granskningen kunde inte hämtas — kräver inloggning. Försök igen.</p>
+          )}
+          {senasteAi && senasteAi.handelse.typ === "ai_svar" && granskning === "vilar" && (
+            <div className="mb-2">
+              {senasteAi.handelse.rader.map((rad, i) => (
+                <p key={i} className="py-0.5 text-lg">
+                  <span className="font-extrabold text-zinc-400">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
+                </p>
+              ))}
+              <p className="mt-1 text-lg">
+                <span className="font-extrabold text-amber-400">Nästa steg:</span> {senasteAi.handelse.nastaSteg}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">Senaste AI-svar ({senasteAi.handelse.modell})</p>
+            </div>
+          )}
+          <StorKnapp variant="sekundar" disabled={granskning === "arbetar"} onClick={granska}>
+            🔍 AI-granska underlaget
+          </StorKnapp>
+        </Panel>
+      )}
       <Panel rubrik="Objekt">
         {b.objekt ? (
           <>

@@ -8,14 +8,14 @@ import { persist } from "zustand/middleware";
 import type { Arende, Handelse, LoggPost, Objekt } from "./domain";
 import { nyLoggPost } from "./domain";
 import { felbeskrivning } from "./projektioner";
-import { GENERISK_METODIK, valjMetodik, type Metodik } from "./metodik";
+import { GENERISK_METODIK, metodikForId, valjMetodik, type Metodik } from "./metodik";
 
 interface FelsokningState {
   anvandare: string;
   arenden: Record<string, Arende>;
   nastaNummer: number;
   sattAnvandare: (namn: string) => void;
-  skapaArende: (objekt: Objekt, felbeskrivningText: string) => string;
+  skapaArende: (objekt: Objekt, felbeskrivningText: string, metodikId?: string) => string;
   laggTill: (arendeId: string, handelse: Handelse) => void;
   // Används endast av synken: ersätter listan med den ihopflätade versionen.
   // Semantiken är fortfarande append-only — flätningen lägger bara till.
@@ -39,7 +39,7 @@ export const useFelsokning = create<FelsokningState>()(
 
       sattAnvandare: (namn) => set({ anvandare: namn.trim() }),
 
-      skapaArende: (objekt, felbeskrivningText) => {
+      skapaArende: (objekt, felbeskrivningText, metodikId) => {
         const { anvandare, nastaNummer } = get();
         const id = `arende-${Date.now().toString(36)}`;
         const arende: Arende = {
@@ -47,6 +47,7 @@ export const useFelsokning = create<FelsokningState>()(
           nummer: nastaNummer,
           skapad: new Date().toISOString(),
           delningskod: nyDelningskod(),
+          metodikId,
           handelser: [
             nyLoggPost(anvandare, { typ: "objekt_identifierat", objekt }),
             nyLoggPost(anvandare, { typ: "felbeskrivning", text: felbeskrivningText }),
@@ -99,6 +100,7 @@ export const useFelsokning = create<FelsokningState>()(
 
 export function metodikForArende(arende: Arende | undefined): Metodik {
   if (!arende) return GENERISK_METODIK;
+  if (arende.metodikId) return metodikForId(arende.metodikId);
   const text = felbeskrivning(arende);
   return text ? valjMetodik(text) : GENERISK_METODIK;
 }

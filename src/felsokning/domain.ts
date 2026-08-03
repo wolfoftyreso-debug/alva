@@ -74,6 +74,9 @@ export interface Arende {
   // Slumpad kod för Live Share-länken; sätts vid skapande och kan aldrig
   // ändras (ärenderaden är append-only även i databasen).
   delningskod?: string;
+  // Explicit vald metodik (t.ex. via AI-klassificering vid skapandet).
+  // Saknas den härleds metodiken ur felbeskrivningen.
+  metodikId?: string;
   handelser: LoggPost[];
 }
 
