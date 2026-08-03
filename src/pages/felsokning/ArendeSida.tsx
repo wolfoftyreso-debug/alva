@@ -238,7 +238,11 @@ function GuideFlik({
       </Panel>
 
       {(aiStatus !== "vilar" || senasteAiSvar) && (
-        <Panel rubrik={`AI-handledning (${AI_MODELL})`}>
+        <Panel
+          rubrik={`AI-handledning (${
+            senasteAiSvar?.handelse.typ === "ai_svar" ? senasteAiSvar.handelse.modell : AI_MODELL
+          })`}
+        >
           {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-bold text-amber-400">AI analyserar …</p>}
           {aiStatus === "fel" && (
             <p className="mb-2 font-bold text-red-400">AI-svaret kunde inte hämtas — kontrollera nyckel och nät. Metodiken fortsätter som vanligt.</p>

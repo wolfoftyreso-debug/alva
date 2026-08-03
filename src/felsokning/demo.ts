@@ -95,6 +95,17 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
     post(82, { typ: "matvarde", beskrivning: "Obalans höger framhjul", varde: "38", enhet: "g" }),
     post(83, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "balansering", text: "Kontrollera hjulbalansering", resultat: "38 g obalans höger fram — en balansvikt saknas. Övriga hjul inom 5 g." }),
     post(85, { typ: "observation", text: "Spår efter lossnad klistervikt på höger framfälgs insida" }),
+    // Exempel på AI-handledning, märkt "demo" — riktiga svar kräver API-nyckel.
+    post(86, {
+      typ: "ai_svar",
+      rader: [
+        { typ: "verifierat", text: "Obalans uppmätt: 38 g höger framhjul. Övriga hjul inom tolerans." },
+        { typ: "observation", text: "Spår efter lossnad klistervikt förklarar var vikten suttit — orsaken till obalansen är dock inte verifierad." },
+        { typ: "rekommendation", text: "Balansera om hjulet och verifiera att symptomet försvinner innan ärendet avslutas." },
+      ],
+      nastaSteg: "Balansera om höger framhjul och genomför ny provkörning i 80–100 km/h.",
+      modell: "demo",
+    }),
     post(90, { typ: "overlamning", fran: anvandare, till: "Johan" }),
     post(92, { typ: "kategori_byte", kategori: "administration" }, "Johan"),
     post(95, { typ: "kommentar", text: "Balanserat om höger framhjul, ny provkörning planerad." }, "Johan"),
