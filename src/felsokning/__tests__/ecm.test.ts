@@ -445,3 +445,59 @@ describe("Åtgärdsfasen och kvalitetskontroll", () => {
     }
   });
 });
+
+describe("Kundgodkännande före arbete", () => {
+  const FORSLAG: Handelse = {
+    typ: "atgardsforslag",
+    beskrivning: "Balansera om höger framhjul och genomför ny provkörning.",
+    uppskattadKostnad: "890 kr",
+  };
+  const ATGARD: Handelse = { typ: "atgard_utford", beskrivning: "Balanserade om höger framhjul.", utford: true };
+
+  it("lämnat förslag kräver registrerat besked innan arbetet utförs", async () => {
+    const { atgardsforslag, kundbeslut } = await import("../ecm");
+    const utanBesked = byggArende([OBJEKT, ...PREDIAG, FORSLAG, ATGARD]);
+    expect(atgardsforslag(utanBesked)).toHaveLength(1);
+    expect(kundbeslut(utanBesked)).toBeUndefined();
+    const rad = kvalitetsgrind(utanBesked, VIBRATION_METODIK).find((r) => r.id === "kundgodkannande");
+    expect(rad?.kravs).toBe(true);
+    expect(rad?.ok).toBe(false);
+    expect(rad?.detalj).toContain("registrera kundens besked");
+
+    const medBesked = byggArende([
+      OBJEKT,
+      ...PREDIAG,
+      FORSLAG,
+      { typ: "kundbeslut", beslut: "godkant", kanal: "Telefon" },
+      ATGARD,
+    ]);
+    const rad2 = kvalitetsgrind(medBesked, VIBRATION_METODIK).find((r) => r.id === "kundgodkannande");
+    expect(rad2?.ok).toBe(true);
+    expect(rad2?.detalj).toContain("Telefon");
+  });
+
+  it("utfört arbete trots avböjt förslag flaggas som konflikt", () => {
+    const konflikt = byggArende([
+      OBJEKT,
+      ...PREDIAG,
+      FORSLAG,
+      { typ: "kundbeslut", beslut: "avbojt", kanal: "Telefon", kommentar: "Kunden vill vänta." },
+      ATGARD,
+    ]);
+    const rad = kvalitetsgrind(konflikt, VIBRATION_METODIK).find((r) => r.id === "godkannande_konflikt");
+    expect(rad?.ok).toBe(false);
+    expect(rad?.kravs).toBe(true);
+  });
+
+  it("utan lämnat förslag ställs inget godkännandekrav", () => {
+    const utanForslag = byggArende([OBJEKT, ...PREDIAG, ATGARD]);
+    expect(kvalitetsgrind(utanForslag, VIBRATION_METODIK).some((r) => r.id === "kundgodkannande")).toBe(false);
+  });
+
+  it("demoärendet visar hela kundkedjan: förslag → godkännande → åtgärd", () => {
+    const demo = byggDemoArende(1);
+    const typer = demo.handelser.map((p) => p.handelse.typ);
+    expect(typer.indexOf("atgardsforslag")).toBeLessThan(typer.indexOf("kundbeslut"));
+    expect(typer.indexOf("kundbeslut")).toBeLessThan(typer.indexOf("atgard_utford"));
+  });
+});

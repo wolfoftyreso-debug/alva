@@ -130,6 +130,19 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
       nastaSteg: "Balansera om höger framhjul och genomför ny provkörning i 80–100 km/h.",
       modell: "demo",
     }),
+    post(86, {
+      typ: "atgardsforslag",
+      beskrivning: "Balansera om höger framhjul och genomför ny provkörning i 80–100 km/h.",
+      uppskattadKostnad: "890 kr inkl. moms",
+    }),
+    post(87, { typ: "kategori_byte", kategori: "kundkontakt" }),
+    post(87, {
+      typ: "kundbeslut",
+      beslut: "godkant",
+      kanal: "Telefon",
+      kommentar: "Kunden godkände ombalansering.",
+    }),
+    post(87, { typ: "kategori_byte", kategori: "aktiv_felsokning" }),
     post(87, {
       typ: "atgard_utford",
       beskrivning: "Balanserade om höger framhjul och monterade ny balansvikt på fälgens insida.",

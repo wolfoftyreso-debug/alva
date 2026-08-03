@@ -5,7 +5,7 @@
 // bort även lokalt.
 
 import type { Arende } from "./domain";
-import { handelseRubrik } from "./domain";
+import { KUNDBESLUT_LABEL, handelseRubrik } from "./domain";
 import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader, videor } from "./projektioner";
 import { metodikForArende } from "./store";
 import { tidDatum, tidKlockslag } from "./format";
@@ -59,6 +59,10 @@ export function DelatArendeVy({
   const avslutat = arAvslutat(arende);
   const bilder = foton(arende);
   const klipp = videor(arende);
+  // Åtgärdsförslaget är avsett för kunden — det visas alltid överst i
+  // delningsvyn, tillsammans med det besked som registrerats.
+  const forslag = arende.handelser.filter((p) => p.handelse.typ === "atgardsforslag");
+  const beslut = [...arende.handelser].reverse().find((p) => p.handelse.typ === "kundbeslut");
   const matvarden = arende.handelser.filter((p) => p.handelse.typ === "matvarde");
   const kundposter = redanFiltrerad
     ? arende.handelser
@@ -90,6 +94,33 @@ export function DelatArendeVy({
       {b.felbeskrivning && (
         <Panel rubrik="Kundens felbeskrivning">
           <p className="text-[14px]">”{b.felbeskrivning}”</p>
+        </Panel>
+      )}
+
+      {forslag.length > 0 && (
+        <Panel rubrik="Åtgärdsförslag">
+          {forslag.map((p) => {
+            const h = p.handelse;
+            if (h.typ !== "atgardsforslag") return null;
+            return (
+              <div key={p.id} className="mb-2 last:mb-0">
+                <p className="text-[14px]">{h.beskrivning}</p>
+                {h.uppskattadKostnad && (
+                  <p className="text-[13px] text-[#4A5560]">Uppskattad kostnad: {h.uppskattadKostnad}</p>
+                )}
+              </div>
+            );
+          })}
+          {beslut?.handelse.typ === "kundbeslut" ? (
+            <p className="mt-2 border-t border-[#DDDDDD] pt-2 text-[13px] font-semibold">
+              Ditt besked: {KUNDBESLUT_LABEL[beslut.handelse.beslut]}{" "}
+              <span className="font-normal text-[#4A5560]">(registrerat via {beslut.handelse.kanal})</span>
+            </p>
+          ) : (
+            <p className="mt-2 border-t border-[#DDDDDD] pt-2 text-[12px] text-[#707070]">
+              Inväntar ditt besked — kontakta verkstaden för att godkänna eller avböja.
+            </p>
+          )}
         </Panel>
       )}
 

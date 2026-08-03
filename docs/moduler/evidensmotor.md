@@ -76,6 +76,7 @@ alla obligatoriska rader är gröna:
 | Fordonshistorik kontrollerad eller motiverad | Obligatorisk |
 | Ingående mätarställning dokumenterad | Obligatorisk |
 | Kundens felbeskrivning verifierad | Rekommenderas |
+| Kundens besked på åtgärdsförslaget | Obligatoriskt när arbete utförts |
 | Åtgärd dokumenterad eller motiverad | Obligatorisk vid avslut |
 | Kvalitetskontroll genomförd | Obligatorisk vid avslut efter utförd åtgärd |
 | Utgående mätarställning | Obligatorisk vid avslut |
@@ -160,6 +161,29 @@ Flottdatan är redan igång: **felorsaksstatistiken** i arbetsledarvyn
 (`GET /api/statistik/felorsaker`) aggregerar orsakskategorierna över
 organisationen — vilka komponenter fallerar av slitage, vilka efter
 tidigare reparationer, vilka tyder på konstruktionsproblem.
+
+## Kundgodkännande före arbete
+
+Verkstaden får aldrig utföra föreslaget arbete utan att kundens besked är
+registrerat och spårbart:
+
+- **Åtgärdsförslaget** skrivs i guiden (förifyllt ur felorsaksanalysens
+  rekommenderade åtgärd) med eventuell uppskattad kostnad, och **visas
+  för kunden i Live Share** — det är kunddelbart material.
+- **Kundens besked** registreras med utfall (godkänt/avböjt/delvis),
+  **kanal** (telefon, på plats, e-post, SMS, delningslänk) och
+  motivering vid avböjt/delvis. Loggposten bär vem i verkstaden som tog
+  emot beskedet och när.
+- **Knappen "Dokumentera utförd åtgärd" är låst** så länge ett förslag
+  saknar besked — och förblir låst vid avböjt besked. Vägen "Ingen
+  åtgärd utförd" är öppen och hänvisar till det registrerade beskedet.
+- Kvalitetsgrinden kräver registrerat besked när arbete utförts, och
+  flaggar konflikten *"Utfört arbete trots avböjt åtgärdsförslag"* som
+  ett hårt fel.
+
+Avgränsning: kunden godkänner i dagsläget genom kontakt med verkstaden —
+plattformen registrerar beskedet. Publikt godkännande direkt i
+delningslänken kräver en skrivande publik endpoint och hanteras separat.
 
 ## Åtgärdsfasen (Repair & Verification)
 

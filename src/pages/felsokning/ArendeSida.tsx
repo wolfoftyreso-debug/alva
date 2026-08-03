@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Arende, Handelse, TidKategori, Tillforlitlighet } from "@/felsokning/domain";
-import { KVALITETSKONTROLL_LABEL, TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
+import { KUNDBESLUT_LABEL, KVALITETSKONTROLL_LABEL, TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
 import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
 import {
@@ -45,15 +45,18 @@ import {
   MARKOR_FELBESKRIVNING_VERIFIERAD,
   MARKOR_INGA_TIDIGA_OBSERVATIONER,
   INGEN_ATGARD_ORSAKER,
+  KUNDKANALER,
   MARKOR_TIDIGA_OBSERVATIONER_KLARA,
   aktivtRegelpaket,
   atgarder,
+  atgardsforslag,
   arendetyp,
   felorsaker,
   granskaAvvikelse,
   grindGodkand,
   kvalitetsgrind,
   hamtaRegelpaket,
+  kundbeslut,
   kvalitetskontroll,
   preDiagnostik,
   reproducering,
@@ -715,6 +718,19 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
   const kk = kvalitetskontroll(arende);
   const repro = reproducering(arende);
 
+  const forslag = atgardsforslag(arende);
+  const beslut = kundbeslut(arende);
+  const senasteFelorsak = felorsaker(arende).at(-1);
+  const foreslagenAtgard =
+    senasteFelorsak?.handelse.typ === "felorsak" ? senasteFelorsak.handelse.atgard : "";
+
+  const [forslagsLage, setForslagsLage] = useState(false);
+  const [forslagText, setForslagText] = useState("");
+  const [kostnad, setKostnad] = useState("");
+  const [beslutsVal, setBeslutsVal] = useState<"" | "godkant" | "avbojt" | "delvis">("");
+  const [kanal, setKanal] = useState("");
+  const [beslutsKommentar, setBeslutsKommentar] = useState("");
+
   const [lage, setLage] = useState<"" | "utford" | "ingen">("");
   const [beskrivning, setBeskrivning] = useState("");
   const [delar, setDelar] = useState("");
@@ -746,9 +762,140 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
         </p>
       )}
 
+      {/* Kundkommunikation: förslaget lämnas för godkännande innan
+          arbetet påbörjas, och beskedet registreras med kanal. */}
+      {forslag.map((p) => {
+        const h = p.handelse;
+        if (h.typ !== "atgardsforslag") return null;
+        return (
+          <p key={p.id} className="border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
+            <span className="font-semibold">Åtgärdsförslag till kund:</span> {h.beskrivning}
+            {h.uppskattadKostnad && <span className="text-[#4A5560]"> · Uppskattad kostnad: {h.uppskattadKostnad}</span>}
+          </p>
+        );
+      })}
+      {beslut && (
+        <p className={`py-1 text-[13px] font-semibold ${beslut.beslut === "godkant" ? "text-[#1E6B34]" : beslut.beslut === "avbojt" ? "text-[#8B1A1A]" : "text-[#9A6700]"}`}>
+          Kundens besked ({beslut.kanal}): {KUNDBESLUT_LABEL[beslut.beslut]}
+          {beslut.kommentar && <span className="font-normal"> — {beslut.kommentar}</span>}
+        </p>
+      )}
+
+      {forslag.length === 0 && !forslagsLage && poster.length === 0 && (
+        <StorKnapp
+          variant="sekundar"
+          className="mb-2"
+          onClick={() => {
+            setForslagsLage(true);
+            setForslagText(foreslagenAtgard);
+          }}
+        >
+          Lämna åtgärdsförslag till kund
+        </StorKnapp>
+      )}
+
+      {forslagsLage && (
+        <div className="mb-3 rounded border border-[#C6C6C6] bg-white p-2">
+          <TextFalt
+            label="Föreslagen åtgärd (visas för kunden i delningsvyn)"
+            varde={forslagText}
+            satt={setForslagText}
+            flerRad
+            rost
+            platshallare="T.ex. Balansera om höger framhjul och genomför ny provkörning."
+          />
+          <TextFalt label="Uppskattad kostnad (valfritt)" varde={kostnad} satt={setKostnad} platshallare="T.ex. 1 200 kr inkl. moms" />
+          <div className="grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => setForslagsLage(false)}>
+              Avbryt
+            </StorKnapp>
+            <StorKnapp
+              disabled={forslagText.trim().length < 10}
+              onClick={() => {
+                skicka({
+                  typ: "atgardsforslag",
+                  beskrivning: forslagText.trim(),
+                  uppskattadKostnad: kostnad.trim() || undefined,
+                });
+                setForslagsLage(false);
+                setForslagText("");
+                setKostnad("");
+              }}
+            >
+              Lämna förslag
+            </StorKnapp>
+          </div>
+        </div>
+      )}
+
+      {forslag.length > 0 && !beslut && (
+        <div className="mb-3 rounded border border-[#E0C36A] bg-[#FFF8E1] p-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#9A6700]">
+            Registrera kundens besked innan arbetet påbörjas
+          </p>
+          <div className="mb-2 grid grid-cols-3 gap-2">
+            {(["godkant", "avbojt", "delvis"] as const).map((val) => (
+              <button
+                key={val}
+                onClick={() => setBeslutsVal(val)}
+                className={`min-h-9 rounded border text-[12px] font-semibold ${
+                  beslutsVal === val ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
+                }`}
+              >
+                {KUNDBESLUT_LABEL[val]}
+              </button>
+            ))}
+          </div>
+          {beslutsVal && (
+            <>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">Hur lämnades beskedet?</p>
+              <div className="mb-2 grid grid-cols-3 gap-1">
+                {KUNDKANALER.map((k) => (
+                  <button
+                    key={k}
+                    onClick={() => setKanal(k)}
+                    className={`min-h-8 rounded border px-1 text-[12px] font-medium ${
+                      kanal === k ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
+                    }`}
+                  >
+                    {k}
+                  </button>
+                ))}
+              </div>
+              <TextFalt
+                label={beslutsVal === "godkant" ? "Kommentar (valfritt)" : "Kundens motivering (obligatorisk)"}
+                varde={beslutsKommentar}
+                satt={setBeslutsKommentar}
+                rost
+              />
+              <StorKnapp
+                disabled={!kanal || (beslutsVal !== "godkant" && !beslutsKommentar.trim())}
+                onClick={() => {
+                  skicka({
+                    typ: "kundbeslut",
+                    beslut: beslutsVal,
+                    kanal,
+                    kommentar: beslutsKommentar.trim() || undefined,
+                  });
+                  setBeslutsVal("");
+                  setKanal("");
+                  setBeslutsKommentar("");
+                }}
+              >
+                Registrera besked
+              </StorKnapp>
+            </>
+          )}
+        </div>
+      )}
+
       {poster.length === 0 && !lage && (
         <div className="grid grid-cols-2 gap-2">
-          <StorKnapp variant="sekundar" onClick={() => setLage("utford")}>
+          <StorKnapp
+            variant="sekundar"
+            disabled={forslag.length > 0 && (!beslut || beslut.beslut === "avbojt")}
+            onClick={() => setLage("utford")}
+          >
             Dokumentera utförd åtgärd
           </StorKnapp>
           <StorKnapp variant="sekundar" onClick={() => setLage("ingen")}>
@@ -806,6 +953,11 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
             ))}
           </div>
           <TextFalt label="Eller egen orsak" varde={orsak && !INGEN_ATGARD_ORSAKER.includes(orsak) ? orsak : ""} satt={setOrsak} rost />
+          {beslut?.beslut === "avbojt" && (
+            <p className="mb-2 text-[11px] text-[#707070]">
+              Kunden har avböjt åtgärden via {beslut.kanal} — beskedet finns registrerat i loggen.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setLage("")}>
               Avbryt
@@ -2005,6 +2157,8 @@ function RapportFlik({
   const orsakerLista = felorsaker(arende);
   const atgardsRader = atgarder(arende);
   const kkRad = kvalitetskontroll(arende);
+  const forslagRader = atgardsforslag(arende);
+  const beslutRad = kundbeslut(arende);
   let matIn: string | undefined;
   let matUt: string | undefined;
   for (const p of arende.handelser) {
@@ -2161,6 +2315,29 @@ function RapportFlik({
           );
         })}
       </Panel>
+      {(forslagRader.length > 0 || beslutRad) && (
+        <Panel rubrik="Åtgärdsförslag och kundens besked">
+          {forslagRader.map((p) => {
+            const h = p.handelse;
+            if (h.typ !== "atgardsforslag") return null;
+            return (
+              <div key={p.id}>
+                {identitetsRader([
+                  ["Föreslagen åtgärd", h.beskrivning],
+                  ["Uppskattad kostnad", h.uppskattadKostnad],
+                  ["Uppskattad tid", h.uppskattadTid],
+                ])}
+              </div>
+            );
+          })}
+          {beslutRad &&
+            identitetsRader([
+              ["Kundens besked", KUNDBESLUT_LABEL[beslutRad.beslut]],
+              ["Lämnat via", beslutRad.kanal],
+              ["Kommentar", beslutRad.kommentar],
+            ])}
+        </Panel>
+      )}
       <Panel rubrik="Utförd åtgärd och verifiering">
         {atgardsRader.length === 0 && <p className="text-[14px] text-[#4A5560]">Ingen åtgärd dokumenterad ännu.</p>}
         {atgardsRader.map((p) => {

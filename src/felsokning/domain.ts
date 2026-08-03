@@ -29,6 +29,13 @@ export const TIDKATEGORI_LABEL: Record<TidKategori, string> = {
   paus: "Paus",
 };
 
+// Kundens besked på ett lämnat åtgärdsförslag.
+export const KUNDBESLUT_LABEL: Record<"godkant" | "avbojt" | "delvis", string> = {
+  godkant: "Godkänt",
+  avbojt: "Avböjt",
+  delvis: "Delvis godkänt",
+};
+
 // Kvalitetskontrollens utfall efter utförd åtgärd.
 export const KVALITETSKONTROLL_LABEL: Record<
   "symptomet_borta" | "kvarstar" | "delvis" | "ej_verifierbar",
@@ -111,6 +118,22 @@ export type Handelse =
       atgard: string;
       motivering?: string;
       ytterligareKontroller?: string;
+    }
+  // Kundkommunikation: åtgärdsförslag lämnat till kund för godkännande
+  // innan arbetet påbörjas. Kunddelbart — visas i Live Share.
+  | {
+      typ: "atgardsforslag";
+      beskrivning: string;
+      uppskattadKostnad?: string;
+      uppskattadTid?: string;
+    }
+  // Kundens besked på förslaget, med kanal och tidpunkt (loggposten bär
+  // vem i verkstaden som tog emot beskedet).
+  | {
+      typ: "kundbeslut";
+      beslut: "godkant" | "avbojt" | "delvis";
+      kanal: string;
+      kommentar?: string;
     }
   // Åtgärdsfasen: vad som faktiskt gjordes — eller varför ingen åtgärd
   // utfördes (kunden avböjde, väntar på delar …). Kopplas till den
@@ -222,6 +245,10 @@ export function handelseRubrik(post: LoggPost): string {
           : `Symptomet kunde inte reproduceras — ${h.beskrivning}`;
     case "felorsak":
       return `Felorsak (${TILLFORLITLIGHET_LABEL[h.sakerhet]}): ${h.avvikelse} — ${h.orsaker.join(", ")}`;
+    case "atgardsforslag":
+      return `Åtgärdsförslag till kund: ${h.beskrivning}${h.uppskattadKostnad ? ` — uppskattad kostnad ${h.uppskattadKostnad}` : ""}`;
+    case "kundbeslut":
+      return `Kundens besked (${h.kanal}): ${KUNDBESLUT_LABEL[h.beslut]}${h.kommentar ? ` — ${h.kommentar}` : ""}`;
     case "atgard_utford":
       return h.utford
         ? `Åtgärd utförd: ${h.beskrivning}${h.delar ? ` (delar: ${h.delar})` : ""}`

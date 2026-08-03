@@ -209,6 +209,22 @@ export const INGEN_ATGARD_ORSAKER = [
   "Kostnadsförslag lämnat, inväntar besked",
 ];
 
+// Kanaler för kundens besked — beskedet ska alltid gå att härleda till
+// ett faktiskt samtal, besök eller meddelande.
+export const KUNDKANALER = ["Telefon", "På plats", "E-post", "SMS", "Delningslänk"];
+
+export function atgardsforslag(arende: Arende) {
+  return arende.handelser.filter((p) => p.handelse.typ === "atgardsforslag");
+}
+
+export function kundbeslut(arende: Arende) {
+  let senaste: { beslut: "godkant" | "avbojt" | "delvis"; kanal: string; kommentar?: string } | undefined;
+  for (const post of arende.handelser) {
+    if (post.handelse.typ === "kundbeslut") senaste = post.handelse;
+  }
+  return senaste;
+}
+
 export function atgarder(arende: Arende) {
   return arende.handelser.filter((p) => p.handelse.typ === "atgard_utford");
 }
@@ -567,6 +583,31 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
           ? undefined
           : "Ingen åtgärd utförd; orsaken är dokumenterad.",
   });
+
+  // Kundgodkännande: har ett åtgärdsförslag lämnats ska kundens besked
+  // vara registrerat innan arbetet utförs — arbete utan besked flaggas.
+  const forslag = atgardsforslag(arende);
+  const beslut = kundbeslut(arende);
+  if (forslag.length > 0 || beslut) {
+    rader.push({
+      id: "kundgodkannande",
+      rubrik: "Kundens besked på åtgärdsförslaget registrerat",
+      ok: !!beslut,
+      kravs: utfordAtgard,
+      detalj: beslut
+        ? `${beslut.beslut === "godkant" ? "Godkänt" : beslut.beslut === "avbojt" ? "Avböjt" : "Delvis godkänt"} via ${beslut.kanal}.`
+        : "Åtgärdsförslag lämnat — registrera kundens besked innan arbetet utförs.",
+    });
+    if (beslut?.beslut === "avbojt" && utfordAtgard) {
+      rader.push({
+        id: "godkannande_konflikt",
+        rubrik: "Utfört arbete trots avböjt åtgärdsförslag",
+        ok: false,
+        kravs: true,
+        detalj: "Kunden avböjde åtgärden men arbete är dokumenterat som utfört — kontrollera underlaget.",
+      });
+    }
+  }
 
   // Kvalitetskontroll: är symptomet borta? Krävs när en åtgärd faktiskt
   // utförts — annars finns inget att verifiera.
