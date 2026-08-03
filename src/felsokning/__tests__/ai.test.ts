@@ -55,7 +55,14 @@ describe("AI-orkestern", () => {
     expect(plattform).toContain("organisation_id");
     expect(plattform).toContain("arendeIOrg");
 
+    // Kontospärr och återkallelse: en giltig signatur räcker inte.
+    expect(plattform).toContain("kontoGiltigt");
+    expect(plattform).toContain("token_version");
+    expect(plattform).toContain("inloggningSparrad");
+
     const schema = readFileSync("infra/postgres-init.sql", "utf8");
+    expect(schema).toContain("create table if not exists inloggningsforsok");
+    expect(schema).toContain("token_version integer not null default 0");
     expect(schema).toContain("before update or delete on felsokning_handelser");
     expect(schema).toContain("before update or delete on felsokning_arenden");
     expect(schema).toContain("create table if not exists organisationer");
@@ -86,6 +93,9 @@ describe("AI-orkestern", () => {
       ["/api/integrationer/leverantorer", "/api/integrationer/leverantorer"],
       ["/api/integrationer/{leverantor}", "integrationVag"],
       ["/api/integrationer/{leverantor}/uppslag", "uppslagVag"],
+      ["/api/anvandare/{anvandarId}/avaktivera", "kontoVag"],
+      ["/api/anvandare/{anvandarId}/aktivera", "aktivera"],
+      ["/api/auth/logga-ut-alla", "/api/auth/logga-ut-alla"],
     ];
     for (const [iSpec, iServer] of vagar) {
       expect(spec).toContain(`${iSpec}:`);

@@ -74,6 +74,7 @@ export interface PlattformAnvandare {
   epost: string;
   namn: string;
   roll: PlattformRoll;
+  aktiv: boolean;
 }
 
 export async function hamtaAnvandare(): Promise<PlattformAnvandare[]> {
@@ -96,6 +97,25 @@ export async function skapaAnvandare(
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(data.error ?? `Fel ${res.status}`);
   }
+}
+
+// Stänga av eller öppna ett konto. En avstängning återkallar samtidigt
+// pågående sessioner — annars vore den verkningslös tills token gick ut.
+export async function sattKontoAktiv(id: string, aktiv: boolean): Promise<void> {
+  const res = await plattformFetch(`/api/anvandare/${id}/${aktiv ? "aktivera" : "avaktivera"}`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Fel ${res.status}`);
+  }
+}
+
+// Logga ut på alla enheter — vägen ut när en telefon tappats bort.
+export async function loggaUtAllaEnheter(): Promise<void> {
+  const res = await plattformFetch("/api/auth/logga-ut-alla", { method: "POST" });
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  loggaUtPlattform();
 }
 
 // Live Share-delningar: återkallbara länkar med behörighetsnivå.

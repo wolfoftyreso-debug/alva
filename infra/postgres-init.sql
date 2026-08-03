@@ -39,8 +39,32 @@ create table if not exists anvandare (
   namn text not null,
   roll text not null default 'tekniker'
     check (roll in ('tekniker', 'arbetsledare', 'admin')),
+  -- En avaktiverad användare kan varken logga in eller använda en token
+  -- som redan är utfärdad.
+  aktiv boolean not null default true,
+  -- Räknare för återkallelse. Utfärdade tokens bär sitt värde; höjs det
+  -- slutar alla tidigare utfärdade att gälla omedelbart. Loggen rörs
+  -- inte — historiken är fortfarande knuten till personen.
+  token_version integer not null default 0,
   skapad timestamptz not null default now()
 );
+alter table anvandare add column if not exists aktiv boolean not null default true;
+alter table anvandare add column if not exists token_version integer not null default 0;
+
+-- Inloggningsförsök: underlag för takt-begränsning som fungerar bakom
+-- flera repliker (den i minnet gör det inte). Inget lösenord lagras —
+-- bara att ett försök skedde och om det lyckades.
+create table if not exists inloggningsforsok (
+  id bigserial primary key,
+  epost text not null,
+  kalla text not null default '',
+  lyckades boolean not null,
+  tidpunkt timestamptz not null default now()
+);
+create index if not exists inloggningsforsok_epost_idx
+  on inloggningsforsok (epost, tidpunkt desc);
+create index if not exists inloggningsforsok_kalla_idx
+  on inloggningsforsok (kalla, tidpunkt desc);
 
 create table if not exists felsokning_arenden (
   id text primary key,

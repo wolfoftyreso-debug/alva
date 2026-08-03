@@ -108,6 +108,33 @@ upp dess CRD redan vid plan. I `extern` läge kör ni
 `infra/postgres-init.sql` mot databasen själva; det är samma fil som
 integrationstestet kör.
 
+## Åtkomst: spärr och återkallelse
+
+En giltig JWT-signatur räcker inte. Varje autentiserat anrop slår upp
+kontot och kontrollerar två saker till: att det fortfarande är aktivt och
+att token-versionen stämmer. Det kostar ett uppslag på primärnyckeln per
+anrop och ger i gengäld **omedelbar** återkallelse i stället för att en
+avstängning börjar gälla först när token går ut om upp till tolv timmar.
+
+| Situation | Väg | Effekt |
+| --- | --- | --- |
+| Någon slutar | `POST /api/anvandare/{id}/avaktivera` (admin) | Inloggning stängs och pågående sessioner upphör direkt |
+| Kontot ska tillbaka | `POST /api/anvandare/{id}/aktivera` (admin) | Kan logga in igen; tidigare återkallade tokens förblir döda |
+| Telefon borttappad | `POST /api/auth/logga-ut-alla` (sig själv) | Alla enheter loggas ut |
+
+En administratör kan inte stänga av sig själv, och gränsen mellan
+organisationer gäller — org B kan inte röra org A:s användare.
+Händelseloggen rörs aldrig: historiken är fortfarande knuten till
+personen som utförde arbetet.
+
+**Takt-begränsning på inloggning** ligger i databasen, inte i minnet, så
+spärren håller bakom flera repliker: 10 misslyckade försök per konto och
+30 per källadress inom 15 minuter ger 429. Spärren gäller kontot även vid
+rätt lösenord — annars kunde den kringgås av den som till slut gissar
+rätt. Andra konton påverkas inte. Inget lösenord lagras, bara att ett
+försök skedde och om det lyckades; rader äldre än ett dygn städas bort i
+skrivvägen.
+
 ## Multi-tenant och roller
 
 Enligt Master Prompt: varje kund är en egen tenant, ingen data blandas mellan kunder.

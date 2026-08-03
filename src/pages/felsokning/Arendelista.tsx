@@ -10,6 +10,7 @@ import {
   plattformAktiv,
   plattformKonto,
   registreraPlattform,
+  sattKontoAktiv,
   skapaAnvandare,
   type PlattformAnvandare,
   type PlattformKonto,
@@ -173,11 +174,43 @@ function AnvandarAdmin() {
   return (
     <Panel rubrik="Användare">
       {lista.map((anv) => (
-        <p key={anv.id} className="border-b border-[#DDDDDD] py-1 text-[14px] last:border-0">
-          <span className="font-semibold">{anv.namn}</span> · {ROLL_LABEL[anv.roll]}{" "}
-          <span className="text-[#707070]">{anv.epost}</span>
-        </p>
+        <div
+          key={anv.id}
+          className="flex items-center justify-between gap-3 border-b border-[#DDDDDD] py-1.5 last:border-0"
+        >
+          <p className="min-w-0 text-[14px]">
+            <span className={`font-semibold ${anv.aktiv === false ? "text-[#8A8A8A] line-through" : ""}`}>
+              {anv.namn}
+            </span>{" "}
+            · {ROLL_LABEL[anv.roll]} <span className="text-[#707070]">{anv.epost}</span>
+            {anv.aktiv === false && (
+              <span className="ml-1 text-[12px] font-semibold text-[#8B1A1A]">Avstängd</span>
+            )}
+          </p>
+          <button
+            type="button"
+            className={`shrink-0 rounded border px-2 py-1 text-[12px] font-semibold ${
+              anv.aktiv === false
+                ? "border-[#1E6B34] bg-white text-[#1E6B34]"
+                : "border-[#6E1414] bg-white text-[#8B1A1A]"
+            }`}
+            onClick={async () => {
+              setFel("");
+              try {
+                await sattKontoAktiv(anv.id, anv.aktiv === false);
+                await uppdatera();
+              } catch (misslyckande) {
+                setFel(misslyckande instanceof Error ? misslyckande.message : "Något gick fel.");
+              }
+            }}
+          >
+            {anv.aktiv === false ? "Öppna igen" : "Stäng av"}
+          </button>
+        </div>
       ))}
+      <p className="mt-1 text-[12px] text-[#707070]">
+        En avstängning gäller omedelbart — pågående sessioner på personens enheter upphör direkt.
+      </p>
       <form
         className="mt-3"
         onSubmit={async (e) => {

@@ -87,6 +87,49 @@ function forTataForsok(kod) {
   return forsok.length > BESLUT_TAK;
 }
 
+// ---- Takt-begränsning på inloggning -----------------------------------
+//
+// Den i minnet (beslutsvägen ovan) räcker för en pod. Inloggningen skalar
+// till flera repliker och behöver därför en gemensam räknare — den ligger
+// i databasen. Två spärrar: per konto (skyddar en enskild användare) och
+// per källa (stoppar den som betar av många konton från samma håll).
+
+const INLOGG_FONSTER = "15 minutes";
+const INLOGG_TAK_KONTO = 10;
+const INLOGG_TAK_KALLA = 30;
+
+function kallaFor(req) {
+  // Bakom ingressen står klientens adress först i X-Forwarded-For.
+  const vidarebefordrad = req.headers["x-forwarded-for"];
+  const forsta = typeof vidarebefordrad === "string" ? vidarebefordrad.split(",")[0].trim() : "";
+  return (forsta || req.socket?.remoteAddress || "").slice(0, 64);
+}
+
+async function inloggningSparrad(epost, kalla) {
+  const rad = await pool.query(
+    `select
+       count(*) filter (where epost = $1) as konto,
+       count(*) filter (where kalla = $2 and $2 <> '') as kalla
+     from inloggningsforsok
+     where lyckades = false and tidpunkt > now() - interval '${INLOGG_FONSTER}'`,
+    [epost, kalla],
+  );
+  const { konto, kalla: franKalla } = rad.rows[0];
+  return Number(konto) >= INLOGG_TAK_KONTO || Number(franKalla) >= INLOGG_TAK_KALLA;
+}
+
+async function loggaForsok(epost, kalla, lyckades) {
+  await pool.query(
+    `insert into inloggningsforsok (epost, kalla, lyckades) values ($1, $2, $3)`,
+    [epost, kalla, lyckades],
+  );
+  // Städa bort det som inte längre kan påverka någon spärr. Billigt nog
+  // att göra i skrivvägen och slipper ett schemalagt jobb.
+  if (Math.random() < 0.02) {
+    await pool.query(`delete from inloggningsforsok where tidpunkt < now() - interval '1 day'`);
+  }
+}
+
 // ---- JWT (HS256, utan beroenden) --------------------------------------
 
 const b64url = (data) => Buffer.from(data).toString("base64url");
@@ -236,6 +279,20 @@ function kravAuth(req, hemlighet) {
   return token ? verifieraJwt(token, hemlighet) : null;
 }
 
+// En giltig signatur räcker inte. Kontot måste fortfarande vara aktivt,
+// och token-versionen måste stämma med kontots — annars har den
+// återkallats. Ett uppslag på primärnyckeln per anrop, vilket gör
+// återkallelsen omedelbar i stället för att gälla vid nästa utgång.
+async function kontoGiltigt(anspr) {
+  const rad = await pool.query(
+    `select aktiv, token_version from anvandare where id = $1 and organisation_id = $2`,
+    [anspr.sub, anspr.org],
+  );
+  if (rad.rowCount === 0) return false;
+  if (rad.rows[0].aktiv === false) return false;
+  return (anspr.tv ?? 0) === rad.rows[0].token_version;
+}
+
 // Verifierar att ärendet tillhör användarens organisation.
 async function arendeIOrg(arendeId, organisationId) {
   const rader = await pool.query(
@@ -351,7 +408,16 @@ export function skapaServer() {
   function loggaIn(res, rad, hemlighet) {
     const nu = Math.floor(Date.now() / 1000);
     const token = skapaJwt(
-      { sub: rad.id, namn: rad.namn, org: rad.organisation_id, roll: rad.roll, iat: nu, exp: nu + TOKEN_LIVSTID_S },
+      {
+        sub: rad.id,
+        namn: rad.namn,
+        org: rad.organisation_id,
+        roll: rad.roll,
+        // Bärs med så att en återkallelse gör token ogiltig direkt.
+        tv: rad.token_version ?? 0,
+        iat: nu,
+        exp: nu + TOKEN_LIVSTID_S,
+      },
       hemlighet,
     );
     return svara(res, 200, { token, namn: rad.namn, roll: rad.roll, organisation: rad.org_namn });
@@ -408,7 +474,7 @@ export function skapaServer() {
             `insert into anvandare (organisation_id, epost, losen_hash, namn, roll)
              values ($1, lower($2), crypt($3, gen_salt('bf')), $4, 'admin')
              on conflict (epost) do nothing
-             returning id, namn, organisation_id, roll`,
+             returning id, namn, organisation_id, roll, token_version`,
             [org.rows[0].id, epost.trim(), losenord, namn.trim()],
           );
           if (rad.rowCount === 0) {
@@ -427,13 +493,30 @@ export function skapaServer() {
 
       if (req.method === "POST" && vag === "/api/auth/logga-in") {
         const { epost, losenord } = await lasKropp(req);
+        const normaliserad = (epost ?? "").trim().toLowerCase();
+        const kalla = kallaFor(req);
+
+        if (await inloggningSparrad(normaliserad, kalla)) {
+          return svara(res, 429, { error: "För många misslyckade försök — vänta en stund och försök igen." });
+        }
+
         const rader = await pool.query(
-          `select a.id, a.namn, a.organisation_id, a.roll, o.namn as org_namn
+          `select a.id, a.namn, a.organisation_id, a.roll, a.aktiv, a.token_version, o.namn as org_namn
            from anvandare a join organisationer o on o.id = a.organisation_id
-           where a.epost = lower($1) and a.losen_hash = crypt($2, a.losen_hash)`,
-          [epost ?? "", losenord ?? ""],
+           where a.epost = $1 and a.losen_hash = crypt($2, a.losen_hash)`,
+          [normaliserad, losenord ?? ""],
         );
-        if (rader.rowCount === 0) return svara(res, 401, { error: "Fel e-post eller lösenord." });
+        if (rader.rowCount === 0) {
+          await loggaForsok(normaliserad, kalla, false);
+          return svara(res, 401, { error: "Fel e-post eller lösenord." });
+        }
+        // Ett avaktiverat konto räknas som misslyckat försök: annars blir
+        // svarstiden ett sätt att lista ut vilka konton som finns.
+        if (rader.rows[0].aktiv === false) {
+          await loggaForsok(normaliserad, kalla, false);
+          return svara(res, 403, { error: "Kontot är avstängt — kontakta er administratör." });
+        }
+        await loggaForsok(normaliserad, kalla, true);
         return loggaIn(res, rader.rows[0], hemlighet);
       }
 
@@ -549,6 +632,9 @@ export function skapaServer() {
       // -- Skyddade endpoints (organisationsknutna) --
       const anspr = kravAuth(req, hemlighet);
       if (!anspr?.org) return svara(res, 401, { error: "Inloggning krävs." });
+      if (!(await kontoGiltigt(anspr))) {
+        return svara(res, 401, { error: "Sessionen gäller inte längre — logga in på nytt." });
+      }
 
       // Användarhantering: endast systemadministratör, endast egen org.
       if (vag === "/api/anvandare") {
@@ -557,7 +643,7 @@ export function skapaServer() {
         if (anspr.roll === "tekniker") return svara(res, 403, { error: "Kräver arbetsledar- eller administratörsbehörighet." });
         if (req.method === "GET") {
           const rader = await pool.query(
-            `select id, epost, namn, roll from anvandare where organisation_id = $1 order by namn`,
+            `select id, epost, namn, roll, aktiv from anvandare where organisation_id = $1 order by namn`,
             [anspr.org],
           );
           return svara(res, 200, { anvandare: rader.rows });
@@ -572,12 +658,45 @@ export function skapaServer() {
             `insert into anvandare (organisation_id, epost, losen_hash, namn, roll)
              values ($1, lower($2), crypt($3, gen_salt('bf')), $4, $5)
              on conflict (epost) do nothing
-             returning id, epost, namn, roll`,
+             returning id, epost, namn, roll, aktiv`,
             [anspr.org, epost.trim(), losenord, namn.trim(), roll],
           );
           if (rad.rowCount === 0) return svara(res, 409, { error: "E-postadressen är redan registrerad." });
           return svara(res, 200, rad.rows[0]);
         }
+      }
+
+      // Stäng av eller öppna ett konto. Att stänga av höjer också
+      // token-versionen, så pågående sessioner upphör direkt — annars
+      // vore avstängningen verkningslös i upp till tolv timmar.
+      const kontoVag = vag.match(/^\/api\/anvandare\/([0-9a-fA-F-]{36})\/(avaktivera|aktivera)$/);
+      if (req.method === "POST" && kontoVag) {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        const [, id, atgard] = kontoVag;
+        if (id === anspr.sub) {
+          return svara(res, 400, { error: "Du kan inte stänga av ditt eget konto." });
+        }
+        const aktivera = atgard === "aktivera";
+        const rad = await pool.query(
+          `update anvandare
+             set aktiv = $3,
+                 token_version = token_version + case when $3 then 0 else 1 end
+           where id = $1 and organisation_id = $2
+           returning id, namn, aktiv`,
+          [id, anspr.org, aktivera],
+        );
+        if (rad.rowCount === 0) return svara(res, 404, { error: "Användaren finns inte." });
+        return svara(res, 200, rad.rows[0]);
+      }
+
+      // Logga ut på alla enheter — den egna vägen ut när en telefon
+      // tappats bort. Höjer den egna token-versionen.
+      if (req.method === "POST" && vag === "/api/auth/logga-ut-alla") {
+        await pool.query(
+          `update anvandare set token_version = token_version + 1 where id = $1 and organisation_id = $2`,
+          [anspr.sub, anspr.org],
+        );
+        return svara(res, 200, { ok: true });
       }
 
       // ECM Knowledge Library: aktuellt regelpaket för inloggade klienter.

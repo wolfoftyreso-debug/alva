@@ -339,6 +339,72 @@ curl -s -X DELETE "$BAS/api/integrationer/generisk_vin" -H "Authorization: Beare
 ANTAL=$(curl -s "$BAS/api/integrationer" -H "Authorization: Bearer $TOKEN_A" | falt .integrationer.length)
 kontroll "kopplingen kan tas bort" "$ANTAL" "0"
 
+# 10e. Kontospärr, återkallelse och takt-begränsning på inloggning
+# Skapa en tekniker att stänga av.
+SVAR=$(curl -s -X POST "$BAS/api/anvandare" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"epost":"karin@a.se","losenord":"hemligt123","namn":"Karin","roll":"tekniker"}')
+KARIN_ID=$(echo "$SVAR" | falt .id)
+kontroll "ny användare är aktiv" "$(echo "$SVAR" | falt .aktiv)" "true"
+
+TOKEN_K=$(curl -s -X POST "$BAS/api/auth/logga-in" -H 'Content-Type: application/json' \
+  -d '{"epost":"karin@a.se","losenord":"hemligt123"}' | falt .token)
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_K")
+kontroll "teknikern kommer in" "$KOD" "200"
+
+# Tekniker får inte stänga av någon
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/anvandare/$KARIN_ID/avaktivera" \
+  -H "Authorization: Bearer $TOKEN_K")
+kontroll "tekniker kan inte stänga av konton" "$KOD" "403"
+
+# Administratören kan inte stänga av sig själv
+ANNA_ID=$(curl -s "$BAS/api/anvandare" -H "Authorization: Bearer $TOKEN_A" \
+  | falt '.anvandare.find(a=>a.epost==="anna@a.se").id')
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/anvandare/$ANNA_ID/avaktivera" \
+  -H "Authorization: Bearer $TOKEN_A")
+kontroll "admin kan inte stänga av sig själv" "$KOD" "400"
+
+# Org B kan inte röra org A:s användare
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/anvandare/$KARIN_ID/avaktivera" \
+  -H "Authorization: Bearer $TOKEN_B")
+kontroll "org B kan inte stänga av org A:s användare" "$KOD" "404"
+
+# Avstängningen gäller OMEDELBART för redan utfärdad token
+curl -s -X POST "$BAS/api/anvandare/$KARIN_ID/avaktivera" -H "Authorization: Bearer $TOKEN_A" >/dev/null
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_K")
+kontroll "utfärdad token slutar gälla direkt vid avstängning" "$KOD" "401"
+
+# … och inloggning stängs
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/auth/logga-in" -H 'Content-Type: application/json' \
+  -d '{"epost":"karin@a.se","losenord":"hemligt123"}')
+kontroll "avstängt konto kan inte logga in" "$KOD" "403"
+
+# Öppnas kontot igen fungerar inloggning, men den gamla token är död för gott
+curl -s -X POST "$BAS/api/anvandare/$KARIN_ID/aktivera" -H "Authorization: Bearer $TOKEN_A" >/dev/null
+TOKEN_K2=$(curl -s -X POST "$BAS/api/auth/logga-in" -H 'Content-Type: application/json' \
+  -d '{"epost":"karin@a.se","losenord":"hemligt123"}' | falt .token)
+kontroll "återöppnat konto kan logga in" "$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_K2")" "200"
+kontroll "den återkallade token förblir ogiltig" "$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_K")" "401"
+
+# Logga ut på alla enheter återkallar den egna sessionen
+curl -s -X POST "$BAS/api/auth/logga-ut-alla" -H "Authorization: Bearer $TOKEN_K2" >/dev/null
+kontroll "logga-ut-alla dödar den egna token" "$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_K2")" "401"
+
+# Takt-begränsning: efter tio misslyckade försök spärras kontot en stund
+SISTA=""
+for i in $(seq 1 11); do
+  SISTA=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/auth/logga-in" \
+    -H 'Content-Type: application/json' -d '{"epost":"karin@a.se","losenord":"fel-losenord"}')
+done
+kontroll "upprepade misslyckade inloggningar spärras" "$SISTA" "429"
+# Spärren gäller kontot även med RÄTT lösenord — annars vore den meningslös
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/auth/logga-in" \
+  -H 'Content-Type: application/json' -d '{"epost":"karin@a.se","losenord":"hemligt123"}')
+kontroll "spärren gäller även rätt lösenord" "$KOD" "429"
+# Ett annat konto påverkas inte av spärren på det första
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/auth/logga-in" \
+  -H 'Content-Type: application/json' -d '{"epost":"anna@a.se","losenord":"hemligt123"}')
+kontroll "andra konton påverkas inte" "$KOD" "200"
+
 # 11. API-first: OpenAPI-specen serveras live, utan inloggning
 SPEC=$(curl -s "$BAS/api/openapi.yaml")
 case "$SPEC" in

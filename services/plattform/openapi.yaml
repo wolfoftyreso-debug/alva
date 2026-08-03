@@ -88,6 +88,12 @@ paths:
     post:
       tags: [Auth]
       summary: Logga in
+      description: >
+        Takt-begränsad i databasen, så spärren håller bakom flera
+        repliker: 10 misslyckade försök per konto och 30 per källadress
+        inom 15 minuter ger 429. Spärren gäller kontot även vid rätt
+        lösenord — annars vore den meningslös. Ett avstängt konto svarar
+        403.
       security: []
       requestBody:
         required: true
@@ -102,6 +108,16 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/Inloggad" }
         "401": { $ref: "#/components/responses/Fel" }
+        "403":
+          description: Kontot är avstängt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fel" }
+        "429":
+          description: För många misslyckade försök.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fel" }
 
   /api/anvandare:
     get:
@@ -229,6 +245,71 @@ paths:
                         antal: { type: integer }
         "401": { $ref: "#/components/responses/Fel" }
         "403": { $ref: "#/components/responses/Fel" }
+
+  /api/anvandare/{anvandarId}/avaktivera:
+    post:
+      tags: [Användare]
+      summary: Stäng av ett konto
+      description: >
+        Kräver rollen `admin` och att användaren tillhör samma
+        organisation. Avstängningen höjer kontots token-version, så
+        **pågående sessioner upphör omedelbart** — annars vore den
+        verkningslös tills utfärdade tokens gick ut. Ett konto kan inte
+        stänga av sig självt.
+      parameters:
+        - name: anvandarId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Kontot är avstängt.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  namn: { type: string }
+                  aktiv: { type: boolean }
+        "400":
+          description: Försök att stänga av sitt eget konto.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Fel" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+
+  /api/anvandare/{anvandarId}/aktivera:
+    post:
+      tags: [Användare]
+      summary: Öppna ett avstängt konto
+      description: >
+        Kräver rollen `admin`. Kontot kan logga in igen, men tokens som
+        återkallades vid avstängningen förblir ogiltiga.
+      parameters:
+        - name: anvandarId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Kontot är öppnat. }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+
+  /api/auth/logga-ut-alla:
+    post:
+      tags: [Auth]
+      summary: Logga ut på alla enheter
+      description: >
+        Höjer den egna token-versionen, vilket gör samtliga utfärdade
+        tokens för kontot ogiltiga direkt — vägen ut när en enhet
+        tappats bort.
+      responses:
+        "200": { description: Alla sessioner är avslutade. }
+        "401": { $ref: "#/components/responses/Fel" }
 
   /api/integrationer/leverantorer:
     get:
