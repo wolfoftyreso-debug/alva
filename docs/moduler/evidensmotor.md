@@ -76,6 +76,8 @@ alla obligatoriska rader är gröna:
 | Fordonshistorik kontrollerad eller motiverad | Obligatorisk |
 | Ingående mätarställning dokumenterad | Obligatorisk |
 | Kundens felbeskrivning verifierad | Rekommenderas |
+| Åtgärd dokumenterad eller motiverad | Obligatorisk vid avslut |
+| Kvalitetskontroll genomförd | Obligatorisk vid avslut efter utförd åtgärd |
 | Utgående mätarställning | Obligatorisk vid avslut |
 | Metodikens kontroller: evidens eller dokumenterat undantag | Obligatorisk |
 | Foton för fotokrävande kontroller | Obligatorisk |
@@ -158,6 +160,25 @@ Flottdatan är redan igång: **felorsaksstatistiken** i arbetsledarvyn
 (`GET /api/statistik/felorsaker`) aggregerar orsakskategorierna över
 organisationen — vilka komponenter fallerar av slitage, vilka efter
 tidigare reparationer, vilka tyder på konstruktionsproblem.
+
+## Åtgärdsfasen (Repair & Verification)
+
+Loopen som symptomverifieringen öppnade sluts här — ett ärende kan inte
+avslutas utan att det framgår vad som gjordes och om det hjälpte:
+
+1. **Åtgärd dokumenterad eller motiverad** — antingen vad som faktiskt
+   utfördes (med eventuella delar), eller varför ingen åtgärd gjordes
+   (kunden avböjde, väntar på reservdel, endast utredning beställd,
+   kostnadsförslag lämnat, åtgärd hos annan verkstad).
+2. **Kvalitetskontroll** — obligatorisk när en åtgärd faktiskt utförts:
+   är symptomet borta, kvarstår det helt eller delvis, eller kunde det
+   inte verifieras? Utfallet dokumenteras med hur verifieringen gick
+   till (samma förhållanden som symptomet reproducerades under).
+
+Kvarstående symptom döljs aldrig: grinden skriver ut att ärendet inte
+bör avslutas som åtgärdat. Avslutsknappen är spärrad tills kedjan
+**symptomverifiering → felorsaksanalys → åtgärd → kvalitetskontroll** är
+komplett, och rapporten redovisar den i egna avsnitt.
 
 ## Ärendeidentitet (Case Identity & Vehicle Context)
 

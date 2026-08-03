@@ -196,6 +196,31 @@ export function felorsaker(arende: Arende) {
   return arende.handelser.filter((p) => p.handelse.typ === "felorsak");
 }
 
+// -- Åtgärdsfasen (Repair & Verification) --
+// Loopen som symptomverifieringen öppnade sluts här: åtgärden
+// dokumenteras (eller motiveras varför den uteblev) och kvalitets-
+// kontrollen visar om symptomet faktiskt är borta.
+
+export const INGEN_ATGARD_ORSAKER = [
+  "Kunden avböjde åtgärd",
+  "Väntar på reservdel",
+  "Åtgärd utförs av annan verkstad",
+  "Endast utredning beställd",
+  "Kostnadsförslag lämnat, inväntar besked",
+];
+
+export function atgarder(arende: Arende) {
+  return arende.handelser.filter((p) => p.handelse.typ === "atgard_utford");
+}
+
+export function kvalitetskontroll(arende: Arende) {
+  let senaste: { resultat: "symptomet_borta" | "kvarstar" | "delvis" | "ej_verifierbar"; beskrivning: string } | undefined;
+  for (const post of arende.handelser) {
+    if (post.handelse.typ === "kvalitetskontroll") senaste = post.handelse;
+  }
+  return senaste;
+}
+
 // -- Symptom Verification Protocol (SVP) --
 // Kundens beskrivning → förtydligande (metodikens symptomfrågor) →
 // reproducering (eller dokumenterat ej reproducerbar). Rapporten skiljer
@@ -524,6 +549,42 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
       orsaker.length > 0
         ? undefined
         : "Beskriv varför felet uppstått — eller ange varför orsaken inte kunnat fastställas.",
+  });
+
+  // Åtgärdsfasen: reparationen dokumenterad — eller motiverat varför
+  // ingen åtgärd utfördes. Obligatoriskt innan ärendet avslutas.
+  const atgardsposter = atgarder(arende);
+  const utfordAtgard = atgardsposter.some((p) => p.handelse.typ === "atgard_utford" && p.handelse.utford);
+  rader.push({
+    id: "atgard",
+    rubrik: "Åtgärd dokumenterad eller motiverad",
+    ok: atgardsposter.length > 0,
+    kravs: avslutat,
+    detalj:
+      atgardsposter.length === 0
+        ? "Dokumentera vad som gjordes — eller varför ingen åtgärd utfördes."
+        : utfordAtgard
+          ? undefined
+          : "Ingen åtgärd utförd; orsaken är dokumenterad.",
+  });
+
+  // Kvalitetskontroll: är symptomet borta? Krävs när en åtgärd faktiskt
+  // utförts — annars finns inget att verifiera.
+  const kk = kvalitetskontroll(arende);
+  rader.push({
+    id: "kvalitetskontroll",
+    rubrik: "Kvalitetskontroll genomförd — symptomet verifierat",
+    ok: !!kk,
+    kravs: avslutat && utfordAtgard,
+    detalj: kk
+      ? kk.resultat === "symptomet_borta"
+        ? "Symptomet är verifierat borta efter åtgärd."
+        : kk.resultat === "ej_verifierbar"
+          ? `Kunde inte verifieras: ${kk.beskrivning}`
+          : `Symptomet kvarstår helt eller delvis — ärendet bör inte avslutas som åtgärdat.`
+      : utfordAtgard
+        ? "Verifiera att symptomet är borta efter åtgärden (provkörning/återtest)."
+        : "Ingen åtgärd utförd — inget att verifiera.",
   });
 
   // Utgående mätarställning: obligatorisk först när ärendet avslutas.

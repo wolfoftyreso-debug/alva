@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { Arende, Handelse, TidKategori, Tillforlitlighet } from "@/felsokning/domain";
-import { TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
+import { KVALITETSKONTROLL_LABEL, TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
 import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
 import {
@@ -44,14 +44,17 @@ import {
   ECM_VERSION,
   MARKOR_FELBESKRIVNING_VERIFIERAD,
   MARKOR_INGA_TIDIGA_OBSERVATIONER,
+  INGEN_ATGARD_ORSAKER,
   MARKOR_TIDIGA_OBSERVATIONER_KLARA,
   aktivtRegelpaket,
+  atgarder,
   arendetyp,
   felorsaker,
   granskaAvvikelse,
   grindGodkand,
   kvalitetsgrind,
   hamtaRegelpaket,
+  kvalitetskontroll,
   preDiagnostik,
   reproducering,
   reproduceringsText,
@@ -702,6 +705,182 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
   );
 }
 
+
+// Åtgärdsfasen: reparationen dokumenteras (eller motiveras varför den
+// uteblev) och kvalitetskontrollen sluter loopen som symptom-
+// verifieringen öppnade — är symptomet faktiskt borta?
+function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
+  const poster = atgarder(arende);
+  const utford = poster.some((p) => p.handelse.typ === "atgard_utford" && p.handelse.utford);
+  const kk = kvalitetskontroll(arende);
+  const repro = reproducering(arende);
+
+  const [lage, setLage] = useState<"" | "utford" | "ingen">("");
+  const [beskrivning, setBeskrivning] = useState("");
+  const [delar, setDelar] = useState("");
+  const [orsak, setOrsak] = useState("");
+  const [kkResultat, setKkResultat] = useState<"" | "symptomet_borta" | "kvarstar" | "delvis" | "ej_verifierbar">("");
+  const [kkText, setKkText] = useState("");
+
+  return (
+    <Panel rubrik="Åtgärd och kvalitetskontroll">
+      {poster.map((p) => {
+        const h = p.handelse;
+        if (h.typ !== "atgard_utford") return null;
+        return (
+          <p key={p.id} className="border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
+            {h.utford ? (
+              <>
+                <span className="font-semibold">Utförd åtgärd:</span> {h.beskrivning}
+                {h.delar && <span className="text-[#4A5560]"> · Delar: {h.delar}</span>}
+              </>
+            ) : (
+              <span className="text-[#9A6700]">Ingen åtgärd utförd — {h.motivering}</span>
+            )}
+          </p>
+        );
+      })}
+      {kk && (
+        <p className={`py-1 text-[13px] font-semibold ${kk.resultat === "symptomet_borta" ? "text-[#1E6B34]" : "text-[#9A6700]"}`}>
+          Kvalitetskontroll: {KVALITETSKONTROLL_LABEL[kk.resultat]} — <span className="font-normal">{kk.beskrivning}</span>
+        </p>
+      )}
+
+      {poster.length === 0 && !lage && (
+        <div className="grid grid-cols-2 gap-2">
+          <StorKnapp variant="sekundar" onClick={() => setLage("utford")}>
+            Dokumentera utförd åtgärd
+          </StorKnapp>
+          <StorKnapp variant="sekundar" onClick={() => setLage("ingen")}>
+            Ingen åtgärd utförd
+          </StorKnapp>
+        </div>
+      )}
+
+      {lage === "utford" && (
+        <div className="mt-2">
+          <TextFalt
+            label="Vad gjordes? (kopplat till den dokumenterade felorsaken)"
+            varde={beskrivning}
+            satt={setBeskrivning}
+            flerRad
+            rost
+            platshallare="T.ex. Balanserade om höger framhjul, ny balansvikt 40 g på insidan."
+          />
+          <TextFalt label="Delar (valfritt)" varde={delar} satt={setDelar} platshallare="T.ex. Balansvikter, artikelnr 30-1234" rost />
+          <div className="grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => setLage("")}>
+              Avbryt
+            </StorKnapp>
+            <StorKnapp
+              disabled={beskrivning.trim().length < 10}
+              onClick={() => {
+                skicka({ typ: "atgard_utford", beskrivning: beskrivning.trim(), delar: delar.trim() || undefined, utford: true });
+                setLage("");
+                setBeskrivning("");
+                setDelar("");
+              }}
+            >
+              Spara åtgärd
+            </StorKnapp>
+          </div>
+        </div>
+      )}
+
+      {lage === "ingen" && (
+        <div className="mt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+            Orsak till att ingen åtgärd utfördes (obligatorisk)
+          </p>
+          <div className="mb-2 grid gap-1">
+            {INGEN_ATGARD_ORSAKER.map((val) => (
+              <button
+                key={val}
+                onClick={() => setOrsak(val)}
+                className={`min-h-8 rounded border px-2 text-left text-[12px] font-medium ${
+                  orsak === val ? "border-[#00437A] bg-[#D6E4F2]" : "border-[#C6C6C6] bg-white"
+                }`}
+              >
+                {val}
+              </button>
+            ))}
+          </div>
+          <TextFalt label="Eller egen orsak" varde={orsak && !INGEN_ATGARD_ORSAKER.includes(orsak) ? orsak : ""} satt={setOrsak} rost />
+          <div className="grid grid-cols-2 gap-2">
+            <StorKnapp variant="sekundar" onClick={() => setLage("")}>
+              Avbryt
+            </StorKnapp>
+            <StorKnapp
+              disabled={!orsak.trim()}
+              onClick={() => {
+                skicka({ typ: "atgard_utford", beskrivning: "Ingen åtgärd utförd", utford: false, motivering: orsak.trim() });
+                setLage("");
+                setOrsak("");
+              }}
+            >
+              Dokumentera
+            </StorKnapp>
+          </div>
+        </div>
+      )}
+
+      {utford && !kk && (
+        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+            Kvalitetskontroll — är symptomet borta efter åtgärden?
+          </p>
+          {repro?.status === "ja" && (
+            <p className="mb-2 text-[12px] text-[#707070]">
+              Symptomet reproducerades vid undersökningen — återskapa samma förhållanden för att verifiera.
+            </p>
+          )}
+          <div className="mb-2 grid grid-cols-2 gap-2">
+            {(["symptomet_borta", "kvarstar", "delvis", "ej_verifierbar"] as const).map((val) => (
+              <button
+                key={val}
+                onClick={() => setKkResultat(val)}
+                className={`min-h-9 rounded border px-2 text-[12px] font-semibold ${
+                  kkResultat === val ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
+                }`}
+              >
+                {KVALITETSKONTROLL_LABEL[val]}
+              </button>
+            ))}
+          </div>
+          {kkResultat && (
+            <>
+              <TextFalt
+                label={
+                  kkResultat === "symptomet_borta"
+                    ? "Hur verifierades det? (förhållanden, hastighet, provkörning …)"
+                    : kkResultat === "ej_verifierbar"
+                      ? "Varför kunde det inte verifieras? (obligatorisk)"
+                      : "Vad kvarstår? (obligatorisk)"
+                }
+                varde={kkText}
+                satt={setKkText}
+                flerRad
+                rost
+                platshallare="T.ex. Ny provkörning 80–110 km/h på samma vägsträcka — ingen vibration."
+              />
+              <StorKnapp
+                disabled={!kkText.trim()}
+                onClick={() => {
+                  skicka({ typ: "kvalitetskontroll", resultat: kkResultat, beskrivning: kkText.trim() });
+                  setKkResultat("");
+                  setKkText("");
+                }}
+              >
+                Spara kvalitetskontroll
+              </StorKnapp>
+            </>
+          )}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 // Navigationsträd (vänsterkolumnen): ärendets vyer plus metodikens steg
 // med status — som en mappstruktur i ett klassiskt verkstadssystem.
 function VyTrad({
@@ -895,8 +1074,16 @@ function GuideFlik({
 
   const senasteAiSvar = [...arende.handelser].reverse().find((p) => p.handelse.typ === "ai_svar");
 
-  // Avslut kräver SVP (reproducering dokumenterad) + felorsaksanalys.
-  const kanAvslutas = !!reproducering(arende) && felorsaker(arende).length > 0;
+  // Avslut kräver hela kedjan: symptomverifiering, felorsaksanalys,
+  // dokumenterad åtgärd (eller motiverat uteblivande) och — när en
+  // åtgärd faktiskt utförts — kvalitetskontroll av att symptomet är borta.
+  const atgardsposter = atgarder(arende);
+  const utfordAtgard = atgardsposter.some((p) => p.handelse.typ === "atgard_utford" && p.handelse.utford);
+  const kanAvslutas =
+    !!reproducering(arende) &&
+    felorsaker(arende).length > 0 &&
+    atgardsposter.length > 0 &&
+    (!utfordAtgard || !!kvalitetskontroll(arende));
 
   if (avslutat) {
     return (
@@ -936,7 +1123,7 @@ function GuideFlik({
             </StorKnapp>
             {!kanAvslutas && (
               <p className="mt-2 text-[12px] font-semibold text-[#9A6700]">
-                Avslut kräver dokumenterad symptomverifiering och felorsaksanalys — se panelerna nedan.
+                Avslut kräver symptomverifiering, felorsaksanalys, åtgärd och kvalitetskontroll — se panelerna nedan.
               </p>
             )}
           </>
@@ -986,6 +1173,10 @@ function GuideFlik({
           säkerhetsnivå. Obligatorisk för avslut. */}
       <FelorsaksPanel arende={arende} skicka={skicka} />
 
+      {/* Åtgärdsfasen: vad som gjordes — och kvalitetskontrollen som
+          verifierar att symptomet faktiskt är borta. */}
+      {felorsaker(arende).length > 0 && <AtgardsPanel arende={arende} skicka={skicka} />}
+
       {/* Utgående mätarställning: obligatorisk för kvalitetsgrinden när
           ärendet avslutas — erbjuds så fort metodiken är genomarbetad. */}
       {!arende.handelser.some((p) => p.handelse.typ === "matarstallning" && p.handelse.lage === "utgaende") && (
@@ -996,7 +1187,8 @@ function GuideFlik({
 
       {!kanAvslutas && (
         <p className="mb-2 text-[12px] font-semibold text-[#9A6700]">
-          Avslut kräver dokumenterad symptomverifiering och felorsaksanalys — annars är slutsatsen inte spårbar.
+          Avslut kräver hela kedjan: symptomverifiering, felorsaksanalys, dokumenterad åtgärd och — vid utförd åtgärd
+          — kvalitetskontroll av att symptomet är borta.
         </p>
       )}
       <div className="grid grid-cols-2 gap-2">
@@ -1811,6 +2003,8 @@ function RapportFlik({
   const typ = arendetyp(arende);
   const repro = reproducering(arende);
   const orsakerLista = felorsaker(arende);
+  const atgardsRader = atgarder(arende);
+  const kkRad = kvalitetskontroll(arende);
   let matIn: string | undefined;
   let matUt: string | undefined;
   for (const p of arende.handelser) {
@@ -1966,6 +2160,30 @@ function RapportFlik({
             </div>
           );
         })}
+      </Panel>
+      <Panel rubrik="Utförd åtgärd och verifiering">
+        {atgardsRader.length === 0 && <p className="text-[14px] text-[#4A5560]">Ingen åtgärd dokumenterad ännu.</p>}
+        {atgardsRader.map((p) => {
+          const h = p.handelse;
+          if (h.typ !== "atgard_utford") return null;
+          return (
+            <div key={p.id} className="mb-2">
+              {h.utford ? (
+                identitetsRader([
+                  ["Utförd åtgärd", h.beskrivning],
+                  ["Delar", h.delar],
+                ])
+              ) : (
+                <p className="text-[14px] text-[#9A6700]">Ingen åtgärd utförd — {h.motivering}</p>
+              )}
+            </div>
+          );
+        })}
+        {kkRad &&
+          identitetsRader([
+            ["Kvalitetskontroll", KVALITETSKONTROLL_LABEL[kkRad.resultat]],
+            ["Verifiering", kkRad.beskrivning],
+          ])}
       </Panel>
       <Panel rubrik="Sammanfattning">
         <p className="text-[14px]">Total arbetstid: <span className="font-semibold">{b.totalArbetstid}</span></p>

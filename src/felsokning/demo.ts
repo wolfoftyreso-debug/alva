@@ -130,6 +130,17 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
       nastaSteg: "Balansera om höger framhjul och genomför ny provkörning i 80–100 km/h.",
       modell: "demo",
     }),
+    post(87, {
+      typ: "atgard_utford",
+      beskrivning: "Balanserade om höger framhjul och monterade ny balansvikt på fälgens insida.",
+      delar: "Balansvikter 40 g",
+      utford: true,
+    }),
+    post(88, {
+      typ: "kvalitetskontroll",
+      resultat: "symptomet_borta",
+      beskrivning: "Ny provkörning 80–110 km/h på samma vägsträcka — ingen vibration i ratten.",
+    }),
     post(90, { typ: "overlamning", fran: anvandare, till: "Johan" }),
     post(92, { typ: "kategori_byte", kategori: "administration" }, "Johan"),
     post(95, { typ: "kommentar", text: "Balanserat om höger framhjul, ny provkörning planerad." }, "Johan"),

@@ -29,6 +29,17 @@ export const TIDKATEGORI_LABEL: Record<TidKategori, string> = {
   paus: "Paus",
 };
 
+// Kvalitetskontrollens utfall efter utförd åtgärd.
+export const KVALITETSKONTROLL_LABEL: Record<
+  "symptomet_borta" | "kvarstar" | "delvis" | "ej_verifierbar",
+  string
+> = {
+  symptomet_borta: "Symptomet är borta",
+  kvarstar: "Symptomet kvarstår",
+  delvis: "Symptomet delvis kvar",
+  ej_verifierbar: "Kunde inte verifieras",
+};
+
 // Fordonsobjektet är den röda tråden genom hela ärendet: identiteten
 // registreras en gång och återanvänds i felsökning, Live Share, rapport
 // och export. Ärendereferenserna (AO/claim/skadenummer) hör till objektet
@@ -100,6 +111,23 @@ export type Handelse =
       atgard: string;
       motivering?: string;
       ytterligareKontroller?: string;
+    }
+  // Åtgärdsfasen: vad som faktiskt gjordes — eller varför ingen åtgärd
+  // utfördes (kunden avböjde, väntar på delar …). Kopplas till den
+  // felorsak åtgärden svarar mot.
+  | {
+      typ: "atgard_utford";
+      beskrivning: string;
+      delar?: string;
+      utford: boolean;
+      motivering?: string;
+    }
+  // Kvalitetskontroll efter åtgärd: är symptomet borta? Slutar loopen
+  // som symptomverifieringen (SVP) öppnade.
+  | {
+      typ: "kvalitetskontroll";
+      resultat: "symptomet_borta" | "kvarstar" | "delvis" | "ej_verifierbar";
+      beskrivning: string;
     }
   | { typ: "export_skapad"; format: string; version: number }
   | {
@@ -194,6 +222,12 @@ export function handelseRubrik(post: LoggPost): string {
           : `Symptomet kunde inte reproduceras — ${h.beskrivning}`;
     case "felorsak":
       return `Felorsak (${TILLFORLITLIGHET_LABEL[h.sakerhet]}): ${h.avvikelse} — ${h.orsaker.join(", ")}`;
+    case "atgard_utford":
+      return h.utford
+        ? `Åtgärd utförd: ${h.beskrivning}${h.delar ? ` (delar: ${h.delar})` : ""}`
+        : `Ingen åtgärd utförd — ${h.motivering ?? "orsak saknas"}`;
+    case "kvalitetskontroll":
+      return `Kvalitetskontroll: ${KVALITETSKONTROLL_LABEL[h.resultat]} — ${h.beskrivning}`;
     case "export_skapad":
       return `Export skapad: ${h.format}, version ${h.version}`;
     case "ai_svar": {

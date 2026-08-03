@@ -654,6 +654,8 @@ components:
             - historik_kontrollerad
             - matarstallning
             - video
+            - atgard_utford
+            - kvalitetskontroll
             - reproducering
             - felorsak
             - export_skapad

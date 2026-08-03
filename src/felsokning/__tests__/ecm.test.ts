@@ -363,3 +363,85 @@ describe("Videoevidens (E3) och signerat avslut", () => {
     expect(rad?.detalj).toContain("Erik");
   });
 });
+
+describe("Åtgärdsfasen och kvalitetskontroll", () => {
+  it("avslut kräver dokumenterad åtgärd — och kvalitetskontroll när åtgärd utförts", async () => {
+    const { atgarder, kvalitetskontroll } = await import("../ecm");
+    const bas: Handelse[] = [
+      OBJEKT,
+      ...PREDIAG,
+      { typ: "reproducering", status: "ja", beskrivning: "Reproducerad vid provkörning." },
+      {
+        typ: "felorsak",
+        avvikelse: "Framhjulen uppvisar obalans om 38 g på höger sida.",
+        orsaker: ["Yttre påverkan"],
+        underlag: ["Direkt observation"],
+        sakerhet: "hog",
+        atgard: "Balansera om hjulet.",
+      },
+      { typ: "observation", text: "Obalans uppmätt" },
+    ];
+
+    // Utan åtgärd: grinden kräver den vid avslut.
+    const utanAtgard = byggArende([...bas, { typ: "arende_avslutat", signatur: "Erik" }]);
+    const rad = kvalitetsgrind(utanAtgard, VIBRATION_METODIK).find((r) => r.id === "atgard");
+    expect(rad?.kravs).toBe(true);
+    expect(rad?.ok).toBe(false);
+
+    // Utförd åtgärd utan kvalitetskontroll: kontrollen blir obligatorisk.
+    const utanKk = byggArende([
+      ...bas,
+      { typ: "atgard_utford", beskrivning: "Balanserade om höger framhjul.", utford: true },
+      { typ: "arende_avslutat", signatur: "Erik" },
+    ]);
+    expect(atgarder(utanKk)).toHaveLength(1);
+    const kkRad = kvalitetsgrind(utanKk, VIBRATION_METODIK).find((r) => r.id === "kvalitetskontroll");
+    expect(kkRad?.kravs).toBe(true);
+    expect(kkRad?.ok).toBe(false);
+
+    // Komplett kedja: åtgärd + verifierat borta.
+    const komplett = byggArende([
+      ...bas,
+      { typ: "atgard_utford", beskrivning: "Balanserade om höger framhjul.", utford: true },
+      { typ: "kvalitetskontroll", resultat: "symptomet_borta", beskrivning: "Ny provkörning utan vibration." },
+      { typ: "arende_avslutat", signatur: "Erik" },
+    ]);
+    expect(kvalitetskontroll(komplett)?.resultat).toBe("symptomet_borta");
+    const rader = kvalitetsgrind(komplett, VIBRATION_METODIK);
+    expect(rader.find((r) => r.id === "atgard")?.ok).toBe(true);
+    expect(rader.find((r) => r.id === "kvalitetskontroll")?.detalj).toContain("verifierat borta");
+  });
+
+  it("motiverat uteblivande godtas utan kvalitetskontroll", () => {
+    const ingenAtgard = byggArende([
+      OBJEKT,
+      ...PREDIAG,
+      { typ: "atgard_utford", beskrivning: "Ingen åtgärd utförd", utford: false, motivering: "Kunden avböjde åtgärd" },
+      { typ: "arende_avslutat", signatur: "Erik" },
+    ]);
+    const rader = kvalitetsgrind(ingenAtgard, VIBRATION_METODIK);
+    expect(rader.find((r) => r.id === "atgard")?.ok).toBe(true);
+    expect(rader.find((r) => r.id === "atgard")?.detalj).toContain("orsaken är dokumenterad");
+    // Inget att verifiera → kvalitetskontrollen är inte obligatorisk.
+    expect(rader.find((r) => r.id === "kvalitetskontroll")?.kravs).toBe(false);
+  });
+
+  it("kvarstående symptom flaggas i grinden i stället för att döljas", () => {
+    const kvarstar = byggArende([
+      OBJEKT,
+      ...PREDIAG,
+      { typ: "atgard_utford", beskrivning: "Bytte hjullager höger fram.", utford: true },
+      { typ: "kvalitetskontroll", resultat: "kvarstar", beskrivning: "Missljudet finns kvar vid 60 km/h." },
+    ]);
+    const rad = kvalitetsgrind(kvarstar, VIBRATION_METODIK).find((r) => r.id === "kvalitetskontroll");
+    expect(rad?.detalj).toContain("bör inte avslutas som åtgärdat");
+  });
+
+  it("demoärendet bär hela kedjan symptom → orsak → åtgärd → verifiering", () => {
+    const demo = byggDemoArende(1);
+    const typer = demo.handelser.map((p) => p.handelse.typ);
+    for (const typ of ["reproducering", "felorsak", "atgard_utford", "kvalitetskontroll"]) {
+      expect(typer, typ).toContain(typ);
+    }
+  });
+});
