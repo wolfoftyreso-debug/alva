@@ -1,17 +1,15 @@
-// AI-motor: Claude som diagnostikhandledare.
+// AI-handledning: Claude, driven av plattformen.
 //
-// Kommunikationsmodellen är text in, text ut: teknikerns (bekräftade)
-// inmatning skickas tillsammans med ärendebriefen, och Claude svarar
-// kortfattat och klassificerat enligt AI-reglerna i Master Prompt —
-// observation / verifierat / hypotes / rekommendation. Svaret är
-// schema-bundet (structured outputs), så det kan aldrig komma tillbaka
-// som fritext som råkar läsas som ett konstaterat fel.
+// AI:n hostas av tjänsten — inte av kunden. Klienten skickar ärendekontexten
+// till plattformens backend (edge-funktionen felsokning-ai), som äger
+// Claude API-nyckeln, systemprompten, modellvalet och svarsschemat.
+// Inga AI-nycklar hanteras eller lagras någonsin i klienten.
 //
-// MVP: tenantens egen API-nyckel används direkt från klienten
-// (dangerouslyAllowBrowser). I produktionsversionen flyttas anropet
-// bakom plattformens backend så att nycklar aldrig lämnar servern.
+// Kommunikationsmodellen är text in, text ut: teknikerns bekräftade
+// inmatning skickas med ärendebriefen, och svaret kommer tillbaka strikt
+// klassificerat enligt AI-reglerna — observation / verifierat / hypotes /
+// rekommendation — plus ETT konkret nästa steg.
 
-import Anthropic from "@anthropic-ai/sdk";
 import type { Brief } from "./projektioner";
 
 export const AI_MODELL = "claude-opus-5";
@@ -34,43 +32,6 @@ export interface AiSvar {
   rader: AiRad[];
   nastaSteg: string;
 }
-
-const SVARS_SCHEMA = {
-  type: "object",
-  properties: {
-    rader: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          typ: { type: "string", enum: ["observation", "verifierat", "hypotes", "rekommendation"] },
-          text: { type: "string" },
-        },
-        required: ["typ", "text"],
-        additionalProperties: false,
-      },
-    },
-    nastaSteg: { type: "string" },
-  },
-  required: ["rader", "nastaSteg"],
-  additionalProperties: false,
-} as const;
-
-// Fryst systemprompt (cachas mellan anrop) — all ärendespecifik kontext
-// ligger i användarmeddelandet.
-export const SYSTEM_PROMPT = `Du är en digital felsökningshandledare för professionella tekniker i plattformen Guidad Felsökning. Du är inte en AI-mekaniker: du ersätter aldrig teknikerns kompetens eller tillverkarens dokumentation — du säkerställer att arbetet sker metodiskt och dokumenteras korrekt.
-
-Absoluta regler:
-- Hitta aldrig på fakta. Låtsas aldrig veta. Gissa aldrig.
-- Presentera aldrig en hypotes som ett konstaterat fel.
-- Skilj strikt mellan raderna du returnerar:
-  - "verifierat": endast det som är belagt av mätvärden eller dokumenterade kontroller i underlaget.
-  - "observation": det som konstaterats utan slutsats.
-  - "hypotes": möjlig felorsak som KRÄVER verifiering — formulera alltid vad som skulle verifiera den.
-  - "rekommendation": nästa verifierbara kontroll eller mätning.
-- Om underlaget är otillräckligt: säg det uttryckligen i en observation och rekommendera vad som behöver dokumenteras.
-
-Arbetssätt: en kontroll i taget, inte långa utläggningar. Svara på svenska, konsekvent, kortfattat och metodiskt — max fyra rader plus nästa steg. "nastaSteg" är EN konkret, verifierbar åtgärd.`;
 
 export function byggAnvandarPrompt(brief: Brief, metodikNamn: string, inmatning: string): string {
   const rader: string[] = [];
@@ -105,36 +66,20 @@ export function tolkaAiSvar(data: unknown): AiSvar {
   return { rader, nastaSteg: svar.nastaSteg };
 }
 
+// Returnerar null i lokalt läge (ej inloggad) — AI:n är en del av tjänsten
+// och nås via plattformens autentiserade backend.
 export async function fragaAi(
-  apiNyckel: string,
   brief: Brief,
   metodikNamn: string,
   inmatning: string,
-): Promise<AiSvar> {
-  const klient = new Anthropic({ apiKey: apiNyckel, dangerouslyAllowBrowser: true });
-  const svar = await klient.beta.messages.create({
-    model: AI_MODELL,
-    max_tokens: 1024,
-    // Verkstadsgolvet är latenskänsligt och uppgiften är väl avgränsad
-    // av briefen — medium balanserar svarstid mot kvalitet.
-    output_config: {
-      effort: "medium",
-      format: { type: "json_schema", schema: SVARS_SCHEMA },
-    },
-    // Avböjer säkerhetsklassificerarna faller anropet automatiskt
-    // tillbaka till Anthropics rekommenderade reservmodell.
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: byggAnvandarPrompt(brief, metodikNamn, inmatning) }],
-  } as Parameters<typeof klient.beta.messages.create>[0]);
+): Promise<AiSvar | null> {
+  const { supabase } = await import("@/integrations/supabase/client");
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) return null;
 
-  if (svar.stop_reason === "refusal") {
-    throw new Error("AI-tjänsten avböjde förfrågan.");
-  }
-  const textBlock = svar.content.find((block) => block.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("AI-svaret saknade innehåll.");
-  }
-  return tolkaAiSvar(JSON.parse(textBlock.text));
+  const { data: svar, error } = await supabase.functions.invoke("felsokning-ai", {
+    body: { prompt: byggAnvandarPrompt(brief, metodikNamn, inmatning) },
+  });
+  if (error) throw error;
+  return tolkaAiSvar(svar);
 }

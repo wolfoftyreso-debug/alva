@@ -10,7 +10,9 @@ Det här är ett produktdirektiv, inte en teknisk specifikation. Visionen och re
 
 Bygg en produktionsredo SaaS-plattform med namnet **Guidad Felsökning**.
 
-Plattformen är en AI-wrapper ovanpå Claude API (Anthropic) och fungerar som ett professionellt arbetsverktyg för mekaniker och servicetekniker. Standardmodell: Claude Opus 5 (`claude-opus-5`), med Anthropics rekommenderade reservmodell som automatisk fallback när en förfrågan avböjs av säkerhetsklassificerarna. Den ska inte ersätta teknisk kompetens eller tillverkarens dokumentation, utan vägleda användaren genom en strukturerad felsökningsprocess, dokumentera allt arbete och skapa full spårbarhet.
+Plattformen är en AI-wrapper ovanpå Claude API (Anthropic) och fungerar som ett professionellt arbetsverktyg för mekaniker och servicetekniker. Standardmodell: Claude Opus 5 (`claude-opus-5`), med Anthropics rekommenderade reservmodell som automatisk fallback när en förfrågan avböjs av säkerhetsklassificerarna.
+
+**AI:n drivs av plattformen, inte av kunden.** Claude API-nycklarna är plattformshemligheter i backend och exponeras aldrig för kunder eller klienter — AI-handledningen ingår i tjänsten. Backend äger systemprompt, modellval och svarsschema, så AI-reglerna kan inte kringgås från klientsidan. Den ska inte ersätta teknisk kompetens eller tillverkarens dokumentation, utan vägleda användaren genom en strukturerad felsökningsprocess, dokumentera allt arbete och skapa full spårbarhet.
 
 Målet är att lansera en stabil, enkel och köpvärdig beta-version.
 
@@ -53,10 +55,9 @@ Första gången en kund loggar in:
 1. Skapa företag
 2. Lägg till logotyp
 3. Lägg till användare
-4. Lägg till Claude API-nyckel
-5. Lägg till eventuella integrationer
+4. Lägg till eventuella integrationer
 
-Klart. Hela onboarding ska ta mindre än fem minuter.
+Klart. Hela onboarding ska ta mindre än fem minuter. AI-handledningen ingår i tjänsten — kunden hanterar inga AI-nycklar.
 
 ---
 

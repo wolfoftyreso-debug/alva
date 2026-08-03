@@ -12,13 +12,9 @@ import { GENERISK_METODIK, valjMetodik, type Metodik } from "./metodik";
 
 interface FelsokningState {
   anvandare: string;
-  // Tenantens Claude API-nyckel (MVP: lagras endast på enheten; i
-  // produktionsversionen hanteras nycklar av backend, aldrig i klienten).
-  aiNyckel: string;
   arenden: Record<string, Arende>;
   nastaNummer: number;
   sattAnvandare: (namn: string) => void;
-  sattAiNyckel: (nyckel: string) => void;
   skapaArende: (objekt: Objekt, felbeskrivningText: string) => string;
   laggTill: (arendeId: string, handelse: Handelse) => void;
   // Används endast av synken: ersätter listan med den ihopflätade versionen.
@@ -38,12 +34,10 @@ export const useFelsokning = create<FelsokningState>()(
   persist(
     (set, get) => ({
       anvandare: "",
-      aiNyckel: "",
       arenden: {},
       nastaNummer: 1,
 
       sattAnvandare: (namn) => set({ anvandare: namn.trim() }),
-      sattAiNyckel: (nyckel) => set({ aiNyckel: nyckel.trim() }),
 
       skapaArende: (objekt, felbeskrivningText) => {
         const { anvandare, nastaNummer } = get();

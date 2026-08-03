@@ -185,18 +185,19 @@ function GuideFlik({
 }) {
   const steg = useMemo(() => nastaSteg(arende, metodik), [arende, metodik]);
   const [visaOverlamning, setVisaOverlamning] = useState(false);
-  const aiNyckel = useFelsokning((s) => s.aiNyckel);
   const [aiStatus, setAiStatus] = useState<"vilar" | "arbetar" | "fel">("vilar");
 
-  // AI:n svarar skriftligt på varje bekräftad dokumentation: klassificerat
-  // (observation/verifierat/hypotes/rekommendation) och loggat som händelse.
-  // Utan nyckel guidar den deterministiska metodiken ensam.
+  // AI:n drivs av plattformen och svarar skriftligt på varje bekräftad
+  // dokumentation: klassificerat (observation/verifierat/hypotes/
+  // rekommendation) och loggat som händelse. I lokalt läge (ej inloggad)
+  // guidar den deterministiska metodiken ensam.
   const fragaAiOmDokumentation = async (inmatning: string) => {
-    if (!aiNyckel) return;
     setAiStatus("arbetar");
     try {
-      const svar = await fragaAi(aiNyckel, brief(arende, metodik, nu), metodik.namn, inmatning);
-      skicka({ typ: "ai_svar", rader: svar.rader, nastaSteg: svar.nastaSteg, modell: AI_MODELL });
+      const svar = await fragaAi(brief(arende, metodik, nu), metodik.namn, inmatning);
+      if (svar) {
+        skicka({ typ: "ai_svar", rader: svar.rader, nastaSteg: svar.nastaSteg, modell: AI_MODELL });
+      }
       setAiStatus("vilar");
     } catch {
       setAiStatus("fel");
@@ -245,7 +246,7 @@ function GuideFlik({
         >
           {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-bold text-amber-400">AI analyserar …</p>}
           {aiStatus === "fel" && (
-            <p className="mb-2 font-bold text-red-400">AI-svaret kunde inte hämtas — kontrollera nyckel och nät. Metodiken fortsätter som vanligt.</p>
+            <p className="mb-2 font-bold text-red-400">AI-svaret kunde inte hämtas — försök igen. Metodiken fortsätter som vanligt.</p>
           )}
           {senasteAiSvar && senasteAiSvar.handelse.typ === "ai_svar" && (
             <>

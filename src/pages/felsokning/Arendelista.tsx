@@ -12,11 +12,9 @@ type Filter = "alla" | "pagaende" | "klara";
 // Dashboard enligt direktivet: endast det viktigaste — mina ärenden,
 // pågående, klara och starta nytt ärende.
 export default function Arendelista() {
-  const { anvandare, arenden, sattAnvandare, laggInArende, nastaNummer, aiNyckel, sattAiNyckel } = useFelsokning();
+  const { anvandare, arenden, sattAnvandare, laggInArende, nastaNummer } = useFelsokning();
   const [namn, setNamn] = useState("");
   const [filter, setFilter] = useState<Filter>("alla");
-  const [visaAi, setVisaAi] = useState(false);
-  const [nyckel, setNyckel] = useState("");
 
   if (!anvandare) {
     return (
@@ -94,39 +92,12 @@ export default function Arendelista() {
       )}
 
       <Panel rubrik="AI-handledning">
-        <p className="mb-2 text-zinc-300">
-          {aiNyckel
-            ? `Aktiv — Claude (${AI_MODELL}) svarar klassificerat på dokumenterade observationer och mätvärden.`
-            : "Inte aktiverad — den deterministiska metodiken guidar. Lägg till organisationens Claude API-nyckel för AI-handledning."}
+        <p className="text-zinc-300">
+          Ingår i tjänsten och drivs av plattformen — Claude ({AI_MODELL}) svarar klassificerat på
+          dokumenterade observationer och mätvärden. Anropen går via plattformens backend; inga AI-nycklar
+          hanteras av verkstaden. Aktiveras automatiskt för inloggade användare; i lokalt läge guidar den
+          deterministiska metodiken ensam.
         </p>
-        {!visaAi ? (
-          <StorKnapp variant="sekundar" onClick={() => setVisaAi(true)}>
-            {aiNyckel ? "Ändra API-nyckel" : "Lägg till Claude API-nyckel"}
-          </StorKnapp>
-        ) : (
-          <>
-            <TextFalt label="Claude API-nyckel" varde={nyckel} satt={setNyckel} platshallare="sk-ant-…" losenord />
-            <p className="mb-3 text-sm text-zinc-500">
-              MVP: nyckeln sparas endast på den här enheten och anropen görs direkt från webbläsaren. I
-              produktionsversionen hanteras nycklar av plattformens backend.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <StorKnapp variant="sekundar" onClick={() => { setVisaAi(false); setNyckel(""); }}>
-                Avbryt
-              </StorKnapp>
-              <StorKnapp
-                disabled={!nyckel.trim() && !aiNyckel}
-                onClick={() => {
-                  sattAiNyckel(nyckel);
-                  setVisaAi(false);
-                  setNyckel("");
-                }}
-              >
-                {nyckel.trim() ? "Spara nyckel" : "Ta bort nyckel"}
-              </StorKnapp>
-            </div>
-          </>
-        )}
       </Panel>
 
       {lista.map((arende) => {

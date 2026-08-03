@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { AI_MODELL, SYSTEM_PROMPT, byggAnvandarPrompt, tolkaAiSvar } from "../ai";
+import { AI_MODELL, byggAnvandarPrompt, tolkaAiSvar } from "../ai";
 import { VIBRATION_METODIK } from "../metodik";
 import { brief } from "../projektioner";
 import { byggDemoArende } from "../demo";
@@ -9,11 +10,16 @@ describe("AI-motorn", () => {
     expect(AI_MODELL).toBe("claude-opus-5");
   });
 
-  it("systemprompten kodar AI-reglerna", () => {
-    expect(SYSTEM_PROMPT).toContain("Hitta aldrig på fakta");
-    expect(SYSTEM_PROMPT).toContain("aldrig en hypotes som ett konstaterat fel");
-    expect(SYSTEM_PROMPT).toContain("KRÄVER verifiering");
-    expect(SYSTEM_PROMPT).toContain("kortfattat");
+  it("plattformens AI-endpoint äger systemprompten och kodar AI-reglerna", () => {
+    // AI:n drivs av plattformen: systemprompt, modell och schema ligger i
+    // backend (edge-funktionen), inte i klienten.
+    const endpoint = readFileSync("supabase/functions/felsokning-ai/index.ts", "utf8");
+    expect(endpoint).toContain('const AI_MODELL = "claude-opus-5"');
+    expect(endpoint).toContain("Hitta aldrig på fakta");
+    expect(endpoint).toContain("aldrig en hypotes som ett konstaterat fel");
+    expect(endpoint).toContain("KRÄVER verifiering");
+    expect(endpoint).toContain("ANTHROPIC_API_KEY");
+    expect(endpoint).toContain('"json_schema"');
   });
 
   it("användarprompten byggs ur ärendebriefen och den nya inmatningen", () => {

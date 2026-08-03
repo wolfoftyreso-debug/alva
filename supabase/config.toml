@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.update-subscription-quantity]
 verify_jwt = false
+
+[functions.felsokning-ai]
+verify_jwt = true
