@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "NeuroSemantics AI",
+    "slug": "neurosemantics-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "neurosemantics",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F6F2",
+    "ios": {
+      "bundleIdentifier": "com.neurosemantics.app",
+      "supportsTablet": false,
+      "usesAppleSignIn": true
+    },
+    "android": {
+      "package": "com.neurosemantics.app"
+    },
+    "extra": {
+      "apiUrl": "https://REPLACE_WITH_API_URL",
+      "cognitoDomain": "https://REPLACE_WITH_PREFIX.auth.eu-north-1.amazoncognito.com",
+      "cognitoClientId": "REPLACE_WITH_CLIENT_ID",
+      "iosMonthlyProductId": "neurosemantics_monthly",
+      "iosYearlyProductId": "neurosemantics_yearly",
+      "androidMonthlyProductId": "neurosemantics_monthly",
+      "androidYearlyProductId": "neurosemantics_yearly"
+    }
+  }
+}
