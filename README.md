@@ -28,9 +28,13 @@ and the stores must follow the same rule.
 **Tone.** Never judging, dramatic, overenthusiastic, or preaching. Always
 calm, curious, clear, respectful, structured, thoughtful.
 
-**Design.** Scandinavian, clinical, quiet, precise, minimal. Off-white
-background, near-black text, one dark blue-green accent. Generous white
-space. No animations, no gradients.
+**Design.** Clinical, Scandinavian, quiet, intelligent, premium, minimal.
+Off-white background, near-black text, one dark blue-green accent. Generous
+white space. No animations, no gradients. The rule: if something can be
+removed without reducing user value, remove it.
+
+**Product principle.** One user. One conversation. One analysis. One
+recommendation. That is the whole product.
 
 ## System overview
 
@@ -57,8 +61,11 @@ it is not built.
    users use `POST /chat` with a **Cognito** JWT (Apple / Google / email via
    the hosted UI).
 3. The Lambda calls the **OpenAI Responses API** with the Markdown knowledge
-   base (`services/api/knowledge/`) as system instructions. The model
-   returns structured output: a reply plus an `analysis_ready` flag.
+   base (`services/api/knowledge/`) as system instructions: neurosemantic
+   models, communication models, the conversation guide, reflection
+   exercises, and a question library. V1 invests in prompt design quality,
+   not infrastructure complexity. The model returns structured output: a
+   reply plus an `analysis_ready` flag.
 4. Sign-in happens at the paywall, since a purchase must attach to an
    account. Usage counters live in **PostgreSQL** (Aurora Serverless v2).
 
@@ -86,7 +93,7 @@ abuse backstop for the free tier — it is not the paywall.
 
 Conversations are never stored server-side; the client holds them in memory
 and sends the running transcript with each request. The database stores the
-absolute minimum: `users` (id, email, provider, subscription_status,
+absolute minimum: `users` (id, email, auth_provider, subscription,
 created_at) and `usage` (messages_used, last_reset). No profiling, no
 training on user data. Error logging is anonymized (no message content).
 
@@ -193,12 +200,33 @@ API Gateway, Lambda, Cognito, S3, Secrets Manager and CloudWatch — and V1
 does not even need S3. No Redis, no Kubernetes, no Kafka, no Elasticsearch,
 no queues, no microservices. One backend. Maximal simplicity.
 
+## Definition of Done
+
+Version 1 is done when a user can:
+
+1. Open the app.
+2. Start a conversation immediately.
+3. Feel seen and understood.
+4. Receive a number of well-considered follow-up questions.
+5. Reach a natural premium boundary.
+6. Buy Premium.
+7. Continue the conversation.
+
+If a feature does not help the user reflect better, it is not built.
+Version 1 must be small, fast, stable, and easy to maintain.
+
 ## Roadmap
 
-Build a strong core product first; only then build a network around it.
+Build a strong core product first; only then build around it.
 
 - **Version 1 (this repo)** — Person ↔ Semantika. Nothing else.
-- **Version 2** — Person ↔ Semantika ↔ small reflection groups.
-- **Version 3** — certified coaches, live sessions, study circles, courses.
+- **Version 2 (not now)** — journal, saved insights, community, certified
+  coaches, courses, voice conversations. None of these are built in V1.
 
-Community features are deliberately absent from V1.
+**Next step: a closed beta.** Put V1 in the hands of 20–50 test users
+before adding anything. The minimal data model already answers several of
+the key questions — how many come back (`usage.last_reset` vs activity),
+how deep dialogues go (`messages_used`), and when users upgrade
+(`subscription` transitions). Which starter questions create the most value
+requires asking testers directly, since conversations are never stored.
+Anything beyond that must justify itself against the privacy rule.

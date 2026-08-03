@@ -24,8 +24,8 @@ export async function getPool(): Promise<pg.Pool> {
 export interface UserRow {
   id: string;
   email: string;
-  provider: string;
-  subscription_status: 'free' | 'active';
+  auth_provider: string;
+  subscription: 'free' | 'active';
   created_at: Date;
 }
 
@@ -39,15 +39,15 @@ export interface UsageRow {
 export async function getOrCreateUser(
   id: string,
   email: string,
-  provider: string,
+  authProvider: string,
 ): Promise<UserRow> {
   const db = await getPool();
   const result = await db.query<UserRow>(
-    `insert into users (id, email, provider)
+    `insert into users (id, email, auth_provider)
      values ($1, $2, $3)
      on conflict (id) do update set email = excluded.email
      returning *`,
-    [id, email, provider],
+    [id, email, authProvider],
   );
   const user = result.rows[0];
   if (!user) throw new Error('User upsert returned no row');
@@ -80,5 +80,5 @@ export async function setSubscriptionStatus(
   status: 'free' | 'active',
 ): Promise<void> {
   const db = await getPool();
-  await db.query(`update users set subscription_status = $2 where id = $1`, [userId, status]);
+  await db.query(`update users set subscription = $2 where id = $1`, [userId, status]);
 }

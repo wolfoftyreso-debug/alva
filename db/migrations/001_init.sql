@@ -2,10 +2,10 @@
 -- no conversations, no profiling data.
 
 create table if not exists users (
-  id text primary key, -- Cognito sub
+  id text primary key, -- Cognito sub, or guest:<device-id>
   email text not null,
-  provider text not null, -- 'apple' | 'google' | 'email'
-  subscription_status text not null default 'free', -- 'free' | 'active'
+  auth_provider text not null, -- 'apple' | 'google' | 'email' | 'guest'
+  subscription text not null default 'free', -- 'free' | 'active'
   created_at timestamptz not null default now()
 );
 

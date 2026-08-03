@@ -55,7 +55,7 @@ async function currentUsage(user: UserRow) {
 async function handleMe(user: UserRow): Promise<APIGatewayProxyResultV2> {
   const usage = await currentUsage(user);
   return json(200, {
-    subscriptionStatus: user.subscription_status,
+    subscriptionStatus: user.subscription,
     messagesUsed: usage.messages_used,
     messageCap: config.messageCap,
   });
@@ -73,7 +73,7 @@ async function handleChat(
   user: UserRow,
   body: string | undefined,
 ): Promise<APIGatewayProxyResultV2> {
-  const premium = user.subscription_status === 'active';
+  const premium = user.subscription === 'active';
   const parsed = body ? (JSON.parse(body) as { messages?: ChatMessage[] }) : {};
   const messages = parsed.messages ?? [];
   const last = messages[messages.length - 1];
@@ -87,7 +87,7 @@ async function handleChat(
   }
 
   const usage = await currentUsage(user);
-  if (!canSendMessage(usage.messages_used, user.subscription_status, config.messageCap)) {
+  if (!canSendMessage(usage.messages_used, user.subscription, config.messageCap)) {
     return json(402, { error: 'message_cap_reached' });
   }
 
