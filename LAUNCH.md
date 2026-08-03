@@ -46,8 +46,15 @@ the README).
       two subscriptions with the same ids and prices. Create a service
       account with Play Developer API access → its JSON key becomes
       `GOOGLE_SERVICE_ACCOUNT_JSON`.
-- [ ] Store copy follows the honest-claims rule: inspiration, not proven
-      effects. Positioning: reflection partner — not therapy.
+- [ ] Store copy: use `docs/store/listing.md` (already written to the
+      honest-claims rule — inspiration, not proven effects; reflection
+      partner, not therapy).
+- [ ] Fill the [PLACEHOLDERS] in `docs/store/privacy-policy.md` and
+      `docs/store/terms-of-service.md`, host them on a public URL (GitHub
+      Pages is enough), and set the URLs in both store consoles.
+- [ ] App Privacy / Data safety forms: mappings are in
+      `docs/store/listing.md`. In-app account deletion (App Store 5.1.1)
+      is implemented: Account → Delete account.
 
 ## 5. Builds
 

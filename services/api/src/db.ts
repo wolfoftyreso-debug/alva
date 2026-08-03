@@ -75,6 +75,12 @@ export async function incrementUsage(userId: string): Promise<void> {
   await db.query(`update usage set messages_used = messages_used + 1 where user_id = $1`, [userId]);
 }
 
+/** Permanently removes the user; the usage row cascades. */
+export async function deleteUser(userId: string): Promise<void> {
+  const db = await getPool();
+  await db.query(`delete from users where id = $1`, [userId]);
+}
+
 export async function setSubscriptionStatus(
   userId: string,
   status: 'free' | 'active',

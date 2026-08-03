@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../src/db.js', () => ({
+  deleteUser: vi.fn(),
   getOrCreateUser: vi.fn(),
   getUsage: vi.fn(),
   incrementUsage: vi.fn(),
@@ -14,7 +15,7 @@ vi.mock('../src/subscription/index.js', () => ({
 }));
 
 import { generateReply } from '../src/chat.js';
-import { getOrCreateUser, getUsage, incrementUsage } from '../src/db.js';
+import { deleteUser, getOrCreateUser, getUsage, incrementUsage } from '../src/db.js';
 import { handler } from '../src/handler.js';
 import { verifyAndApplyPurchase } from '../src/subscription/index.js';
 
@@ -100,6 +101,15 @@ describe('authorization', () => {
       claims: { sub: 'sub-1', email: 'a@b.se', identities: '[{"providerName":"SignInWithApple"}]' },
     });
     expect(getOrCreateUser).toHaveBeenCalledWith('sub-1', 'a@b.se', 'apple');
+  });
+
+  it('deletes the account on DELETE /me', async () => {
+    const { status, body } = await call('DELETE', '/me', {
+      claims: { sub: 'sub-1', email: 'a@b.se' },
+    });
+    expect(status).toBe(200);
+    expect(body.deleted).toBe(true);
+    expect(deleteUser).toHaveBeenCalledWith('user-1');
   });
 });
 

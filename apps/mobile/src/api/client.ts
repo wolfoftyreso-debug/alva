@@ -89,6 +89,11 @@ export async function fetchMe(): Promise<Me> {
   return request<Me>('/me', {}, await authHeader());
 }
 
+/** Permanently deletes the account and its usage data (App Store 5.1.1). */
+export async function deleteAccount(): Promise<void> {
+  await request<{ deleted: boolean }>('/me', { method: 'DELETE' }, await authHeader());
+}
+
 export async function verifyPurchase(body: {
   platform: 'ios' | 'android';
   productId: string;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -9,7 +10,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { fetchSuggestions, sendChat, type ChatMessage } from '../api/client';
+import { deleteAccount, fetchSuggestions, sendChat, type ChatMessage } from '../api/client';
+import { signOut } from '../auth/session';
 import { colors, spacing, type } from '../theme';
 
 interface Props {
@@ -22,6 +24,9 @@ interface Props {
   /** Set right after unlock: fetch the promised analysis automatically. */
   deliverAnalysis: boolean;
   onAnalysisDelivered: () => void;
+  /** Shows the quiet Account affordance (sign out / delete account). */
+  signedIn: boolean;
+  onSignedOut: () => void;
 }
 
 const SUGGESTIONS_SHOWN = 4;
@@ -39,6 +44,8 @@ export function ChatScreen({
   onContinueWithPremium,
   deliverAnalysis,
   onAnalysisDelivered,
+  signedIn,
+  onSignedOut,
 }: Props) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
@@ -91,6 +98,42 @@ export function ChatScreen({
   }
 
   const showSuggestions = messages.length === 0 && suggestions.length > 0;
+
+  // No menus, no settings view: account management lives in two native
+  // dialogs behind one quiet link (in-app deletion per App Store 5.1.1).
+  function openAccount() {
+    Alert.alert('Account', undefined, [
+      {
+        text: 'Sign out',
+        onPress: () => {
+          signOut().then(onSignedOut);
+        },
+      },
+      {
+        text: 'Delete account',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert(
+            'Delete account?',
+            'This permanently deletes your account and usage data. Conversations are never stored. An active subscription is cancelled in your App Store or Google Play settings.',
+            [
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => {
+                  deleteAccount()
+                    .then(() => signOut())
+                    .then(onSignedOut)
+                    .catch(() => setError('Something went wrong. Please try again.'));
+                },
+              },
+              { text: 'Cancel', style: 'cancel' },
+            ],
+          ),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
 
   return (
     <KeyboardAvoidingView
@@ -150,6 +193,11 @@ export function ChatScreen({
           </Pressable>
         </View>
       )}
+      {signedIn ? (
+        <Pressable style={styles.accountLink} onPress={openAccount}>
+          <Text style={styles.accountText}>Account</Text>
+        </Pressable>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -191,8 +239,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.s,
     paddingHorizontal: spacing.l,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.m,
   },
+  accountLink: { alignItems: 'center', paddingBottom: spacing.l },
+  accountText: { ...type.caption },
   input: {
     flex: 1,
     ...type.body,

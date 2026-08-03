@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import type { ChatMessage } from './src/api/client';
+import { getAccessToken } from './src/auth/session';
 import { ChatScreen } from './src/screens/ChatScreen';
 import { PaywallScreen } from './src/screens/PaywallScreen';
 
@@ -15,6 +16,19 @@ export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [paywalled, setPaywalled] = useState(false);
   const [deliverAnalysis, setDeliverAnalysis] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    getAccessToken().then((token) => setSignedIn(token !== null));
+  }, []);
+
+  function resetToSignedOut() {
+    setSignedIn(false);
+    setMessages([]);
+    setPaywalled(false);
+    setDeliverAnalysis(false);
+    setView('chat');
+  }
 
   return (
     <>
@@ -28,11 +42,14 @@ export default function App() {
           onContinueWithPremium={() => setView('paywall')}
           deliverAnalysis={deliverAnalysis}
           onAnalysisDelivered={() => setDeliverAnalysis(false)}
+          signedIn={signedIn}
+          onSignedOut={resetToSignedOut}
         />
       )}
       {view === 'paywall' && (
         <PaywallScreen
           onSubscribed={() => {
+            setSignedIn(true);
             setPaywalled(false);
             setDeliverAnalysis(true);
             setView('chat');

@@ -1,7 +1,14 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { generateReply, type ChatMessage } from './chat.js';
 import { config } from './config.js';
-import { getOrCreateUser, getUsage, incrementUsage, resetUsage, type UserRow } from './db.js';
+import {
+  deleteUser,
+  getOrCreateUser,
+  getUsage,
+  incrementUsage,
+  resetUsage,
+  type UserRow,
+} from './db.js';
 import { verifyAndApplyPurchase } from './subscription/index.js';
 import type { VerifyPurchaseRequest } from './subscription/types.js';
 import { canSendMessage, shouldResetUsage } from './usage.js';
@@ -142,6 +149,12 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     switch (route) {
       case 'GET /me':
         return await handleMe(user);
+      case 'DELETE /me':
+        // In-app account deletion (App Store guideline 5.1.1). Removes the
+        // user and usage rows; store subscriptions are cancelled by the user
+        // in App Store / Play settings.
+        await deleteUser(user.id);
+        return json(200, { deleted: true });
       case 'POST /chat':
         return await handleChat(user, event.body);
       case 'POST /subscription/verify':

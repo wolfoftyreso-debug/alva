@@ -156,7 +156,7 @@ export class SemantikaStack extends Stack {
     );
     const api = new HttpApi(this, 'HttpApi', { defaultAuthorizer: authorizer });
     const integration = new HttpLambdaIntegration('ApiIntegration', apiFunction);
-    api.addRoutes({ path: '/me', methods: [HttpMethod.GET], integration });
+    api.addRoutes({ path: '/me', methods: [HttpMethod.GET, HttpMethod.DELETE], integration });
     api.addRoutes({ path: '/chat', methods: [HttpMethod.POST], integration });
     api.addRoutes({ path: '/subscription/verify', methods: [HttpMethod.POST], integration });
 
