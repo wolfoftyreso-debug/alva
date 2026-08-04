@@ -68,6 +68,8 @@ import {
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { lasVideo, skalaNerFoto, tidDatum, tidKlockslag } from "@/felsokning/format";
 import { IkonCheck, IkonKamera, IkonKryss, IkonLank, IkonPunkt, IkonSok, IkonVarning } from "@/felsokning/ikoner";
+import { Bild, Klipp } from "@/felsokning/Bilagevisning";
+import { bilageFalt } from "@/felsokning/bilagor";
 
 const FLIKAR = [
   { id: "guide", label: "Guide" },
@@ -144,7 +146,20 @@ export default function ArendeSida() {
   const o = objekt(arende);
   const avslutat = arAvslutat(arende);
   const total = formateraTid(tidsfordelning(arende, nu).totalMs);
-  const skicka = (h: Handelse) => laggTill(id, h);
+  // Ett ställe flyttar bilagornas innehåll ut ur händelsen. Alla
+  // panelerna nedan skickar som förut med en inbäddad data-URL; här
+  // laddas den upp och händelsen får i stället en referens med
+  // innehållets hash. Misslyckas uppladdningen — eller finns ingen
+  // server, som i lokalt läge — sparas den inbäddat precis som förut.
+  // Dokumentationen får aldrig gå förlorad för att nätet ligger nere.
+  const skicka = (h: Handelse) => {
+    if (!("dataUrl" in h) || !h.dataUrl) {
+      laggTill(id, h);
+      return;
+    }
+    const { dataUrl, ...utan } = h;
+    void bilageFalt(id, dataUrl).then((bilaga) => laggTill(id, { ...utan, ...bilaga } as Handelse));
+  };
 
   return (
     <FelsokningSkal
@@ -1991,10 +2006,10 @@ function LoggFlik({ arende }: { arende: Arende }) {
               <p className="text-[13px] text-[#1A1A1A]">{handelseRubrik(post)}</p>
               <p className="text-[11px] text-[#707070]">{post.anvandare}</p>
               {post.handelse.typ === "foto" && (
-                <img src={post.handelse.dataUrl} alt={post.handelse.beskrivning} className="mt-1 max-h-40 rounded border border-[#C6C6C6]" />
+                <Bild bilaga={post.handelse} alt={post.handelse.beskrivning} className="mt-1 max-h-40 rounded border border-[#C6C6C6]" />
               )}
               {post.handelse.typ === "video" && (
-                <video src={post.handelse.dataUrl} controls className="mt-1 max-h-40 rounded border border-[#C6C6C6]" />
+                <Klipp bilaga={post.handelse} className="mt-1 max-h-40 rounded border border-[#C6C6C6]" />
               )}
             </div>
           </li>
@@ -2385,7 +2400,7 @@ function RapportFlik({
         <Panel rubrik="Dokumenterad video">
           {klipp.map((v, i) => (
             <figure key={i} className="mb-2">
-              <video src={v.dataUrl} controls className="w-full rounded border border-[#C6C6C6]" />
+              <Klipp bilaga={v.bilaga} className="w-full rounded border border-[#C6C6C6]" />
               <figcaption className="mt-1 text-[11px] text-[#4A5560]">{v.beskrivning}</figcaption>
             </figure>
           ))}
@@ -2396,7 +2411,7 @@ function RapportFlik({
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
-                <img src={bild.dataUrl} alt={bild.beskrivning} className="rounded border border-[#C6C6C6]" />
+                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} className="rounded border border-[#C6C6C6]" />
                 <figcaption className="mt-1 text-[11px] text-[#4A5560]">{bild.beskrivning}</figcaption>
               </figure>
             ))}

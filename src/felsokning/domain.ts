@@ -73,9 +73,23 @@ export interface ArbetsorderFalt {
 }
 
 // Varje händelse är en av dessa typer. Ingen händelse ändras eller tas bort.
+// Bilagans innehåll ligger utanför händelsen: loggen bär referensen och
+// innehållets SHA-256. Hashen står därmed i den append-only-skyddade
+// loggen och en utbytt bild går att upptäcka.
+//
+// dataUrl finns kvar och kommer alltid att finnas kvar. Loggen är
+// append-only, så händelser som skrevs när bilden låg inbäddad måste
+// gå att läsa för alltid. Lokalt läge (utan inloggning) använder den
+// också — där finns ingen server att ladda upp till.
+export interface Bilaga {
+  bilagaId?: string;
+  bilagaHash?: string;
+  dataUrl?: string;
+}
+
 export type Handelse =
   | { typ: "objekt_identifierat"; objekt: Objekt }
-  | { typ: "arbetsorder_skannad"; falt: ArbetsorderFalt[]; dataUrl?: string }
+  | ({ typ: "arbetsorder_skannad"; falt: ArbetsorderFalt[] } & Bilaga)
   | { typ: "felbeskrivning"; text: string }
   | { typ: "fraga_besvarad"; stegId: string; frageId: string; fraga: string; svar: string }
   // undantag: underlaget kunde inte tas fram — obligatorisk orsak i stället
@@ -84,11 +98,11 @@ export type Handelse =
   | { typ: "observation"; text: string }
   | { typ: "matvarde"; beskrivning: string; varde: string; enhet?: string }
   | { typ: "hypotes"; text: string; niva: Exclude<Tillforlitlighet, "hog"> }
-  | { typ: "foto"; beskrivning: string; dataUrl: string }
+  | ({ typ: "foto"; beskrivning: string } & Bilaga)
   // Video med ljud (E3-evidens): för det som låter eller rör sig —
   // motorljud, hjullager, fjädringsrörelse. Kort och komprimerad;
   // originalfilen bevaras som evidens precis som foton.
-  | { typ: "video"; beskrivning: string; dataUrl: string }
+  | ({ typ: "video"; beskrivning: string } & Bilaga)
   | { typ: "kommentar"; text: string }
   | { typ: "kategori_byte"; kategori: TidKategori }
   | { typ: "inaktivitet_forklarad"; text: string; minuter: number }
@@ -101,7 +115,7 @@ export type Handelse =
   // varför inte (kvalitetsvarning).
   | { typ: "historik_kontrollerad"; kontrollerad: boolean; kommentar?: string }
   // Officiell mätarställning in/ut, normalt med foto av instrumentpanelen.
-  | { typ: "matarstallning"; lage: "ingaende" | "utgaende"; varde: string; dataUrl?: string; undantag?: string }
+  | ({ typ: "matarstallning"; lage: "ingaende" | "utgaende"; varde: string; undantag?: string } & Bilaga)
   // Symptomverifiering (SVP): kundens beskrivning är inte ett konstaterat
   // fel förrän den reproducerats — eller dokumenterats som ej
   // reproducerbar med motivering.

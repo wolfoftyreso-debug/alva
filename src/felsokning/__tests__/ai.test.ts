@@ -62,6 +62,8 @@ describe("AI-orkestern", () => {
 
     const schema = readFileSync("infra/postgres-init.sql", "utf8");
     expect(schema).toContain("create table if not exists inloggningsforsok");
+    expect(schema).toContain("create table if not exists bilagor");
+    expect(schema).toContain("create table if not exists bilage_innehall");
     expect(schema).toContain("token_version integer not null default 0");
     expect(schema).toContain("before update or delete on felsokning_handelser");
     expect(schema).toContain("before update or delete on felsokning_arenden");
@@ -96,6 +98,9 @@ describe("AI-orkestern", () => {
       ["/api/anvandare/{anvandarId}/avaktivera", "kontoVag"],
       ["/api/anvandare/{anvandarId}/aktivera", "aktivera"],
       ["/api/auth/logga-ut-alla", "/api/auth/logga-ut-alla"],
+      ["/api/arenden/{arendeId}/bilagor", "laddaUppVag"],
+      ["/api/bilagor/{bilagaId}", "bilagaVag"],
+      ["/api/delad/{delningskod}/bilagor/{bilagaId}", "delatBilaga"],
     ];
     for (const [iSpec, iServer] of vagar) {
       expect(spec).toContain(`${iSpec}:`);

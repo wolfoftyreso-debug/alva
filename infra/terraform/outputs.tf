@@ -49,6 +49,8 @@ output "karta" {
       )
     }
 
+    bilagor = local.bilagor
+
     drift = {
       registrering_öppen       = var.registrering_oppen
       interna_uppslag_tillåtna = var.tillat_interna_uppslag

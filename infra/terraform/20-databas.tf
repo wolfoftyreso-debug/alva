@@ -51,6 +51,11 @@ resource "terraform_data" "databaskontroll" {
     }
 
     precondition {
+      condition     = var.bilage_lage != "s3" || (var.s3.endpoint != "" && var.s3.hink != "" && var.s3.region != "" && var.s3_nyckel_id != "" && var.s3_nyckel != "")
+      error_message = "bilage_lage = \"s3\" kräver s3.endpoint, s3.hink, s3.region, s3_nyckel_id och s3_nyckel."
+    }
+
+    precondition {
       condition     = !local.inbyggd_databas || var.miljo != "produktion"
       error_message = "databas_lage = \"inbyggd\" saknar säkerhetskopiering och kan inte användas med miljo = \"produktion\". Välj \"extern\" eller \"cnpg\"."
     }

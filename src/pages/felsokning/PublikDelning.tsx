@@ -133,6 +133,7 @@ export default function PublikDelning() {
       notis={NIVA_NOTIS[niva] ?? NIVA_NOTIS.kund}
       redanFiltrerad
       vidBeslut={skickaBeslut}
+      delningskod={kod}
     />
   );
 }

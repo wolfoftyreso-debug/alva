@@ -242,6 +242,62 @@ variable "databas_instanser" {
   default     = 3
 }
 
+# ---- Bilagor -----------------------------------------------------------
+
+variable "bilage_lage" {
+  description = <<-TEXT
+    Var foton och videoklipp lagras.
+
+      "databas"  bytea i en egen tabell. Fungerar överallt och kräver
+                 ingen konfiguration, men bilderna följer med databasens
+                 säkerhetskopior och gör dem stora.
+
+      "s3"       S3-kompatibel objektlagring (AWS, MinIO, Ceph). Loggen
+                 och bilderna växer oberoende av varandra. Kräver
+                 s3-uppgifterna nedan.
+
+    Innehållet är innehållsadresserat i båda lägena: samma foto lagras
+    en gång, och hashen står i händelseloggen så en utbytt bild går att
+    upptäcka.
+  TEXT
+  type        = string
+  default     = "databas"
+
+  validation {
+    condition     = contains(["databas", "s3"], var.bilage_lage)
+    error_message = "bilage_lage måste vara \"databas\" eller \"s3\"."
+  }
+}
+
+variable "s3" {
+  description = "Objektlagring för bilagor. Används bara när bilage_lage = \"s3\"."
+  type = object({
+    endpoint = string
+    hink     = string
+    region   = string
+    prefix   = optional(string, "bilagor")
+  })
+  default = {
+    endpoint = ""
+    hink     = ""
+    region   = ""
+  }
+}
+
+variable "s3_nyckel_id" {
+  description = "Åtkomstnyckel till bilagornas objektlagring."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "s3_nyckel" {
+  description = "Hemlig nyckel till bilagornas objektlagring."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "databas_storlek" {
   description = "Volymstorlek för händelseloggen. Foton och video ligger inline i loggen."
   type        = string

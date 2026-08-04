@@ -79,6 +79,32 @@ create table if not exists felsokning_arenden (
 create index if not exists felsokning_arenden_org_idx
   on felsokning_arenden (organisation_id, skapad desc);
 
+-- Bilagor: foton, video och instrumentbilder. Innehållet ligger utanför
+-- händelsen; loggen bär en referens och innehållets SHA-256. Hashen står
+-- i den append-only-skyddade loggen, så en utbytt bild går att upptäcka —
+-- starkare bevisvärde än när bilden låg inbäddad och måste tros på.
+create table if not exists bilagor (
+  id text primary key,
+  organisation_id uuid not null references organisationer(id),
+  arende_id text not null,
+  hash text not null,
+  mediatyp text not null,
+  storlek integer not null,
+  laddad_av uuid references anvandare(id),
+  skapad timestamptz not null default now()
+);
+create index if not exists bilagor_arende_idx on bilagor (arende_id);
+create index if not exists bilagor_hash_idx on bilagor (hash);
+
+-- Själva bytesen när BILAGE_LAGE=databas. Innehållsadresserat: samma
+-- foto som dokumenteras två gånger lagras en gång. I s3-läget är den
+-- här tabellen tom och innehållet ligger i objektlagringen.
+create table if not exists bilage_innehall (
+  hash text primary key,
+  data bytea not null,
+  skapad timestamptz not null default now()
+);
+
 create table if not exists felsokning_handelser (
   id text primary key,
   arende_id text not null references felsokning_arenden(id),

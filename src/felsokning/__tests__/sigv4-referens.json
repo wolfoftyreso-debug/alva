@@ -1,0 +1,29 @@
+[
+  {
+    "namn": "put-liten",
+    "metod": "PUT",
+    "url": "https://s3.eu-north-1.amazonaws.com/verkstad-bilagor/bilagor/ab/abcdef",
+    "kropp_base64": "aGVq",
+    "region": "eu-north-1",
+    "tid": "20260804T111952Z",
+    "authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20260804/eu-north-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=20ee842bb592f8af0cfe2dbf1e697693b12de1aa677812a1a12628687f4ab102"
+  },
+  {
+    "namn": "get-tom",
+    "metod": "GET",
+    "url": "https://s3.eu-north-1.amazonaws.com/verkstad-bilagor/bilagor/ff/ffff",
+    "kropp_base64": "",
+    "region": "eu-north-1",
+    "tid": "20260804T111952Z",
+    "authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20260804/eu-north-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=7002e3616b3ab2a3a2a55927827afbe9e197eb47e4ebfe6def73b56de5c2f266"
+  },
+  {
+    "namn": "annan-endpoint",
+    "metod": "PUT",
+    "url": "https://minio.exempel.se:9000/hink/verkstad-1/bilagor/0f/0f9a2b",
+    "kropp_base64": "AAECYmluYXJ0",
+    "region": "us-east-1",
+    "tid": "20260804T111952Z",
+    "authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20260804/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=09e038fa4e0ba6b967bfd8e88dde00285f3090f7609c935eabe04c4eae68758e"
+  }
+]

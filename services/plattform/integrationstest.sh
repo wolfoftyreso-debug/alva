@@ -405,6 +405,70 @@ KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/auth/logga-in" \
   -H 'Content-Type: application/json' -d '{"epost":"anna@a.se","losenord":"hemligt123"}')
 kontroll "andra konton påverkas inte" "$KOD" "200"
 
+# 10f. Bilagor: innehållet ligger utanför händelsen, hashen i loggen
+PNG=$(mktemp); printf '\x89PNG\r\n\x1a\nTESTBILD-1' > "$PNG"
+SVAR=$(curl -s -X POST "$BAS/api/arenden/arende-test1/bilagor" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: image/png' --data-binary "@$PNG")
+BIL_ID=$(echo "$SVAR" | falt .id)
+BIL_HASH=$(echo "$SVAR" | falt .hash)
+kontroll "bilagan får en hash" "${#BIL_HASH}" "64"
+kontroll "hashen är innehållets" "$BIL_HASH" "$(sha256sum "$PNG" | cut -d' ' -f1)"
+
+# Samma innehåll igen: ny referens, men bara ett lagrat innehåll
+SVAR2=$(curl -s -X POST "$BAS/api/arenden/arende-test1/bilagor" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: image/png' --data-binary "@$PNG")
+kontroll "identiskt innehåll ger samma hash" "$(echo "$SVAR2" | falt .hash)" "$BIL_HASH"
+ANTAL_INNEHALL=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select count(*) from bilage_innehall where hash='$BIL_HASH'")
+kontroll "innehållsadresserat — lagras en gång" "$ANTAL_INNEHALL" "1"
+
+# Hämtning ger tillbaka exakt samma bytes
+curl -s "$BAS/api/bilagor/$BIL_ID" -H "Authorization: Bearer $TOKEN_A" -o /tmp/hamtad.png
+kontroll "hämtat innehåll är identiskt" "$(sha256sum /tmp/hamtad.png | cut -d' ' -f1)" "$BIL_HASH"
+
+# Fel mediatyp och tom kropp avvisas
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-test1/bilagor" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/pdf' --data-binary "@$PNG")
+kontroll "endast bilder och video tas emot" "$KOD" "415"
+
+# Organisationsgränsen gäller bilagor
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/bilagor/$BIL_ID" -H "Authorization: Bearer $TOKEN_B")
+kontroll "org B kommer inte åt org A:s bilaga" "$KOD" "404"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-test1/bilagor" \
+  -H "Authorization: Bearer $TOKEN_B" -H 'Content-Type: image/png' --data-binary "@$PNG")
+kontroll "org B kan inte ladda upp till org A:s ärende" "$KOD" "404"
+
+# Manipulerat innehåll upptäcks: hashen i loggen är facit
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "update bilage_innehall set data = decode('4d414e4950554c45524154', 'hex') where hash='$BIL_HASH'"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/bilagor/$BIL_ID" -H "Authorization: Bearer $TOKEN_A")
+kontroll "utbytt innehåll upptäcks och lämnas inte ut" "$KOD" "409"
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "update bilage_innehall set data = pg_read_binary_file('$PNG') where hash='$BIL_HASH'" 2>/dev/null \
+  || PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+       -qc "delete from bilage_innehall where hash='$BIL_HASH'"
+
+# Delningsfiltret gäller även bilagor: en bilaga som hör till en intern
+# händelsetyp får inte hämtas via kundlänken.
+BIL2=$(curl -s -X POST "$BAS/api/arenden/arende-test1/bilagor" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: image/png' --data-binary "@$PNG" | falt .id)
+BIL3=$(curl -s -X POST "$BAS/api/arenden/arende-test1/bilagor" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: image/png' --data-binary "@$PNG" | falt .id)
+curl -s -X POST "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d "{\"handelser\":[
+    {\"id\":\"h-foto\",\"tidpunkt\":\"2026-08-03T08:07:00Z\",\"anvandare\":\"Anna\",\"handelse\":{\"typ\":\"foto\",\"beskrivning\":\"Hjul\",\"bilagaId\":\"$BIL2\"}},
+    {\"id\":\"h-ao\",\"tidpunkt\":\"2026-08-03T08:08:00Z\",\"anvandare\":\"Anna\",\"handelse\":{\"typ\":\"arbetsorder_skannad\",\"falt\":[],\"bilagaId\":\"$BIL3\"}}
+  ]}" >/dev/null
+NYKUND=$(curl -s -X POST "$BAS/api/arenden/arende-test1/delningar" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"niva":"kund"}' | falt .kod)
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/delad/$NYKUND/bilagor/$BIL2")
+kontroll "kunden når bilagan till ett foto" "$KOD" "200"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/delad/$NYKUND/bilagor/$BIL3")
+kontroll "kunden når INTE arbetsorderbilden" "$KOD" "404"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/delad/$NYKUND/bilagor/$BIL_ID")
+kontroll "bilaga utan händelse lämnas inte ut publikt" "$KOD" "404"
+rm -f "$PNG" /tmp/hamtad.png
+
 # 11. API-first: OpenAPI-specen serveras live, utan inloggning
 SPEC=$(curl -s "$BAS/api/openapi.yaml")
 case "$SPEC" in

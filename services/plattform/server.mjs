@@ -25,6 +25,7 @@ import { lookup } from "node:dns/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
+import { innehallsHash, mediatypGiltig, valjLager } from "./bilagor.mjs";
 
 // API-first: OpenAPI-specen är en versionerad artefakt och serveras live.
 const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "openapi.yaml"), "utf8");
@@ -50,10 +51,17 @@ const INTEGRATIONER = JSON.parse(
 
 const PORT = Number(process.env.PORT ?? 8080);
 const MAX_KROPP = 4 * 1024 * 1024;
+// Bilagor får vara större än en händelse — ett videoklipp med ljud är
+// evidens som inte går att skala ned hur långt som helst.
+const MAX_BILAGA = 32 * 1024 * 1024;
 const TOKEN_LIVSTID_S = 12 * 60 * 60;
 const ROLLER = ["tekniker", "arbetsledare", "admin"];
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
+
+// Var bilagornas innehåll hamnar. Felkonfigurerat s3-läge failar här,
+// vid start, i stället för vid första uppladdningen.
+const BILAGELAGER = valjLager(process.env, pool);
 
 // Vilka ursprung som får anropa API:t från en webbläsare. I klusterdriften
 // serveras klienten från samma domän som API:t, så listan kan hållas kort.
@@ -267,6 +275,17 @@ async function lasKropp(req) {
   return JSON.parse(Buffer.concat(bitar).toString("utf8"));
 }
 
+async function lasBinart(req, tak) {
+  const bitar = [];
+  let storlek = 0;
+  for await (const bit of req) {
+    storlek += bit.length;
+    if (storlek > tak) throw new Error("för stor kropp");
+    bitar.push(bit);
+  }
+  return Buffer.concat(bitar);
+}
+
 function nyKod() {
   const tecken = "abcdefghijklmnopqrstuvwxyz0123456789";
   const { randomBytes } = crypto;
@@ -403,6 +422,27 @@ export async function gorUppslag(def, uppgifter, identifierare, hamtare = fetch)
 }
 
 // ---- Server -----------------------------------------------------------
+
+// Lämnar ut innehållet — men bara efter att det kontrollerats mot
+// hashen i loggen. Stämmer det inte säger vi det rakt ut i stället för
+// att visa en bild som kan ha bytts ut.
+async function skickaBilaga(res, rad) {
+  const data = await BILAGELAGER.hamta(rad.hash);
+  if (!data) return svara(res, 404, { error: "Innehållet saknas i lagringen." });
+  if (innehallsHash(data) !== rad.hash) {
+    console.error("bilaga: innehållet stämmer inte med hashen i loggen", rad.hash);
+    return svara(res, 409, { error: "Innehållet stämmer inte med det som dokumenterades." });
+  }
+  res.writeHead(200, {
+    "Content-Type": rad.mediatyp,
+    "Content-Length": data.length,
+    // Innehållsadresserat — samma id ger alltid samma bytes.
+    "Cache-Control": "private, max-age=31536000, immutable",
+    "Access-Control-Allow-Origin": res.ursprung ?? "*",
+    Vary: "Origin",
+  });
+  return res.end(data);
+}
 
 export function skapaServer() {
   function loggaIn(res, rad, hemlighet) {
@@ -566,6 +606,32 @@ export function skapaServer() {
         return svara(res, 200, { arende: arende.rows[0], handelser: handelser.rows, niva });
       }
 
+      // Bilaga via delningslänk. Bilden får bara hämtas om den hör till
+      // en händelse som nivån faktiskt får se — annars vore det en väg
+      // runt delningsfiltret.
+      const delatBilaga = vag.match(/^\/api\/delad\/([A-Za-z0-9_-]+)\/bilagor\/([A-Za-z0-9_-]+)$/);
+      if (req.method === "GET" && delatBilaga) {
+        const delning = await pool.query(
+          `select arende_id, niva from delningar where kod = $1 and aterkallad is null`,
+          [delatBilaga[1]],
+        );
+        if (delning.rowCount === 0) return svara(res, 404, { error: "Bilagan är inte tillgänglig." });
+        const synliga = synligaTyper(delning.rows[0].niva);
+        const rad = await pool.query(
+          `select b.hash, b.mediatyp from bilagor b
+           where b.id = $1 and b.arende_id = $2
+             and exists (
+               select 1 from felsokning_handelser h
+               where h.arende_id = b.arende_id
+                 and h.handelse->>'bilagaId' = b.id
+                 and ($3::text[] is null or h.handelse->>'typ' = any($3))
+             )`,
+          [delatBilaga[2], delning.rows[0].arende_id, synliga],
+        );
+        if (rad.rowCount === 0) return svara(res, 404, { error: "Bilagan är inte tillgänglig." });
+        return skickaBilaga(res, rad.rows[0]);
+      }
+
       // -- Publikt kundgodkännande (den enda skrivande publika vägen) --
       //
       // Kunden svarar på ett åtgärdsförslag via sin delningslänk. Spärrar:
@@ -697,6 +763,50 @@ export function skapaServer() {
           [anspr.sub, anspr.org],
         );
         return svara(res, 200, { ok: true });
+      }
+
+      // -- Bilagor --
+      // Innehållet ligger utanför händelsen; loggen bär referensen och
+      // innehållets hash. Uppladdningen sker före händelsen skrivs, så
+      // en händelse aldrig pekar på något som inte finns.
+      const laddaUppVag = vag.match(/^\/api\/arenden\/([A-Za-z0-9_-]+)\/bilagor$/);
+      if (req.method === "POST" && laddaUppVag) {
+        if (!(await arendeIOrg(laddaUppVag[1], anspr.org))) {
+          return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
+        }
+        const mediatyp = (req.headers["content-type"] ?? "").split(";")[0].trim().toLowerCase();
+        if (!mediatypGiltig(mediatyp)) {
+          return svara(res, 415, { error: "Endast bilder och videoklipp kan laddas upp." });
+        }
+        let data;
+        try {
+          data = await lasBinart(req, MAX_BILAGA);
+        } catch {
+          return svara(res, 413, { error: `Bilagan är för stor (max ${MAX_BILAGA / 1024 / 1024} MB).` });
+        }
+        if (data.length === 0) return svara(res, 400, { error: "Bilagan är tom." });
+
+        const hash = innehallsHash(data);
+        await BILAGELAGER.spara(hash, data);
+        const id = `bil-${nyKod()}`;
+        await pool.query(
+          `insert into bilagor (id, organisation_id, arende_id, hash, mediatyp, storlek, laddad_av)
+           values ($1, $2, $3, $4, $5, $6, $7)`,
+          [id, anspr.org, laddaUppVag[1], hash, mediatyp, data.length, anspr.sub],
+        );
+        // Hashen går tillbaka till klienten och hamnar i händelsen —
+        // därmed står den i den append-only-skyddade loggen.
+        return svara(res, 200, { id, hash, mediatyp, storlek: data.length });
+      }
+
+      const bilagaVag = vag.match(/^\/api\/bilagor\/([A-Za-z0-9_-]+)$/);
+      if (req.method === "GET" && bilagaVag) {
+        const rad = await pool.query(
+          `select hash, mediatyp from bilagor where id = $1 and organisation_id = $2`,
+          [bilagaVag[1], anspr.org],
+        );
+        if (rad.rowCount === 0) return svara(res, 404, { error: "Bilagan finns inte." });
+        return skickaBilaga(res, rad.rows[0]);
       }
 
       // ECM Knowledge Library: aktuellt regelpaket för inloggade klienter.

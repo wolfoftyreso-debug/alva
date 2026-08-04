@@ -34,10 +34,16 @@ locals {
       utat    = ["webbläsaren anropar plattform och orkester direkt över ingressen"]
     }
     plattform = {
-      roll    = "Backend. Auth, append-only händelse-API, Live Share, organisationsinställningar, ECM-regelpaket, märkesspecifika kopplingar."
-      bild    = "${var.register}/${local.namn}-plattform:${var.bildtagg}"
-      hemligt = ["jwt-hemlighet", "postgres-losenord", "integration-nyckel"]
-      utat    = ["postgres:5432", "kundernas leverantörer över internet (spärrat mot privata nät)"]
+      roll = "Backend. Auth, append-only händelse-API, Live Share, organisationsinställningar, ECM-regelpaket, märkesspecifika kopplingar."
+      bild = "${var.register}/${local.namn}-plattform:${var.bildtagg}"
+      hemligt = concat(
+        ["jwt-hemlighet", "postgres-losenord", "integration-nyckel"],
+        var.bilage_lage == "s3" ? ["s3-nyckel-id", "s3-nyckel"] : [],
+      )
+      utat = concat(
+        ["postgres:5432", "kundernas leverantörer över internet (spärrat mot privata nät)"],
+        var.bilage_lage == "s3" ? ["objektlagringen för bilagor"] : [],
+      )
     }
     orkester = {
       roll    = "AI-orkestern. Routar per uppgift till Claude, äger systemprompt och svarsschema. Verifierar plattformens JWT."
@@ -82,6 +88,8 @@ locals {
       var.integration_nyckel,
       random_id.integration_nyckel.hex,
     )
+    "s3-nyckel-id" = var.s3_nyckel_id
+    "s3-nyckel"    = var.s3_nyckel
   }
 
   # ---- Dataflöden -----------------------------------------------------
@@ -96,11 +104,22 @@ locals {
     "Plattform → kundens leverantör                     VIN/regnr ut, fordonsuppgifter in",
   ]
 
+  bilagor = {
+    lage = var.bilage_lage
+    var  = var.bilage_lage == "s3" ? "${var.s3.endpoint}/${var.s3.hink}/${var.s3.prefix}" : "tabellen bilage_innehall"
+    hur = join(" ", [
+      "Innehållet ligger utanför händelsen; loggen bär referensen och innehållets SHA-256.",
+      "Innehållsadresserat, så samma foto lagras en gång.",
+      "Hashen kontrolleras vid utlämning — en utbytt bild lämnas inte ut.",
+    ])
+  }
+
   granser = [
     "Organisationsgränsen: varje fråga mot ärendedata filtreras på organisation_id i SQL:en, inte i klienten.",
     "Delningsgränsen: tillåtelselista över händelsetyper per nivå (kund/partner/intern) — nya typer är interna tills de aktivt släpps fram.",
     "Hemlighetsgränsen: Claude-nyckeln och kundernas leverantörsnycklar finns bara serversidan. Klienten ser maskerade värden.",
     "Historikgränsen: append-only i både API och databas (triggers). Ingen roll kan ändra eller radera en händelse.",
+    "Bilagegränsen: en bilaga kan bara hämtas via en delningslänk om händelsen den hör till är synlig på den nivån.",
   ]
 
   # ---- Det som medvetet inte ingår ------------------------------------
@@ -108,7 +127,6 @@ locals {
   avgransningar = concat(
     var.databas_lage == "inbyggd" ? ["INGEN SÄKERHETSKOPIERING — läget inbyggd har en volym och inget mer. Endast prov och demo."] : [],
     [
-      "Objektlagring. Foton och video ligger som data-URL:er i händelseloggen, vilket gör volymen stor och tung att säkerhetskopiera.",
       "Observability. Ingen metrikexport, ingen tracing — bara containerloggar.",
       "Takt-begränsning på inloggning. Endast den publika beslutsvägen är begränsad, och bara per pod.",
       "Återkallelse av utfärdade JWT. En token gäller sin livstid ut även om användaren tas bort.",

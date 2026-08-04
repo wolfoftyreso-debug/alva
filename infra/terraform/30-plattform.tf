@@ -111,6 +111,44 @@ resource "kubernetes_deployment_v1" "plattform" {
             value = var.tillat_interna_uppslag ? "true" : "false"
           }
 
+          # Bilagornas innehåll: i databasen eller i objektlagring.
+          env {
+            name  = "BILAGE_LAGE"
+            value = var.bilage_lage
+          }
+
+          dynamic "env" {
+            for_each = var.bilage_lage == "s3" ? {
+              S3_ENDPOINT = var.s3.endpoint
+              S3_HINK     = var.s3.hink
+              S3_REGION   = var.s3.region
+              S3_PREFIX   = var.s3.prefix
+            } : {}
+
+            content {
+              name  = env.key
+              value = env.value
+            }
+          }
+
+          dynamic "env" {
+            for_each = var.bilage_lage == "s3" ? {
+              S3_NYCKEL_ID = "s3-nyckel-id"
+              S3_NYCKEL    = "s3-nyckel"
+            } : {}
+
+            content {
+              name = env.key
+
+              value_from {
+                secret_key_ref {
+                  name = kubernetes_secret_v1.hemligheter.metadata[0].name
+                  key  = env.value
+                }
+              }
+            }
+          }
+
           resources {
             requests = { cpu = "100m", memory = "128Mi" }
             limits   = { cpu = "1", memory = "512Mi" }

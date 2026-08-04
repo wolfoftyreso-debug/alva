@@ -108,6 +108,42 @@ upp dess CRD redan vid plan. I `extern` läge kör ni
 `infra/postgres-init.sql` mot databasen själva; det är samma fil som
 integrationstestet kör.
 
+## Bilagor
+
+Foton, videoklipp och instrumentbilder låg tidigare som data-URL:er inne
+i händelserna. Det drabbade allt som läser loggen: synken drog med hela
+bildmassan var femtonde sekund, kundvyn likaså, och en säkerhetskopia av
+loggen var i praktiken en kopia av alla foton.
+
+Nu ligger innehållet utanför händelsen och loggen bär en referens med
+innehållets SHA-256. **Det stärker bevisvärdet i stället för att försvaga
+det**: hashen står i den append-only-skyddade loggen, så en bild som
+bytts ut går att upptäcka — tidigare låg bilden i loggen och måste helt
+enkelt tros på. Innehållet kontrolleras mot hashen varje gång det lämnas
+ut; stämmer det inte svarar tjänsten 409 i stället för att visa bilden.
+
+Innehållsadresserat, så samma foto som dokumenteras två gånger lagras en
+gång.
+
+| `bilage_lage` | Var innehållet ligger | Använd när |
+| --- | --- | --- |
+| `databas` (standard) | `bilage_innehall` (bytea) | Fungerar överallt utan konfiguration; bilderna följer med databasens säkerhetskopior |
+| `s3` | S3-kompatibel objektlagring (AWS, MinIO, Ceph) | Loggen och bilderna ska växa oberoende av varandra |
+
+Signeringen mot objektlagringen är egen (SigV4 för PUT och GET) i stället
+för molnleverantörens SDK — två operationer motiverar inte tiotals
+megabyte beroenden. Den korsverifieras mot botocore i testerna, bit för
+bit.
+
+**Delningsgränsen gäller även bilagor.** En bilaga kan bara hämtas via en
+delningslänk om händelsen den hör till är synlig på den nivån; den
+skannade arbetsordern nås alltså aldrig via kundlänken.
+
+Äldre händelser med inbäddad data-URL fortsätter att fungera och kommer
+alltid att göra det — loggen är append-only. Lokalt läge, utan
+inloggning, bäddar också in: det finns ingen server att ladda upp till,
+och dokumentationen får inte gå förlorad för att nätet ligger nere.
+
 ## Åtkomst: spärr och återkallelse
 
 En giltig JWT-signatur räcker inte. Varje autentiserat anrop slår upp

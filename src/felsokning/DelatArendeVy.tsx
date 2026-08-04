@@ -9,6 +9,7 @@ import type { Arende } from "./domain";
 import { KUNDBESLUT_LABEL, handelseRubrik } from "./domain";
 import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader, videor } from "./projektioner";
 import { metodikForArende } from "./store";
+import { Bild, Klipp } from "./Bilagevisning";
 import { tidDatum, tidKlockslag } from "./format";
 import { FelsokningSkal, Panel, StorKnapp } from "./ui";
 import { IkonCheck, IkonKlocka, IkonUppdatera } from "./ikoner";
@@ -107,10 +108,14 @@ export function DelatArendeVy({
   notis,
   redanFiltrerad = false,
   vidBeslut,
+  delningskod,
 }: {
   arende: Arende;
   nu: string;
   notis: string;
+  // Satt i den publika vyn: bilagor hämtas då via delningens egen väg,
+  // som filtrerar på samma behörighetsnivå som händelserna.
+  delningskod?: string;
   // Satt endast på den publika kundlänken: kunden kan svara på ett
   // åtgärdsförslag. Utan den är vyn helt skrivskyddad.
   vidBeslut?: (beslut: "godkant" | "avbojt", kommentar: string) => Promise<string | null>;
@@ -205,7 +210,7 @@ export function DelatArendeVy({
         <Panel rubrik="Video">
           {klipp.map((v, i) => (
             <figure key={i} className="mb-2">
-              <video src={v.dataUrl} controls className="w-full rounded border border-[#C6C6C6]" />
+              <Klipp bilaga={v.bilaga} delningskod={delningskod} className="w-full rounded border border-[#C6C6C6]" />
               <figcaption className="mt-1 text-[11px] text-[#4A5560]">{v.beskrivning}</figcaption>
             </figure>
           ))}
@@ -216,7 +221,7 @@ export function DelatArendeVy({
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
-                <img src={bild.dataUrl} alt={bild.beskrivning} className="rounded border border-[#C6C6C6]" />
+                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} delningskod={delningskod} className="rounded border border-[#C6C6C6]" />
                 <figcaption className="mt-1 text-[11px] text-[#4A5560]">{bild.beskrivning}</figcaption>
               </figure>
             ))}

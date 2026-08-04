@@ -2,7 +2,7 @@
 // funktioner av händelseloggen. De kan alltid regenereras — loggen vinner
 // om en vy och loggen skulle säga olika saker.
 
-import type { Arende, LoggPost, Objekt, TidKategori, Tillforlitlighet } from "./domain";
+import type { Arende, Bilaga, LoggPost, Objekt, TidKategori, Tillforlitlighet } from "./domain";
 import { TIDKATEGORI_LABEL } from "./domain";
 import type { Metodik } from "./metodik";
 import { nastaSteg } from "./metodik";
@@ -172,21 +172,21 @@ export function hypoteser(arende: Arende): { text: string; niva: Tillforlitlighe
   return resultat;
 }
 
-export function foton(arende: Arende): { beskrivning: string; dataUrl: string; tidpunkt: string }[] {
-  const resultat: { beskrivning: string; dataUrl: string; tidpunkt: string }[] = [];
+export function foton(arende: Arende): { beskrivning: string; bilaga: Bilaga; tidpunkt: string }[] {
+  const resultat: { beskrivning: string; bilaga: Bilaga; tidpunkt: string }[] = [];
   for (const post of arende.handelser) {
     if (post.handelse.typ === "foto") {
-      resultat.push({ beskrivning: post.handelse.beskrivning, dataUrl: post.handelse.dataUrl, tidpunkt: post.tidpunkt });
+      resultat.push({ beskrivning: post.handelse.beskrivning, bilaga: post.handelse, tidpunkt: post.tidpunkt });
     }
   }
   return resultat;
 }
 
-export function videor(arende: Arende): { beskrivning: string; dataUrl: string; tidpunkt: string }[] {
-  const resultat: { beskrivning: string; dataUrl: string; tidpunkt: string }[] = [];
+export function videor(arende: Arende): { beskrivning: string; bilaga: Bilaga; tidpunkt: string }[] {
+  const resultat: { beskrivning: string; bilaga: Bilaga; tidpunkt: string }[] = [];
   for (const post of arende.handelser) {
     if (post.handelse.typ === "video") {
-      resultat.push({ beskrivning: post.handelse.beskrivning, dataUrl: post.handelse.dataUrl, tidpunkt: post.tidpunkt });
+      resultat.push({ beskrivning: post.handelse.beskrivning, bilaga: post.handelse, tidpunkt: post.tidpunkt });
     }
   }
   return resultat;
