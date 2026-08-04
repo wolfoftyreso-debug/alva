@@ -4,8 +4,4 @@ build/
 .expo/
 cdk.out/
 coverage/
-*.log
-.DS_Store
-.env
-.env.*
-!.env.example
+package-lock.json
