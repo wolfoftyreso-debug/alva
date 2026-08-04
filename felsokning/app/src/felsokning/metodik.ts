@@ -2,11 +2,12 @@
 // Systemet presenterar aldrig en hypotes som ett konstaterat fel —
 // motorn föreslår nästa verifierbara steg utifrån vad som redan är dokumenterat.
 //
-// I MVP:t är metodikerna fördefinierade flöden. Den framtida AI-integrationen
-// ansluter här: den väljer/genererar steg, men händelseloggen och
-// projektionerna är oförändrade.
+// Här bor motorn: typerna, valet av metodik och härledningen av nästa
+// steg. Själva metodikerna ligger i ./metodiker — de växer i antal, och
+// motorn ska inte behöva ändras när de gör det.
 
 import type { Arende } from "./domain";
+import { ALLA_METODIKER, ELSYSTEM, GENERISK, VIBRATION } from "./metodiker";
 
 export interface Fraga {
   id: string;
@@ -36,205 +37,108 @@ export interface MetodikSteg {
 export interface Metodik {
   id: string;
   namn: string;
+  /** Fordonets system, för gruppering i listor. */
+  omrade: string;
+  /**
+   * Ord ur kundens eller teknikerns språk, inte ur konstruktörens.
+   * Används enbart för att välja ingång — aldrig för att dra en slutsats
+   * om vad felet är.
+   */
+  nyckelord: string[];
   steg: MetodikSteg[];
 }
 
-export const VIBRATION_METODIK: Metodik = {
-  id: "vibration",
-  namn: "Vibration under körning",
-  steg: [
-    {
-      id: "symptom",
-      rubrik: "Verifiera symptom",
-      fragor: [
-        { id: "hastighetsberoende", text: "Är vibrationen hastighetsberoende?", svarstyp: "janej" },
-        {
-          id: "var",
-          text: "Var känns vibrationen?",
-          svarstyp: "val",
-          val: ["I ratten", "I stolen", "I hela bilen"],
-        },
-        {
-          id: "nar",
-          text: "När uppstår vibrationen?",
-          svarstyp: "val",
-          val: ["Vid acceleration", "Vid jämn fart", "Vid inbromsning", "Alltid under körning"],
-        },
-        {
-          id: "intervall",
-          text: "Försvinner den över eller under ett visst hastighetsintervall?",
-          svarstyp: "text",
-        },
-      ],
-    },
-    {
-      id: "visuell",
-      rubrik: "Visuell kontroll",
-      beskrivning: "Fotografera samtliga hjul. Skilj på observation och slutsats.",
-      kontroller: [
-        { id: "foto_vf", text: "Fotografera vänster framhjul", krav: "foto" },
-        { id: "foto_hf", text: "Fotografera höger framhjul", krav: "foto" },
-        { id: "foto_vb", text: "Fotografera vänster bakhjul", krav: "foto" },
-        { id: "foto_hb", text: "Fotografera höger bakhjul", krav: "foto" },
-        { id: "dot", text: "Dokumentera DOT-/tillverkningsdatum", krav: "kommentar" },
-        { id: "slitage", text: "Kontrollera däckslitage", krav: "kommentar" },
-      ],
-    },
-    {
-      id: "kontroller",
-      rubrik: "Rekommenderade kontroller",
-      kontroller: [
-        { id: "lufttryck", text: "Kontrollera lufttryck", krav: "matvarde" },
-        { id: "hjulmoment", text: "Kontrollera hjulmoment", krav: "matvarde" },
-        { id: "kast", text: "Kontrollera radial- och sidokast", krav: "matvarde" },
-        { id: "balansering", text: "Kontrollera hjulbalansering", krav: "kommentar" },
-        { id: "bussningar", text: "Kontrollera bussningar och leder", krav: "kommentar" },
-      ],
-    },
-    {
-      id: "provkorning",
-      rubrik: "Provkörning",
-      beskrivning: "Verifiera under provkörning:",
-      kontroller: [
-        { id: "pk_hastighet", text: "Hastighet där vibration uppstår", krav: "kommentar" },
-        { id: "pk_acc", text: "Förändring vid acceleration", krav: "kommentar" },
-        { id: "pk_motorbroms", text: "Förändring vid motorbroms", krav: "kommentar" },
-        { id: "pk_kurva", text: "Förändring vid kurvtagning", krav: "kommentar" },
-        { id: "pk_var", text: "Om vibration känns i ratt eller kaross", krav: "kommentar" },
-      ],
-    },
-  ],
-};
+// ---- Biblioteket ---------------------------------------------------------
+//
+// Metodikerna definieras i ./metodiker. Namnen nedan finns kvar för att
+// äldre kod och tester ska fortsätta fungera oförändrat.
 
-export const GENERISK_METODIK: Metodik = {
-  id: "generisk",
-  namn: "Generell strukturerad felsökning",
-  steg: [
-    {
-      id: "symptom",
-      rubrik: "Verifiera symptom",
-      fragor: [
-        { id: "reproducerbart", text: "Går felet att reproducera?", svarstyp: "janej" },
-        {
-          id: "nar",
-          text: "När uppträder felet?",
-          svarstyp: "val",
-          val: ["Alltid", "Ibland", "Endast under drift", "Endast vid start"],
-        },
-        {
-          id: "var",
-          text: "Var upplevs felet?",
-          svarstyp: "val",
-          val: ["Fram", "Bak", "Höger", "Vänster", "Motor/drivkälla", "Kupé/förarplats", "Okänt"],
-        },
-        {
-          id: "hur",
-          text: "Hur upplevs felet?",
-          svarstyp: "val",
-          val: ["Skakar/vibrerar", "Missljud (knack/gnissel/vinande)", "Rycker", "Tappar kraft", "Stannar helt", "Annat"],
-        },
-        { id: "forlopp", text: "Beskriv förloppet när felet uppstår", svarstyp: "text" },
-        { id: "forandring", text: "Har något förändrats nyligen (service, reparation, miljö)?", svarstyp: "text" },
-      ],
-    },
-    {
-      id: "visuell",
-      rubrik: "Visuell kontroll",
-      kontroller: [
-        { id: "foto_objekt", text: "Fotografera objektet och det berörda området", krav: "foto" },
-        { id: "skador", text: "Kontrollera synliga skador, läckage eller lösa anslutningar", krav: "kommentar" },
-        { id: "typskylt", text: "Dokumentera typskylt/märkning", krav: "foto" },
-      ],
-    },
-    {
-      id: "grundkontroller",
-      rubrik: "Grundkontroller",
-      kontroller: [
-        { id: "matning", text: "Utför grundläggande mätningar (spänning, tryck, temperatur — det som är relevant)", krav: "matvarde" },
-        { id: "sakringar", text: "Kontrollera säkringar/skydd", krav: "kommentar" },
-        { id: "anslutningar", text: "Kontrollera kontaktdon och anslutningar", krav: "kommentar" },
-      ],
-    },
-    {
-      id: "funktionstest",
-      rubrik: "Funktionstest",
-      kontroller: [
-        { id: "test", text: "Genomför funktionstest och dokumentera resultatet", krav: "kommentar" },
-      ],
-    },
-  ],
-};
+export {
+  ALLA_METODIKER,
+  VIBRATION,
+  BROMSAR,
+  STYRNING_FJADRING,
+  ELSYSTEM,
+  START_LADDNING,
+  MOTOR_DRIFT,
+  KYLSYSTEM,
+  DRIVLINA,
+  AVGAS_EMISSION,
+  KLIMAT,
+  HOGVOLT,
+  DIAGNOS_NATVERK,
+  LACKAGE,
+  MISSLJUD,
+  ADAS,
+  GENERISK,
+} from "./metodiker";
 
-// Elsystem-metodik enligt visionens relä-exempel: mätningar med krav på
-// värden, reläkontroll och funktionstest.
-export const ELSYSTEM_METODIK: Metodik = {
-  id: "elsystem",
-  namn: "Elsystem / strömförsörjning",
-  steg: [
-    {
-      id: "symptom",
-      rubrik: "Verifiera symptom",
-      fragor: [
-        { id: "reproducerbart", text: "Går felet att reproducera?", svarstyp: "janej" },
-        {
-          id: "omfattning",
-          text: "Är funktionen helt död eller delvis fungerande?",
-          svarstyp: "val",
-          val: ["Helt död", "Delvis fungerande", "Intermittent"],
-        },
-        { id: "funktion", text: "Vilken funktion saknas eller felar?", svarstyp: "text" },
-        { id: "forandring", text: "Har något åtgärdats eller förändrats nyligen?", svarstyp: "text" },
-      ],
-    },
-    {
-      id: "visuell",
-      rubrik: "Visuell kontroll",
-      kontroller: [
-        { id: "foto_komponent", text: "Fotografera komponenten och dess anslutningar", krav: "foto" },
-        { id: "skador", text: "Kontrollera synliga skador, korrosion och lösa kontaktdon", krav: "kommentar" },
-      ],
-    },
-    {
-      id: "matningar",
-      rubrik: "Mätningar",
-      kontroller: [
-        { id: "batterispanning", text: "Mät batterispänning", krav: "matvarde" },
-        { id: "sakringar", text: "Kontrollera berörda säkringar", krav: "kommentar" },
-        { id: "matningsspanning", text: "Mät matningsspänning vid komponenten", krav: "matvarde" },
-        { id: "jord", text: "Mät spänningsfall mot jord", krav: "matvarde" },
-      ],
-    },
-    {
-      id: "rela",
-      rubrik: "Relä och styrsignal",
-      kontroller: [
-        { id: "rela_klick", text: "Kontrollera om reläet klickar vid aktivering", krav: "kommentar" },
-        { id: "styrsignal", text: "Mät styrsignal till reläet", krav: "matvarde" },
-      ],
-    },
-    {
-      id: "funktionstest",
-      rubrik: "Funktionstest",
-      kontroller: [
-        { id: "test", text: "Genomför funktionstest och dokumentera resultatet", krav: "kommentar" },
-      ],
-    },
-  ],
-};
-
-export const METODIKER = [VIBRATION_METODIK, ELSYSTEM_METODIK, GENERISK_METODIK];
+export const VIBRATION_METODIK = VIBRATION;
+export const ELSYSTEM_METODIK = ELSYSTEM;
+export const GENERISK_METODIK = GENERISK;
+export const METODIKER = ALLA_METODIKER;
 
 export function metodikForId(id: string): Metodik {
-  return METODIKER.find((m) => m.id === id) ?? GENERISK_METODIK;
+  return ALLA_METODIKER.find((m) => m.id === id) ?? GENERISK;
 }
 
-export function valjMetodik(felbeskrivning: string): Metodik {
-  const text = felbeskrivning.toLowerCase();
-  if (/vibr|skak|obalans/.test(text)) return VIBRATION_METODIK;
-  if (/relä|rela\b|säkring|elektr|spänning|volt\b|batteri|lampa|belysning|ström|kortslut/.test(text)) {
-    return ELSYSTEM_METODIK;
+// ---- Val av metodik ------------------------------------------------------
+
+// Korta ord matchas som helt ord, längre som ordstam. Annars skulle "ac"
+// träffa "acceleration" och en vibration hamna i klimatanläggningen.
+const HELT_ORD = 3;
+const ORDTECKEN = "a-z0-9åäöéèü";
+
+const monsterCache = new Map<string, RegExp>();
+
+function monster(nyckelord: string): RegExp {
+  let m = monsterCache.get(nyckelord);
+  if (!m) {
+    const bokstavligt = nyckelord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const slut = nyckelord.length <= HELT_ORD ? `(?![${ORDTECKEN}])` : "";
+    m = new RegExp(`(?<![${ORDTECKEN}])${bokstavligt}${slut}`, "i");
+    monsterCache.set(nyckelord, m);
   }
-  return GENERISK_METODIK;
+  return m;
+}
+
+/**
+ * Poäng för hur väl en metodik matchar en fritext.
+ *
+ * Ett långt nyckelord väger tyngre än ett kort: "traktionsbatteri" säger
+ * mer om vart ärendet hör hemma än "batteri" gör. Poängen är exponerad
+ * för att valet ska gå att granska — inte bara att lita på.
+ */
+export function metodikPoang(metodik: Metodik, text: string): number {
+  const normaliserad = text.toLowerCase();
+  let poang = 0;
+  for (const ord of metodik.nyckelord) {
+    if (monster(ord).test(normaliserad)) poang += ord.length;
+  }
+  return poang;
+}
+
+/**
+ * Väljer ingång utifrån felbeskrivningen.
+ *
+ * Detta är ett val av *frågeordning*, inte en diagnos. Träffar ingenting
+ * blir det GENERISK — som är strukturellt komplett och därmed ett ärligt
+ * svar på "vi vet inte var vi ska börja" — och anropande kod kan då låta
+ * klassificeraren i orkestern försöka i stället.
+ */
+export function valjMetodik(felbeskrivning: string): Metodik {
+  let bast = GENERISK;
+  let basta = 0;
+  for (const metodik of ALLA_METODIKER) {
+    const poang = metodikPoang(metodik, felbeskrivning);
+    // Strikt större: vid lika poäng vinner den som står först i
+    // biblioteket, så valet blir stabilt mellan körningar.
+    if (poang > basta) {
+      basta = poang;
+      bast = metodik;
+    }
+  }
+  return bast;
 }
 
 export interface NastaSteg {

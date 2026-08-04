@@ -64,7 +64,7 @@ Det ersätter inte teknikern. Det ersätter pärmen, minneslapparna och "fråga 
 
 | I demon | I produktion |
 | --- | --- |
-| Deterministisk metodikmotor (3 metodiker) | LLM väljer/genererar steg genom samma motorgränssnitt |
+| Deterministisk metodikmotor (16 metodiker) | LLM väljer/genererar steg genom samma motorgränssnitt |
 | Webbläsarens taligenkänning | Leverantörens Voice-to-Text bakom samma gränssnitt |
 | localStorage + synk vid inloggning | Multi-tenant-backend (migration finns), roller enligt Master Prompt |
 | Delningslänk kräver synkat ärende | Live Share med behörighetsnivåer kund/intern/partner |

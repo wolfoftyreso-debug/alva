@@ -42,7 +42,9 @@ describe("verifierade checklistor", () => {
 describe("metodikval", () => {
   it("väljer vibrationsmetodiken när felbeskrivningen nämner vibration", () => {
     expect(valjMetodik("Bilen vibrerar runt 88 km/h").id).toBe("vibration");
-    expect(valjMetodik("Motorn startar inte").id).toBe("generisk");
+    // Utan igenkännbart symptom väljs ingen ingång — generisk är svaret,
+    // inte en gissning. (Se metodiker.test.ts för hela urvalet.)
+    expect(valjMetodik("Kunden vill ha en genomgång").id).toBe("generisk");
   });
 
   it("väljer elsystemmetodiken vid elrelaterade symptom", () => {

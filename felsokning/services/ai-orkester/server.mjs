@@ -58,10 +58,33 @@ const SVARS_SCHEMA = {
   additionalProperties: false,
 };
 
+// Metodikkatalogen. Måste vara identisk med app/src/felsokning/metodiker.ts —
+// testet "orkestern känner till exakt samma metodiker som klienten" faller
+// om listorna glider isär. Beskrivningen är klassificerarens enda underlag,
+// så den ska säga vad symptomet är, inte vad felet tros vara.
+const METODIK_KATALOG = [
+  ["vibration", "vibrationer, skakningar eller obalans under körning"],
+  ["bromsar", "bromsverkan, bromspedal, skevhet, gnissel vid inbromsning, ABS"],
+  ["styrning_fjadring", "styrning, ratt, glapp, stötdämpare, hjulinställning, fordonet drar åt sidan"],
+  ["elsystem", "elektriska fel — reläer, säkringar, spänning, belysning, kablage, kontaktdon"],
+  ["start_laddning", "fordonet startar inte, startmotor, generator, batteriet laddar ur"],
+  ["motor_drift", "motorgång och effekt — rycker, misständer, ojämn tomgång, tappar kraft"],
+  ["kylsystem", "överhettning, kylvätska, termostat, kylare, värme i kupén"],
+  ["drivlina", "växellåda, koppling, automatlåda, drivknutar, kardan, differential"],
+  ["avgas_emission", "avgassystem och emissioner — partikelfilter, AdBlue, katalysator, lambda, EGR"],
+  ["klimat", "klimatanläggning — kyler inte, kompressor, köldmedium, imma, lukt i kupén"],
+  ["hogvolt", "högvoltsystem i elbil eller hybrid — traktionsbatteri, laddning, räckvidd"],
+  ["diagnos_natverk", "felkoder, kommunikationsfel, ingen kontakt med styrenhet, CAN/buss"],
+  ["lackage", "läckage — olja, vätska, vatten som tar sig in i fordonet"],
+  ["missljud", "missljud — knack, gnissel, vinande, brummande, skrammel"],
+  ["adas", "förarassistans och kalibrering — kamera, radar, filhållning, parkeringssensorer"],
+  ["generisk", "allt annat, eller när det är oklart"],
+];
+
 const METODIK_SCHEMA = {
   type: "object",
   properties: {
-    metodikId: { type: "string", enum: ["vibration", "elsystem", "generisk"] },
+    metodikId: { type: "string", enum: METODIK_KATALOG.map(([id]) => id) },
   },
   required: ["metodikId"],
   additionalProperties: false,
@@ -180,10 +203,10 @@ const ORKESTER = {
     modell: "claude-haiku-4-5",
     maxTokens: 256,
     system: `Du klassificerar en felbeskrivning från en verkstad till EN felsökningsmetodik:
-- "vibration": vibrationer, skakningar eller obalans under körning.
-- "elsystem": elektriska fel — reläer, säkringar, spänning, batteri, belysning, givare, strömförsörjning.
-- "generisk": allt annat, eller när det är oklart.
-Gissa inte: välj "generisk" om beskrivningen inte tydligt hör till en specifik metodik.`,
+${METODIK_KATALOG.map(([id, beskrivning]) => `- "${id}": ${beskrivning}.`).join("\n")}
+
+Valet är en frågeordning, inte en diagnos — du avgör var teknikern ska börja leta, inte vad som är fel.
+Gissa inte: välj "generisk" om beskrivningen inte tydligt hör till en specifik metodik. "generisk" är ett fullgott svar och alltid bättre än en gissning.`,
     schema: METODIK_SCHEMA,
   },
   // Ärendestart: teknikern fotograferar arbetsordern; vi läser dokumentet
