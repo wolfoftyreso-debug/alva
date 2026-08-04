@@ -21,7 +21,7 @@ flowchart LR
 | `web` | SPA:n bakom oprivilegierad nginx (`Dockerfile`, `docker/nginx.conf`) | Deployment + Service + HPA + PDB |
 | `plattform` | Självhostad backend (`services/plattform`): **multi-tenant** — registrering skapar organisation + systemadministratör, admin hanterar användare (tekniker/arbetsledare/admin), all ärendedata organisationsisolerad. Inloggning (bcrypt via pgcrypto, HS256-JWT med roll + org i anspråken), append-only händelse-API, publik delningsendpoint | Deployment + Service + HPA + PDB |
 | `ai-orkester` | AI-orkestern (`services/ai-orkester`): fyra uppgifter routade till Sonnet 5 / Opus 5 / Haiku 4.5 — verifierar plattformens JWT (delad hemlighet) | Deployment + Service + HPA + PDB |
-| `postgres` | Händelselogg + användare; **append-only garanterat med databastriggers** — historik kan inte ändras eller raderas oavsett roll | Tre lägen: extern managerad Postgres (rekommenderat), CloudNativePG i klustret, eller en enkel StatefulSet utan backup för prov |
+| `postgres` | Händelselogg + användare; **append-only garanterat med databastriggers** — historik kan inte ändras eller raderas oavsett roll | **Aurora PostgreSQL Serverless v2** utanför klustret, i ett subnätlager utan routing ut. Automatisk säkerhetskopiering med PITR ned till sekunden |
 | Hemligheter | `anthropic-api-key`, `jwt-secret` (delas av plattform + orkester), `postgres-losenord`, `integration-nyckel` (krypterar kundernas märkesspecifika credentials) |
 | Miljöflaggor | `TILLATNA_URSPRUNG` (CORS-lista; utelämnad = `*`), `TILLAT_INTERNA_UPPSLAG` (`true` tillåter leverantörsuppslag mot privata nät), `REGISTRERING_OPPEN`, `ECM_REGLER_FIL`, `INTEGRATIONER_FIL` | Secret `felsokning-hemligheter` — aldrig i bilder eller manifest |
 
@@ -29,16 +29,23 @@ flowchart LR
 
 ## Infrastrukturen som kod
 
-`infra/terraform` är systemets definition — läs [README:n där](../infra/terraform/README.md).
-Börja i `karta.tf`: hela systemet beskrivet en gång som data (tjänster,
-portar, routing, hemligheter, dataflöden, gränser). `terraform output
-karta` skriver ut samma sak i klartext.
+Två lager, i ordning:
 
-Definitionen omfattar hemligheter, databasschema, nätverksgränser och
-alla tre databaslägena. Kustomize- och Argo CD-vägen är borttagen —
-`infra/postgres-init.sql` är det enda som blivit kvar utanför Terraform,
-och den läses av både Terraform och integrationstestet så att schemat
-inte kan glida isär från det som testas.
+| Lager | Var | Vad |
+| --- | --- | --- |
+| 1 | `felsokning/infra/aws` | VPC, EKS, Aurora, S3, ECR, Secrets Manager, Route 53/ACM, CloudWatch |
+| 2 | `felsokning/infra/terraform` | Arbetslasten i klustret — läser lager 1:s utdata |
+
+Uppdelningen är inte smak. En enda apply som både skapar ett EKS-kluster
+och schemalägger in i det är en känd fälla: kubernetes-leverantören måste
+konfigureras med uppgifter som inte finns förrän klustret existerar.
+
+Lager 2 bestämmer nästan ingenting själv — `05-aws.tf` läser basens
+utdata, så domän, register, roller, certifikat, hink och hemligheternas
+namn anges bara på ett ställe.
+
+`terraform output karta` i vardera lagret skriver ut hela sanningen i
+klartext, direkt ur definitionen.
 
 ## Nätverksgränser
 
@@ -61,52 +68,56 @@ dokumentation, inte skydd.
 
 ## Driftsätta
 
-Allt går genom Terraform — hemligheter, schema och nätverksgränser
-ingår. Det finns ingen `kubectl apply` att komma ihåg.
-
 ```sh
-cd infra/terraform
-cp terraform.tfvars.exempel terraform.tfvars   # domän, register, databasläge, nycklar
-terraform init
-terraform plan
-terraform apply -var bildtagg=<git-sha>
+# Lager 1 — AWS-basen
+cd felsokning/infra/aws
+cp terraform.tfvars.exempel terraform.tfvars   # domän, region, larmadress
+terraform init && terraform apply
+terraform output karta
 
-terraform output karta       # hela systemet i klartext
-terraform output endpoints   # adresser att kontrollera
+# Lager 2 — arbetslasten
+cd ../terraform
+cp terraform.tfvars.exempel terraform.tfvars   # tillståndshink och bildtagg
+terraform init && terraform apply -var bildtagg=<commit-sha>
 ```
 
-Sedan:
-
-```sh
-curl https://app.exempel.se/halsa            # → {"status":"ok"}
-curl https://app.exempel.se/api/openapi.yaml # hela API-specen
-```
-
-Klustret behöver: en CNI som tillämpar NetworkPolicy, ingress-nginx,
-cert-manager, en metrics-server och en StorageClass med ReadWriteOnce.
+Efter första apply återstår tre saker som `terraform output karta`
+listar under `kvar_att_gora`: fyll i Claude-nyckeln i Secrets Manager,
+kör `felsokning/infra/postgres-init.sql` mot Aurora, och snäva in
+`tillatna_api_cidr` från `0.0.0.0/0`.
 
 Att skapa nya organisationer är stängt som standard
 (`registrering_oppen = false`); användare inom en organisation skapas
 alltid av dess systemadministratör.
 
-## Databasen: valet som avgör om det finns backup
+## Databasen
 
-`databas_lage` saknar standardvärde med flit.
+Aurora PostgreSQL Serverless v2, utanför klustret, i ett subnätlager
+**utan routing ut alls** — att databasen inte kan nå internet hänger
+alltså inte på att en säkerhetsgrupp är rätt konfigurerad.
 
-| Läge | Backup | Failover | Använd när |
-| --- | --- | --- | --- |
-| `extern` | Leverantörens, med PITR | Leverantörens | **Produktion.** Cloud SQL, RDS, Neon, Azure |
-| `cnpg` | Basbackup 02:30 + WAL-arkiv → objektlagring, PITR | Ja | Produktion när databasen måste ligga i klustret |
-| `inbyggd` | **Ingen** | Nej | Prov och demo — spärras när `miljo = "produktion"` |
+Automatisk säkerhetskopiering med PITR ned till sekunden inom
+retentionsfönstret. Går händelseloggen förlorad är det inte "data" som
+försvinner utan varje ärendes bevisvärde: vad som kontrollerades, av vem,
+när, med vilken evidens. Det går inte att återskapa i efterhand.
 
-Går händelseloggen förlorad är det inte "data" som försvinner utan varje
-ärendes bevisvärde: vad som kontrollerades, av vem, när, med vilken
-evidens. Det går inte att återskapa i efterhand.
+Schemat med append-only-triggarna är `felsokning/infra/postgres-init.sql`
+— samma fil som integrationstestet kör, så de kan inte glida isär.
 
-`cnpg` kräver CloudNativePG-operatorn installerad först — Terraform slår
-upp dess CRD redan vid plan. I `extern` läge kör ni
-`infra/postgres-init.sql` mot databasen själva; det är samma fil som
-integrationstestet kör.
+## Hemligheter
+
+AWS Secrets Manager är sanningskällan. External Secrets speglar in dem i
+klustret var timme, och podarna läser dem som vanliga miljövariabler.
+
+**Terraform ser aldrig värdena**, och det är själva poängen: en hemlighet
+som passerar Terraform hamnar i tillståndsfilen. Roteras en hemlighet
+följer klustret efter av sig självt inom en timme.
+
+Åtkomsten går via IRSA: plattformens tjänstekonto har en roll bunden till
+exakt det kontot i den namnrymden. Grannpodden på samma nod får ingenting
+på köpet, och IMDSv2 med hoppgräns 1 hindrar en pod från att låna nodens
+roll via metadatatjänsten. Samma roll signerar mot S3 — inga nycklar
+existerar att läcka.
 
 ## Bilagor
 
@@ -193,19 +204,27 @@ Integrationstestet (`services/plattform/integrationstest.sh`, körs även i CI m
 
 **CI** (`.github/workflows/ci.yml`): tester, produktionsbygge, integrationstest mot riktig Postgres och verifierande containerbyggen på varje push/PR.
 
-**CD** — två flöden, medvetet åtskilda: en bild i registret är inte samma sak som en bild som kör.
+**CD** — allt eget, inget GitHub. Källkod, bygge, register och drift ligger i vår AWS-miljö.
 
 ```mermaid
 flowchart LR
-    P[Push till main] --> B[Publicera:\nbygger 3 bilder\ntaggade med git-SHA] --> G[(GHCR)]
-    G -.-> D[Driftsätt:\nstartas för hand\nmed en tagg]
-    D --> M[miljö: produktion\ngodkännande] --> T[terraform apply] --> K[Klustret]
-    T --> R[Rökkontroll\nhälsa + API-spec]
+    D[Utvecklare] --> G[Gitea
+på egna EKS]
+    G --> R[Actions-runner
+samma kluster]
+    R --> T[tester
+typkontroll
+integrationstest]
+    T --> E[(ECR
+oföränderliga taggar)]
+    E -.->|manuellt steg| P[terraform apply]
+    P --> K[EKS]
 ```
 
-1. **Publicera** vid varje main-push: bygger de tre bilderna och taggar med git-SHA:t (`GITHUB_TOKEN`, inga externa hemligheter).
-2. **Driftsätt** startas för hand med en tagg, mot GitHub-miljön `produktion` som kan kräva godkännande. Kör `fmt`, `init`, `validate`, `plan`, `apply`, skriver ut kartan och rökkontrollerar hälsa och API-spec. `bara_plan` visar planen utan att applicera.
-3. **Rollback** = kör Driftsätt igen med en tidigare tagg.
+1. **Gitea** kör i klustret med egna Actions-runners. Workflow-syntaxen är densamma som GitHub Actions, så `.gitea/workflows/felsokning.yml` är samma fil som tidigare låg under `.github` — bara flyttad.
+2. **Bygget** publicerar till ECR med oföränderliga taggar: en tagg som pekat på ett bygge kan inte peka på ett annat, så "vilken kod kör i produktion" har ett entydigt svar.
+3. **Driftsättningen** är ett eget, manuellt steg med en bildtagg. En bild i registret är inte samma sak som en bild som kör. Rollback = kör igen med tidigare tagg.
+4. **Delade rättigheter:** byggrollen får publicera till ECR men inte röra klustret; driftrollen tvärtom. Ett komprometterat bygge kan inte driftsätta.
 
-Kustomize- och Argo CD-vägen är borttagen. Den beskrev samma system en gång till och kunde inte köras samtidigt som Terraform utan att de motarbetade varandra — `selfHeal` återställde det Terraform ändrade och `prune` tog bort det Terraform skapade.
+`.github/workflows/ci.yml` tillhör Semantika och rörs inte.
 
