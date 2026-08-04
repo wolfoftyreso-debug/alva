@@ -76,9 +76,9 @@ variable "nod_typer" {
 variable "noder" {
   description = "Nodgruppens storlek."
   type = object({
-    minsta  = number
-    onskad  = number
-    hogsta  = number
+    minsta = number
+    onskad = number
+    hogsta = number
   })
   default = {
     minsta = 3
@@ -134,9 +134,9 @@ variable "gitea" {
     någon annanstans.
   TEXT
   type = object({
-    aktiv     = optional(bool, true)
-    doman     = optional(string, "")
-    runners   = optional(number, 2)
+    aktiv   = optional(bool, true)
+    doman   = optional(string, "")
+    runners = optional(number, 2)
   })
   default = {}
 }
