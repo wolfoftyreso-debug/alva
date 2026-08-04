@@ -788,7 +788,11 @@ docs/MASTER-PROMPT.md                   grundinstruktionen
 docs/MVP.md                             vad som är byggt, funktion för funktion
 docs/DEMO.md                            demomanus för visning
 docs/DRIFT.md                           drift
-docs/SYSTEMBESKRIVNING.md               detta dokument
+docs/SYSTEMBESKRIVNING.md               detta dokument (källan)
+docs/SYSTEMBESKRIVNING.en.md            engelska
+docs/SYSTEMBESKRIVNING.de.md            tyska
+docs/SYSTEMBESKRIVNING.da.md            danska
+docs/SYSTEMBESKRIVNING.no.md            norska (bokmål)
 docs/exempel/vibration-vid-88-km-h.md   genomgående exempelflöde
 docs/moduler/
   arbetslogg-och-tidredovisning.md
