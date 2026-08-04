@@ -1,115 +1,43 @@
-# Allt som skiljer en installation från en annan. Inget annat ska
-# behöva ändras i .tf-filerna för att driftsätta i en ny miljö.
+# Det lilla som inte kommer från AWS-basen.
+#
+# Domän, register, roller, certifikat, hink och hemligheternas namn läses
+# ur basens utdata (05-aws.tf) — de ska inte anges två gånger.
 
-# ---- Kluster -----------------------------------------------------------
-
-variable "kubeconfig" {
-  description = "Sökväg till kubeconfig."
+variable "tillstandshink" {
+  description = "S3-hinken där AWS-basens Terraform-tillstånd ligger. Basen skriver ut namnet."
   type        = string
-  default     = "~/.kube/config"
 }
 
-variable "kube_context" {
-  description = "Kubernetes-kontext att driftsätta i. Tom = kubeconfigens aktuella."
+variable "region" {
+  description = "Region för tillståndshinken. Samma som basens."
   type        = string
-  default     = ""
+  default     = "eu-north-1"
 }
 
 variable "namnrymd" {
-  description = "Namnrymd för hela systemet."
+  description = "Namnrymd för arbetslasten."
   type        = string
   default     = "guidad-felsokning"
 }
 
 variable "miljo" {
-  description = "Miljöns namn (produktion, test, demo). Sätts som label på allt."
+  description = "Miljöns namn. Sätts som label på allt."
   type        = string
   default     = "produktion"
 }
 
-# ---- Domän och certifikat ---------------------------------------------
-
-variable "doman" {
-  description = "Domänen klienten och API:t nås på, t.ex. app.exempel.se."
-  type        = string
-}
-
-variable "cert_issuer" {
-  description = "cert-manager ClusterIssuer som utfärdar TLS-certifikatet."
-  type        = string
-  default     = "letsencrypt"
-}
-
-variable "ingress_klass" {
-  description = "IngressClass. Nätverkspolicyn öppnar för ingress-kontrollerns namnrymd nedan."
-  type        = string
-  default     = "nginx"
-}
-
-variable "ingress_namnrymd" {
-  description = "Namnrymd där ingress-kontrollern kör — behövs av nätverkspolicyn."
-  type        = string
-  default     = "ingress-nginx"
-}
-
-# ---- Bilder ------------------------------------------------------------
-
-variable "register" {
-  description = "Containerregister, t.ex. ghcr.io/min-organisation."
-  type        = string
-}
-
 variable "bildtagg" {
   description = <<-TEXT
-    Taggen alla tre bilderna körs med — normalt git-SHA:t från
-    publiceringsflödet. "latest" duger för prov men gör en rullning
-    omöjlig att spåra.
+    Taggen alla tre bilderna körs med — commit-SHA:t från
+    publiceringsflödet. ECR har oföränderliga taggar, så en tagg pekar
+    alltid på samma bygge.
   TEXT
   type        = string
 
   validation {
     condition     = var.bildtagg != ""
-    error_message = "Ange en bildtagg — helst git-SHA:t, aldrig tomt."
+    error_message = "Ange en bildtagg — helst commit-SHA:t, aldrig tomt."
   }
-}
-
-# ---- Hemligheter -------------------------------------------------------
-#
-# Sätts helst via en secrets-hanterare (External Secrets, Vault, molnets
-# secret manager) i stället för tfvars. Lämnas de tomma genererar
-# Terraform slumpvärden vid första körningen och behåller dem i
-# tillståndet — bekvämt för prov, men då måste tillståndet skyddas
-# därefter.
-
-variable "anthropic_api_nyckel" {
-  description = "Claude API-nyckel. Ägs av plattformen, når aldrig klienten."
-  type        = string
-  sensitive   = true
-}
-
-variable "jwt_hemlighet" {
-  description = "HS256-hemlighet. Delas av plattformen och orkestern. Tom = genereras."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "postgres_losenord" {
-  description = "Databaslösenord. Tom = genereras."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "integration_nyckel" {
-  description = <<-TEXT
-    32 byte hex som krypterar kundernas leverantörsuppgifter i vila.
-    Tom = genereras. Byts nyckeln måste alla kopplingar sparas om —
-    tjänsten visar då inga värden i stället för att gissa.
-  TEXT
-  type        = string
-  sensitive   = true
-  default     = ""
 }
 
 # ---- Drift -------------------------------------------------------------
@@ -133,12 +61,12 @@ variable "tillat_interna_uppslag" {
 
 variable "max_kropp_mb" {
   description = <<-TEXT
-    Största tillåtna anropskropp. Foton och videoklipp följer med i
-    händelseloggen, så ingressens gräns måste minst motsvara tjänstens
-    egen (4 MB) — annars avvisas dokumentationen redan vid dörren.
+    Största tillåtna anropskropp. Bilagor laddas upp separat och kan
+    vara upp till 32 MB — lastbalanserarens gräns måste rymma dem,
+    annars avvisas dokumentationen redan vid dörren.
   TEXT
   type        = number
-  default     = 8
+  default     = 64
 }
 
 variable "repliker" {
@@ -169,143 +97,19 @@ variable "max_repliker" {
   }
 }
 
-# ---- Databas -----------------------------------------------------------
+# ---- Självhostad git ---------------------------------------------------
 
-variable "databas_lage" {
+variable "gitea" {
   description = <<-TEXT
-    Hur händelseloggen lagras. Inget standardvärde: valet avgör om det
-    finns säkerhetskopiering, och det är inte ett val någon ska göra av
-    misstag.
-
-      "extern"   Managerad Postgres utanför klustret (Cloud SQL, RDS,
-                 Neon, Azure Flexible Server). Leverantören sköter
-                 backup, PITR, failover och kryptering. REKOMMENDERAT
-                 i produktion. Kräver databas_url.
-
-      "cnpg"     CloudNativePG i klustret: basbackup, WAL-arkivering och
-                 PITR mot objektlagring. Kräver att operatorn redan är
-                 installerad — Terraform slår upp dess CRD vid plan.
-                 Kräver backup-uppgifterna nedan.
-
-      "inbyggd"  En StatefulSet med en volym. INGEN säkerhetskopiering.
-                 Går volymen förlorad är händelseloggen borta, och den
-                 är hela produktens bevisvärde. Endast för prov och demo.
-  TEXT
-  type        = string
-
-  validation {
-    condition     = contains(["extern", "cnpg", "inbyggd"], var.databas_lage)
-    error_message = "databas_lage måste vara \"extern\", \"cnpg\" eller \"inbyggd\"."
-  }
-}
-
-variable "databas_url" {
-  description = "Anslutning till den externa databasen. Krävs när databas_lage = \"extern\"."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "backup" {
-  description = <<-TEXT
-    Objektlagring för CloudNativePG:s basbackup och WAL-arkiv. Används
-    bara när databas_lage = "cnpg". mal är en S3-URL, t.ex.
-    s3://verkstad-backup/felsokning.
+    Gitea med egna Actions-runners i samma kluster. Med den på finns
+    inget externt beroende alls: källkod, bygge, register och drift
+    ligger i vår egen AWS-miljö.
   TEXT
   type = object({
-    mal          = string
-    endpoint     = optional(string, "")
-    behall_dagar = optional(number, 30)
+    aktiv   = optional(bool, true)
+    doman   = optional(string, "")
+    runners = optional(number, 2)
+    lagring = optional(string, "20Gi")
   })
-  default = {
-    mal = ""
-  }
-}
-
-variable "backup_nyckel_id" {
-  description = "Åtkomstnyckel till objektlagringen (databas_lage = \"cnpg\")."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "backup_nyckel" {
-  description = "Hemlig nyckel till objektlagringen (databas_lage = \"cnpg\")."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "databas_instanser" {
-  description = "Antal Postgres-instanser i CloudNativePG-klustret. 3 ger failover utan dataförlust."
-  type        = number
-  default     = 3
-}
-
-# ---- Bilagor -----------------------------------------------------------
-
-variable "bilage_lage" {
-  description = <<-TEXT
-    Var foton och videoklipp lagras.
-
-      "databas"  bytea i en egen tabell. Fungerar överallt och kräver
-                 ingen konfiguration, men bilderna följer med databasens
-                 säkerhetskopior och gör dem stora.
-
-      "s3"       S3-kompatibel objektlagring (AWS, MinIO, Ceph). Loggen
-                 och bilderna växer oberoende av varandra. Kräver
-                 s3-uppgifterna nedan.
-
-    Innehållet är innehållsadresserat i båda lägena: samma foto lagras
-    en gång, och hashen står i händelseloggen så en utbytt bild går att
-    upptäcka.
-  TEXT
-  type        = string
-  default     = "databas"
-
-  validation {
-    condition     = contains(["databas", "s3"], var.bilage_lage)
-    error_message = "bilage_lage måste vara \"databas\" eller \"s3\"."
-  }
-}
-
-variable "s3" {
-  description = "Objektlagring för bilagor. Används bara när bilage_lage = \"s3\"."
-  type = object({
-    endpoint = string
-    hink     = string
-    region   = string
-    prefix   = optional(string, "bilagor")
-  })
-  default = {
-    endpoint = ""
-    hink     = ""
-    region   = ""
-  }
-}
-
-variable "s3_nyckel_id" {
-  description = "Åtkomstnyckel till bilagornas objektlagring."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "s3_nyckel" {
-  description = "Hemlig nyckel till bilagornas objektlagring."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "databas_storlek" {
-  description = "Volymstorlek för händelseloggen. Foton och video ligger inline i loggen."
-  type        = string
-  default     = "50Gi"
-}
-
-variable "lagringsklass" {
-  description = "StorageClass för databasvolymen. Tom = klustrets standard."
-  type        = string
-  default     = ""
+  default = {}
 }

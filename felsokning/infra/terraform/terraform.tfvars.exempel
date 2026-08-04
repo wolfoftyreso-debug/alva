@@ -1,61 +1,28 @@
-# Kopiera till terraform.tfvars och fyll i. Checka aldrig in riktiga
-# nycklar — .gitignore utesluter *.tfvars.
+# Kopiera till terraform.tfvars och fyll i. Nästan allt kommer från
+# AWS-basen — det här är resten.
 
-doman    = "app.exempel.se"
-register = "ghcr.io/min-organisation"
-bildtagg = "ersatt-med-git-sha"
+# Hinken där basens tillstånd ligger. Basen skriver ut namnet:
+#   cd ../aws && terraform output -raw ...
+tillstandshink = "felsokning-produktion-tfstate-123456789012"
+region         = "eu-north-1"
+
+# Commit-SHA från publiceringsflödet. ECR har oföränderliga taggar, så
+# en tagg pekar alltid på samma bygge.
+bildtagg = "ersatt-med-commit-sha"
 
 miljo = "produktion"
 
-# Claude-nyckeln ägs av plattformen och når aldrig klienten.
-# Hämta hellre från en secrets-hanterare än att skriva den här:
-#   export TF_VAR_anthropic_api_nyckel="$(vault kv get -field=key ...)"
-anthropic_api_nyckel = "sk-ant-…"
-
-# Lämnas dessa tomma genererar Terraform dem vid första körningen och
-# behåller dem i tillståndet. Byts integration_nyckel måste alla
-# märkesspecifika kopplingar sparas om.
-jwt_hemlighet      = ""
-postgres_losenord  = ""
-integration_nyckel = ""
-
-# Stäng självregistrering i produktion — annars kan vem som helst skapa
-# en organisation.
+# Stäng självregistrering i produktion.
 registrering_oppen = false
 
 # Öppnar en väg från en tenant-administratör in i klustrets interna
 # adresser. Sätt bara true om verkstaden har en OEM-server på eget nät.
 tillat_interna_uppslag = false
 
-# --- Databasen ---------------------------------------------------------
-#
-# Inget standardvärde: valet avgör om det finns säkerhetskopiering.
-#
-#   "extern"   managerad Postgres — leverantören sköter backup och PITR
-#              (rekommenderat i produktion). Kräver databas_url.
-#   "cnpg"     CloudNativePG i klustret — basbackup, WAL-arkiv, failover.
-#              Kräver att operatorn är installerad och backup-uppgifter.
-#   "inbyggd"  en volym, ingen backup. Endast prov och demo — går inte
-#              att kombinera med miljo = "produktion".
-
-databas_lage = "extern"
-databas_url  = "postgresql://plattform:...@db.exempel.internal:5432/felsokning"
-
-# Används bara när databas_lage = "cnpg":
-# backup = {
-#   mal          = "s3://verkstad-backup/felsokning"
-#   endpoint     = ""   # sätts för S3-kompatibel lagring som inte är AWS
-#   behall_dagar = 30
-# }
-# backup_nyckel_id  = ""
-# backup_nyckel     = ""
-# databas_instanser = 3
-
-databas_storlek = "50Gi"
-# lagringsklass = "premium-rwo"
-
-repliker = {
-  web       = 2
-  plattform = 2
-  orkester  = 2
+# Självhostad git med egna runners.
+gitea = {
+  aktiv   = true
+  doman   = "git.exempel.se"
+  runners = 2
+  lagring = "20Gi"
 }

@@ -29,38 +29,27 @@ locals {
   tjanster = {
     web = {
       roll    = "Klienten. Statisk SPA bakom oprivilegierad nginx. Innehåller ingen hemlighet — API-adressen bakas in vid bygget."
-      bild    = "${var.register}/${local.namn}-web:${var.bildtagg}"
+      bild    = "${local.aws.register}/${local.namn}-web:${var.bildtagg}"
       hemligt = []
       utat    = ["webbläsaren anropar plattform och orkester direkt över ingressen"]
     }
     plattform = {
-      roll = "Backend. Auth, append-only händelse-API, Live Share, organisationsinställningar, ECM-regelpaket, märkesspecifika kopplingar."
-      bild = "${var.register}/${local.namn}-plattform:${var.bildtagg}"
-      hemligt = concat(
-        ["jwt-hemlighet", "postgres-losenord", "integration-nyckel"],
-        var.bilage_lage == "s3" ? ["s3-nyckel-id", "s3-nyckel"] : [],
-      )
-      utat = concat(
-        ["postgres:5432", "kundernas leverantörer över internet (spärrat mot privata nät)"],
-        var.bilage_lage == "s3" ? ["objektlagringen för bilagor"] : [],
-      )
+      roll    = "Backend. Auth, append-only händelse-API, Live Share, organisationsinställningar, ECM-regelpaket, märkesspecifika kopplingar."
+      bild    = "${local.aws.register}/${local.namn}-plattform:${var.bildtagg}"
+      hemligt = ["allt via Secrets Manager: databas, Claude-nyckel, JWT, krypteringsnyckel"]
+      utat    = ["Aurora:5432", "S3 för bilagor", "kundernas leverantörer (spärrat mot privata nät)"]
     }
     orkester = {
       roll    = "AI-orkestern. Routar per uppgift till Claude, äger systemprompt och svarsschema. Verifierar plattformens JWT."
-      bild    = "${var.register}/${local.namn}-ai-orkester:${var.bildtagg}"
+      bild    = "${local.aws.register}/${local.namn}-ai-orkester:${var.bildtagg}"
       hemligt = ["anthropic-api-nyckel", "jwt-hemlighet"]
       utat    = ["api.anthropic.com"]
     }
     postgres = {
-      roll = join(" ", [
-        "Händelseloggen — systemets enda sanningskälla. Append-only garanteras av databastriggers, inte bara av API:t.",
-        var.databas_lage == "extern" ? "Läge: extern managerad Postgres — leverantören sköter backup och PITR." :
-        var.databas_lage == "cnpg" ? "Läge: CloudNativePG i klustret — basbackup, WAL-arkivering, PITR och failover." :
-        "Läge: inbyggd StatefulSet UTAN säkerhetskopiering — endast prov och demo."
-      ])
-      bild    = var.databas_lage == "cnpg" ? "ghcr.io/cloudnative-pg/postgresql:17.2" : var.databas_lage == "extern" ? "(utanför klustret)" : "postgres:17-alpine"
-      hemligt = ["postgres-losenord"]
-      utat    = var.databas_lage == "cnpg" ? ["objektlagringen för backup och WAL-arkiv"] : []
+      roll    = "Händelseloggen ligger i Aurora utanför klustret — se AWS-basen. Append-only garanteras av databastriggers, säkerhetskopiering och PITR av Aurora."
+      bild    = "(Aurora PostgreSQL, managerad)"
+      hemligt = ["databasens anslutningssträng, ur Secrets Manager"]
+      utat    = []
     }
   }
 
@@ -81,15 +70,9 @@ locals {
   # En enda Secret, men varje tjänst monterar bara sina egna nycklar.
 
   hemligheter = {
-    "anthropic-api-key" = var.anthropic_api_nyckel
-    "jwt-secret"        = coalesce(var.jwt_hemlighet, random_password.jwt.result)
-    "postgres-losenord" = coalesce(var.postgres_losenord, random_password.postgres.result)
-    "integration-nyckel" = coalesce(
-      var.integration_nyckel,
-      random_id.integration_nyckel.hex,
-    )
-    "s3-nyckel-id" = var.s3_nyckel_id
-    "s3-nyckel"    = var.s3_nyckel
+    kalla   = "AWS Secrets Manager — Terraform ser aldrig värdena"
+    speglas = "External Secrets, var timme, med tjänstekontots roll"
+    lasare  = "endast plattformens tjänstekonto, via IRSA"
   }
 
   # ---- Dataflöden -----------------------------------------------------
@@ -105,12 +88,13 @@ locals {
   ]
 
   bilagor = {
-    lage = var.bilage_lage
-    var  = var.bilage_lage == "s3" ? "${var.s3.endpoint}/${var.s3.hink}/${var.s3.prefix}" : "tabellen bilage_innehall"
+    lage = "s3"
+    var  = "S3-hinken ur AWS-basen"
     hur = join(" ", [
       "Innehållet ligger utanför händelsen; loggen bär referensen och innehållets SHA-256.",
       "Innehållsadresserat, så samma foto lagras en gång.",
       "Hashen kontrolleras vid utlämning — en utbytt bild lämnas inte ut.",
+      "Tjänsten signerar mot S3 med tjänstekontots roll; inga nycklar finns.",
     ])
   }
 
@@ -119,32 +103,15 @@ locals {
     "Delningsgränsen: tillåtelselista över händelsetyper per nivå (kund/partner/intern) — nya typer är interna tills de aktivt släpps fram.",
     "Hemlighetsgränsen: Claude-nyckeln och kundernas leverantörsnycklar finns bara serversidan. Klienten ser maskerade värden.",
     "Historikgränsen: append-only i både API och databas (triggers). Ingen roll kan ändra eller radera en händelse.",
+    "AWS-gränsen: varje roll är bunden till exakt ett tjänstekonto i en namnrymd (IRSA). Bygget får publicera men inte driftsätta; driften tvärtom.",
     "Bilagegränsen: en bilaga kan bara hämtas via en delningslänk om händelsen den hör till är synlig på den nivån.",
   ]
 
   # ---- Det som medvetet inte ingår ------------------------------------
 
-  avgransningar = concat(
-    var.databas_lage == "inbyggd" ? ["INGEN SÄKERHETSKOPIERING — läget inbyggd har en volym och inget mer. Endast prov och demo."] : [],
-    [
-      "Observability. Ingen metrikexport, ingen tracing — bara containerloggar.",
-      "Takt-begränsning på inloggning. Endast den publika beslutsvägen är begränsad, och bara per pod.",
-      "Återkallelse av utfärdade JWT. En token gäller sin livstid ut även om användaren tas bort.",
-    ],
-  )
+  avgransningar = [
+    "Observability är CloudWatch: loggar, Container Insights och fyra larm. Ingen distribuerad tracing.",
+    "Takt-begränsning på inloggning är databasbackad och håller bakom flera repliker; övriga endpoints har ingen.",
+  ]
 }
 
-# Genereras bara när motsvarande variabel lämnats tom.
-resource "random_password" "jwt" {
-  length  = 64
-  special = false
-}
-
-resource "random_password" "postgres" {
-  length  = 32
-  special = false
-}
-
-resource "random_id" "integration_nyckel" {
-  byte_length = 32
-}

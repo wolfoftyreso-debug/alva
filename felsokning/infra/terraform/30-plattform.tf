@@ -29,7 +29,8 @@ resource "kubernetes_deployment_v1" "plattform" {
       }
 
       spec {
-        automount_service_account_token = false
+        # Behöver token: IRSA hämtar AWS-uppgifter genom det.
+        service_account_name = kubernetes_service_account_v1.plattform.metadata[0].name
 
         security_context {
           run_as_non_root = true
@@ -47,58 +48,20 @@ resource "kubernetes_deployment_v1" "plattform" {
             container_port = local.port_container
           }
 
-          env {
-            name = "JWT_SECRET"
-
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret_v1.hemligheter.metadata[0].name
-                key  = "jwt-secret"
-              }
+          # Alla hemligheter kommer ur den spegling External Secrets
+          # gör från Secrets Manager. Ingen av dem finns i Terraforms
+          # tillstånd eller i något manifest.
+          env_from {
+            secret_ref {
+              name = "felsokning-hemligheter"
             }
-          }
-
-          # Krypterar kundernas leverantörsuppgifter i vila. Saknas den
-          # sparas ingenting alls — tjänsten failar closed i stället för
-          # att lagra i klartext.
-          env {
-            name = "INTEGRATION_NYCKEL"
-
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret_v1.hemligheter.metadata[0].name
-                key  = "integration-nyckel"
-              }
-            }
-          }
-
-          # Lösenordet expanderas in i DATABASE_URL nedan. I externt läge
-          # står hela anslutningen i variabeln och behövs inte här.
-          dynamic "env" {
-            for_each = local.extern_databas ? [] : [1]
-
-            content {
-              name = "POSTGRES_LOSENORD"
-
-              value_from {
-                secret_key_ref {
-                  name = kubernetes_secret_v1.hemligheter.metadata[0].name
-                  key  = "postgres-losenord"
-                }
-              }
-            }
-          }
-
-          env {
-            name  = "DATABASE_URL"
-            value = local.databas_anslutning
           }
 
           # Klienten serveras från samma domän som API:t, så CORS behöver
           # inte vara öppet.
           env {
             name  = "TILLATNA_URSPRUNG"
-            value = "https://${var.doman}"
+            value = "https://${local.aws.doman}"
           }
 
           env {
@@ -111,43 +74,28 @@ resource "kubernetes_deployment_v1" "plattform" {
             value = var.tillat_interna_uppslag ? "true" : "false"
           }
 
-          # Bilagornas innehåll: i databasen eller i objektlagring.
+          # Bilagorna ligger i S3. Inga nycklar behövs — tjänsten
+          # signerar med tjänstekontots roll via IRSA.
           env {
             name  = "BILAGE_LAGE"
-            value = var.bilage_lage
+            value = "s3"
           }
 
-          dynamic "env" {
-            for_each = var.bilage_lage == "s3" ? {
-              S3_ENDPOINT = var.s3.endpoint
-              S3_HINK     = var.s3.hink
-              S3_REGION   = var.s3.region
-              S3_PREFIX   = var.s3.prefix
-            } : {}
-
-            content {
-              name  = env.key
-              value = env.value
-            }
+          env {
+            name  = "S3_HINK"
+            value = local.aws.bilage_hink
           }
 
-          dynamic "env" {
-            for_each = var.bilage_lage == "s3" ? {
-              S3_NYCKEL_ID = "s3-nyckel-id"
-              S3_NYCKEL    = "s3-nyckel"
-            } : {}
-
-            content {
-              name = env.key
-
-              value_from {
-                secret_key_ref {
-                  name = kubernetes_secret_v1.hemligheter.metadata[0].name
-                  key  = env.value
-                }
-              }
-            }
+          env {
+            name  = "S3_REGION"
+            value = local.aws.region
           }
+
+          env {
+            name  = "S3_ENDPOINT"
+            value = "https://s3.${local.aws.region}.amazonaws.com"
+          }
+
 
           resources {
             requests = { cpu = "100m", memory = "128Mi" }

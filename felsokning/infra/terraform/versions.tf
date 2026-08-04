@@ -1,26 +1,39 @@
-# Guidad Felsökning — infrastrukturens definition.
+# Guidad Felsökning — arbetslasten i klustret.
 #
-# Läsordning för den som vill förstå hela systemet:
-#   versions.tf      det här — leverantörer och tillstånd
-#   variables.tf     alla rattar som finns att vrida på
-#   karta.tf         locals: hela systemet som data (tjänster, portar,
-#                    routing, hemligheter, dataflöden) — kartans källa
-#   10-namnrymd.tf   namnrymd + hemligheter
-#   20-databas.tf    Postgres: händelseloggen
-#   30-plattform.tf  backend: auth, händelse-API, delning, integrationer
-#   40-orkester.tf   AI-orkestern: modellrouting mot Claude
-#   50-web.tf        klienten
-#   60-ingress.tf    trafiken utifrån och in
-#   70-natverk.tf    nätverkspolicyer: vem får prata med vem
-#   outputs.tf       kartan utskriven — kör `terraform output karta`
+# Lager två av två. Basen (felsokning/infra/aws) måste vara applicerad
+# först; det här lagret läser dess utdata och behöver därför inte känna
+# till en enda AWS-resurs vid namn.
+#
+# Läsordning:
+#   versions.tf       det här — leverantörer, kopplade till EKS
+#   05-aws.tf         basens utdata och vad de betyder här
+#   variables.tf      det lilla som inte kommer från basen
+#   karta.tf          systemet som data — kartans källa
+#   10-namnrymd.tf    namnrymd + hemligheter ur Secrets Manager
+#   15-plattformstjanster.tf  ALB-kontroller, External Secrets, metrics
+#   30-plattform.tf   backend
+#   40-orkester.tf    AI-orkestern
+#   50-web.tf         klienten
+#   60-ingress.tf     ALB
+#   70-natverk.tf     nätverkspolicyer
+#   90-gitea.tf       självhostad git + byggrunners
+#   outputs.tf        kartan utskriven — kör `terraform output karta`
 
 terraform {
   required_version = ">= 1.6"
 
   required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.80"
+    }
     kubernetes = {
       source  = "hashicorp/kubernetes"
       version = "~> 2.35"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.16"
     }
     random = {
       source  = "hashicorp/random"
@@ -28,20 +41,43 @@ terraform {
     }
   }
 
-  # Tillståndet innehåller hemligheter (JWT-hemlighet, databaslösenord,
-  # krypteringsnyckeln för kundernas leverantörsuppgifter). Lägg det i en
-  # backend med kryptering och åtkomststyrning — aldrig lokalt i git.
+  # Samma hink som basen, annan nyckel.
   #
   # backend "s3" {
-  #   bucket       = "guidad-felsokning-tfstate"
-  #   key          = "produktion/terraform.tfstate"
+  #   bucket       = "felsokning-produktion-tfstate-<konto>"
+  #   key          = "arbetslast/terraform.tfstate"
   #   region       = "eu-north-1"
   #   encrypt      = true
   #   use_lockfile = true
   # }
 }
 
+provider "aws" {
+  region = local.aws.region
+}
+
+# Autentisering mot klustret sker med en färsk token från EKS i stället
+# för en kubeconfig på disk — inget att distribuera, inget som går ut.
 provider "kubernetes" {
-  config_path    = var.kubeconfig
-  config_context = var.kube_context
+  host                   = local.aws.kluster_slutpunkt
+  cluster_ca_certificate = base64decode(local.aws.kluster_ca)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", local.aws.kluster, "--region", local.aws.region]
+  }
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = local.aws.kluster_slutpunkt
+    cluster_ca_certificate = base64decode(local.aws.kluster_ca)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", local.aws.kluster, "--region", local.aws.region]
+    }
+  }
 }

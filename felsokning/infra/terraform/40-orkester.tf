@@ -48,13 +48,17 @@ resource "kubernetes_deployment_v1" "orkester" {
             container_port = local.port_container
           }
 
+          # Claude-nyckeln och JWT-hemligheten kommer ur speglingen
+          # från Secrets Manager — samma secret som plattformen läser,
+          # men orkestern får bara de två nycklar den behöver genom att
+          # den inte känner till de andra namnen.
           env {
             name = "ANTHROPIC_API_KEY"
 
             value_from {
               secret_key_ref {
-                name = kubernetes_secret_v1.hemligheter.metadata[0].name
-                key  = "anthropic-api-key"
+                name = "felsokning-hemligheter"
+                key  = "ANTHROPIC_API_KEY"
               }
             }
           }
@@ -64,8 +68,8 @@ resource "kubernetes_deployment_v1" "orkester" {
 
             value_from {
               secret_key_ref {
-                name = kubernetes_secret_v1.hemligheter.metadata[0].name
-                key  = "jwt-secret"
+                name = "felsokning-hemligheter"
+                key  = "JWT_SECRET"
               }
             }
           }

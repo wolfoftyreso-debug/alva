@@ -8,12 +8,14 @@ begripliga att läsa:
 | `versions.tf` | Leverantörer och tillståndsbackend |
 | `variables.tf` | Allt som skiljer en installation från en annan |
 | `karta.tf` | **Systemet som data** — tjänster, portar, routing, hemligheter, dataflöden, gränser |
-| `10-namnrymd.tf` | Namnrymd, hemligheten, databasschemat |
-| `20-databas.tf` | Händelseloggen — tre lägen, se nedan |
+| `10-namnrymd.tf` | Namnrymd, tjänstekonto med IRSA, hemligheter ur Secrets Manager |
+| `05-aws.tf` | Kopplingen till AWS-basen — allt den redan bestämt läses här |
+| `15-plattformstjanster.tf` | ALB-kontroller, External Secrets, metrics, CloudWatch |
+| `90-gitea.tf` | Självhostad git med egna byggrunners |
 | `30-plattform.tf` | Backend: auth, händelse-API, delning, integrationer |
 | `40-orkester.tf` | AI-orkestern |
 | `50-web.tf` | Klienten |
-| `60-ingress.tf` | Trafiken utifrån |
+| `60-ingress.tf` | ALB och DNS |
 | `70-natverk.tf` | Nätverkspolicyer — vem får prata med vem |
 | `outputs.tf` | Kartan utskriven |
 
@@ -45,33 +47,24 @@ terraform validate                # typer och referenser
 `terraform validate` kräver att leverantörerna hämtats från
 registry.terraform.io.
 
-## Databasen: tre lägen
+## Var saker ligger
 
-`var.databas_lage` saknar standardvärde med flit. Valet avgör om det
-finns säkerhetskopiering, och det ska inte kunna bli fel av slentrian.
+Det här lagret bestämmer nästan ingenting själv. AWS-basen
+(`felsokning/infra/aws`) äger klustret, databasen, registret, hinken,
+rollerna, domänen och hemligheterna — och `05-aws.tf` läser dess utdata.
+Ändras något där slår det igenom här utan att en rad ändras.
 
-| Läge | Backup | Failover | Använd när |
-| --- | --- | --- | --- |
-| `extern` | Leverantörens, med PITR | Leverantörens | **Produktion.** Cloud SQL, RDS, Neon, Azure Flexible Server |
-| `cnpg` | Basbackup 02:30 + WAL-arkiv → objektlagring, PITR | Ja, `databas_instanser` styr | Produktion när databasen måste ligga i klustret |
-| `inbyggd` | **Ingen** | Nej | Prov och demo. Blockeras av en precondition när `miljo = "produktion"` |
+| Vad | Var |
+| --- | --- |
+| Händelseloggen | Aurora PostgreSQL utanför klustret, med PITR |
+| Bilagor | S3, signerat med tjänstekontots roll — inga nycklar finns |
+| Hemligheter | Secrets Manager, speglade av External Secrets var timme |
+| Bilder | ECR med oföränderliga taggar |
+| Trafik in | ALB med ACM-certifikat |
+| Git och bygge | Gitea med egna runners i samma kluster |
 
-Går händelseloggen förlorad är det inte "data" som försvinner utan varje
-ärendes bevisvärde: vad som kontrollerades, av vem, när, med vilken
-evidens. Det går inte att återskapa i efterhand.
-
-`cnpg` kräver att CloudNativePG-operatorn redan är installerad —
-Terraform slår upp dess CRD vid plan:
-
-```sh
-kubectl apply --server-side -f \
-  https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.25/releases/cnpg-1.25.0.yaml
-```
-
-I `extern` läge ansvarar ni själva för att köra
-`infra/postgres-init.sql` mot databasen. Det är samma fil som
-integrationstestet kör, så schemat kan inte glida isär från det som
-testas.
+Terraform ser aldrig en hemlighets värde. Det är avsiktligt: en
+hemlighet som passerar Terraform hamnar i tillståndsfilen.
 
 ## Driftsättning
 

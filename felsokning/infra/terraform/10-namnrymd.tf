@@ -1,4 +1,12 @@
-# Namnrymden och den enda hemligheten.
+# Namnrymden, tjänstekontot och hemligheterna.
+#
+# Hemligheterna bor i AWS Secrets Manager, inte här. External Secrets
+# speglar dem in i klustret så att podarna kan läsa dem som vanliga
+# miljövariabler — men sanningskällan är Secrets Manager, med rotation,
+# revisionsspår per läsning och kryptering med egen KMS-nyckel.
+#
+# Terraform ser aldrig värdena, och det är själva poängen: en hemlighet
+# som passerar Terraform hamnar i tillståndsfilen.
 
 resource "kubernetes_namespace_v1" "denna" {
   metadata {
@@ -7,37 +15,101 @@ resource "kubernetes_namespace_v1" "denna" {
   }
 }
 
-# En Secret, men varje tjänst monterar bara sina egna nycklar — se
-# hemligt-fältet per tjänst i karta.tf.
-#
-# Vill ni hellre ha hemligheterna utanför Terraform-tillståndet: byt den
-# här resursen mot ett ExternalSecret och peka manifesten på samma namn.
-resource "kubernetes_secret_v1" "hemligheter" {
+# Tjänstekontot plattformstjänsten kör som. IRSA-annoteringen binder det
+# till rollen basen skapade — och rollen är i sin tur bunden till exakt
+# det här kontot i den här namnrymden. Ingen annan pod kan anta den.
+resource "kubernetes_service_account_v1" "plattform" {
   metadata {
-    name      = "felsokning-hemligheter"
+    name      = "plattform"
     namespace = kubernetes_namespace_v1.denna.metadata[0].name
     labels    = local.etiketter
-  }
 
-  type = "Opaque"
-  data = local.hemligheter
+    annotations = {
+      "eks.amazonaws.com/role-arn" = local.aws.plattform_roll
+    }
+  }
 }
 
-# Databasschemat körs vid databasens första start. Samma fil används av
-# integrationstestet, så schemat kan aldrig glida isär från det som testas.
-# I inbyggt läge körs schemat av postgres-bilden vid första starten, i
-# cnpg-läget av operatorn via postInitApplicationSQLRefs. I externt läge
-# ansvarar ni för att köra filen mot er databas.
-resource "kubernetes_config_map_v1" "postgres_init" {
-  count = local.extern_databas ? 0 : 1
+# Var hemligheterna hämtas ifrån. Autentiseringen sker med
+# tjänstekontots roll — inga nycklar att distribuera.
+resource "kubernetes_manifest" "hemlighetskalla" {
+  manifest = {
+    apiVersion = "external-secrets.io/v1beta1"
+    kind       = "SecretStore"
 
-  metadata {
-    name      = "postgres-init"
-    namespace = kubernetes_namespace_v1.denna.metadata[0].name
-    labels    = local.etiketter
+    metadata = {
+      name      = "aws"
+      namespace = kubernetes_namespace_v1.denna.metadata[0].name
+    }
+
+    spec = {
+      provider = {
+        aws = {
+          service = "SecretsManager"
+          region  = local.aws.region
+
+          auth = {
+            jwt = {
+              serviceAccountRef = {
+                name = kubernetes_service_account_v1.plattform.metadata[0].name
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
-  data = {
-    "init.sql" = file("${path.module}/../postgres-init.sql")
+  depends_on = [helm_release.external_secrets]
+}
+
+# Speglingen. Namnen till vänster är miljövariablerna tjänsterna läser;
+# till höger nycklarna i Secrets Manager.
+resource "kubernetes_manifest" "hemligheter" {
+  manifest = {
+    apiVersion = "external-secrets.io/v1beta1"
+    kind       = "ExternalSecret"
+
+    metadata = {
+      name      = "felsokning-hemligheter"
+      namespace = kubernetes_namespace_v1.denna.metadata[0].name
+    }
+
+    spec = {
+      # Roteras en hemlighet i Secrets Manager följer klustret efter inom
+      # en timme, utan att någon behöver göra något.
+      refreshInterval = "1h"
+
+      secretStoreRef = {
+        name = "aws"
+        kind = "SecretStore"
+      }
+
+      target = {
+        name           = "felsokning-hemligheter"
+        creationPolicy = "Owner"
+      }
+
+      data = [
+        {
+          secretKey = "DATABASE_URL"
+          remoteRef = { key = local.aws.hemlighet_databas, property = "url" }
+        },
+        {
+          secretKey = "ANTHROPIC_API_KEY"
+          remoteRef = { key = local.aws.hemlighet_app, property = "anthropic_api_key" }
+        },
+        {
+          secretKey = "JWT_SECRET"
+          remoteRef = { key = local.aws.hemlighet_app, property = "jwt_secret" }
+        },
+        {
+          secretKey = "INTEGRATION_NYCKEL"
+          remoteRef = { key = local.aws.hemlighet_app, property = "integration_nyckel" }
+        },
+      ]
+    }
   }
+
+  depends_on = [kubernetes_manifest.hemlighetskalla]
 }

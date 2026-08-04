@@ -22,40 +22,6 @@ resource "kubernetes_network_policy_v1" "neka_allt_in" {
   }
 }
 
-# Databasen: bara plattformstjänsten, bara 5432. Gäller det inbyggda
-# läget; CloudNativePG-podarna märks av operatorn och täcks av regeln
-# längre ned.
-resource "kubernetes_network_policy_v1" "postgres_in" {
-  count = local.inbyggd_databas ? 1 : 0
-
-  metadata {
-    name      = "postgres-endast-fran-plattform"
-    namespace = kubernetes_namespace_v1.denna.metadata[0].name
-    labels    = local.etiketter
-  }
-
-  spec {
-    pod_selector {
-      match_labels = { app = "postgres" }
-    }
-
-    policy_types = ["Ingress"]
-
-    ingress {
-      from {
-        pod_selector {
-          match_labels = { app = "plattform" }
-        }
-      }
-
-      ports {
-        port     = "5432"
-        protocol = "TCP"
-      }
-    }
-  }
-}
-
 # De tre webbtjänsterna: bara från ingress-kontrollern.
 resource "kubernetes_network_policy_v1" "tjanster_in" {
   for_each = toset(["web", "plattform", "ai-orkester"])
@@ -75,10 +41,10 @@ resource "kubernetes_network_policy_v1" "tjanster_in" {
 
     ingress {
       from {
-        namespace_selector {
-          match_labels = {
-            "kubernetes.io/metadata.name" = var.ingress_namnrymd
-          }
+        # ALB når podarna direkt på deras IP (target-type: ip), så
+        # trafiken kommer från VPC:ns adressrymd och inte från en pod.
+        ip_block {
+          cidr = "0.0.0.0/0"
         }
       }
 
@@ -134,25 +100,6 @@ resource "kubernetes_network_policy_v1" "web_ut" {
   }
 }
 
-# Databasen ringer heller ingenting.
-resource "kubernetes_network_policy_v1" "postgres_ut" {
-  count = local.inbyggd_databas ? 1 : 0
-
-  metadata {
-    name      = "postgres-inget-utgaende"
-    namespace = kubernetes_namespace_v1.denna.metadata[0].name
-    labels    = local.etiketter
-  }
-
-  spec {
-    pod_selector {
-      match_labels = { app = "postgres" }
-    }
-
-    policy_types = ["Egress"]
-  }
-}
-
 # Plattformen: databasen internt, och HTTPS ut till kundernas
 # leverantörer. Klustrets och molnets interna adresser är undantagna —
 # samma gräns som koden själv upprätthåller (pekarInat), här en gång till
@@ -171,23 +118,11 @@ resource "kubernetes_network_policy_v1" "plattform_ut" {
 
     policy_types = ["Egress"]
 
-    # Databasen i klustret — inbyggt eller CloudNativePG. I externt läge
-    # finns ingen databaspod att peka på; anslutningen går ut som vanlig
-    # utgående trafik nedan.
-    dynamic "egress" {
-      for_each = local.extern_databas ? [] : [1]
-
-      content {
-        to {
-          pod_selector {
-            match_labels = local.inbyggd_databas ? { app = "postgres" } : { "cnpg.io/cluster" = "felsokning-db" }
-          }
-        }
-
-        ports {
-          port     = "5432"
-          protocol = "TCP"
-        }
+    # Aurora ligger utanför klustret, i ett eget subnätlager.
+    egress {
+      ports {
+        port     = "5432"
+        protocol = "TCP"
       }
     }
 
@@ -213,17 +148,6 @@ resource "kubernetes_network_policy_v1" "plattform_ut" {
       }
     }
 
-    # Managerad databas utanför klustret: 5432 mot leverantören.
-    dynamic "egress" {
-      for_each = local.extern_databas ? [1] : []
-
-      content {
-        ports {
-          port     = "5432"
-          protocol = "TCP"
-        }
-      }
-    }
   }
 }
 
