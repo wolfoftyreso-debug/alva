@@ -264,6 +264,19 @@ export async function gorUppslag(
   return data.fordon ?? {};
 }
 
+// W3C Trace Context. Klienten startar spåret så att en teknikers
+// handling går att följa hela vägen — via plattformen till modellsvaret
+// — i stället för att bli två orelaterade spår i loggen.
+function slumphex(byte: number): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(byte)), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+export function nyttSpar(): string {
+  return `00-${slumphex(16)}-${slumphex(8)}-01`;
+}
+
 // Autentiserat anrop mot plattformen. En utgången token rensas (401) så
 // att appen faller tillbaka till lokalt läge tills nästa inloggning.
 export async function plattformFetch(vag: string, init?: RequestInit): Promise<Response> {
@@ -273,6 +286,7 @@ export async function plattformFetch(vag: string, init?: RequestInit): Promise<R
     ...init,
     headers: {
       "Content-Type": "application/json",
+      traceparent: nyttSpar(),
       ...init?.headers,
       Authorization: `Bearer ${token}`,
     },

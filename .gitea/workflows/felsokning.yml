@@ -94,8 +94,12 @@ jobs:
             --build-arg VITE_PLATTFORM_URL="https://${{ vars.DOMAN }}" \
             --build-arg VITE_AI_ORKESTER_URL="https://${{ vars.DOMAN }}" \
             felsokning/app
-          docker build -t "$REGISTER/guidad-felsokning-plattform:$TAGG" felsokning/services/plattform
-          docker build -t "$REGISTER/guidad-felsokning-ai-orkester:$TAGG" felsokning/services/ai-orkester
+          # Byggkontexten är felsokning/services så båda tjänsterna når
+          # den delade observationsmodulen utan att den dupliceras.
+          docker build -t "$REGISTER/guidad-felsokning-plattform:$TAGG" \
+            -f felsokning/services/plattform/Dockerfile felsokning/services
+          docker build -t "$REGISTER/guidad-felsokning-ai-orkester:$TAGG" \
+            -f felsokning/services/ai-orkester/Dockerfile felsokning/services
           for bild in web plattform ai-orkester; do
             docker push "$REGISTER/guidad-felsokning-$bild:$TAGG"
           done

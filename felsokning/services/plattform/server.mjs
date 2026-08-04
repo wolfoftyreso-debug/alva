@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import pg from "pg";
 import { innehallsHash, mediatypGiltig, valjLager } from "./bilagor.mjs";
+import { avsluta, logga, mätvärde, spårFrån, starta, traceparent } from "./observation.mjs";
 
 // API-first: OpenAPI-specen är en versionerad artefakt och serveras live.
 const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "openapi.yaml"), "utf8");
@@ -58,6 +59,15 @@ const TOKEN_LIVSTID_S = 12 * 60 * 60;
 const ROLLER = ["tekniker", "arbetsledare", "admin"];
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
+
+// Poolens uttömning är den vanligaste orsaken till att allt blir
+// långsamt samtidigt utan att någon enskild fråga är långsam.
+setInterval(() => {
+  mätvärde("Databaskopplingar", pool.totalCount, "Count", { Tjänst: "plattform" }, {
+    lediga: pool.idleCount,
+    väntande: pool.waitingCount,
+  });
+}, 60_000).unref();
 
 // Var bilagornas innehåll hamnar. Felkonfigurerat s3-läge failar här,
 // vid start, i stället för vid första uppladdningen.
@@ -427,10 +437,10 @@ export async function gorUppslag(def, uppgifter, identifierare, hamtare = fetch)
 // hashen i loggen. Stämmer det inte säger vi det rakt ut i stället för
 // att visa en bild som kan ha bytts ut.
 async function skickaBilaga(res, rad) {
-  const data = await BILAGELAGER.hamta(rad.hash);
+  const data = await res.spann.mät("bilaga_las", () => BILAGELAGER.hamta(rad.hash));
   if (!data) return svara(res, 404, { error: "Innehållet saknas i lagringen." });
   if (innehallsHash(data) !== rad.hash) {
-    console.error("bilaga: innehållet stämmer inte med hashen i loggen", rad.hash);
+    logga("fel", "bilagans innehåll stämmer inte med hashen i loggen", { hash: rad.hash });
     return svara(res, 409, { error: "Innehållet stämmer inte med det som dokumenterades." });
   }
   res.writeHead(200, {
@@ -465,6 +475,22 @@ export function skapaServer() {
 
   return createServer(async (req, res) => {
     res.ursprung = ursprungFor(req);
+
+    // Spåret följer med genom hela kedjan. Kommer inget huvud in startar
+    // vi ett nytt — de flesta anrop kommer utifrån.
+    res.spår = spårFrån(req.headers.traceparent);
+    res.spann = starta("plattform", res.spår);
+    res.setHeader("traceparent", traceparent(res.spår));
+
+    res.on("finish", () => {
+      avsluta(res.spann, {
+        status: res.statusCode,
+        // Ärende- och bilage-id ersätts så att vägen blir en dimension
+        // med rimligt antal värden i stället för en per ärende.
+        väg: (req.url ?? "/").split("?")[0].replace(/\/[A-Za-z0-9_-]{8,}/g, "/:id"),
+        extra: { metod: req.method },
+      });
+    });
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "Access-Control-Allow-Origin": res.ursprung,
@@ -787,7 +813,7 @@ export function skapaServer() {
         if (data.length === 0) return svara(res, 400, { error: "Bilagan är tom." });
 
         const hash = innehallsHash(data);
-        await BILAGELAGER.spara(hash, data);
+        await res.spann.mät("bilaga_skriv", () => BILAGELAGER.spara(hash, data));
         const id = `bil-${nyKod()}`;
         await pool.query(
           `insert into bilagor (id, organisation_id, arende_id, hash, mediatyp, storlek, laddad_av)
@@ -937,7 +963,9 @@ export function skapaServer() {
           return svara(res, 500, { error: "Uppgifterna kunde inte läsas — spara om kopplingen." });
         }
 
-        const resultat = await gorUppslag(def, uppgifter, identifierare.trim().toUpperCase());
+        const resultat = await res.spann.mät("leverantorsuppslag", () =>
+          gorUppslag(def, uppgifter, identifierare.trim().toUpperCase()),
+        );
         await pool.query(
           `update integrationer set senast_testad = now(), senaste_status = $3
            where organisation_id = $1 and leverantor = $2`,
@@ -1143,6 +1171,7 @@ export function skapaServer() {
           if (!Array.isArray(handelser) || handelser.length > 500) {
             return svara(res, 400, { error: "Ogiltig händelselista." });
           }
+          res.spann.spår.antalHandelser = handelser.length;
           for (const post of handelser) {
             if (typeof post?.id !== "string" || !post.tidpunkt || typeof post.anvandare !== "string" || !post.handelse) {
               return svara(res, 400, { error: "Ogiltig händelse." });
@@ -1161,7 +1190,14 @@ export function skapaServer() {
 
       return svara(res, 404, { error: "Okänd resurs." });
     } catch (fel) {
-      console.error("plattform:", fel);
+      // Spår-id:t i raden gör att hela kedjan går att hitta i Logs
+      // Insights utifrån larmet.
+      logga("fel", "förfrågan misslyckades", {
+        spårId: res.spår.spårId,
+        väg: vag,
+        metod: req.method,
+        orsak: fel?.message ?? String(fel),
+      });
       return svara(res, 500, { error: "Förfrågan misslyckades." });
     }
   });

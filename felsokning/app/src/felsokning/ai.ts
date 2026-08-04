@@ -247,6 +247,9 @@ async function anropa(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        // Samma spårformat som plattformen: ett långsamt modellsvar går
+        // att hitta i loggen utifrån teknikerns anrop.
+        traceparent: (await import("./plattform")).nyttSpar(),
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ uppgift, prompt, ...extra }),

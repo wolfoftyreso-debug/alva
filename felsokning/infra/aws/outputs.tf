@@ -68,6 +68,9 @@ output "karta" {
       instrumentpanel = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards:name=${aws_cloudwatch_dashboard.denna.dashboard_name}"
       larm            = var.larm_epost != "" ? "till ${var.larm_epost}" : "INGEN mottagare satt — larm går ingenstans"
       flodesloggar    = "avvisad trafik, 30 dagar"
+      sparning        = "W3C traceparent genom hela kedjan; varje anrop loggas som en JSON-rad med nedbrytning av tiden"
+      matvarden       = "CloudWatch EMF från tjänsterna själva — ingen agent, ingen SDK"
+      larm_pa_app     = "svarstid p95 > 3 s, serverfel, modellen avböjer"
     }
 
     kvar_att_gora = compact([

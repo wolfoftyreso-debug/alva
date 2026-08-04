@@ -164,6 +164,72 @@ resource "aws_cloudwatch_metric_alarm" "noder" {
   }
 }
 
+# ---- Larm på applikationens egna mätvärden ------------------------------
+#
+# Tjänsterna skriver CloudWatch EMF på stdout, så mätvärdena finns utan
+# agent eller SDK. Larmen nedan är på det som teknikern faktiskt märker.
+
+resource "aws_cloudwatch_metric_alarm" "svarstid" {
+  alarm_name          = "${local.namn}-svarstid"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  threshold           = 3000
+  alarm_description   = "Plattformen svarar långsamt i tre perioder — p95 över tre sekunder märks i verkstaden."
+  alarm_actions       = [aws_sns_topic.larm.arn]
+  ok_actions          = [aws_sns_topic.larm.arn]
+  treat_missing_data  = "notBreaching"
+
+  metric_query {
+    id          = "p95"
+    return_data = true
+
+    metric {
+      metric_name = "Svarstid"
+      namespace   = "GuidadFelsokning"
+      period      = 300
+      # p95, inte medelvärde: medelvärdet döljer att var tjugonde
+      # tekniker väntar orimligt länge.
+      stat = "p95"
+
+      dimensions = {
+        "Tjänst" = "plattform"
+      }
+    }
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "fel" {
+  alarm_name          = "${local.namn}-fel"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "Fel"
+  namespace           = "GuidadFelsokning"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 5
+  alarm_description   = "Serverfel. Loggraden bär spår-id — sök på det i Logs Insights för hela kedjan."
+  alarm_actions       = [aws_sns_topic.larm.arn]
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    "Tjänst" = "plattform"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "modell_avbojd" {
+  alarm_name          = "${local.namn}-modell-avbojd"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ModellAvbojd"
+  namespace           = "GuidadFelsokning"
+  period              = 900
+  statistic           = "Sum"
+  threshold           = 3
+  alarm_description   = "Modellen avböjer förfrågningar — tyder på att underlaget innehåller något oväntat, inte på ett driftfel."
+  alarm_actions       = [aws_sns_topic.larm.arn]
+  treat_missing_data  = "notBreaching"
+}
+
 # ---- Instrumentpanel ----------------------------------------------------
 
 resource "aws_cloudwatch_dashboard" "denna" {
@@ -201,6 +267,41 @@ resource "aws_cloudwatch_dashboard" "denna" {
       },
       {
         type = "metric", x = 0, y = 6, width = 12, height = 6
+        properties = {
+          title  = "Svarstid — där teknikern märker det"
+          region = var.region
+          metrics = [
+            ["GuidadFelsokning", "Svarstid", "Tjänst", "plattform", { stat = "p50", label = "median" }],
+            ["...", { stat = "p95", label = "p95" }],
+            ["...", { stat = "p99", label = "p99" }],
+          ]
+          period = 300
+          yAxis  = { left = { label = "ms" } }
+        }
+      },
+      {
+        type = "metric", x = 12, y = 6, width = 12, height = 6
+        properties = {
+          title  = "Modellanrop per uppgift"
+          region = var.region
+          metrics = [
+            ["GuidadFelsokning", "Svarstid", "Tjänst", "ai-orkester", { stat = "p95" }],
+            ["GuidadFelsokning", "ModellTokens", "Uppgift", "handledning", "Modell", "claude-sonnet-5", { stat = "Sum", yAxis = "right" }],
+            ["...", "granskning", ".", "claude-opus-5", { stat = "Sum", yAxis = "right" }],
+          ]
+          period = 300
+        }
+      },
+      {
+        type = "log", x = 0, y = 12, width = 24, height = 6
+        properties = {
+          title  = "Långsammaste anropen — med nedbrytning av tiden"
+          region = var.region
+          query  = "SOURCE '${aws_cloudwatch_log_group.applikation.name}' | fields tid, väg, ms, delar.databas.ms as databas, delar.modell_handledning.ms as modell, spårId | filter ms > 1000 | sort ms desc | limit 20"
+        }
+      },
+      {
+        type = "metric", x = 0, y = 18, width = 12, height = 6
         properties = {
           title  = "Bilagor i objektlagringen"
           region = var.region

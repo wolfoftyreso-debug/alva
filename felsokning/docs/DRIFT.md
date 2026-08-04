@@ -182,6 +182,60 @@ rätt. Andra konton påverkas inte. Inget lösenord lagras, bara att ett
 försök skedde och om det lyckades; rader äldre än ett dygn städas bort i
 skrivvägen.
 
+## Observation
+
+Tjänsterna har medvetet nästan inga beroenden. Att dra in ett
+OpenTelemetry-SDK med trettio paket för att mäta fyra saker vore fel
+avvägning, så observationen bygger på två standarder som båda bara är
+text på stdout:
+
+**W3C Trace Context.** Klienten startar spåret och `traceparent` följer
+med genom plattformen till orkestern. En teknikers handling går därför
+att följa hela vägen till modellsvaret i stället för att bli två
+orelaterade spår.
+
+**CloudWatch EMF.** Strukturerad JSON som CloudWatch själv extraherar
+mätvärden ur — ingen agent, ingen SDK, inget som kan sluta fungera tyst.
+
+Varje anrop ger en loggrad med **nedbrytning av tiden**:
+
+```json
+{"nivå":"info","meddelande":"plattform","spårId":"fd5dec…","väg":"/api/arenden/:id/handelser",
+ "status":200,"ms":842.1,"delar":{"databas":{"antal":3,"ms":31.2},"bilaga_skriv":{"antal":1,"ms":780.4}}}
+```
+
+Det svarar på frågan man faktiskt har klockan tre på natten: *var tog
+tiden vägen*. Här i objektlagringen, inte i databasen.
+
+### Vägen ut är alltid samma
+
+Vägen normaliseras (`/api/arenden/:id/handelser`) innan den blir en
+dimension. Organisation, ärende-id och spår-id blir **aldrig**
+dimensioner — varje unik kombination är en egen tidsserie som kostar.
+De ligger som vanliga fält, sökbara i Logs Insights. Ett test låser det.
+
+### Frågor som brukar behövas
+
+```
+# Var tog tiden vägen för ett långsamt anrop?
+fields tid, väg, ms, delar.databas.ms, delar.modell_handledning.ms, spårId
+| filter ms > 1000 | sort ms desc | limit 20
+
+# Hela kedjan för ett spår — plattform och orkester i samma vy
+fields tid, meddelande, väg, ms, status | filter spårId = "fd5dec…" | sort tid
+
+# Vilka modellanrop kostar mest?
+stats sum(ut) as ut_tokens, avg(ms) as snitt by Uppgift, Modell
+```
+
+### Larm
+
+Utöver infrastrukturlarmen finns tre på applikationens egna mätvärden:
+svarstid **p95** över tre sekunder (medelvärdet döljer att var tjugonde
+tekniker väntar orimligt länge), serverfel, och att modellen avböjer —
+det senare tyder på att underlaget innehåller något oväntat, inte på ett
+driftfel.
+
 ## Multi-tenant och roller
 
 Enligt Master Prompt: varje kund är en egen tenant, ingen data blandas mellan kunder.

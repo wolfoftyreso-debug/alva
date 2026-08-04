@@ -14,6 +14,7 @@
 import { createServer } from "node:http";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
+import { avsluta, logga, mätvärde, spårFrån, starta } from "./observation.mjs";
 
 const PORT = Number(process.env.PORT ?? 8080);
 const MAX_PROMPT_LANGD = 40000;
@@ -249,6 +250,14 @@ async function lasKropp(req) {
 
 export function skapaServer() {
   return createServer(async (req, res) => {
+    // Spåret kommer från plattformen, så ett långsamt teknikeranrop går
+    // att följa hela vägen till modellsvaret.
+    res.spår = spårFrån(req.headers.traceparent);
+    res.spann = starta("ai-orkester", res.spår);
+    res.on("finish", () =>
+      avsluta(res.spann, { status: res.statusCode, väg: req.url ?? "/", extra: { metod: req.method } }),
+    );
+
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "Access-Control-Allow-Origin": "*",
@@ -309,7 +318,8 @@ export function skapaServer() {
 
     try {
       const klient = new Anthropic({ apiKey: apiNyckel });
-      const svar = await klient.beta.messages.create({
+      const svar = await res.spann.mät(`modell_${uppgift}`, () =>
+        klient.beta.messages.create({
         model: konfig.modell,
         max_tokens: konfig.maxTokens,
         output_config: {
@@ -318,9 +328,30 @@ export function skapaServer() {
         },
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",
-        system: [{ type: "text", text: konfig.system, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: innehall }],
-      });
+          system: [{ type: "text", text: konfig.system, cache_control: { type: "ephemeral" } }],
+          messages: [{ role: "user", content: innehall }],
+        }),
+      );
+      // Modellval, token och latens per uppgift. Det är den här
+      // uppdelningen som svarar på om en långsam session beror på
+      // granskningen (Opus, hög effort) eller på något annat.
+      mätvärde(
+        "ModellTokens",
+        (svar.usage?.input_tokens ?? 0) + (svar.usage?.output_tokens ?? 0),
+        "Count",
+        { Uppgift: uppgift, Modell: konfig.modell },
+        {
+          in: svar.usage?.input_tokens ?? 0,
+          ut: svar.usage?.output_tokens ?? 0,
+          cache_las: svar.usage?.cache_read_input_tokens ?? 0,
+          spårId: res.spår.spårId,
+        },
+      );
+
+      if (svar.stop_reason === "refusal") {
+        logga("varning", "modellen avböjde", { uppgift, modell: konfig.modell, spårId: res.spår.spårId });
+        mätvärde("ModellAvbojd", 1, "Count", { Uppgift: uppgift, Modell: konfig.modell });
+      }
       if (svar.stop_reason === "refusal") {
         return svara(res, 502, { error: "AI-tjänsten avböjde förfrågan." });
       }
@@ -328,7 +359,12 @@ export function skapaServer() {
       if (!textBlock) return svara(res, 502, { error: "AI-svaret saknade innehåll." });
       return svara(res, 200, { modell: konfig.modell, svar: JSON.parse(textBlock.text) });
     } catch (fel) {
-      console.error("ai-orkester:", fel);
+      logga("fel", "AI-anropet misslyckades", {
+        uppgift,
+        modell: konfig.modell,
+        spårId: res.spår.spårId,
+        orsak: fel?.message ?? String(fel),
+      });
       return svara(res, 500, { error: "AI-anropet misslyckades." });
     }
   });

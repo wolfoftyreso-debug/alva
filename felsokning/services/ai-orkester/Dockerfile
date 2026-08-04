@@ -2,9 +2,12 @@
 FROM node:22-alpine
 
 WORKDIR /app
-COPY package.json ./
+COPY ai-orkester/package.json ./
 RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
-COPY server.mjs ./
+# Byggkontexten är felsokning/services, så den delade
+# observationsmodulen kan hämtas utan att dupliceras.
+COPY gemensam/observation.mjs ./
+COPY ai-orkester/server.mjs ./
 
 ENV NODE_ENV=production PORT=8080
 USER node
