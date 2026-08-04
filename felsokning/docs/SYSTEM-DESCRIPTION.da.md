@@ -825,15 +825,18 @@ docs/VISION.md                          produktvisionen
 docs/MASTER-PROMPT.md                   grundinstruktionen
 docs/MVP.md                             hvad der er bygget, funktion for funktion
 docs/DEMO.md                            demomanuskript til fremvisning
-docs/DRIFT.md                           drift
+docs/OPERATIONS.md                           drift
 docs/SYSTEM-DESCRIPTION.md              engelsk — den gældende udgave
 docs/SYSTEM-DESCRIPTION.sv.md           svensk
 docs/SYSTEM-DESCRIPTION.de.md           tysk
 docs/SYSTEM-DESCRIPTION.da.md           dette dokument
 docs/SYSTEM-DESCRIPTION.no.md           norsk (bokmål)
-docs/exempel/vibration-vid-88-km-h.md   gennemgående eksempel
-docs/moduler/                           otte moduldokumenter
+docs/examples/vibration-at-88-km-h.md   gennemgående eksempel
+docs/modules/                           otte moduldokumenter
 ```
+Alle dokumenter ovenfor har engelsk som kilde og et `.sv.md`-søskendedokument
+på svensk. Kun SYSTEM-DESCRIPTION findes på alle fem sprog.
+
 
 ---
 

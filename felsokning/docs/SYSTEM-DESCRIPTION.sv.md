@@ -794,14 +794,14 @@ docs/VISION.md                          produktvisionen
 docs/MASTER-PROMPT.md                   grundinstruktionen
 docs/MVP.md                             vad som är byggt, funktion för funktion
 docs/DEMO.md                            demomanus för visning
-docs/DRIFT.md                           drift
+docs/OPERATIONS.md                           drift
 docs/SYSTEM-DESCRIPTION.md              engelska — källan
 docs/SYSTEM-DESCRIPTION.sv.md           detta dokument
 docs/SYSTEM-DESCRIPTION.de.md           tyska
 docs/SYSTEM-DESCRIPTION.da.md           danska
 docs/SYSTEM-DESCRIPTION.no.md           norska (bokmål)
-docs/exempel/vibration-vid-88-km-h.md   genomgående exempelflöde
-docs/moduler/
+docs/examples/vibration-at-88-km-h.md   genomgående exempelflöde
+docs/modules/
   arbetslogg-och-tidredovisning.md
   arendebrief.md
   evidensmotor.md
@@ -811,6 +811,9 @@ docs/moduler/
   markesspecifika-kopplingar.md
   verifierade-checklistor.md
 ```
+Samtliga dokument ovan har engelska som källa och ett `.sv.md`-syskon på
+svenska. Bara SYSTEM-DESCRIPTION finns på alla fem språk.
+
 
 ---
 

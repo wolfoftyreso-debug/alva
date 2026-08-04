@@ -1,180 +1,218 @@
-# Guidad Felsökning
+# Guidad Felsökning (Guided Diagnostics)
 
-> Styrdokument för utveckling: [Master Prompt v2.0](MASTER-PROMPT.md)
+> Canonical version. Swedish: [VISION.sv.md](VISION.sv.md).
+> Development is governed by [Master Prompt v2.0](MASTER-PROMPT.md).
 
 ## Vision
 
-Guidad Felsökning är en professionell diagnostikplattform som steg för steg vägleder tekniker genom en strukturerad felsökningsprocess. Plattformen dokumenterar varje moment, hämtar information från tillverkarens system via användarens egna behörigheter och skapar en komplett, spårbar felsökningshistorik.
+Guidad Felsökning is a professional diagnostic platform that guides technicians
+step by step through a structured diagnostic process. The platform documents
+every step, retrieves information from the manufacturer's systems using the
+user's own credentials, and creates a complete, traceable diagnostic history.
 
-Systemet ersätter inte teknikerens kompetens – det säkerställer att arbetet utförs metodiskt, dokumenteras korrekt och kan följas i efterhand.
+The system does not replace the technician's competence — it ensures the work is
+carried out methodically, documented correctly, and can be reviewed afterwards.
 
-Produkten ska inte försöka vara en AI-mekaniker, utan en **digital felsökningshandledare**. Det gör den både mer trovärdig och lättare att använda i professionella miljöer.
-
----
-
-## Ledstjärna
-
-> **Systemet dokumenterar observationer, leder användaren genom verifierbara kontroller och rekommenderar nästa steg – men presenterar aldrig en hypotes som ett konstaterat fel.**
-
-Den principen gör verktyget användbart både för erfarna tekniker och för mindre erfarna användare, samtidigt som det ger ett robust underlag för kunder, verkstäder och framtida analyser. Guidad Felsökning är en digital diagnostikprocess, inte en AI-chat.
+The product should not try to be an automated mechanic, but a **digital
+diagnostic supervisor**. That makes it both more credible and easier to use in
+professional environments.
 
 ---
 
-## Grundprinciper
+## Guiding principle
 
-### 1. Ingen gissning
+> **The system documents observations, leads the user through verifiable checks
+> and recommends the next step — but never presents a hypothesis as a confirmed
+> fault.**
 
-Systemet får aldrig presentera spekulation som fakta.
+That principle makes the tool useful both to experienced technicians and to less
+experienced users, while providing a robust record for customers, workshops and
+future analysis. Guidad Felsökning is a digital diagnostic process, not a chat.
 
-Varje påstående märks med en tillförlitlighetsnivå:
+---
 
-- 🟢 **Hög** – verifierat genom mätning, tillverkarinformation eller användarens inmatning.
-- 🟡 **Medel** – logisk slutsats baserad på tillgänglig information.
-- 🔴 **Låg** – hypotes eller möjlig felorsak som kräver verifiering.
+## Core principles
 
-Om tillräckligt underlag saknas ska systemet uttryckligen säga det.
+### 1. No guessing
 
-### 2. Identifiera objektet först
+The system must never present speculation as fact.
 
-Ingen felsökning börjar innan objektet identifierats.
+Every claim is marked with a confidence level:
 
-Identifiering kan ske genom:
+- 🟢 **High** — verified through measurement, manufacturer information or the
+  user's own input.
+- 🟡 **Medium** — a logical conclusion based on available information.
+- 🔴 **Low** — a hypothesis or possible cause requiring verification.
 
-- registreringsnummer
+If there is not enough to go on, the system must say so explicitly.
+
+### 2. Identify the object first
+
+No diagnosis begins before the object has been identified.
+
+Identification can happen through:
+
+- registration number
 - VIN
-- maskinnummer
-- serienummer
-- QR-kod
-- streckkod
-- OCR från typskylt
-- foto av objektet
-- manuell inmatning av objekt-ID
+- machine number
+- serial number
+- QR code
+- barcode
+- OCR from the type plate
+- a photo of the object
+- manual entry of an object ID
 
-När identifieringen är klar visas en tydlig bekräftelse innan felsökningen fortsätter.
+Once identification is complete, a clear confirmation is shown before the
+diagnosis continues.
 
-### 3. Integration med tillverkarsystem
+### 3. Integration with manufacturer systems
 
-Användaren ansluter sina egna behörigheter via API eller motsvarande integrationslösning.
+The user connects their own credentials via an API or an equivalent integration.
 
-Exempel på informationskällor:
+Examples of information sources:
 
-- tillverkarens verkstadssystem
-- reservdelskataloger
-- elscheman
-- servicebulletiner
-- servicehistorik
-- elektroniska serviceböcker
-- interna DMS-system
+- the manufacturer's workshop system
+- parts catalogues
+- wiring diagrams
+- service bulletins
+- service history
+- electronic service books
+- internal DMS systems
 
-Guidad Felsökning använder dessa som referens men lagrar inte upphovsrättsskyddad dokumentation om inte användaren eller organisationen har rätt att göra det.
+Guidad Felsökning uses these as reference but does not store copyrighted
+documentation unless the user or the organisation has the right to do so.
 
-### 4. Samtalsbaserad guidning
+### 4. Conversational guidance
 
-Teknikern arbetar naturligt:
+The technician works naturally:
 
-> ”Jag har mätt.”
+> "I've measured."
 >
-> ”Det finns 13,9 volt.”
+> "There's 13.9 volts."
 >
-> ”Reläet klickar inte.”
+> "The relay doesn't click."
 
-Systemet väljer nästa steg utifrån tidigare observationer och den etablerade felsökningsmetodiken.
+The system chooses the next step based on earlier observations and the
+established diagnostic methodology.
 
-### 5. Fullständig revisionslogg
+### 5. Complete audit log
 
-Varje aktivitet registreras.
+Every activity is recorded.
 
-Exempel på loggposter:
+Examples of log entries:
 
-- tidpunkt
-- användare
-- objekt
-- mätvärden
-- bilder
-- dokument
-- observationer
-- AI:s rekommendation
-- användarens svar
-- nästa steg
+- timestamp
+- user
+- object
+- measured values
+- images
+- documents
+- observations
+- the system's recommendation
+- the user's answer
+- next step
 
-Ingenting skrivs över. Händelser läggs endast till, vilket ger full spårbarhet.
+Nothing is overwritten. Events are only appended, which gives full traceability.
 
-### 6. Export och API
+### 6. Export and API
 
-Varje avslutat ärende kan exporteras som ett strukturerat felsökningsprotokoll.
+Every completed case can be exported as a structured diagnostic record.
 
-Det ska även finnas ett API för att:
+There should also be an API for:
 
-- hämta loggar
-- hämta rapporter
-- koppla mot DMS
-- koppla mot affärssystem
-- koppla mot ERP
-- koppla mot elektroniska serviceböcker
-- koppla mot garantiadministration
+- retrieving logs
+- retrieving reports
+- connecting to a DMS
+- connecting to business systems
+- connecting to an ERP
+- connecting to electronic service books
+- connecting to warranty administration
 
-På så sätt blir Guidad Felsökning en komponent i befintliga arbetsflöden, inte ett isolerat system.
-
----
-
-## Moduler
-
-Utöver grundprinciperna byggs plattformen upp av moduler som specificeras separat:
-
-- [Arbetslogg & Tidredovisning](moduler/arbetslogg-och-tidredovisning.md) – tidsatt, spårbart arbete kopplat till konkreta aktiviteter; ett digitalt arbetsprotokoll där tid, aktivitet och tekniskt resonemang hänger ihop.
-- [Delningsbar kundrapport (Kundvy)](moduler/kundrapport.md) – en tydlig tidslinje med bilder, mätvärden och kommentarer som visar kunden vad de faktiskt betalat för.
-- [Ärendebrief](moduler/arendebrief.md) – en löpande uppdaterad arbetsbild av ärendet som gör att en ny tekniker blir produktiv på under en minut; fleranvändararbetsyta med överlämning med ett klick.
-- [Kommunikationsmodell (röst)](moduler/kommunikationsmodell.md) – tal in, text ut via Push-to-Talk; röst är ett inmatningssätt, inte ett separat gränssnitt, och inget skickas utan bekräftelse.
-- [Verifierade checklistor](moduler/verifierade-checklistor.md) – en kontrollpunkt är inte slutförd genom en kryssruta; varje kontroll samlar bevis och kontext med minimikrav per kontrolltyp.
-- [Live Share](moduler/live-share.md) – behörighetsstyrd delningslänk som visar ärendet i realtid; versionsmärkta exporter ur samma händelselogg.
-
-Hur processen fungerar i praktiken illustreras i exempelflödet [”Bilen vibrerar runt 88 km/h”](exempel/vibration-vid-88-km-h.md).
+In this way Guidad Felsökning becomes a component in existing workflows, not an
+isolated system.
 
 ---
 
-## Användargränssnitt
+## Modules
 
-Gränssnittet ska vara avsiktligt enkelt.
+Beyond the core principles, the platform is built from modules specified
+separately:
 
-Ingen chatt med långa AI-svar.
+- [Work log and time tracking](modules/work-log-and-time-tracking.md) — timed,
+  traceable work tied to concrete activities; a digital work record in which
+  time, activity and technical reasoning hang together.
+- [Shareable customer report (customer view)](modules/customer-report.md) — a
+  clear timeline with images, measured values and comments that shows the
+  customer what they actually paid for.
+- [The case brief](modules/case-brief.md) — a continuously updated working
+  picture of the case that makes a new technician productive in under a minute;
+  a multi-user workspace with one-click handover.
+- [Communication model (voice)](modules/communication-model.md) — speech in,
+  text out via push-to-talk; voice is an input method, not a separate interface,
+  and nothing is sent without confirmation.
+- [Verified checklists](modules/verified-checklists.md) — a check item is not
+  complete by ticking a box; every check collects evidence and context, with a
+  minimum requirement per type of check.
+- [Live Share](modules/live-share.md) — a permission-controlled share link that
+  shows the case in real time; versioned exports from the same event log.
 
-Istället:
-
-- en fråga i taget
-- en tydlig rekommenderad åtgärd
-- stora knappar
-- tydliga statusindikatorer
-- hög kontrast
-- få val per skärm
-
-Designen ska ge samma känsla som ett modernt fabriksverktyg: funktion före estetik.
-
----
-
-## Säkerhet
-
-Systemet ska utformas för professionell användning med fokus på informationssäkerhet.
-
-Målet är att:
-
-- kryptera data under överföring och lagring,
-- logga alla förändringar och åtkomster,
-- stödja rollbaserad behörighetsstyrning,
-- erbjuda säker API-autentisering,
-- möjliggöra export och radering enligt organisationens policy och tillämpliga regelverk.
+How the process works in practice is illustrated in the worked example
+["The car vibrates at around 88 km/h"](examples/vibration-at-88-km-h.md).
 
 ---
 
-## Produktfilosofi
+## User interface
 
-Den viktigaste principen är att Guidad Felsökning aldrig försöker ersätta teknikern.
+The interface should be deliberately simple.
 
-Den ersätter inte erfarenhet.
+No chat with long generated answers.
 
-Den ersätter inte tillverkarens dokumentation.
+Instead:
 
-Den ersätter inte verkstadshandboken.
+- one question at a time
+- one clear recommended action
+- large buttons
+- clear status indicators
+- high contrast
+- few choices per screen
 
-Den fungerar som en konsekvent arbetsledare som säkerställer att rätt frågor ställs i rätt ordning, att inga steg förbises och att hela felsökningsprocessen dokumenteras på ett sätt som är spårbart, återanvändbart och enkelt att integrera med övriga verksamhetssystem.
+The design should give the same feeling as a modern factory tool: function
+before aesthetics.
 
-Det gör att verkstäder och serviceorganisationer får högre kvalitet, jämnare arbetssätt, bättre kunskapsöverföring mellan tekniker och ett tydligt underlag gentemot kunder, garantihantering och intern uppföljning.
+---
+
+## Security
+
+The system is designed for professional use with a focus on information
+security.
+
+The aim is to:
+
+- encrypt data in transit and at rest,
+- log all changes and access,
+- support role-based access control,
+- offer secure API authentication,
+- enable export and deletion in line with the organisation's policy and
+  applicable regulation.
+
+---
+
+## Product philosophy
+
+The most important principle is that Guidad Felsökning never tries to replace
+the technician.
+
+It does not replace experience.
+
+It does not replace the manufacturer's documentation.
+
+It does not replace the workshop manual.
+
+It acts as a consistent supervisor that ensures the right questions are asked in
+the right order, that no steps are overlooked, and that the whole diagnostic
+process is documented in a way that is traceable, reusable and easy to integrate
+with the rest of the organisation's systems.
+
+That gives workshops and service organisations higher quality, more consistent
+working methods, better knowledge transfer between technicians, and a clear
+record towards customers, warranty handling and internal follow-up.

@@ -858,15 +858,18 @@ docs/VISION.md                          die Produktvision
 docs/MASTER-PROMPT.md                   die Gründungsinstruktion
 docs/MVP.md                             was gebaut ist, Funktion für Funktion
 docs/DEMO.md                            Demoskript für Vorführungen
-docs/DRIFT.md                           Betrieb
+docs/OPERATIONS.md                           Betrieb
 docs/SYSTEM-DESCRIPTION.md              Englisch — die maßgebliche Fassung
 docs/SYSTEM-DESCRIPTION.sv.md           Schwedisch
 docs/SYSTEM-DESCRIPTION.de.md           dieses Dokument
 docs/SYSTEM-DESCRIPTION.da.md           Dänisch
 docs/SYSTEM-DESCRIPTION.no.md           Norwegisch (Bokmål)
-docs/exempel/vibration-vid-88-km-h.md   durchgerechnetes Beispiel
-docs/moduler/                           acht Moduldokumente
+docs/examples/vibration-at-88-km-h.md   durchgerechnetes Beispiel
+docs/modules/                           acht Moduldokumente
 ```
+Alle Dokumente oben sind auf Englisch maßgeblich und haben ein schwedisches
+`.sv.md`-Gegenstück. Nur SYSTEM-DESCRIPTION liegt in allen fünf Sprachen vor.
+
 
 ---
 

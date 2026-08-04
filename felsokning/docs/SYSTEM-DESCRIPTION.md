@@ -833,15 +833,18 @@ docs/VISION.md                          the product vision
 docs/MASTER-PROMPT.md                   the founding instruction
 docs/MVP.md                             what is built, feature by feature
 docs/DEMO.md                            demo script for presentations
-docs/DRIFT.md                           operations
+docs/OPERATIONS.md                           operations
 docs/SYSTEM-DESCRIPTION.md              this document — the canonical version
 docs/SYSTEM-DESCRIPTION.sv.md           Swedish
 docs/SYSTEM-DESCRIPTION.de.md           German
 docs/SYSTEM-DESCRIPTION.da.md           Danish
 docs/SYSTEM-DESCRIPTION.no.md           Norwegian (Bokmål)
-docs/exempel/vibration-vid-88-km-h.md   worked example
-docs/moduler/                           eight module documents
+docs/examples/vibration-at-88-km-h.md   worked example
+docs/modules/                           eight module documents
 ```
+Every document above is canonical in English; each has a `.sv.md` Swedish
+sibling. Only SYSTEM-DESCRIPTION is translated into all five languages.
+
 
 ---
 

@@ -1,6 +1,9 @@
 # Guidad Felsökning – Drift i Kubernetes (helt självhostat)
 
-Målarkitekturen ur [Master Prompt](MASTER-PROMPT.md) som kod: hela stacken körbar i eget kluster — webb, AI-orkester, plattformsbackend (auth + händelse-API + Live Share) och Postgres. Inga externa tjänstberoenden utöver Anthropic-API:et för AI-anropen.
+> **Svensk översättning.** Källan är [OPERATIONS.md](OPERATIONS.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
+Målarkitekturen ur [Master Prompt](MASTER-PROMPT.sv.md) som kod: hela stacken körbar i eget kluster — webb, AI-orkester, plattformsbackend (auth + händelse-API + Live Share) och Postgres. Inga externa tjänstberoenden utöver Anthropic-API:et för AI-anropen.
 
 ## Arkitektur
 
@@ -256,7 +259,7 @@ Integrationstestet (`services/plattform/integrationstest.sh`, körs även i CI m
 
 ## CI/CD med GitOps
 
-**CI** (`.github/workflows/ci.yml`): tester, produktionsbygge, integrationstest mot riktig Postgres och verifierande containerbyggen på varje push/PR.
+**CI** (`.gitea/workflows/felsokning.yml`): tester, produktionsbygge, integrationstest mot riktig Postgres och verifierande containerbyggen på varje push/PR.
 
 **CD** — allt eget, inget GitHub. Källkod, bygge, register och drift ligger i vår AWS-miljö.
 

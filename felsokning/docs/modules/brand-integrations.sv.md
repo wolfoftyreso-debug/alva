@@ -100,5 +100,5 @@ Fullständigt dokumenterat i `services/plattform/openapi.yaml`.
 
 `INTEGRATION_NYCKEL` är 32 byte hex eller base64 (`openssl rand -hex 32`),
 levererad via secret:en `felsokning-hemligheter` — se
-[DRIFT.md](../DRIFT.md). Byts nyckeln måste kopplingarna sparas om;
+[OPERATIONS.sv.md](../OPERATIONS.sv.md). Byts nyckeln måste kopplingarna sparas om;
 tjänsten visar då inga värden i stället för att gissa.

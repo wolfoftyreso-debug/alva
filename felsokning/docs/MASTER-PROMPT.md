@@ -1,183 +1,255 @@
-# Guidad Felsökning – Master Prompt v2.0
+# Guidad Felsökning — Master Prompt v2.0
+
+> Canonical version. Swedish: [MASTER-PROMPT.sv.md](MASTER-PROMPT.sv.md).
 
 **Production Ready AI Wrapper Platform (MVP/Beta)**
 
-Det här är ett produktdirektiv, inte en teknisk specifikation. Visionen och resonemangen bakom finns i [VISION.md](VISION.md); v1.0 finns i versionshistoriken. Detaljerade modulspecifikationer: [kommunikationsmodell (röst/PTT)](moduler/kommunikationsmodell.md), [Live Share](moduler/live-share.md), [verifierade checklistor](moduler/verifierade-checklistor.md), [ärendebrief](moduler/arendebrief.md), [arbetslogg & tidredovisning](moduler/arbetslogg-och-tidredovisning.md), [kundrapport](moduler/kundrapport.md).
+This is a product directive, not a technical specification. The vision and the
+reasoning behind it are in [VISION.md](VISION.md); v1.0 is in the version
+history. Detailed module specifications:
+[communication model (voice/PTT)](modules/communication-model.md),
+[Live Share](modules/live-share.md),
+[verified checklists](modules/verified-checklists.md),
+[case brief](modules/case-brief.md),
+[work log and time tracking](modules/work-log-and-time-tracking.md),
+[customer report](modules/customer-report.md).
 
 ---
 
-## Projekt
+## Project
 
-Bygg en produktionsredo SaaS-plattform med namnet **Guidad Felsökning**.
+Build a production-ready SaaS platform named **Guidad Felsökning**.
 
-Plattformen är en AI-wrapper ovanpå Claude API (Anthropic) och fungerar som ett professionellt arbetsverktyg för mekaniker och servicetekniker.
+The platform is a wrapper on top of the Claude API (Anthropic) and works as a
+professional tool for mechanics and service technicians.
 
-**AI:n drivs av plattformen, inte av kunden.** Claude API-nycklarna är plattformshemligheter i backend och exponeras aldrig för kunder eller klienter — AI-handledningen ingår i tjänsten. Backend äger systemprompt, modellval och svarsschema, så AI-reglerna kan inte kringgås från klientsidan.
+**The model is operated by the platform, not by the customer.** The Claude API
+keys are platform secrets in the backend and are never exposed to customers or
+clients — the guidance is part of the service. The backend owns the system
+prompt, the model selection and the response schema, so the rules cannot be
+circumvented from the client side.
 
-**Modellorkestern.** Vi kör flera Claude-modeller i vår infrastruktur och routar per uppgift — backend äger routingtabellen, så den kan justeras utan klientändringar:
+**The model orchestra.** We run several Claude models in our infrastructure and
+route per task — the backend owns the routing table, so it can be adjusted
+without client changes:
 
-| Uppgift | Modell | Motiv |
+| Task | Model | Rationale |
 | --- | --- | --- |
-| Handledning (svar på varje dokumentation) | Claude Sonnet 5 | Många anrop, latenskänsligt på verkstadsgolvet |
-| Granskning (motsägelser/luckor i hela underlaget) | Claude Opus 5, hög effort | Djupaste resonemanget — kvalitet före latens |
-| Överlämningssammanfattning (risker & osäkerheter) | Claude Sonnet 5, låg effort | Balans |
-| Metodikklassificering av felbeskrivning | Claude Haiku 4.5 | Ren klassificering — snabbast och billigast |
+| Guidance (a response to each piece of documentation) | Claude Sonnet 5 | Many calls, latency-sensitive on the workshop floor |
+| Review (contradictions and gaps across the whole record) | Claude Opus 5, high effort | The deepest reasoning — quality before latency |
+| Handover summary (risks and uncertainties) | Claude Sonnet 5, low effort | Balance |
+| Methodology classification of the fault description | Claude Haiku 4.5 | Pure classification — fastest and cheapest |
 
-Alla uppgifter delar samma grundregler (AI-reglerna nedan) och samma klassificerade svarsschema. Vid avböjd förfrågan faller anropet automatiskt tillbaka till Anthropics rekommenderade reservmodell. Den ska inte ersätta teknisk kompetens eller tillverkarens dokumentation, utan vägleda användaren genom en strukturerad felsökningsprocess, dokumentera allt arbete och skapa full spårbarhet.
+All tasks share the same base rules (below) and the same classified response
+schema. On a declined request the call automatically falls back to Anthropic's
+recommended reserve model. The system should not replace technical competence or
+the manufacturer's documentation, but guide the user through a structured
+diagnostic process, document all work, and create full traceability.
 
-Målet är att lansera en stabil, enkel och köpvärdig beta-version.
-
----
-
-## Produktfilosofi
-
-Produkten ska kännas som ett verktyg från en stor industrileverantör: enkel, stabil, extremt snabb, professionell, förutsägbar, tydlig, minimalistisk.
-
-Ingen "AI-leksak". Ingen onödig design. Inga experimentella funktioner. Allting ska kännas robust.
+The goal is to launch a stable, simple beta version worth paying for.
 
 ---
 
-## Roller
+## Product philosophy
 
-### Systemadministratör
+The product should feel like a tool from a major industrial supplier: simple,
+stable, extremely fast, professional, predictable, clear, minimal.
 
-Normalt en eller flera personer hos kunden. Behörigheter: hantera organisation, API-nycklar, integrationer, skapa/ta bort användare, roller, behörigheter, export, säkerhetsinställningar, fakturering, loggar.
-
-### Tekniker
-
-Kan skapa ärenden, fortsätta ärenden, ta över ärenden, skriva, prata, fotografera, filma, mäta, exportera rapport.
-
-### Arbetsledare
-
-Kan dessutom se alla ärenden, omfördela ärenden, följa status, läsa rapporter, skapa statistik.
+No toy. No unnecessary design. No experimental features. Everything should feel
+robust.
 
 ---
 
-## Multi-tenant
+## Roles
 
-Varje kund är en egen tenant med egna användare, API-nycklar, integrationer, ärenden, databaslogik och säkerhet. **Ingen data får blandas mellan kunder.**
+### System administrator
+
+Normally one or more people at the customer. Permissions: manage the
+organisation, API keys, integrations, create and remove users, roles,
+permissions, export, security settings, billing, logs.
+
+### Technician
+
+Can create cases, continue cases, take over cases, write, speak, photograph,
+record video, measure, and export reports.
+
+### Supervisor
+
+Can additionally see all cases, reassign cases, follow status, read reports, and
+produce statistics.
 
 ---
 
-## Enkel onboarding
+## Multi-tenancy
 
-Första gången en kund loggar in:
+Each customer is its own tenant with its own users, API keys, integrations,
+cases, database logic and security. **No data may be mixed between customers.**
 
-1. Skapa företag
-2. Lägg till logotyp
-3. Lägg till användare
-4. Lägg till eventuella integrationer
+---
 
-Klart. Hela onboarding ska ta mindre än fem minuter. AI-handledningen ingår i tjänsten — kunden hanterar inga AI-nycklar.
+## Simple onboarding
+
+The first time a customer logs in:
+
+1. Create the company
+2. Add a logo
+3. Add users
+4. Add any integrations
+
+Done. The whole onboarding should take less than five minutes. The guidance is
+part of the service — the customer handles no model keys.
 
 ---
 
 ## Dashboard
 
-Visa endast det viktigaste: Mina ärenden · Pågående · Väntar · Klara · Starta nytt ärende.
+Show only what matters: My cases · In progress · Waiting · Done · Start new
+case.
 
 ---
 
-## Nytt ärende
+## New case
 
-Identifiera objekt genom registreringsnummer, VIN, maskinnummer, QR, streckkod, OCR, foto eller manuell identifiering. Objektet verifieras innan felsökning startar.
-
----
-
-## AI-guidning
-
-Systemet arbetar stegvis. Inte långa svar. En kontroll åt gången:
-
-> Kontrollera säkring F24. → Användaren svarar. → AI går vidare.
-
-### AI-regler
-
-AI får aldrig hitta på fakta, låtsas veta eller gissa. Den ska skilja på **Observation**, **Verifierat**, **Hypotes** och **Rekommendation**. Alla svar ska ha tydlig tillförlitlighet.
+Identify the object by registration number, VIN, machine number, QR code,
+barcode, OCR, photo or manual identification. The object is verified before
+diagnosis starts.
 
 ---
 
-## Kommunikationsmodell
+## Guidance
 
-**Tal in, text ut.** All röstinmatning sker via tal-till-text enligt Push-to-Talk — ingen bakgrundslyssning, ingen röstagent, aldrig automatiskt skick. Transkriberingen är alltid redigerbar innan den sparas i arbetsloggen. Se [modulen](moduler/kommunikationsmodell.md) för fullständig specifikation.
+The system works step by step. Not long answers. One check at a time:
 
----
+> Check fuse F24. → The user answers. → The system moves on.
 
-## Kamerastöd
+### Rules
 
-Foto, video, OCR, bildanalys och objektidentifiering: däck, typskyltar, serienummer, skyltar, komponenter, mätinstrument.
-
----
-
-## Arbetslogg
-
-Allt loggas: tid, användare, objekt, kommentar, foto, video, mätvärde, AI-fråga, AI-svar, resultat. Ingenting får försvinna. Loggen ska vara revisionssäker.
+The model may never invent facts, pretend to know, or guess. It must distinguish
+**Observation**, **Verified**, **Hypothesis** and **Recommendation**. Every
+answer must carry a clear confidence level.
 
 ---
 
-## Tidrapportering
+## Communication model
 
-När objektet identifierats startar arbetstiden. Vid längre inaktivitet ber systemet om en kort beskrivning av vad som gjorts. Slutrapporten visar total tid fördelad på moment (provkörning, diagnos, administration …).
-
----
-
-## Ärendebrief
-
-AI håller alltid en levande sammanfattning. När en annan tekniker öppnar ärendet visas automatiskt: vad kunden beskriver, vad som gjorts, vad som verifierats, vad som återstår, rekommenderade nästa steg och total arbetstid.
+**Speech in, text out.** All voice input goes through speech-to-text on a
+push-to-talk basis — no background listening, no voice agent, never automatic
+sending. The transcription is always editable before it is saved to the work
+log. See [the module](modules/communication-model.md) for the full
+specification.
 
 ---
 
-## Verifierade checklistor
+## Camera support
 
-En kontrollpunkt är inte slutförd enbart genom en kryssruta — varje kontroll samlar bevis och kontext (observation, mätvärde, foto) med minimikrav anpassade efter kontrolltyp. Se [modulen](moduler/verifierade-checklistor.md).
-
----
-
-## Samarbete
-
-Flera tekniker kan arbeta samtidigt. Alla ser bilder, filmer, mätningar, anteckningar, AI-sammanfattning, status och rekommendationer.
+Photo, video, OCR, image analysis and object identification: tyres, type plates,
+serial numbers, labels, components, measuring instruments.
 
 ---
 
-## Kundrapport och Live Share
+## Work log
 
-Kundrapporten genereras automatiskt (objekt, felbeskrivning, bilder, tester, mätvärden, utförda kontroller, tid, rekommendation, nästa steg) och delas som PDF, länk eller API. Varje ärende kan dessutom publiceras via en säker, behörighetsstyrd delningslänk som uppdateras i realtid — se [Live Share-modulen](moduler/live-share.md). Alla exporter versionsmärks (version, datum, tid, vem, format).
-
----
-
-## API First
-
-Bygg hela systemet API-first. Alla resurser ska kunna skapas, läsas, uppdateras, exporteras och integreras. Dokumentera API:erna med OpenAPI/Swagger.
+Everything is logged: time, user, object, comment, photo, video, measured value,
+question, answer, result. Nothing may disappear. The log must be audit-proof.
 
 ---
 
-## Integrationer
+## Time reporting
 
-Förbered integrationsramverk för DMS, ERP, CRM, elektroniska serviceböcker, tidredovisning, fakturering, reservdelssystem och tillverkarsystem via kundens egna behörigheter. Modulär integrationsarkitektur så att nya integrationer läggs till utan att påverka kärnplattformen.
-
----
-
-## Infrastruktur
-
-Bygg för produktion. Exempel på målarkitektur: AWS, Kubernetes, Docker, PostgreSQL, Redis, objektlagring, CDN, automatisk skalning, lastbalansering, backup, central loggning, övervakning, CI/CD, Infrastructure as Code.
+Once the object is identified, the working time starts. After a longer period of
+inactivity the system asks for a short description of what was done. The final
+report shows the total time distributed across activities (road test, diagnosis,
+administration …).
 
 ---
 
-## Säkerhet
+## Case brief
 
-Rollbaserad åtkomst, kryptering i vila och under överföring, säker API-autentisering, revisionsloggar, principen om minsta behörighet, säker hantering av API-nycklar och hemligheter. Utforma systemet så att det kan uppfylla relevanta krav, exempelvis GDPR, beroende på hur kunden använder tjänsten.
-
----
-
-## Beta-fokus
-
-Prioritera ett litet antal funktioner med hög kvalitet framför många halvfärdiga funktioner.
-
-MVP ska innehålla: inloggning, organisation (tenant), användarhantering, starta ärende, objektidentifiering, AI-guidad felsökning, kamera och bildanalys, arbetslogg, tidrapportering, ärendebrief, kundrapport, API, administration.
-
-All övrig funktionalitet planeras för senare versioner.
+The system always maintains a living summary. When another technician opens the
+case, it automatically shows: what the customer describes, what has been done,
+what has been verified, what remains, the recommended next steps and the total
+working time.
 
 ---
 
-## Slutmål
+## Verified checklists
 
-Bygg en plattform som känns lika självklar för en mekaniker eller servicetekniker som ett diagnosinstrument är idag. Fokus på snabbhet, tydlighet, metodisk vägledning och spårbar dokumentation. När en användare öppnar appen ska den upplevas som ett pålitligt professionellt verktyg — inte som en generell AI-chatt. Det ska vara enkelt att komma igång, enkelt att samarbeta och enkelt att visa kunden exakt hur felsökningen har genomförts.
+A check item is not complete merely by ticking a box — every check collects
+evidence and context (observation, measured value, photo) with minimum
+requirements adapted to the type of check. See
+[the module](modules/verified-checklists.md).
+
+---
+
+## Collaboration
+
+Several technicians can work at the same time. Everyone sees images, video,
+measurements, notes, the generated summary, status and recommendations.
+
+---
+
+## Customer report and Live Share
+
+The customer report is generated automatically (object, fault description,
+images, tests, measured values, checks performed, time, recommendation, next
+step) and shared as a PDF, a link or via the API. Each case can additionally be
+published through a secure, permission-controlled share link that updates in
+real time — see [the Live Share module](modules/live-share.md). Every export is
+versioned (version, date, time, who, format).
+
+---
+
+## API first
+
+Build the whole system API-first. All resources must be creatable, readable,
+updatable, exportable and integrable. Document the APIs with OpenAPI/Swagger.
+
+---
+
+## Integrations
+
+Prepare an integration framework for DMS, ERP, CRM, electronic service books,
+time reporting, invoicing, parts systems and manufacturer systems via the
+customer's own credentials. A modular integration architecture so that new
+integrations can be added without affecting the core platform.
+
+---
+
+## Infrastructure
+
+Build for production. Example target architecture: AWS, Kubernetes, Docker,
+PostgreSQL, Redis, object storage, CDN, autoscaling, load balancing, backup,
+central logging, monitoring, CI/CD, infrastructure as code.
+
+---
+
+## Security
+
+Role-based access, encryption at rest and in transit, secure API
+authentication, audit logs, the principle of least privilege, secure handling of
+API keys and secrets. Design the system so that it can meet relevant
+requirements, for example GDPR, depending on how the customer uses the service.
+
+---
+
+## Beta focus
+
+Prioritise a small number of features at high quality over many half-finished
+ones.
+
+The MVP must contain: login, organisation (tenant), user management, start a
+case, object identification, guided diagnosis, camera and image analysis, work
+log, time reporting, case brief, customer report, API, administration.
+
+All other functionality is planned for later versions.
+
+---
+
+## Ultimate goal
+
+Build a platform that feels as obvious to a mechanic or service technician as a
+diagnostic instrument does today. Focus on speed, clarity, methodical guidance
+and traceable documentation. When a user opens the app it should feel like a
+reliable professional tool — not like a general-purpose chat. It should be easy
+to get started, easy to collaborate, and easy to show the customer exactly how
+the diagnosis was carried out.

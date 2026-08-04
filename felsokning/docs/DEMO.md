@@ -1,71 +1,98 @@
-# Guidad Felsökning – Demomanus
+# Guidad Felsökning — demo script
 
-Ett 5–10 minuters manus för att visa plattformen. Allt körs lokalt utan konton eller nycklar.
+> Canonical version. Swedish: [DEMO.sv.md](DEMO.sv.md).
 
-## Förberedelser
+A 5–10 minute script for showing the platform. Everything runs locally, with no
+accounts and no keys.
+
+## Preparation
 
 ```sh
 npm install
 npm run dev
 ```
 
-Öppna `http://localhost:8080/felsokning` — helst på mobil eller i mobilläge i webbläsaren (appen är byggd för verkstadsgolvet). Ange ett namn (allt loggas per användare).
+Open `http://localhost:8080/felsokning` — ideally on a phone, or in mobile mode
+in the browser (the app is built for the workshop floor). Enter a name
+(everything is logged per user).
 
-Chrome rekommenderas: då fungerar även röstinmatningen (Push-to-Talk).
+Chrome is recommended: voice input (push-to-talk) then works as well.
 
-## Demoflöde
+## Demo flow
 
-### 1. Dashboarden och demoärendet (1 min)
+### 1. The dashboard and the demo case (1 min)
 
-Klicka **Skapa demoärende (Volvo XC60, vibration)**. Ett komplett ärende med 1 tim 35 min arbetshistorik läggs in: identifierat objekt, besvarade symptomfrågor, fyra hjulfoton, mätvärden, provkörning, en överlämning mellan två tekniker och en hypotes.
+Click **Skapa demoärende (Volvo XC60, vibration)** — create demo case. A complete
+case with 1 h 35 min of work history is loaded: identified object, answered
+symptom questions, four wheel photos, measured values, a road test, a handover
+between two technicians, and a hypothesis.
 
-Poäng att göra: dashboarden visar bara det viktigaste — pågående, klara, nytt ärende.
+The point to make: the dashboard shows only what matters — in progress, done,
+new case.
 
-### 2. Ärendebriefen (2 min)
+### 2. The case brief (2 min)
 
-Öppna ärendet → fliken **Brief**. Det här är kärnargumentet:
+Open the case → the **Brief** tab. This is the core argument:
 
-- **Utförda kontroller** med resultat — inte bara kryssrutor.
-- **Ej kontrollerat** — härlett automatiskt ur metodiken; det som orsakar dubbelarbete vid skiftbyte är det ingen skrivit ner att ingen gjort.
-- **Hypoteser** tydligt märkta 🔴 — systemet presenterar aldrig en hypotes som ett konstaterat fel.
-- **Tillförlitlighet** och **total arbetstid**.
+- **Checks performed** with results — not just tick boxes.
+- **Not checked** — derived automatically from the methodology; what causes
+  duplicated work at shift change is the thing nobody wrote down that nobody
+  did.
+- **Hypotheses** clearly marked 🔴 — the system never presents a hypothesis as a
+  confirmed fault.
+- **Reliability** and **total working time**.
 
-Poäng: en ny tekniker är produktiv på under en minut, utan att läsa hundratals loggrader.
+The point: a new technician is productive in under a minute, without reading
+hundreds of log lines.
 
-### 3. Guiden och verifierade checklistor (2 min)
+### 3. The guide and verified checklists (2 min)
 
-Fliken **Guide**. Metodiken fortsätter där den slutade: en fråga eller kontroll i taget, stora knappar.
+The **Guide** tab. The methodology carries on where it left off: one question or
+check at a time, large buttons.
 
-- Visa att en mätkontroll **inte kan verifieras utan mätvärde** (knappen är låst tills värdet är ifyllt).
-- Tryck på 🎤 och diktera en observation — texten hamnar i fältet, redigerbar, och sparas först när man trycker Spara. Tal in, text ut; inget skickas automatiskt.
-- Visa kategoriknapparna (aktiv felsökning / väntetid / provkörning …) — tidrapporteringen sköter sig själv.
+- Show that a measurement check **cannot be verified without a measured value**
+  (the button is locked until the value is filled in).
+- Press 🎤 and dictate an observation — the text lands in the field, editable,
+  and is saved only when you press Save. Speech in, text out; nothing is sent
+  automatically.
+- Show the category buttons (active diagnosis / waiting / road test …) — time
+  reporting takes care of itself.
 
-### 4. Arbetsloggen (1 min)
+### 4. The work log (1 min)
 
-Fliken **Logg**: varje händelse tidsstämplad med användare, append-only — ingenting kan ändras eller raderas i efterhand. Peka på överlämningen mellan Anna och Johan.
+The **Logg** tab: every event timestamped with its user, append-only — nothing
+can be changed or deleted afterwards. Point out the handover between Anna and
+Johan.
 
-### 5. Kundrapporten och Live Share (2 min)
+### 5. The customer report and Live Share (2 min)
 
-Fliken **Rapport**:
+The **Rapport** tab:
 
-- **Skriv ut / PDF** — rapporten blir svart på vitt automatiskt.
-- **Exportera JSON** — versionsmärkt (version = antal händelser), och exporten loggas själv.
-- **Öppna Live Share-vy** — det kunden ser via delningslänken: status ✔/🔄/⏳, bilder, mätvärden, tidslinje. Inga hypoteser, inga interna poster.
+- **Print / PDF** — the report becomes black on white automatically.
+- **Export JSON** — versioned (version = number of events), and the export logs
+  itself.
+- **Open Live Share view** — what the customer sees through the share link:
+  status ✔/🔄/⏳, images, measured values, timeline. No hypotheses, no internal
+  entries.
 
-Poäng: i stället för "Felsökning – 2,5 timmar" på fakturan får kunden en tidslinje över vad som faktiskt gjorts.
+The point: instead of "Diagnosis — 2.5 hours" on the invoice, the customer gets
+a timeline of what was actually done.
 
-### 6. Avsluta med filosofin (30 sek)
+### 6. Close with the philosophy (30 sec)
 
-> Systemet dokumenterar observationer, leder användaren genom verifierbara kontroller och rekommenderar nästa steg — men presenterar aldrig en hypotes som ett konstaterat fel.
+> The system documents observations, leads the user through verifiable checks
+> and recommends the next step — but never presents a hypothesis as a confirmed
+> fault.
 
-Det ersätter inte teknikern. Det ersätter pärmen, minneslapparna och "fråga Kent, han skruvade på den i torsdags".
+It does not replace the technician. It replaces the binder, the sticky notes,
+and "ask Kent, he was working on it on Thursday".
 
-## Vad som är demoläge respektive produktion
+## What is demo mode and what is production
 
-| I demon | I produktion |
+| In the demo | In production |
 | --- | --- |
-| Deterministisk metodikmotor (16 metodiker) | LLM väljer/genererar steg genom samma motorgränssnitt |
-| Webbläsarens taligenkänning | Leverantörens Voice-to-Text bakom samma gränssnitt |
-| localStorage + synk vid inloggning | Multi-tenant-backend (migration finns), roller enligt Master Prompt |
-| Delningslänk kräver synkat ärende | Live Share med behörighetsnivåer kund/intern/partner |
-| Demobilder ritade av systemet | Riktiga foton via kameran (fungerar redan i demon också) |
+| Deterministic methodology engine (16 methodologies) | The model selects/generates steps through the same engine interface |
+| The browser's speech recognition | The vendor's voice-to-text behind the same interface |
+| localStorage + sync on login | Multi-tenant backend (the migration exists), roles per the Master Prompt |
+| Share link requires a synced case | Live Share with permission levels customer/internal/partner |
+| Demo images drawn by the system | Real photos via the camera (already works in the demo too) |
