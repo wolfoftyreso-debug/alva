@@ -21,6 +21,8 @@ VITE_HASH_ROUTER=1 npm run build
 I det läget är `/` Guidad Felsökning i stället för värdapplikationens
 startsida, och sidan fungerar oavsett vilken sökväg den ligger på.
 
+Fullständig systembeskrivning i ett dokument (för granskning eller resonemang utanför repot): [SYSTEMBESKRIVNING.md](SYSTEMBESKRIVNING.md).
+
 Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på startsidan lägger in ett komplett vibrationsärende med 1 tim 35 min historik.
 
 ## Vad som ingår
