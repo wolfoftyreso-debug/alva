@@ -1,5 +1,8 @@
 # Modul: Evidensmotorn (ECM — Evidence & Compliance Matrix)
 
+> **Svensk översättning.** Källan är [evidence-engine.md](evidence-engine.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
 **Version: ECM v2.0** · ECM är ett eget subsystem — inte en tabell i
 databasen — och motorn som styr hela plattformen: den avgör vilken
 dokumentation som krävs, när dokumentation saknas, vilken bevisnivå som

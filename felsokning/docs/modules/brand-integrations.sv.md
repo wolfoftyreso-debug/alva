@@ -1,5 +1,8 @@
 # Märkesspecifika kopplingar
 
+> **Svensk översättning.** Källan är [brand-integrations.md](brand-integrations.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
 Verkstaden har redan sina avtal. Volvo-verkstaden har VIDA, VAG-verkstaden
 har erWin, den fria verkstaden har en fordonsdataleverantör. Ingen av dem
 vill att vi ska vara mellanhand för deras abonnemang — och ingen av dem
@@ -74,7 +77,7 @@ bygga om applikationen.
 Uppslaget fyller i **fordonsbeskrivningen** (märke, modell, årsmodell,
 motor, växellåda). Det är kontextdata, inte evidens: ett svar från en
 leverantör är aldrig en utförd kontroll och räknas inte i
-[evidensmotorn](evidensmotor.md). Returnerar leverantören inga kända fält
+[evidensmotorn](evidence-engine.sv.md). Returnerar leverantören inga kända fält
 säger systemet det rakt ut i stället för att visa tomma rader.
 
 Varje uppslag skriver `senast_testad` och `senaste_status` på

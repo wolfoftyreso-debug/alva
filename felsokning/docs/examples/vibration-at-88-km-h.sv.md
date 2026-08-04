@@ -1,5 +1,8 @@
 # Exempelflöde: ”Bilen vibrerar runt 88 km/h”
 
+> **Svensk översättning.** Källan är [vibration-at-88-km-h.md](vibration-at-88-km-h.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
 Det här exemplet illustrerar hur Guidad Felsökning fungerar i praktiken: en digital diagnostikprocess, inte en AI-chat. AI:n hoppar inte direkt till ”det är nog hjulbalansering”, utan följer en reproducerbar metod.
 
 ---

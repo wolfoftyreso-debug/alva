@@ -1,5 +1,8 @@
 # Modul: Ärendebrief
 
+> **Svensk översättning.** Källan är [case-brief.md](case-brief.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
 ## Syfte
 
 När en ny tekniker tar över ett pågående ärende ska denne kunna bli produktiv på under en minut, utan att behöva läsa hela historiken.

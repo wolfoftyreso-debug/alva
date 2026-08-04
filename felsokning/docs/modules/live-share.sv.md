@@ -1,5 +1,8 @@
 # Modul: Live Share
 
+> **Svensk översättning.** Källan är [live-share.md](live-share.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
 ## Syfte
 
 Varje ärende kan publiceras via en unik säker delningslänk. Länken visar ärendets aktuella status i realtid och uppdateras automatiskt när ny information registreras. Ingen manuell export behövs.

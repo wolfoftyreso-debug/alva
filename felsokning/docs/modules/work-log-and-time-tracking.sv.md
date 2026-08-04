@@ -1,5 +1,8 @@
 # Modul: Arbetslogg & Tidredovisning
 
+> **Svensk översättning.** Källan är [work-log-and-time-tracking.md](work-log-and-time-tracking.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
 ## Syfte
 
 Allt arbete som utförs under ett felsökningsärende ska vara tidsatt, spårbart och kopplat till konkreta aktiviteter.

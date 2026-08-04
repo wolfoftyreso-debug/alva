@@ -1,5 +1,8 @@
 # Modul: Kommunikationsmodell (röst)
 
+> **Svensk översättning.** Källan är [communication-model.md](communication-model.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
 ## Grundprincip
 
 **Användaren pratar, systemet skriver.**

@@ -1,5 +1,8 @@
 # Modul: Verifierade checklistor
 
+> **Svensk översättning.** Källan är [verified-checklists.md](verified-checklists.md) (engelska).
+> Vid avvikelse gäller det engelska dokumentet.
+
 ## Grundprincip
 
 En kontrollpunkt är inte slutförd enbart genom att kryssa i en ruta.
