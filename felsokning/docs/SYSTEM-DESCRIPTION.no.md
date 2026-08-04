@@ -1,7 +1,7 @@
 # Guidad Felsökning (Veiledet Feilsøking) — fullstendig systembeskrivelse
 
-> **Norsk oversettelse (bokmål).** Kilden er [SYSTEMBESKRIVNING.md](SYSTEMBESKRIVNING.md) (svensk).
-> Ved uoverensstemmelse gjelder det svenske dokumentet.
+> **Norsk oversettelse (bokmål).** Kilden er [SYSTEM-DESCRIPTION.md](SYSTEM-DESCRIPTION.md) (engelsk).
+> Ved uoverensstemmelse gjelder det engelske dokumentet.
 >
 > **Kodeidentifikatorer oversettes ikke.** Hendelsestyper, funksjons- og
 > feltnavn, filstier og konfigurasjonsnøkler er svenske *i selve koden*. En
@@ -823,11 +823,11 @@ docs/MASTER-PROMPT.md                   grunninstruksjonen
 docs/MVP.md                             hva som er bygget, funksjon for funksjon
 docs/DEMO.md                            demomanus for framvisning
 docs/DRIFT.md                           drift
-docs/SYSTEMBESKRIVNING.md               den svenske originalen av dette dokumentet
-docs/SYSTEMBESKRIVNING.en.md            engelsk
-docs/SYSTEMBESKRIVNING.de.md            tysk
-docs/SYSTEMBESKRIVNING.da.md            dansk
-docs/SYSTEMBESKRIVNING.no.md            dette dokumentet
+docs/SYSTEM-DESCRIPTION.md              engelsk — den gjeldende utgaven
+docs/SYSTEM-DESCRIPTION.sv.md           svensk
+docs/SYSTEM-DESCRIPTION.de.md           tysk
+docs/SYSTEM-DESCRIPTION.da.md           dansk
+docs/SYSTEM-DESCRIPTION.no.md           dette dokumentet
 docs/exempel/vibration-vid-88-km-h.md   gjennomgående eksempel
 docs/moduler/                           åtte moduldokumenter
 ```

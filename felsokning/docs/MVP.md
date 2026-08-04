@@ -21,7 +21,7 @@ VITE_HASH_ROUTER=1 npm run build
 I det läget är `/` Guidad Felsökning i stället för värdapplikationens
 startsida, och sidan fungerar oavsett vilken sökväg den ligger på.
 
-Fullständig systembeskrivning i ett dokument (för granskning eller resonemang utanför repot): [SYSTEMBESKRIVNING.md](SYSTEMBESKRIVNING.md) — även på [engelska](SYSTEMBESKRIVNING.en.md), [tyska](SYSTEMBESKRIVNING.de.md), [danska](SYSTEMBESKRIVNING.da.md) och [norska](SYSTEMBESKRIVNING.no.md). Svenska versionen är källan; översättningarna behåller kodidentifierarna oöversatta.
+Fullständig systembeskrivning i ett dokument (för granskning eller resonemang utanför repot): [SYSTEM-DESCRIPTION.md](SYSTEM-DESCRIPTION.md) — engelska är källan, och finns även på [svenska](SYSTEM-DESCRIPTION.sv.md), [tyska](SYSTEM-DESCRIPTION.de.md), [danska](SYSTEM-DESCRIPTION.da.md) och [norska](SYSTEM-DESCRIPTION.no.md). Alla versioner behåller kodidentifierarna oöversatta — koden är svensk oavsett vilket språk dokumentet är på.
 
 Demomanus för visning: [DEMO.md](DEMO.md). Knappen **Skapa demoärende** på startsidan lägger in ett komplett vibrationsärende med 1 tim 35 min historik.
 

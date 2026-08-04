@@ -1,12 +1,14 @@
 # Guidad Felsökning (Guided Diagnostics) — complete system description
 
-> **English translation.** Source of truth: [SYSTEMBESKRIVNING.md](SYSTEMBESKRIVNING.md) (Swedish).
-> If the two disagree, the Swedish document is correct.
+> **This is the canonical version.** Translations: [Swedish](SYSTEM-DESCRIPTION.sv.md) · [German](SYSTEM-DESCRIPTION.de.md) · [Danish](SYSTEM-DESCRIPTION.da.md) · [Norwegian](SYSTEM-DESCRIPTION.no.md).
+> Where a translation disagrees with this document, this document is correct.
 >
-> **Code identifiers are not translated.** Event types, function names, field
-> names, file paths and configuration keys are Swedish *in the code itself*.
-> Translating them would make this document useless against the repository, so
-> they appear verbatim, with an English gloss where the meaning is not obvious.
+> **Code identifiers are Swedish and are not translated.** Event types, function
+> names, field names, file paths and configuration keys are Swedish *in the code
+> itself* — the domain is Swedish and the implementation follows it. Translating
+> them here would make this document useless against the repository, so they
+> appear verbatim, with an English gloss where the meaning is not obvious. This
+> document being English does not change what the code is called.
 >
 > A self-contained reference document. Everything below is taken from the code
 > in `felsokning/` (branch `claude/guidad-felsokning-vision-1mnx7f`), not from
@@ -832,11 +834,11 @@ docs/MASTER-PROMPT.md                   the founding instruction
 docs/MVP.md                             what is built, feature by feature
 docs/DEMO.md                            demo script for presentations
 docs/DRIFT.md                           operations
-docs/SYSTEMBESKRIVNING.md               the Swedish original of this document
-docs/SYSTEMBESKRIVNING.en.md            this document
-docs/SYSTEMBESKRIVNING.de.md            German
-docs/SYSTEMBESKRIVNING.da.md            Danish
-docs/SYSTEMBESKRIVNING.no.md            Norwegian (Bokmål)
+docs/SYSTEM-DESCRIPTION.md              this document — the canonical version
+docs/SYSTEM-DESCRIPTION.sv.md           Swedish
+docs/SYSTEM-DESCRIPTION.de.md           German
+docs/SYSTEM-DESCRIPTION.da.md           Danish
+docs/SYSTEM-DESCRIPTION.no.md           Norwegian (Bokmål)
 docs/exempel/vibration-vid-88-km-h.md   worked example
 docs/moduler/                           eight module documents
 ```

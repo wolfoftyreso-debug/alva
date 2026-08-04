@@ -1,7 +1,7 @@
 # Guidad Felsökning (Geführte Fehlersuche) — vollständige Systembeschreibung
 
-> **Deutsche Übersetzung.** Maßgeblich ist [SYSTEMBESKRIVNING.md](SYSTEMBESKRIVNING.md) (Schwedisch).
-> Bei Widersprüchen gilt das schwedische Dokument.
+> **Deutsche Übersetzung.** Maßgeblich ist [SYSTEM-DESCRIPTION.md](SYSTEM-DESCRIPTION.md) (Englisch).
+> Bei Widersprüchen gilt das englische Dokument.
 >
 > **Bezeichner im Code werden nicht übersetzt.** Ereignistypen, Funktions- und
 > Feldnamen, Dateipfade und Konfigurationsschlüssel sind *im Code selbst*
@@ -859,11 +859,11 @@ docs/MASTER-PROMPT.md                   die Gründungsinstruktion
 docs/MVP.md                             was gebaut ist, Funktion für Funktion
 docs/DEMO.md                            Demoskript für Vorführungen
 docs/DRIFT.md                           Betrieb
-docs/SYSTEMBESKRIVNING.md               das schwedische Original dieses Dokuments
-docs/SYSTEMBESKRIVNING.en.md            Englisch
-docs/SYSTEMBESKRIVNING.de.md            dieses Dokument
-docs/SYSTEMBESKRIVNING.da.md            Dänisch
-docs/SYSTEMBESKRIVNING.no.md            Norwegisch (Bokmål)
+docs/SYSTEM-DESCRIPTION.md              Englisch — die maßgebliche Fassung
+docs/SYSTEM-DESCRIPTION.sv.md           Schwedisch
+docs/SYSTEM-DESCRIPTION.de.md           dieses Dokument
+docs/SYSTEM-DESCRIPTION.da.md           Dänisch
+docs/SYSTEM-DESCRIPTION.no.md           Norwegisch (Bokmål)
 docs/exempel/vibration-vid-88-km-h.md   durchgerechnetes Beispiel
 docs/moduler/                           acht Moduldokumente
 ```

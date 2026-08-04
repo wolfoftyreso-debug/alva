@@ -1,7 +1,7 @@
 # Guidad Felsökning (Guidet Fejlfinding) — fuldstændig systembeskrivelse
 
-> **Dansk oversættelse.** Kilden er [SYSTEMBESKRIVNING.md](SYSTEMBESKRIVNING.md) (svensk).
-> Ved uoverensstemmelse gælder det svenske dokument.
+> **Dansk oversættelse.** Kilden er [SYSTEM-DESCRIPTION.md](SYSTEM-DESCRIPTION.md) (engelsk).
+> Ved uoverensstemmelse gælder det engelske dokument.
 >
 > **Kodeidentifikatorer oversættes ikke.** Hændelsestyper, funktions- og
 > feltnavne, filstier og konfigurationsnøgler er svenske *i selve koden*. En
@@ -826,11 +826,11 @@ docs/MASTER-PROMPT.md                   grundinstruktionen
 docs/MVP.md                             hvad der er bygget, funktion for funktion
 docs/DEMO.md                            demomanuskript til fremvisning
 docs/DRIFT.md                           drift
-docs/SYSTEMBESKRIVNING.md               det svenske original af dette dokument
-docs/SYSTEMBESKRIVNING.en.md            engelsk
-docs/SYSTEMBESKRIVNING.de.md            tysk
-docs/SYSTEMBESKRIVNING.da.md            dette dokument
-docs/SYSTEMBESKRIVNING.no.md            norsk (bokmål)
+docs/SYSTEM-DESCRIPTION.md              engelsk — den gældende udgave
+docs/SYSTEM-DESCRIPTION.sv.md           svensk
+docs/SYSTEM-DESCRIPTION.de.md           tysk
+docs/SYSTEM-DESCRIPTION.da.md           dette dokument
+docs/SYSTEM-DESCRIPTION.no.md           norsk (bokmål)
 docs/exempel/vibration-vid-88-km-h.md   gennemgående eksempel
 docs/moduler/                           otte moduldokumenter
 ```

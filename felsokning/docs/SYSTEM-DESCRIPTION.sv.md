@@ -1,5 +1,12 @@
 # Guidad Felsökning — fullständig systembeskrivning
 
+> **Svensk översättning.** Källan är [SYSTEM-DESCRIPTION.md](SYSTEM-DESCRIPTION.md)
+> (engelska). Vid avvikelse gäller det engelska dokumentet.
+>
+> **Kodidentifierare översätts inte** — och behöver det inte här: koden är
+> svensk. Det är värt att notera för den som jämför med en annan språkversion,
+> där samma identifierare står oöversatta mitt i främmande text.
+>
 > Ett självständigt referensdokument. Allt nedan är hämtat ur koden i
 > `felsokning/` (branch `claude/guidad-felsokning-vision-1mnx7f`), inte ur
 > planer eller avsikter. Där något **inte** finns står det uttryckligen.
@@ -788,11 +795,11 @@ docs/MASTER-PROMPT.md                   grundinstruktionen
 docs/MVP.md                             vad som är byggt, funktion för funktion
 docs/DEMO.md                            demomanus för visning
 docs/DRIFT.md                           drift
-docs/SYSTEMBESKRIVNING.md               detta dokument (källan)
-docs/SYSTEMBESKRIVNING.en.md            engelska
-docs/SYSTEMBESKRIVNING.de.md            tyska
-docs/SYSTEMBESKRIVNING.da.md            danska
-docs/SYSTEMBESKRIVNING.no.md            norska (bokmål)
+docs/SYSTEM-DESCRIPTION.md              engelska — källan
+docs/SYSTEM-DESCRIPTION.sv.md           detta dokument
+docs/SYSTEM-DESCRIPTION.de.md           tyska
+docs/SYSTEM-DESCRIPTION.da.md           danska
+docs/SYSTEM-DESCRIPTION.no.md           norska (bokmål)
 docs/exempel/vibration-vid-88-km-h.md   genomgående exempelflöde
 docs/moduler/
   arbetslogg-och-tidredovisning.md
