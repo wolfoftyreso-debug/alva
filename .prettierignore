@@ -5,3 +5,6 @@ build/
 cdk.out/
 coverage/
 package-lock.json
+
+# Egen produkt med egen verktygskedja — se felsokning/app.
+felsokning/

@@ -9,9 +9,15 @@ name: Guidad Felsökning
 
 on:
   push:
-    paths: ["felsokning/**", ".gitea/workflows/felsokning.yml"]
+    paths: ['felsokning/**', '.gitea/workflows/felsokning.yml']
   pull_request:
-    paths: ["felsokning/**"]
+    paths: ['felsokning/**']
+  workflow_dispatch:
+    inputs:
+      bildtagg:
+        description: 'Bildtagg att driftsätta (commit-SHA från publiceringen)'
+        required: true
+        type: string
 
 jobs:
   test-och-bygg:
@@ -59,3 +65,61 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false -input=false
       - run: terraform validate
+
+  # Bygger och publicerar till vårt eget ECR. Bara på main och bara när
+  # kontrollerna ovan gått igenom.
+  publicera:
+    needs: [test-och-bygg, tjanster, terraform]
+    if: gitea.ref == 'refs/heads/main'
+    runs-on: felsokning
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.BYGG_ROLL_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      - name: Bygg och publicera
+        env:
+          REGISTER: ${{ steps.ecr.outputs.registry }}
+          TAGG: ${{ gitea.sha }}
+        run: |
+          # Klientens API-adress bakas in vid bygget (Vite), så bilden är
+          # miljöbunden.
+          docker build -t "$REGISTER/guidad-felsokning-web:$TAGG" \
+            --build-arg VITE_PLATTFORM_URL="https://${{ vars.DOMAN }}" \
+            --build-arg VITE_AI_ORKESTER_URL="https://${{ vars.DOMAN }}" \
+            felsokning/app
+          docker build -t "$REGISTER/guidad-felsokning-plattform:$TAGG" felsokning/services/plattform
+          docker build -t "$REGISTER/guidad-felsokning-ai-orkester:$TAGG" felsokning/services/ai-orkester
+          for bild in web plattform ai-orkester; do
+            docker push "$REGISTER/guidad-felsokning-$bild:$TAGG"
+          done
+
+  # Driftsättning är ett eget, manuellt steg: en bild i registret är inte
+  # samma sak som en bild som kör. Rollback = kör igen med tidigare tagg.
+  driftsatt:
+    if: gitea.event_name == 'workflow_dispatch'
+    runs-on: felsokning
+    environment: produktion
+    permissions:
+      id-token: write
+    defaults:
+      run:
+        working-directory: felsokning/infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.DRIFT_ROLL_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: aws eks update-kubeconfig --name ${{ vars.KLUSTER }}
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.8 }
+      - run: terraform init -input=false
+      - run: terraform apply -input=false -auto-approve -var bildtagg=${{ inputs.bildtagg }}
+      - run: terraform output karta
