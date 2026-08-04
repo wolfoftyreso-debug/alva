@@ -1,0 +1,61 @@
+# Guidad Felsökning — CI på egna runners i klustret.
+#
+# Samma syntax som GitHub Actions men körs av Gitea Actions-runners på
+# vår egen EKS. Inget externt beroende: koden, bygget och registret
+# ligger i vår AWS-miljö.
+#
+# .github/workflows/ tillhör Semantika och rörs inte.
+name: Guidad Felsökning
+
+on:
+  push:
+    paths: ["felsokning/**", ".gitea/workflows/felsokning.yml"]
+  pull_request:
+    paths: ["felsokning/**"]
+
+jobs:
+  test-och-bygg:
+    runs-on: felsokning
+    defaults:
+      run:
+        working-directory: felsokning/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci --no-audit --no-fund
+      - run: npx vitest run
+      - run: npm run typkontroll
+      - run: npx eslint src/felsokning src/pages/felsokning src/test --ext .ts,.tsx
+      - run: npm run build
+
+  tjanster:
+    runs-on: felsokning
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+        working-directory: felsokning/services/plattform
+      - run: npx eslint . --ext .mjs
+        working-directory: felsokning/services
+      # Hela flödet mot riktig Postgres: organisationer, roller,
+      # append-only-triggern, isolering, delning, bilagor.
+      - run: sudo apt-get update && sudo apt-get install -y postgresql
+      - run: sudo bash integrationstest.sh
+        working-directory: felsokning/services/plattform
+      - run: npx swagger-cli validate felsokning/services/plattform/openapi.yaml
+        working-directory: .
+
+  terraform:
+    runs-on: felsokning
+    defaults:
+      run:
+        working-directory: felsokning/infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: 1.9.8 }
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate

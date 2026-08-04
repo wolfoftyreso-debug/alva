@@ -1,12 +1,12 @@
 name: CI
 
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
 
 jobs:
-  test-och-bygg:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,48 +14,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci --no-audit --no-fund
-      - run: npx vitest run
-      - run: npm run build
-
-  integrationstest:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: sudo apt-get update && sudo apt-get install -y postgresql
-      - run: npm install --no-audit --no-fund
-        working-directory: services/plattform
-      # Kör hela flödet mot riktig Postgres: organisationer, roller,
-      # append-only-triggern, isolering och publik delning.
-      - run: sudo bash integrationstest.sh
-        working-directory: services/plattform
-
-  # Kontrollerar infrastrukturens definition utan kluster: formatering,
-  # leverantörer, typer och referenser — och att alla tre databaslägena
-  # går att planera.
-  terraform:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: infra/terraform
-    steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.9.8
-      - run: terraform fmt -check -recursive
-      - run: terraform init -backend=false -input=false
-      - run: terraform validate
-
-  container-byggen:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # Bygger båda bilderna för att verifiera Dockerfiler — publicering
-      # till registry sker i ett separat, behörighetsstyrt flöde.
-      - run: docker build -t guidad-felsokning-web .
-      - run: docker build -t guidad-felsokning-ai-orkester services/ai-orkester
-      - run: docker build -t guidad-felsokning-plattform services/plattform
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test

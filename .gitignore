@@ -1,6 +1,18 @@
+node_modules/
+dist/
+build/
+.expo/
+cdk.out/
+coverage/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# --- Guidad Felsökning ---
 # Logs
 logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -16,7 +28,6 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
