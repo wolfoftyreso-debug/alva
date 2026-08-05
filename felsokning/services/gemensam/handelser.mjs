@@ -33,7 +33,7 @@ export const HÄNDELSESCHEMA = {
   fraga_besvarad: { stegId: "text", frageId: "text", fraga: "text", svar: "text" },
   kontroll_utford: { stegId: "text", kontrollId: "text", text: "text" },
   observation: { text: "text" },
-  matvarde: { beskrivning: "text", varde: "text" },
+  matvarde: { beskrivning: "text", varde: "text" },  // matdonId valfritt — se M-1
   hypotes: { text: "text", niva: ["medel", "lag"] },
   foto: { beskrivning: "text" },
   video: { beskrivning: "text" },

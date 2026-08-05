@@ -30,6 +30,12 @@ import { avsluta, logga, mätvärde, spårFrån, starta, traceparent } from "./o
 import { tillPost } from "./handelser.mjs";
 import { grinda, grindaArendetyp } from "./grind.mjs";
 import { ALLA_METODIKER } from "./metodiker.mjs";
+import {
+  MASKERAT,
+  gallringsdatum,
+  skyddaHändelse,
+  öppnaHändelse,
+} from "./personuppgifter.mjs";
 
 // API-first: OpenAPI-specen är en versionerad artefakt och serveras live.
 const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "openapi.yaml"), "utf8");
@@ -42,6 +48,40 @@ const ECM_REGLER = readFileSync(
   process.env.ECM_REGLER_FIL ?? join(dirname(fileURLToPath(import.meta.url)), "ecm-regler.json"),
   "utf8",
 );
+
+// Regelpaketet avgör vad systemet accepterar som ett compliant ärende.
+// Den som kan skriva till namnrymden kunde tidigare ändra vad "compliant"
+// betyder, utan signatur och utan godkännandespår (QUALITET M-6).
+//
+// Paketet verifieras nu mot en HMAC med ECM_REGLER_NYCKEL. Saknas nyckeln
+// körs paketet i granskningsläge: det används, men varje spårbarhetspaket
+// märks som osignerat, och driften larmar. Att vägra starta hade varit
+// renare men gjort en säkerhetsförbättring till ett driftavbrott för alla
+// befintliga installationer — det är så säkerhetsfunktioner blir
+// avstängda.
+const ECM_REGLER_NYCKEL = process.env.ECM_REGLER_NYCKEL ?? "";
+const ECM_REGLER_SIGNATUR = process.env.ECM_REGLER_SIGNATUR ?? "";
+
+function regelpaketetsStatus() {
+  if (!ECM_REGLER_NYCKEL || !ECM_REGLER_SIGNATUR) return "osignerat";
+  const väntad = createHmac("sha256", ECM_REGLER_NYCKEL).update(ECM_REGLER).digest("hex");
+  const a = Buffer.from(ECM_REGLER_SIGNATUR);
+  const b = Buffer.from(väntad);
+  return a.length === b.length && timingSafeEqual(a, b) ? "signerat" : "ogiltig signatur";
+}
+
+const REGELPAKET_STATUS = regelpaketetsStatus();
+if (REGELPAKET_STATUS !== "signerat") {
+  logga("varning", "regelpaketets signatur", {
+    status: REGELPAKET_STATUS,
+    // Ett ogiltigt paket är värre än inget: det betyder att någon bytt
+    // filen utan att kunna signera den.
+    konsekvens:
+      REGELPAKET_STATUS === "ogiltig signatur"
+        ? "Paketet används INTE — inbyggt standardpaket gäller."
+        : "Paketet används men märks som osignerat i spårbarheten.",
+  });
+}
 
 // Register över märkesspecifika kopplingar — data, inte kod. Nya
 // leverantörer läggs till i filen (eller via ConfigMap-mount) utan att
@@ -332,6 +372,9 @@ async function grindHinder(pool, arendeId, nya) {
     ALLA_METODIKER.find((m) => m.id === rader.rows[0]?.metodik_id) ?? ALLA_METODIKER.at(-1);
 
   let regelpaket;
+  if (REGELPAKET_STATUS === "ogiltig signatur") {
+    return [{ id: "regelpaket", rubrik: "Regelpaketets signatur stämmer inte — avslut spärrat." }];
+  }
   try {
     regelpaket = JSON.parse(ECM_REGLER);
   } catch {
@@ -339,6 +382,64 @@ async function grindHinder(pool, arendeId, nya) {
     return [{ id: "regelpaket", rubrik: "Regelpaketet gick inte att läsa — avslut spärrat." }];
   }
   return [...grinda(handelser, metodik), ...grindaArendetyp(handelser, regelpaket)];
+}
+
+
+// ---- Personuppgifter, gallring och åtkomstlogg -------------------------
+
+/**
+ * Hämtar eller skapar nyckeln för ett subjekt. Ett subjekt är normalt ett
+ * fordon (regnr eller VIN) — det som en raderingsbegäran pekar ut.
+ */
+/**
+ * Blindat index över en fordonsidentifierare.
+ *
+ * Samma fordon ger alltid samma värde, men värdet går inte att vända
+ * tillbaka till ett registreringsnummer utan nyckeln. Det är det som gör
+ * en raderingsbegäran genomförbar över hela fordonets historik trots att
+ * identifieraren är krypterad i loggen (QUALITET C-3).
+ */
+function blindaIdentifierare(ident) {
+  const nyckel = process.env.INTEGRATION_NYCKEL ?? process.env.JWT_SECRET ?? "";
+  return createHmac("sha256", nyckel)
+    .update(String(ident).trim().toUpperCase().replace(/\s+/g, ""))
+    .digest("hex");
+}
+
+async function personnyckel(orgId, subjekt) {
+  const rad = await pool.query(
+    `insert into personnycklar (organisation_id, subjekt, nyckel)
+     values ($1, $2, $3)
+     on conflict (organisation_id, subjekt) do update set subjekt = excluded.subjekt
+     returning id, nyckel, radering_begard`,
+    [orgId, subjekt, randomBytes(32)],
+  );
+  return rad.rows[0];
+}
+
+/** Nycklar som fortfarande finns, för att öppna en logg vid läsning. */
+async function nycklarFor(orgId) {
+  const rader = await pool.query(
+    `select id, nyckel from personnycklar where organisation_id = $1`,
+    [orgId],
+  );
+  return new Map(rader.rows.map((r) => [r.id, r.nyckel]));
+}
+
+/**
+ * Läslogg. Skrivningar loggades redan; läsningar gjorde det inte, vilket
+ * gjorde det omöjligt att svara på vem som sett en kunds uppgifter
+ * (QUALITET M-4). Misslyckas loggningen svarar vi ändå — en trasig
+ * revisionslogg får inte bli ett driftavbrott, men den ska synas.
+ */
+function loggaAtkomst(req, res, { org, anvandare, arende, delningskod }) {
+  pool
+    .query(
+      `insert into atkomstlogg (organisation_id, anvandare_id, arende_id, vag, kalla, delningskod)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [org ?? null, anvandare ?? null, arende ?? null, req.url?.slice(0, 500) ?? "", kallaFor(req), delningskod ?? null],
+    )
+    .catch((fel) => logga("fel", "åtkomstlogg misslyckades", { spårId: res.spår.spårId, orsak: fel?.message }));
 }
 
 function kravAuth(req, hemlighet) {
@@ -504,6 +605,10 @@ export function skapaServer() {
         roll: rad.roll,
         // Bärs med så att en återkallelse gör token ogiltig direkt.
         tv: rad.token_version ?? 0,
+        // Modellanropen kan stängas av per organisation (QUALITET C-4).
+        // Flaggan bärs i token så att orkestern kan neka utan att själv
+        // behöva databasåtkomst — den vet redan vem som frågar.
+        ai: rad.ai_tillaten !== false,
         iat: nu,
         exp: nu + TOKEN_LIVSTID_S,
       },
@@ -606,7 +711,8 @@ export function skapaServer() {
         }
 
         const rader = await pool.query(
-          `select a.id, a.namn, a.organisation_id, a.roll, a.aktiv, a.token_version, o.namn as org_namn
+          `select a.id, a.namn, a.organisation_id, a.roll, a.aktiv, a.token_version, o.namn as org_namn,
+                  coalesce((o.installningar->>'ai_tillaten')::boolean, true) as ai_tillaten
            from anvandare a join organisationer o on o.id = a.organisation_id
            where a.epost = $1 and a.losen_hash = crypt($2, a.losen_hash)`,
           [normaliserad, losenord ?? ""],
@@ -876,6 +982,7 @@ export function skapaServer() {
 
       // ECM Knowledge Library: aktuellt regelpaket för inloggade klienter.
       if (req.method === "GET" && vag === "/api/ecm/regler") {
+        res.setHeader("X-Regelpaket-Status", REGELPAKET_STATUS);
         res.writeHead(200, {
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": res.ursprung,
@@ -1028,7 +1135,7 @@ export function skapaServer() {
 
       if (req.method === "POST" && vag === "/api/organisation/installningar") {
         if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
-        const { objekttyper, identifieringsmetoder } = await lasKropp(req);
+        const { objekttyper, identifieringsmetoder, ai_tillaten } = await lasKropp(req);
         const giltigLista = (lista) =>
           Array.isArray(lista) && lista.length > 0 && lista.length <= 50 &&
           lista.every((v) => typeof v === "string" && v.length <= 100);
@@ -1037,7 +1144,18 @@ export function skapaServer() {
         }
         await pool.query(
           `update organisationer set installningar = $2 where id = $1`,
-          [anspr.org, JSON.stringify({ objekttyper, identifieringsmetoder })],
+          [
+            anspr.org,
+            JSON.stringify({
+              objekttyper,
+              identifieringsmetoder,
+              // Modellanropen kan stängas av helt. Metodikmotorn fungerar
+              // ensam, så en organisation som inte kan acceptera
+              // överföringen till modelleverantören kan ändå använda
+              // produkten (QUALITET C-4).
+              ai_tillaten: ai_tillaten !== false,
+            }),
+          ],
         );
         return svara(res, 200, { ok: true });
       }
@@ -1178,6 +1296,116 @@ export function skapaServer() {
         }
       }
 
+
+      // ---- Radering (dataskyddsförordningen art. 17) ------------------
+      //
+      // Krypto-shredding: nyckeln förstörs, loggen står kvar. Vad som
+      // raderas är identifieringen — inte protokollet över vad som
+      // kontrollerades, av vem och när. Det är den enda konstruktion där
+      // bevisvärdet överlever en raderingsbegäran.
+      if (req.method === "POST" && vag === "/api/radering") {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        const { subjekt, bekraftelse } = await lasKropp(req);
+        if (typeof subjekt !== "string" || !subjekt.trim()) {
+          return svara(res, 400, { error: "Ange vilket fordon eller vilken kund som avses." });
+        }
+        // Raderingen går inte att ångra. En bekräftelse som upprepar
+        // subjektet gör det svårt att göra av misstag och lätt att göra
+        // med avsikt.
+        if (bekraftelse !== subjekt) {
+          return svara(res, 400, { error: "Bekräftelsen måste upprepa subjektet exakt. Raderingen går inte att ångra." });
+        }
+
+        // Begäran gäller normalt ett fordon. Alla dess ärenden hittas via
+        // det blindade indexet; ett enskilt ärende-id fungerar också.
+        const arenden = await pool.query(
+          `select id from felsokning_arenden
+           where organisation_id = $1 and (identifierare_index = $2 or id = $3)`,
+          [anspr.org, blindaIdentifierare(subjekt), subjekt],
+        );
+        const berorda = { rows: [{ antal: arenden.rowCount }] };
+        const bort = await pool.query(
+          `delete from personnycklar
+           where organisation_id = $1 and subjekt = any($2::text[]) returning id`,
+          [anspr.org, arenden.rows.map((r) => r.id)],
+        );
+        if (bort.rowCount === 0) {
+          return svara(res, 404, { error: "Inget skyddat underlag finns för det subjektet." });
+        }
+        // Raderingen loggas — men loggen får inte själv bära uppgiften.
+        await pool.query(
+          `insert into raderingar (organisation_id, subjekt_hash, begard, begard_av, antal_arenden)
+           values ($1, $2, now(), $3, $4)`,
+          [anspr.org, innehallsHash(Buffer.from(subjekt)), anspr.namn, berorda.rows[0].antal],
+        );
+        logga("info", "radering verkställd", {
+          spårId: res.spår.spårId,
+          org: anspr.org,
+          antalArenden: berorda.rows[0].antal,
+        });
+        return svara(res, 200, { ok: true, arenden: berorda.rows[0].antal, maskeras_som: MASKERAT });
+      }
+
+      if (req.method === "GET" && vag === "/api/radering") {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        const rader = await pool.query(
+          `select subjekt_hash, begard, verkstalld, begard_av, antal_arenden
+           from raderingar where organisation_id = $1 order by verkstalld desc limit 200`,
+          [anspr.org],
+        );
+        return svara(res, 200, { raderingar: rader.rows });
+      }
+
+      // ---- Åtkomstlogg -----------------------------------------------
+      if (req.method === "GET" && vag === "/api/atkomstlogg") {
+        if (anspr.roll === "tekniker") return svara(res, 403, { error: "Kräver arbetsledare eller administratör." });
+        const rader = await pool.query(
+          `select l.tidpunkt, l.arende_id, l.vag, l.delningskod, a.namn as anvandare
+           from atkomstlogg l left join anvandare a on a.id = l.anvandare_id
+           where l.organisation_id = $1 order by l.tidpunkt desc limit 500`,
+          [anspr.org],
+        );
+        return svara(res, 200, { atkomster: rader.rows });
+      }
+
+      // ---- Mätdon -----------------------------------------------------
+      //
+      // Ett mätvärde rankas som E4 — hög evidens. Utan kalibrerat
+      // instrument är det inte lägre evidens utan ingen evidens alls
+      // (QUALITET M-1). Registret gör påståendet kontrollerbart.
+      if (vag === "/api/matdon") {
+        if (req.method === "GET") {
+          const rader = await pool.query(
+            `select id, beteckning, serienummer, kalibrerad_till, aktiv,
+                    (kalibrerad_till is not null and kalibrerad_till >= current_date) as giltig
+             from matdon where organisation_id = $1 and aktiv order by beteckning`,
+            [anspr.org],
+          );
+          return svara(res, 200, { matdon: rader.rows });
+        }
+        if (req.method === "POST") {
+          if (anspr.roll === "tekniker") return svara(res, 403, { error: "Kräver arbetsledare eller administratör." });
+          const { beteckning, serienummer, kalibrerad_till } = await lasKropp(req);
+          if (typeof beteckning !== "string" || !beteckning.trim() || typeof serienummer !== "string" || !serienummer.trim()) {
+            return svara(res, 400, { error: "Beteckning och serienummer krävs." });
+          }
+          if (kalibrerad_till && Number.isNaN(Date.parse(kalibrerad_till))) {
+            return svara(res, 400, { error: "Kalibreringsdatum är ogiltigt." });
+          }
+          const rad = await pool.query(
+            `insert into matdon (organisation_id, beteckning, serienummer, kalibrerad_till)
+             values ($1, $2, $3, $4)
+             on conflict (organisation_id, serienummer)
+               do update set beteckning = excluded.beteckning,
+                             kalibrerad_till = excluded.kalibrerad_till,
+                             aktiv = true
+             returning id`,
+            [anspr.org, beteckning.trim(), serienummer.trim(), kalibrerad_till || null],
+          );
+          return svara(res, 200, { id: rad.rows[0].id });
+        }
+      }
+
       const aterkalla = vag.match(/^\/api\/delningar\/([A-Za-z0-9_-]+)\/aterkalla$/);
       if (req.method === "POST" && aterkalla) {
         const rad = await pool.query(
@@ -1203,7 +1431,11 @@ export function skapaServer() {
              where arende_id = $1 order by tidpunkt, id`,
             [handelserVag[1]],
           );
-          return svara(res, 200, { handelser: rader.rows });
+          const nycklar = await nycklarFor(anspr.org);
+          loggaAtkomst(req, res, { org: anspr.org, anvandare: anspr.sub, arende: handelserVag[1] });
+          return svara(res, 200, {
+            handelser: rader.rows.map((r) => ({ ...r, handelse: öppnaHändelse(r.handelse, nycklar) })),
+          });
         }
         if (req.method === "POST") {
           const { handelser } = await lasKropp(req);
@@ -1214,10 +1446,15 @@ export function skapaServer() {
 
           // Härkomst och form avgörs här, inte av anroparen. Se
           // services/gemensam/handelser.mjs och QUALITET C-1/M-3.
+          // Identifierande fält krypteras med en nyckel per fordon.
+          // Radering sker sedan genom att nyckeln förstörs — loggen
+          // förblir intakt, identifieringen försvinner (QUALITET C-3).
+          const nyckel = await personnyckel(anspr.org, handelserVag[1]);
           const attSkriva = [];
           for (const post of handelser) {
             const { post: giltig, fel } = tillPost(post, anspr);
             if (fel) return svara(res, 400, { error: `Ogiltig händelse: ${fel}` });
+            giltig.handelse = skyddaHändelse(giltig.handelse, nyckel.id, nyckel.nyckel);
             attSkriva.push(giltig);
           }
 
@@ -1231,6 +1468,40 @@ export function skapaServer() {
                 error: "Ärendet kan inte avslutas — kvalitetsgrinden är inte passerad.",
                 hinder,
               });
+            }
+          }
+
+          // Gallringsdatum sätts vid avslut utifrån ärendetypen.
+          // Retention är ett juridiskt ställningstagande, inte en teknisk
+          // detalj: ett garantiärende måste kunna visas upp under hela
+          // garantitiden, ett kontantärende inte (QUALITET C-3). Ett
+          // ärende utan datum gallras aldrig automatiskt — det försiktiga
+          // utfallet, eftersom för tidig gallring inte går att ångra.
+          const avslut = attSkriva.find((p) => p.handelse.typ === "arende_avslutat");
+          if (avslut) {
+            const typrad = await pool.query(
+              `select handelse->>'arendetyp' as typ from felsokning_handelser
+               where arende_id = $1 and handelse->>'typ' = 'arendetyp_satt'
+               order by tidpunkt desc limit 1`,
+              [handelserVag[1]],
+            );
+            await pool.query(`update felsokning_arenden set gallras_efter = $2 where id = $1`, [
+              handelserVag[1],
+              gallringsdatum(typrad.rows[0]?.typ, avslut.tidpunkt),
+            ]);
+          }
+
+          // Blindat index över fordonet, så en raderingsbegäran kan nå
+          // hela historiken utan att identifieraren lagras i klartext.
+          const objekt = attSkriva.find((p) => p.handelse.typ === "objekt_identifierat");
+          if (objekt) {
+            const ident = handelser.find((h) => h?.handelse?.typ === "objekt_identifierat")?.handelse?.objekt
+              ?.identifierare;
+            if (ident) {
+              await pool.query(`update felsokning_arenden set identifierare_index = $2 where id = $1`, [
+                handelserVag[1],
+                blindaIdentifierare(ident),
+              ]);
             }
           }
 

@@ -62,6 +62,21 @@ export function innehallsHash(innehall: string): string {
 }
 
 // Katalogiserar varje evidenspost i loggen med nivå, kategori och hash.
+/**
+ * Var instrumentet kalibrerat när mätningen gjordes?
+ *
+ * Frågan gäller mättillfället, inte i dag. Ett instrument vars
+ * kalibrering gått ut i efterhand gör inte en gammal mätning ogiltig —
+ * och ett nyligen kalibrerat instrument räddar inte en mätning som
+ * gjordes när kalibreringen var utgången.
+ */
+export function kalibreradVid(kalibreradTill: string | undefined, matt: string): boolean {
+  if (!kalibreradTill) return false;
+  const giltigt = Date.parse(kalibreradTill);
+  const tidpunkt = Date.parse(matt);
+  return Number.isFinite(giltigt) && Number.isFinite(tidpunkt) && tidpunkt <= giltigt;
+}
+
 export function evidensposter(arende: Arende): Evidenspost[] {
   const poster: Evidenspost[] = [];
   const lagg = (post: LoggPost, kategori: string, niva: Evidenspost["niva"], sammanfattning: string) =>
@@ -78,7 +93,25 @@ export function evidensposter(arende: Arende): Evidenspost[] {
     const h = post.handelse;
     if (h.typ === "foto") lagg(post, "foto", "E2", h.beskrivning);
     if (h.typ === "video") lagg(post, "video", "E3", h.beskrivning);
-    if (h.typ === "matvarde") lagg(post, "mätvärde", "E4", `${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""}`);
+    if (h.typ === "matvarde") {
+      // Ett mätvärde är E4 bara när det går att visa vad som mätte och
+      // att instrumentet var kalibrerat vid mättillfället. Utan det är
+      // det teknikerns observation av en siffra — E1 (QUALITY-AUDIT M-1).
+      //
+      // Nedgraderingen är tyst i loggen men syns i rapporten: att låtsas
+      // att en okalibrerad mätning väger som en kalibrerad är precis den
+      // sortens obefogade säkerhet produkten finns för att undvika.
+      const spårbar = Boolean(h.matdonId) && kalibreradVid(h.matdonKalibreradTill, post.tidpunkt);
+      const märkning = h.matdonBeteckning
+        ? `${h.matdonBeteckning}${spårbar ? "" : " — kalibrering saknas eller utgången"}`
+        : "instrument ej angivet";
+      lagg(
+        post,
+        "mätvärde",
+        spårbar ? "E4" : "E1",
+        `${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""} (${märkning})`,
+      );
+    }
     if (h.typ === "matarstallning" && !h.undantag) lagg(post, "mätarställning", "E2", `${h.lage === "ingaende" ? "In" : "Ut"}: ${h.varde}`);
     if (h.typ === "arbetsorder_skannad") lagg(post, "dokument", "E5", `Arbetsorder, ${h.falt.length} fält`);
     if (h.typ === "observation") lagg(post, "observation", "E1", h.text);

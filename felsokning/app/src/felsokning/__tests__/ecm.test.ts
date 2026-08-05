@@ -51,13 +51,29 @@ describe("Evidence Engine", () => {
     expect(evidensNiva(byggArende([]))).toBe("E0");
     expect(evidensNiva(byggArende([{ typ: "observation", text: "x" }]))).toBe("E1");
     expect(evidensNiva(byggArende([{ typ: "foto", beskrivning: "x", dataUrl: "data:" }]))).toBe("E2");
-    expect(evidensNiva(byggArende([{ typ: "matvarde", beskrivning: "U", varde: "12" }]))).toBe("E4");
+    // Utan spårbart instrument är ett mätvärde teknikerns observation
+    // av en siffra, inte en mätning (QUALITY-AUDIT M-1).
+    expect(evidensNiva(byggArende([{ typ: "matvarde", beskrivning: "U", varde: "12" }]))).toBe("E1");
+    expect(
+      evidensNiva(
+        byggArende([
+          {
+            typ: "matvarde",
+            beskrivning: "U",
+            varde: "12",
+            matdonId: "m1",
+            matdonBeteckning: "Fluke 87V",
+            matdonKalibreradTill: "2099-01-01",
+          },
+        ]),
+      ),
+    ).toBe("E4");
     expect(evidensNiva(byggArende([{ typ: "arbetsorder_skannad", falt: [] }]))).toBe("E5");
     expect(
       evidensNiva(
         byggArende([
           { typ: "foto", beskrivning: "x", dataUrl: "data:" },
-          { typ: "matvarde", beskrivning: "U", varde: "12" },
+          { typ: "matvarde", beskrivning: "U", varde: "12", matdonId: "m1", matdonBeteckning: "Fluke 87V", matdonKalibreradTill: "2099-01-01" },
         ]),
       ),
     ).toBe("E6");
@@ -71,7 +87,7 @@ describe("Evidence Engine", () => {
     const poster = evidensposter(arende);
     expect(poster).toHaveLength(2);
     expect(poster[0].niva).toBe("E2");
-    expect(poster[1].sammanfattning).toBe("Obalans = 38 g");
+    expect(poster[1].sammanfattning).toBe("Obalans = 38 g (instrument ej angivet)");
     expect(poster[0].tekniker).toBe("Anna");
     expect(poster[0].hash).toMatch(/^[0-9a-f]{8}$/);
     // Samma innehåll → samma hash (deterministisk spårbarhet).
@@ -343,9 +359,17 @@ describe("Videoevidens (E3) och signerat avslut", () => {
     expect(evidensposter(medVideo)[0].kategori).toBe("video");
     const tvaKallor = byggArende([
       { typ: "video", beskrivning: "Motorljud", dataUrl: "data:video/webm;base64,x" },
-      { typ: "matvarde", beskrivning: "Oljetryck", varde: "3,1", enhet: "bar" },
+      { typ: "matvarde", beskrivning: "Oljetryck", varde: "3,1", enhet: "bar", matdonId: "m1", matdonBeteckning: "Fluke 87V", matdonKalibreradTill: "2099-01-01" },
     ]);
     expect(evidensNiva(tvaKallor)).toBe("E6");
+
+    // Utan kalibrerat instrument är det inte två oberoende källor utan
+    // en: video plus en observation av en siffra.
+    const enKalla = byggArende([
+      { typ: "video", beskrivning: "Motorljud", dataUrl: "data:video/webm;base64,x" },
+      { typ: "matvarde", beskrivning: "Oljetryck", varde: "3,1", enhet: "bar" },
+    ]);
+    expect(evidensNiva(enKalla)).toBe("E3");
   });
 
   it("underlagskällan Video valideras mot loggen i felorsaksanalysen", async () => {

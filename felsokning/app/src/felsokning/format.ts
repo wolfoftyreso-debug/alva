@@ -8,7 +8,21 @@ export function tidDatum(iso: string): string {
   return new Date(iso).toLocaleDateString("sv-SE");
 }
 
-// Skalar ner ett foto innan det loggas, så att händelseloggen förblir hanterbar.
+/**
+ * Skalar ner ett foto innan det loggas, så att händelseloggen förblir
+ * hanterbar.
+ *
+ * **Omritningen via canvas är också det som tar bort EXIF — inklusive
+ * GPS-position.** Den egenskapen höll tidigare av en slump
+ * (QUALITY-AUDIT m-3): ingen hade skrivit ned den, och en framtida
+ * ändring i stil med "bevara originalkvaliteten" hade tyst börjat
+ * publicera var kundens bil stod när fotot togs, i en vy som delas med
+ * försäkringsbolag och partners.
+ *
+ * Egenskapen är nu avsiktlig och låst av test. Den som byter ut
+ * canvas-vägen mot något som bevarar originalbytes måste ta bort
+ * metadata på annat sätt först.
+ */
 export function skalaNerFoto(fil: File, maxSida = 1024): Promise<string> {
   return new Promise((resolve, reject) => {
     const lasare = new FileReader();

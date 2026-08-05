@@ -144,3 +144,91 @@ create table if not exists delningar (
   aterkallad timestamptz
 );
 create index if not exists delningar_arende_idx on delningar (arende_id);
+
+-- ---- Personuppgifter och gallring -------------------------------------
+--
+-- Append-only och rätten till radering (dataskyddsförordningen art. 17)
+-- är inte oförenliga, men de måste förenas medvetet. Krypto-shredding:
+-- identifierande fält i loggen krypteras med en nyckel per registrerad,
+-- och radering sker genom att nyckeln förstörs.
+--
+-- Loggen förblir intakt och hashverifierbar. Det som blir oåtkomligt är
+-- identifieringen, inte protokollet över vad som kontrollerades — ett
+-- raderat ärende kan fortfarande visa att lufttrycket mättes till
+-- 2,4 bar klockan 08:42, bara inte längre vems bil det gällde.
+--
+-- Tabellen är det enda stället i schemat där en rad FÅR försvinna, och
+-- det är hela poängen med den.
+create table if not exists personnycklar (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references organisationer(id),
+  -- Vad nyckeln skyddar: normalt ett fordon (regnr/VIN) eller en kund.
+  subjekt text not null,
+  nyckel bytea not null,
+  skapad timestamptz not null default now(),
+  -- Sätts när radering begärts men nyckeln ännu inte förstörts, så att
+  -- begäran syns i systemet även innan den verkställts.
+  radering_begard timestamptz,
+  unique (organisation_id, subjekt)
+);
+
+-- Radering loggas. Att en begäran verkställts måste gå att visa i
+-- efterhand, och den loggen får själv inte innehålla personuppgiften.
+create table if not exists raderingar (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references organisationer(id),
+  subjekt_hash text not null,
+  begard timestamptz not null,
+  verkstalld timestamptz not null default now(),
+  begard_av text not null,
+  antal_arenden integer not null default 0
+);
+
+-- Gallringsdatum per ärende, satt vid avslut utifrån ärendetypen.
+-- Ett ärende utan datum gallras aldrig automatiskt — det försiktiga
+-- utfallet, eftersom för tidig gallring inte går att ångra.
+alter table felsokning_arenden add column if not exists gallras_efter timestamptz;
+
+-- Läslogg. Varje skrivning loggades redan; ingen läsning gjorde det.
+-- Utan den går det inte att svara på vem som sett en kunds uppgifter,
+-- vilket både artikel 32 och en verkstadschef vill kunna få svar på.
+create table if not exists atkomstlogg (
+  id bigserial primary key,
+  tidpunkt timestamptz not null default now(),
+  organisation_id uuid,
+  anvandare_id uuid,
+  arende_id text,
+  vag text not null,
+  kalla text,
+  -- Delningskod när åtkomsten skedde via en publik länk.
+  delningskod text
+);
+create index if not exists atkomstlogg_arende on atkomstlogg (arende_id, tidpunkt desc);
+create index if not exists atkomstlogg_org on atkomstlogg (organisation_id, tidpunkt desc);
+
+-- Mätdon. Ett mätvärde rankas som hög evidens (E4); utan kalibrerat
+-- instrument är det inte lägre evidens utan ingen evidens alls.
+create table if not exists matdon (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references organisationer(id),
+  beteckning text not null,
+  serienummer text not null,
+  kalibrerad_till date,
+  aktiv boolean not null default true,
+  skapad timestamptz not null default now(),
+  unique (organisation_id, serienummer)
+);
+
+-- Blindat index över fordonsidentifieraren.
+--
+-- En raderingsbegäran gäller ett fordon eller en person, inte ett enskilt
+-- ärende — men identifieraren är krypterad, så den går inte att söka på.
+-- Indexet är en HMAC av den normaliserade identifieraren med en
+-- servernyckel: samma fordon ger alltid samma värde, och värdet går inte
+-- att vända tillbaka till ett registreringsnummer utan nyckeln.
+--
+-- Det gör radering över hela fordonets historik möjlig utan att lagra
+-- identifieraren i klartext någonstans.
+alter table felsokning_arenden add column if not exists identifierare_index text;
+create index if not exists felsokning_arenden_ident_idx
+  on felsokning_arenden (organisation_id, identifierare_index);

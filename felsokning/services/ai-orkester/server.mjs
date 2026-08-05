@@ -12,7 +12,7 @@
 //   PORT                 default 8080
 
 import { createServer } from "node:http";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { avsluta, logga, mätvärde, spårFrån, starta } from "./observation.mjs";
 
@@ -250,6 +250,17 @@ export function verifieraJwt(token, hemlighet) {
   }
 }
 
+
+/**
+ * Kort, stabil identitet för den instruktion som gav svaret: modell,
+ * effort och systempromptens innehåll. Ändras något av dem ändras
+ * versionen, och två svar går att jämföra utan att prompten sparas.
+ */
+function promptversion(konfig) {
+  const underlag = `${konfig.modell}|${konfig.effort ?? "-"}|${konfig.system}`;
+  return createHash("sha256").update(underlag).digest("hex").slice(0, 12);
+}
+
 function svara(res, status, kropp) {
   const data = JSON.stringify(kropp);
   res.writeHead(status, {
@@ -306,8 +317,21 @@ export function skapaServer() {
 
     const auth = req.headers.authorization ?? "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-    if (!token || !verifieraJwt(token, jwtHemlighet)) {
+    const anspr = token ? verifieraJwt(token, jwtHemlighet) : null;
+    if (!anspr) {
       return svara(res, 401, { error: "Inloggning krävs." });
+    }
+
+    // Organisationen kan ha stängt av modellanropen helt — normalt för
+    // att den inte kan acceptera överföringen av kund- och fordonsdata
+    // till modelleverantören (QUALITET C-4). Flaggan bärs i token, så
+    // beslutet fattas här och inte av klienten. Metodikmotorn fungerar
+    // ensam; produkten blir mindre hjälpsam, inte obrukbar.
+    if (anspr.ai === false) {
+      return svara(res, 403, {
+        error: "Organisationen har stängt av modellanropen. Metodiken guidar utan dem.",
+        avstangd: true,
+      });
     }
 
     let uppgift, prompt, bild;
@@ -380,7 +404,17 @@ export function skapaServer() {
       }
       const textBlock = svar.content.find((block) => block.type === "text");
       if (!textBlock) return svara(res, 502, { error: "AI-svaret saknade innehåll." });
-      return svara(res, 200, { modell: konfig.modell, svar: JSON.parse(textBlock.text) });
+      return svara(res, 200, {
+        modell: konfig.modell,
+        // Modellen loggades redan; prompten gjorde det inte. Två
+        // identiska ärenden kunde därmed få olika vägledning utan att
+        // skillnaden gick att härleda i efterhand (QUALITET m-7).
+        // Hashen är kort med avsikt — den ska kunna stå i en loggrad och
+        // svara på "kördes de här två svaren mot samma instruktion?",
+        // inte återskapa prompten.
+        promptversion: promptversion(konfig),
+        svar: JSON.parse(textBlock.text),
+      });
     } catch (fel) {
       logga("fel", "AI-anropet misslyckades", {
         uppgift,

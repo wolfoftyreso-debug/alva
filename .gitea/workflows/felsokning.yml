@@ -66,10 +66,52 @@ jobs:
       - run: terraform init -backend=false -input=false
       - run: terraform validate
 
+  # Leverantörskedjan. 53 direkta klientberoenden utan SBOM eller
+  # skanning var ett fynd i revisionen (QUALITET m-5): de flesta
+  # OEM-baslinjer för leverantörssäkerhet kräver båda.
+  leverantorskedja:
+    runs-on: felsokning
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci --no-audit --no-fund
+        working-directory: felsokning/app
+      # Kända sårbarheter stoppar bygget från "high" och uppåt. Lägre
+      # nivåer rapporteras men fäller inte — annars slutar folk läsa.
+      - run: npm audit --audit-level=high
+        working-directory: felsokning/app
+      - run: npm audit
+        working-directory: felsokning/app
+        continue-on-error: true
+      # SBOM i CycloneDX, arkiverad per bygge. Utan den går det inte att
+      # svara på "påverkas vi av den här sårbarheten" utan att gissa.
+      - run: npx --yes @cyclonedx/cyclonedx-npm@latest --output-file sbom-klient.json
+        working-directory: felsokning/app
+      - run: npm install --no-audit --no-fund && npx --yes @cyclonedx/cyclonedx-npm@latest --output-file ../sbom-plattform.json
+        working-directory: felsokning/services/plattform
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ gitea.sha }}
+          path: |
+            felsokning/app/sbom-klient.json
+            felsokning/services/sbom-plattform.json
+          retention-days: 400
+
+  # M-5: en säkerhetskopia som aldrig återställts är en förhoppning.
+  # Larmet visar att backup sker, inte att den går att återställa.
+  aterstallning:
+    runs-on: felsokning
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y postgresql
+      - run: sudo bash aterstallningstest.sh
+        working-directory: felsokning/services/plattform
+
   # Bygger och publicerar till vårt eget ECR. Bara på main och bara när
   # kontrollerna ovan gått igenom.
   publicera:
-    needs: [test-och-bygg, tjanster, terraform]
+    needs: [test-och-bygg, tjanster, terraform, leverantorskedja, aterstallning]
     if: gitea.ref == 'refs/heads/main'
     runs-on: felsokning
     permissions:

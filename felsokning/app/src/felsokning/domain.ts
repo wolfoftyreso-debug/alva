@@ -96,7 +96,22 @@ export type Handelse =
   // för evidens. Kontrollen räknas som hanterad men flaggas i brief/rapport.
   | { typ: "kontroll_utford"; stegId: string; kontrollId: string; text: string; resultat?: string; undantag?: string }
   | { typ: "observation"; text: string }
-  | { typ: "matvarde"; beskrivning: string; varde: string; enhet?: string }
+  | {
+      typ: "matvarde";
+      beskrivning: string;
+      varde: string;
+      enhet?: string;
+      /**
+       * Vilket mätdon som användes. Ett mätvärde rankas som E4 — hög
+       * evidens — och utan kalibrerat instrument är det inte lägre
+       * evidens utan ingen evidens alls (QUALITY-AUDIT M-1). Fältet är
+       * valfritt i typen därför att loggen är append-only och äldre
+       * poster saknar det; evidensmotorn nedgraderar dem i stället.
+       */
+      matdonId?: string;
+      matdonBeteckning?: string;
+      matdonKalibreradTill?: string;
+    }
   | { typ: "hypotes"; text: string; niva: Exclude<Tillforlitlighet, "hog"> }
   | ({ typ: "foto"; beskrivning: string } & Bilaga)
   // Video med ljud (E3-evidens): för det som låter eller rör sig —

@@ -48,6 +48,21 @@ function demoFoto(text: string): string {
   }
 }
 
+// Mätdon i demot. Ett mätvärde är E4 bara när det går att visa vad som
+// mätte och att instrumentet var kalibrerat vid mättillfället — annars är
+// det teknikerns observation av en siffra (QUALITY-AUDIT M-1). Demot ska
+// visa den praxis produkten kräver, inte den som fanns innan.
+const DACKTRYCKSMATARE = {
+  matdonId: "demo-tryck-01",
+  matdonBeteckning: "Däcktrycksmätare PCL DPG7",
+  matdonKalibreradTill: "2027-03-31",
+};
+const BALANSMASKIN = {
+  matdonId: "demo-balans-01",
+  matdonBeteckning: "Balanseringsmaskin Hunter Road Force",
+  matdonKalibreradTill: "2027-01-15",
+};
+
 export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
   const start = Date.now() - 97 * 60000; // 1 tim 37 min sedan
   const vid = (minuter: number) => new Date(start + minuter * 60000).toISOString();
@@ -90,8 +105,8 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
     post(22, { typ: "kontroll_utford", stegId: "visuell", kontrollId: "dot", text: "Dokumentera DOT-/tillverkningsdatum", resultat: "Fram: DOT 2318, bak: DOT 2318 — samtliga från vecka 23 2018" }),
     post(26, { typ: "observation", text: "Höger framdäck visar ojämnt slitage på innerkanten" }),
     post(26, { typ: "kontroll_utford", stegId: "visuell", kontrollId: "slitage", text: "Kontrollera däckslitage", resultat: "Ojämnt slitage höger fram, övriga ok" }),
-    post(31, { typ: "matvarde", beskrivning: "Lufttryck vänster fram", varde: "2,4", enhet: "bar" }),
-    post(32, { typ: "matvarde", beskrivning: "Lufttryck höger fram", varde: "2,1", enhet: "bar" }),
+    post(31, { typ: "matvarde", beskrivning: "Lufttryck vänster fram", varde: "2,4", enhet: "bar", ...DACKTRYCKSMATARE }),
+    post(32, { typ: "matvarde", beskrivning: "Lufttryck höger fram", varde: "2,1", enhet: "bar", ...DACKTRYCKSMATARE }),
     post(33, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "lufttryck", text: "Kontrollera lufttryck", resultat: "VF 2,4 / HF 2,1 / VB 2,4 / HB 2,4 bar — justerat till 2,4 runtom" }),
     post(38, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "hjulmoment", text: "Kontrollera hjulmoment", resultat: "140 Nm samtliga hjul, ok" }),
     post(40, { typ: "hypotes", text: "Obalans eller kast i höger framhjul", niva: "lag" }),
@@ -102,7 +117,7 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
     post(58, { typ: "kontroll_utford", stegId: "provkorning", kontrollId: "pk_var", text: "Om vibration känns i ratt eller kaross", resultat: "Endast i ratten" }),
     post(60, { typ: "kategori_byte", kategori: "aktiv_felsokning" }),
     post(75, { typ: "inaktivitet_forklarad", text: "Lyfte bilen och demonterade höger framhjul för kontroll i balanseringsmaskin.", minuter: 15 }),
-    post(82, { typ: "matvarde", beskrivning: "Obalans höger framhjul", varde: "38", enhet: "g" }),
+    post(82, { typ: "matvarde", beskrivning: "Obalans höger framhjul", varde: "38", enhet: "g", ...BALANSMASKIN }),
     post(83, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "balansering", text: "Kontrollera hjulbalansering", resultat: "38 g obalans höger fram — en balansvikt saknas. Övriga hjul inom 5 g." }),
     post(85, { typ: "observation", text: "Spår efter lossnad klistervikt på höger framfälgs insida" }),
     post(85, {
