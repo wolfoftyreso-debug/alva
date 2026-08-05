@@ -1257,11 +1257,17 @@ function GuideFlik({
   // Underlaget: det som gör att en slutsats över huvud taget går att
   // motivera. Innan detta är på plats vore varför-frågan en begäran om
   // en gissning.
+  //
+  // Kundbeskedet hör till kedjan när arbete faktiskt utförts. Grinden på
+  // servern har alltid krävt det; klienten gjorde det inte, med följden
+  // att ett ärende gick att stänga på skärmen och nekas först vid synk.
+  // Samma sorts glapp som slutsatsen hade — hittat genom att köra tio
+  // ärenden hela vägen och jämföra mot grinden.
   const underlagKlart =
     !!reproducering(arende) &&
     felorsaker(arende).length > 0 &&
     atgardsposter.length > 0 &&
-    (!utfordAtgard || !!kvalitetskontroll(arende));
+    (!utfordAtgard || (!!kvalitetskontroll(arende) && !!kundbeslut(arende)));
 
   // ALVA-RULE-200. Samma granskning som kvalitetsgrinden på servern kör
   // — avsiktligt samma funktion, inte en klientkopia av regeln. En
@@ -1443,7 +1449,8 @@ function Avslutshinder({ underlagKlart, brister }: { underlagKlart: boolean; bri
       {!underlagKlart && (
         <p className="mb-2 text-[13px] leading-[20px] text-[#333333]">
           Underlaget är ofullständigt: avslut kräver symptomverifiering, felorsaksanalys, dokumenterad åtgärd och —
-          vid utförd åtgärd — kvalitetskontroll av att symptomet är borta. Se panelerna nedan.
+          vid utförd åtgärd — kvalitetskontroll av att symptomet är borta samt kundens besked på åtgärdsförslaget.
+          Se panelerna nedan.
         </p>
       )}
       {brister.length > 0 && (

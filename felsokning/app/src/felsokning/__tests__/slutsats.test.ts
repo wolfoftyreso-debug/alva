@@ -9,6 +9,7 @@
 // inte blivit slutsatsen måste bemötas. Utan den är en felsökning en
 // gissning som råkade stämma — och det är precis den skillnaden en
 // försäkringsbedömare försöker avgöra.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   MINSTA_MOTIVERING,
@@ -223,5 +224,54 @@ describe("avslutsvillkoret är detsamma i klienten och i grinden", () => {
     const logg = [...ARBETE, { typ: "hypotes", text: "Misstänkt glapp i hjullagret höger fram", niva: "medel" }, GILTIG];
     expect(klientBrister(logg).length).toBeGreaterThan(0);
     expect(await slutsatsHinder(logg)).not.toHaveLength(0);
+  });
+});
+
+// ---- Hela avslutskedjan, inte bara slutsatsen ---------------------------
+//
+// Hittat genom att köra tio ärenden av olika karaktär hela vägen genom
+// gränssnittet: samtliga gick att stänga på skärmen med utfört arbete och
+// utan kundbesked — men grinden på servern kräver beskedet. Samma glapp
+// som slutsatsen hade, på ett annat villkor.
+//
+// Testet speglar klientens kanAvslutas mot grinden för hela kedjan, så
+// att nästa villkor som läggs till i grinden inte kan glömmas i klienten.
+describe("klientens avslutsvillkor täcker hela grindens åtgärdskedja", () => {
+  const KEDJA = [
+    { typ: "reproducering", status: "ja", beskrivning: "Reproducerad vid provkörning i 90 km/h på plan väg." },
+    {
+      typ: "felorsak",
+      avvikelse: "Höger framhjul har 38 g obalans mot gränsen 10 g.",
+      orsaker: ["Normalt slitage"],
+      underlag: ["Mätresultat"],
+      sakerhet: "hog",
+      atgard: "Balansera om höger framhjul.",
+    },
+    { typ: "atgard_utford", beskrivning: "Balanserade om höger framhjul.", utford: true },
+    { typ: "kvalitetskontroll", resultat: "symptomet_borta", beskrivning: "Ny provkörning — ingen vibration." },
+  ];
+
+  const gateHinder = async (handelser: unknown[]) => {
+    const { grinda } = await import("../../../../services/gemensam/grind.mjs");
+    const { ALLA_METODIKER } = await import("../../../../services/gemensam/metodiker.mjs");
+    return grinda(handelser, ALLA_METODIKER.at(-1)).map((h) => h.id);
+  };
+
+  it("utfört arbete utan kundbesked spärras av grinden", async () => {
+    expect(await gateHinder(KEDJA)).toContain("kundbeslut");
+  });
+
+  it("med kundbesked försvinner det hindret", async () => {
+    const med = [...KEDJA, { typ: "kundbeslut", beslut: "godkant", kanal: "telefon" }];
+    expect(await gateHinder(med)).not.toContain("kundbeslut");
+  });
+
+  it("klienten kräver samma sak — kundbeslut ingår i underlagKlart", () => {
+    const kod = readFileSync("src/pages/felsokning/ArendeSida.tsx", "utf8");
+    const rad = kod.match(/const underlagKlart =[\s\S]*?;/)?.[0] ?? "";
+    expect(rad).toContain("reproducering(arende)");
+    expect(rad).toContain("felorsaker(arende)");
+    expect(rad).toContain("kvalitetskontroll(arende)");
+    expect(rad).toContain("kundbeslut(arende)");
   });
 });
