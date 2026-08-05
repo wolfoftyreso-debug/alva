@@ -146,21 +146,60 @@ export interface NastaSteg {
   fraga?: Fraga;
   kontroll?: Kontroll;
   klart: boolean;
+  /**
+   * Satt när metodiken är stoppad av en säkerhetsspärr. Metodiken går
+   * inte vidare förrän förutsättningen är uppfylld — svaret är inte ett
+   * varningsmeddelande utan ett hinder.
+   */
+  sparr?: { orsak: string; atgard: string };
 }
+
+/**
+ * Frågor som måste besvaras jakande innan arbetet får fortsätta.
+ *
+ * Revisionen (docs/QUALITY-AUDIT.md, M-2) fann att högvoltssteget gick
+ * att svara nej på och ändå fortsätta: `nastaSteg` gick vidare oavsett
+ * svar. En tekniker som ärligt uppgav sig sakna behörighet leddes alltså
+ * in i nästa steg av en procedur som kan döda.
+ *
+ * Regeln bor i data, inte i en if-sats i vyn, så att den gäller överallt
+ * där metodiken körs — och så att nästa farliga metodik bara behöver en
+ * rad här.
+ */
+export const SPARRFRAGOR: Record<string, { orsak: string; atgard: string }> = {
+  "hogvolt/sakerhet/behorighet": {
+    orsak: "Arbete på högvoltsystem kräver dokumenterad behörighet.",
+    atgard: "Lämna över ärendet till en behörig tekniker. Arbetet får inte påbörjas utan behörighet.",
+  },
+  "hogvolt/sakerhet/avstangt": {
+    orsak: "Fordonet är inte spänningslöst enligt tillverkarens rutin.",
+    atgard: "Gör fordonet spänningslöst enligt tillverkarens anvisning innan något ingrepp påbörjas.",
+  },
+};
 
 // Nästa steg = första obesvarade frågan, därefter första ej utförda kontrollen,
 // i metodikens ordning. Helt härlett ur händelseloggen.
 export function nastaSteg(arende: Arende, metodik: Metodik): NastaSteg {
   const besvarade = new Set<string>();
+  const svar = new Map<string, string>();
   const utforda = new Set<string>();
   for (const post of arende.handelser) {
     const h = post.handelse;
-    if (h.typ === "fraga_besvarad") besvarade.add(`${h.stegId}/${h.frageId}`);
+    if (h.typ === "fraga_besvarad") {
+      besvarade.add(`${h.stegId}/${h.frageId}`);
+      svar.set(`${h.stegId}/${h.frageId}`, h.svar);
+    }
     if (h.typ === "kontroll_utford") utforda.add(`${h.stegId}/${h.kontrollId}`);
   }
   for (const steg of metodik.steg) {
     for (const fraga of steg.fragor ?? []) {
       if (!besvarade.has(`${steg.id}/${fraga.id}`)) return { steg, fraga, klart: false };
+      // Säkerhetsspärr: ett nekande svar stoppar metodiken här i stället
+      // för att räknas som besvarat och släppa fram nästa steg.
+      const sparr = SPARRFRAGOR[`${metodik.id}/${steg.id}/${fraga.id}`];
+      if (sparr && svar.get(`${steg.id}/${fraga.id}`) !== "Ja") {
+        return { steg, fraga, klart: false, sparr };
+      }
     }
     for (const kontroll of steg.kontroller ?? []) {
       if (!utforda.has(`${steg.id}/${kontroll.id}`)) return { steg, kontroll, klart: false };

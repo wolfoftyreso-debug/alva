@@ -27,6 +27,9 @@ import { dirname, join } from "node:path";
 import pg from "pg";
 import { innehallsHash, mediatypGiltig, valjLager } from "./bilagor.mjs";
 import { avsluta, logga, mätvärde, spårFrån, starta, traceparent } from "./observation.mjs";
+import { tillPost } from "./handelser.mjs";
+import { grinda, grindaArendetyp } from "./grind.mjs";
+import { ALLA_METODIKER } from "./metodiker.mjs";
 
 // API-first: OpenAPI-specen är en versionerad artefakt och serveras live.
 const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "openapi.yaml"), "utf8");
@@ -296,10 +299,46 @@ async function lasBinart(req, tak) {
   return Buffer.concat(bitar);
 }
 
-function nyKod() {
+// Delningskod. Förkastningsurval i stället för modulo: 256 är inte jämnt
+// delbart med 36, så `b % 36` gör de fyra första tecknen ~14 % vanligare.
+// Entropiförlusten är liten, men en snedfördelad kod i en säkerhetsväg är
+// inte något man vill behöva förklara i en granskning (QUALITET m-1).
+function nyKod(langd = 16) {
   const tecken = "abcdefghijklmnopqrstuvwxyz0123456789";
-  const { randomBytes } = crypto;
-  return Array.from(randomBytes(16), (b) => tecken[b % 36]).join("");
+  const tak = 256 - (256 % tecken.length); // 252 — värden däröver kastas
+  const ut = [];
+  while (ut.length < langd) {
+    for (const b of crypto.randomBytes(langd)) {
+      if (b < tak && ut.length < langd) ut.push(tecken[b % tecken.length]);
+    }
+  }
+  return ut.join("");
+}
+
+/**
+ * Avslutsspärren. Läser hela loggen ur databasen, lägger de inkommande
+ * händelserna ovanpå och utvärderar grinden mot det samlade underlaget —
+ * annars skulle ett avslut i samma anrop som evidensen felaktigt nekas.
+ */
+async function grindHinder(pool, arendeId, nya) {
+  const rader = await pool.query(
+    `select h.handelse, a.metodik_id from felsokning_handelser h
+     join felsokning_arenden a on a.id = h.arende_id
+     where h.arende_id = $1 order by h.tidpunkt, h.id`,
+    [arendeId],
+  );
+  const handelser = [...rader.rows.map((r) => r.handelse), ...nya.map((p) => p.handelse)];
+  const metodik =
+    ALLA_METODIKER.find((m) => m.id === rader.rows[0]?.metodik_id) ?? ALLA_METODIKER.at(-1);
+
+  let regelpaket;
+  try {
+    regelpaket = JSON.parse(ECM_REGLER);
+  } catch {
+    // Ett trasigt regelpaket får aldrig tolkas som "inga extra krav".
+    return [{ id: "regelpaket", rubrik: "Regelpaketet gick inte att läsa — avslut spärrat." }];
+  }
+  return [...grinda(handelser, metodik), ...grindaArendetyp(handelser, regelpaket)];
 }
 
 function kravAuth(req, hemlighet) {
@@ -1172,17 +1211,41 @@ export function skapaServer() {
             return svara(res, 400, { error: "Ogiltig händelselista." });
           }
           res.spann.spår.antalHandelser = handelser.length;
+
+          // Härkomst och form avgörs här, inte av anroparen. Se
+          // services/gemensam/handelser.mjs och QUALITET C-1/M-3.
+          const attSkriva = [];
           for (const post of handelser) {
-            if (typeof post?.id !== "string" || !post.tidpunkt || typeof post.anvandare !== "string" || !post.handelse) {
-              return svara(res, 400, { error: "Ogiltig händelse." });
+            const { post: giltig, fel } = tillPost(post, anspr);
+            if (fel) return svara(res, 400, { error: `Ogiltig händelse: ${fel}` });
+            attSkriva.push(giltig);
+          }
+
+          // Avslut passerar kvalitetsgrinden på servern. Grinden fanns
+          // tidigare bara i webbläsaren, vilket gjorde hela ECM till ett
+          // råd i stället för en spärr (QUALITET C-2).
+          if (attSkriva.some((p) => p.handelse.typ === "arende_avslutat")) {
+            const hinder = await grindHinder(pool, handelserVag[1], attSkriva);
+            if (hinder.length > 0) {
+              return svara(res, 409, {
+                error: "Ärendet kan inte avslutas — kvalitetsgrinden är inte passerad.",
+                hinder,
+              });
             }
+          }
+
+          for (const p of attSkriva) {
             // Append-only: on conflict do nothing — en befintlig händelse
             // skrivs aldrig över, och databastriggern stoppar allt annat.
-            await pool.query(
+            // Kollisionen räknas: ett id som redan finns är antingen en
+            // ofarlig omsändning eller ett försök att blockera en framtida
+            // post, och skillnaden syns bara om den mäts (QUALITET m-2).
+            const skrivet = await pool.query(
               `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
                values ($1, $2, $3, $4, $5) on conflict (id) do nothing`,
-              [post.id, handelserVag[1], post.tidpunkt, post.anvandare, post.handelse],
+              [p.id, handelserVag[1], p.tidpunkt, p.anvandare, p.handelse],
             );
+            if (skrivet.rowCount === 0) res.spann.spår.kollisioner = (res.spann.spår.kollisioner ?? 0) + 1;
           }
           return svara(res, 200, { ok: true });
         }

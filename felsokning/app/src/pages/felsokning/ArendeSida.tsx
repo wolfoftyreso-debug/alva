@@ -1295,6 +1295,19 @@ function GuideFlik({
               </p>
             )}
           </>
+        ) : steg.sparr ? (
+          // Säkerhetsspärr. Metodiken går inte vidare — svaret är ett
+          // hinder, inte en varning. Enda vägen framåt är att ändra
+          // förutsättningen, inte att klicka förbi.
+          <div className="border-2 border-[#B42318] bg-[#FEF3F2] p-4">
+            <p className="mb-2 text-[15px] font-semibold text-[#B42318]">Arbetet får inte fortsätta</p>
+            <p className="mb-2 text-[#333333]">{steg.sparr.orsak}</p>
+            <p className="mb-3 font-semibold text-[#333333]">{steg.sparr.atgard}</p>
+            <p className="text-[12px] text-[#666666]">
+              Svaret är dokumenterat i loggen. Metodiken öppnas när förutsättningen är uppfylld och frågan besvaras
+              jakande.
+            </p>
+          </div>
         ) : steg.fraga ? (
           <FrageKort key={`${steg.steg.id}/${steg.fraga.id}`} steg={steg} skicka={skicka} />
         ) : steg.kontroll ? (
