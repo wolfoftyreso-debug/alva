@@ -266,13 +266,31 @@ describe("klientens avslutsvillkor täcker hela grindens åtgärdskedja", () => 
     expect(await gateHinder(med)).not.toContain("kundbeslut");
   });
 
-  it("klienten kräver samma sak — kundbeslut ingår i underlagKlart", () => {
+  // QUALITY-AUDIT-2 · M-7. Testet krävde tidigare att klienten räknade
+  // upp grindens villkor. Det var fel sorts skydd: det låser bara fast
+  // de villkor någon råkade tänka på, och nästa villkor som läggs till i
+  // grinden glider isär precis som de två föregående gjorde.
+  //
+  // Nu krävs i stället att klienten inte har någon egen mening. Ett
+  // uttryck kan inte glida från sig självt.
+  it("klienten frågar grinden i stället för att upprepa den", () => {
     const kod = readFileSync("src/pages/felsokning/ArendeSida.tsx", "utf8");
-    const rad = kod.match(/const underlagKlart =[\s\S]*?;/)?.[0] ?? "";
-    expect(rad).toContain("reproducering(arende)");
-    expect(rad).toContain("felorsaker(arende)");
-    expect(rad).toContain("kvalitetskontroll(arende)");
-    expect(rad).toContain("kundbeslut(arende)");
+    expect(kod).toContain('from "../../../../services/gemensam/grind.mjs"');
+
+    const rad = kod.match(/const kanAvslutas =[\s\S]{0,200}?;/)?.[0] ?? "";
+    expect(rad).toContain("hinder.length === 0");
+
+    // Ingen egen uppräkning av grindens villkor får finnas kvar.
+    const uppraknat = kod.match(/const underlagKlart =[\s\S]{0,300}?;/)?.[0] ?? "";
+    for (const villkor of ["reproducering(arende)", "felorsaker(arende)", "kvalitetskontroll(arende)", "kundbeslut(arende)"]) {
+      expect(uppraknat, `klienten upprepar grindens villkor: ${villkor}`).not.toContain(villkor);
+    }
+  });
+
+  it("hindren som visas är grindens egna, med id och rubrik", () => {
+    const kod = readFileSync("src/pages/felsokning/ArendeSida.tsx", "utf8");
+    expect(kod).toMatch(/function Avslutshinder\(\{ hinder \}/);
+    expect(kod).toContain("h.rubrik");
   });
 });
 

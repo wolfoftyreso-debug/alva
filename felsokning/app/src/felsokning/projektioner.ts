@@ -155,11 +155,25 @@ export function ejKontrollerat(arende: Arende, metodik: Metodik): string[] {
 }
 
 export function observationer(arende: Arende): string[] {
+  // En kontroll vars krav är ett mätvärde loggar både mätvärdet och
+  // kontrollen, så att mätningen finns som mätevidens. Rapporten ska
+  // ändå bara redovisa värdet en gång: kontrollen bär det redan under
+  // Utförda kontroller (QUALITY-AUDIT-2 · m-10).
+  const iKontroll = new Set(
+    arende.handelser
+      .map((p) => p.handelse)
+      .filter((h) => h.typ === "kontroll_utford" && h.resultat)
+      .map((h) => (h as { text: string; resultat: string }).text + " " + (h as { resultat: string }).resultat),
+  );
+
   const resultat: string[] = [];
   for (const post of arende.handelser) {
     const h = post.handelse;
     if (h.typ === "observation") resultat.push(h.text);
-    if (h.typ === "matvarde") resultat.push(`${h.beskrivning}: ${h.varde}${h.enhet ? ` ${h.enhet}` : ""}`);
+    if (h.typ === "matvarde") {
+      if (iKontroll.has(h.beskrivning + " " + h.varde)) continue;
+      resultat.push(`${h.beskrivning}: ${h.varde}${h.enhet ? ` ${h.enhet}` : ""}`);
+    }
   }
   return resultat;
 }

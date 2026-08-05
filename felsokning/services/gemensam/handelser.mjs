@@ -67,6 +67,54 @@ export const HÄNDELSESCHEMA = {
   arende_avslutat: {},
 };
 
+// ---- Valfria fält (QUALITY-AUDIT-2 · C-5) ------------------------------
+//
+// Schemat kontrollerade tidigare bara att de OBLIGATORISKA fälten fanns.
+// Det itererade schemats nycklar, aldrig händelsens, så vilket okänt fält
+// som helst passerade och sparades ordagrant.
+//
+// Två garantier vilade på motsatsen. Krypto-shreddingen skyddar en fast
+// lista av fältNAMN: ett registreringsnummer på en vanlig observation
+// kom aldrig in på listan, krypterades aldrig, och överlevde därför att
+// nyckeln förstördes — medan raderingskvittot ändå sa att subjektet var
+// raderat. Och delningsfiltret arbetar på typnivå, inte fältnivå, så
+// samma fält gick ut i kundens delningslänk.
+//
+// Därför är listan nedan uttömmande och avvisningen hård. Ett fält som
+// inte står här eller bland de obligatoriska finns inte, och en anropare
+// som tror sig ha sparat något får aldrig veta att det gick bra.
+export const VALFRIA_FÄLT = {
+  // Bilagefälten ärvs via intersektion med Bilaga i domänmodellen.
+  arbetsorder_skannad: ["bilagaId", "bilagaHash", "dataUrl"],
+  foto: ["bilagaId", "bilagaHash", "dataUrl"],
+  video: ["bilagaId", "bilagaHash", "dataUrl"],
+  matarstallning: ["undantag", "bilagaId", "bilagaHash", "dataUrl"],
+
+  kontroll_utford: ["resultat", "undantag"],
+  // `kalla` bär härkomsten för värden som kommit in via ett
+  // diagnosprotokoll (ALVA-SPEC-020). Fältet måste vara deklarerat:
+  // integrationen fungerade tidigare bara därför att schemat var öppet.
+  observation: ["kalla"],
+  matvarde: ["enhet", "matdonId", "matdonBeteckning", "matdonKalibreradTill", "kalla"],
+  overlamning: ["till"],
+  historik_kontrollerad: ["kommentar"],
+  felorsak: ["motivering", "ytterligareKontroller"],
+  atgardsforslag: ["uppskattadKostnad", "uppskattadTid"],
+  kundbeslut: ["kommentar", "kontaktperson"],
+  atgard_utford: ["delar", "motivering"],
+  slutsats: ["atgardsval", "orsakFastställd"],
+  arende_avslutat: ["signatur"],
+};
+
+/**
+ * Fält som systemet självt sätter efter valideringen.
+ *
+ * `anvandarId` skrivs av tillPost ur den verifierade token, och
+ * `registrerad_tidpunkt` bevarar klientens klocka vid offline-arbete.
+ * Bägge måste passera när en redan skriven händelse valideras om.
+ */
+export const SYSTEMFÄLT = ["typ", "anvandarId", "registrerad_tidpunkt"];
+
 // Hypotesen får aldrig anta hög tillförlitlighet — samma regel som
 // typsystemet upprätthåller i klienten, upprepad här därför att servern inte
 // kan lita på att klienten är vår.
@@ -100,6 +148,19 @@ export function granskaHändelse(handelse) {
   for (const [nyckel, regel] of Object.entries(schema)) {
     const fel = fältFel(handelse.typ, nyckel, regel, handelse[nyckel]);
     if (fel) return fel;
+  }
+
+  // C-5: schemat är stängt. Allt som inte är deklarerat avvisas — annars
+  // kan personuppgifter hängas på en vanlig händelse, undgå krypteringen
+  // och följa med ut i delningslänken.
+  const tillåtna = new Set([
+    ...SYSTEMFÄLT,
+    ...Object.keys(schema),
+    ...(VALFRIA_FÄLT[handelse.typ] ?? []),
+  ]);
+  const okända = Object.keys(handelse).filter((n) => !tillåtna.has(n));
+  if (okända.length > 0) {
+    return `${handelse.typ}: okända fält avvisas (${okända.join(", ")})`;
   }
   return null;
 }

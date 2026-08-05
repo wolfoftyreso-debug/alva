@@ -8,7 +8,7 @@ import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
 import { Fasrad } from "@/alva/komponenter";
 import { Slutsatspanel } from "@/felsokning/Slutsats";
 import { sammanfatta } from "../../../../services/gemensam/sammanfattning.mjs";
-import { granskaSlutsats } from "../../../../services/gemensam/motivering.mjs";
+import { grinda } from "../../../../services/gemensam/grind.mjs";
 import { arendebeteckning, fasDefinition } from "@/alva/system";
 import {
   arAvslutat,
@@ -1255,36 +1255,31 @@ function GuideFlik({
 
   const senasteAiSvar = [...arende.handelser].reverse().find((p) => p.handelse.typ === "ai_svar");
 
-  // Avslut kräver hela kedjan: symptomverifiering, felorsaksanalys,
-  // dokumenterad åtgärd (eller motiverat uteblivande) och — när en
-  // åtgärd faktiskt utförts — kvalitetskontroll av att symptomet är borta.
-  const atgardsposter = atgarder(arende);
-  const utfordAtgard = atgardsposter.some((p) => p.handelse.typ === "atgard_utford" && p.handelse.utford);
-
-  // Underlaget: det som gör att en slutsats över huvud taget går att
-  // motivera. Innan detta är på plats vore varför-frågan en begäran om
-  // en gissning.
+  // QUALITY-AUDIT-2 · M-7. Klienten upprepar inte längre grindens regel.
   //
-  // Kundbeskedet hör till kedjan när arbete faktiskt utförts. Grinden på
-  // servern har alltid krävt det; klienten gjorde det inte, med följden
-  // att ett ärende gick att stänga på skärmen och nekas först vid synk.
-  // Samma sorts glapp som slutsatsen hade — hittat genom att köra tio
-  // ärenden hela vägen och jämföra mot grinden.
-  const underlagKlart =
-    !!reproducering(arende) &&
-    felorsaker(arende).length > 0 &&
-    atgardsposter.length > 0 &&
-    (!utfordAtgard || (!!kvalitetskontroll(arende) && !!kundbeslut(arende)));
-
-  // ALVA-RULE-200. Samma granskning som kvalitetsgrinden på servern kör
-  // — avsiktligt samma funktion, inte en klientkopia av regeln. En
-  // tekniker ska aldrig få veta vid synk att ärendet inte gick att
-  // stänga; hindret ska synas på skärmen där arbetet utförs.
-  const slutsatsbrister = granskaSlutsats(
-    [...arende.handelser].reverse().find((p) => p.handelse.typ === "slutsats")?.handelse,
+  // Den gjorde det tidigare, för att kunna gråa ut avslutsknappen, och
+  // villkoret gled isär från grinden två gånger: först saknades kravet på
+  // en slutsats, sedan kravet på kundens besked. Ingen av gångerna
+  // fångades av testerna — bägge hittades av att köra tio ärenden hela
+  // vägen. Två självständiga uttryck för en regel glider alltid; frågan
+  // är bara när det upptäcks.
+  //
+  // Nu ställs frågan till grinden själv, med den lokala loggen. Samma
+  // funktion som servern kör, så svaret kan inte skilja sig. Att den
+  // därmed blir strängare är avsikten: det servern skulle neka ska synas
+  // på skärmen där arbetet utförs, inte vid synk när bilen har åkt.
+  const hinder = grinda(
     arende.handelser.map((p) => p.handelse),
-  );
-  const kanAvslutas = underlagKlart && slutsatsbrister.length === 0;
+    metodik,
+  ) as { id: string; rubrik: string; detalj?: string }[];
+
+  const kanAvslutas = hinder.length === 0;
+
+  // Slutsatspanelen visas när underlaget är helt — alltså när det enda
+  // som återstår är varför-frågan. Att fråga tidigare vore att be om en
+  // gissning; att fråga först vid knappen vore att neka någon som redan
+  // är klar.
+  const underlagKlart = hinder.every((h) => h.id.startsWith("slutsats_"));
 
   if (avslutat) {
     return (
@@ -1350,7 +1345,7 @@ function GuideFlik({
             <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare })}>
               Avsluta felsökning
             </StorKnapp>
-            {!kanAvslutas && <Avslutshinder underlagKlart={underlagKlart} brister={slutsatsbrister} />}
+            {!kanAvslutas && <Avslutshinder hinder={hinder} />}
           </>
         ) : steg.sparr ? (
           // Säkerhetsspärr. Metodiken går inte vidare — svaret är ett
@@ -1423,7 +1418,7 @@ function GuideFlik({
         </Panel>
       )}
 
-      {!kanAvslutas && <Avslutshinder underlagKlart={underlagKlart} brister={slutsatsbrister} />}
+      {!kanAvslutas && <Avslutshinder hinder={hinder} />}
       <div className="grid grid-cols-2 gap-2">
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
           Lämna över arbete
@@ -1443,30 +1438,25 @@ function GuideFlik({
 /**
  * Varför avslut är spärrat — i klartext, på skärmen, medan arbetet pågår.
  *
- * Ett hinder som bara säger "kraven är inte uppfyllda" tvingar teknikern
- * att leta. Här står vad som fattas, i den ordning det behöver åtgärdas:
- * först underlaget, sedan varför-frågan.
+ * Listan är grindens egen. Det är hela poängen: teknikern läser exakt de
+ * hinder som servern skulle svara med, vid den tidpunkt då de fortfarande
+ * går att åtgärda. Ett hinder som bara säger "kraven är inte uppfyllda"
+ * tvingar teknikern att leta.
  */
-function Avslutshinder({ underlagKlart, brister }: { underlagKlart: boolean; brister: { falt: string; text: string }[] }) {
+function Avslutshinder({ hinder }: { hinder: { id: string; rubrik: string; detalj?: string }[] }) {
   return (
     <div className="mb-2 border-l-2 border-[#9A6700] bg-[#FFFBF0] px-4 py-4">
       <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#9A6700]">
         Ärendet kan inte avslutas ännu
       </p>
-      {!underlagKlart && (
-        <p className="mb-2 text-[13px] leading-[20px] text-[#333333]">
-          Underlaget är ofullständigt: avslut kräver symptomverifiering, felorsaksanalys, dokumenterad åtgärd och —
-          vid utförd åtgärd — kvalitetskontroll av att symptomet är borta samt kundens besked på åtgärdsförslaget.
-          Se panelerna nedan.
-        </p>
-      )}
-      {brister.length > 0 && (
-        <ul className="ml-4 list-disc text-[13px] leading-[20px] text-[#333333]">
-          {brister.map((b) => (
-            <li key={b.falt}>{b.text}</li>
-          ))}
-        </ul>
-      )}
+      <ul className="ml-4 list-disc text-[13px] leading-[20px] text-[#333333]">
+        {hinder.map((h) => (
+          <li key={h.id}>
+            {h.rubrik}
+            {h.detalj && <span className="text-[#4A5560]"> — {h.detalj}</span>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

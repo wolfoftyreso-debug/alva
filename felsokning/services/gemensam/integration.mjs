@@ -151,7 +151,15 @@ export function verifieraLeverans(kropp, huvud, hemlighet, hmac, timingSafeEqual
  */
 export function protokollTillHandelser(protokoll, profil, kalla) {
   const ut = [];
-  const plocka = (objekt, vag) => String(vag ?? "").split(".").reduce((o, n) => o?.[n], objekt);
+  // Vägen kommer från leverantörsprofilen, alltså utifrån. Uppslaget
+  // begränsas till egna, uppräkningsbara egenskaper: annars når en
+  // profil med `__proto__` eller `constructor.prototype` fram till
+  // prototypkedjan. Läsningen är visserligen ofarlig i sig, men en
+  // extern indata ska inte ha den friheten (QUALITY-AUDIT-2 · m-8).
+  const plocka = (objekt, vag) =>
+    String(vag ?? "")
+      .split(".")
+      .reduce((o, n) => (o !== null && typeof o === "object" && Object.hasOwn(o, n) ? o[n] : undefined), objekt);
 
   for (const kod of plocka(protokoll, profil?.felkoder?.vag) ?? []) {
     ut.push({

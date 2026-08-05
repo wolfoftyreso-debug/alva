@@ -163,6 +163,14 @@ export type Handelse =
       beslut: "godkant" | "avbojt" | "delvis";
       kanal: string;
       kommentar?: string;
+      /**
+       * Vem hos kunden som lämnade beskedet. Personuppgift: krypteras per
+       * ärendenyckel och försvinner vid radering (IDENTIFIERANDE i
+       * services/gemensam/personuppgifter.mjs). Fältet stod tidigare i
+       * krypteringslistan utan att finnas i modellen — nu stämmer
+       * modellen, schemat och krypteringen överens.
+       */
+      kontaktperson?: string;
     }
   // Åtgärdsfasen: vad som faktiskt gjordes — eller varför ingen åtgärd
   // utfördes (kunden avböjde, väntar på delar …). Kopplas till den

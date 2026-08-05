@@ -1406,12 +1406,32 @@ export function skapaServer() {
           if (!Array.isArray(handelser) || handelser.some((h) => !(h in UTGAENDE))) {
             return svara(res, 400, { error: "handelser måste vara kända händelsetyper.", kanda: Object.keys(UTGAENDE) });
           }
+          // QUALITY-AUDIT-2 · M-9. Servern genererade tidigare en
+          // hemlighet, krypterade den, sparade den — och lämnade bara
+          // ut id:t. Den gick därefter inte att nå: GET väljer avsiktligt
+          // inte kolumnen. Mottagaren kunde alltså aldrig verifiera
+          // signaturen, och enda utvägen var att sluta kontrollera den —
+          // vilket gör en signerad kanal osignerad, alltså raka motsatsen
+          // till kontrollens syfte.
+          //
+          // Den genererade hemligheten lämnas nu ut en gång, vid
+          // skapandet, med besked om att den inte visas igen.
+          const egen = typeof hemlighet === "string" && hemlighet.length >= 16;
+          const nyHemlighet = egen ? hemlighet : nyKod(32);
           const rad = await pool.query(
             `insert into prenumerationer (organisation_id, namn, url, hemlighet_krypt, handelser)
              values ($1, $2, $3, $4, $5) returning id`,
-            [anspr.org, namn.trim(), url, kryptera(String(hemlighet ?? nyKod(32))), handelser],
+            [anspr.org, namn.trim(), url, kryptera(nyHemlighet), handelser],
           );
-          return svara(res, 200, { id: rad.rows[0].id });
+          return svara(res, 200, {
+            id: rad.rows[0].id,
+            ...(egen
+              ? {}
+              : {
+                  hemlighet: nyHemlighet,
+                  anmarkning: "Hemligheten visas bara nu. Spara den i mottagarsystemet innan svaret stängs.",
+                }),
+          });
         }
       }
 
@@ -1463,23 +1483,75 @@ export function skapaServer() {
             atgard: "Kontrollera att profilens sökvägar matchar leverantörens format.",
           });
         }
+        // QUALITY-AUDIT-2 · M-8. Tre fel på samma väg, alla med samma
+        // följd: evidens försvann utan att någon fick veta det.
+        //
+        //   Tyst validering   `if (fel) continue` slängde händelsen och
+        //                     rapporterade en siffra. Ett instrument som
+        //                     laddade upp tolv avläsningar och fick fem
+        //                     avvisade fick 200 OK och kunde inte ta reda
+        //                     på vilka fem eller varför.
+        //
+        //   Id-krock          `prot-${Date.now()}-${i}` är unikt bara
+        //                     inom ett anrop i en millisekund. Två
+        //                     samtidiga uppladdningar gav samma id och
+        //                     `on conflict do nothing` slukade den andra
+        //                     — medan räknaren ändå räknade den.
+        //
+        //   Ingen transaktion Ett fel vid rad 8 av 12 lämnade åtta rader
+        //                     skrivna och ärendet med ett halvinläst
+        //                     protokoll utan markering.
+        //
+        // Id:t härleds nu ur innehållet, vilket också gör en omtagning
+        // av samma protokoll idempotent i stället för dubblerande.
         const nyckel = await personnyckel(anspr.org, protokollVag[1]);
-        let skrivna = 0;
+        const avvisade = [];
+        const poster = [];
         for (const [i, h] of handelser.entries()) {
-          const { post, fel } = tillPost(
-            { id: `prot-${Date.now()}-${i}`, handelse: h },
-            anspr,
-          );
-          if (fel) continue;
+          const avtryck = crypto
+            .createHash("sha256")
+            .update(`${protokollVag[1]} ${kalla.trim()} ${i} ${JSON.stringify(h)}`)
+            .digest("hex")
+            .slice(0, 32);
+          const { post, fel } = tillPost({ id: `prot-${avtryck}`, handelse: h }, anspr);
+          if (fel) {
+            avvisade.push({ index: i, typ: h.typ, orsak: fel });
+            continue;
+          }
           post.handelse = skyddaHändelse(post.handelse, nyckel.id, nyckel.nyckel);
-          await pool.query(
-            `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
-             values ($1, $2, $3, $4, $5) on conflict (id) do nothing`,
-            [post.id, protokollVag[1], post.tidpunkt, post.anvandare, post.handelse],
-          );
-          skrivna += 1;
+          poster.push(post);
         }
-        return svara(res, 200, { handelser: skrivna, kalla });
+
+        const klientDb = await pool.connect();
+        let skrivna = 0;
+        let dubbletter = 0;
+        try {
+          await klientDb.query("begin");
+          for (const post of poster) {
+            const r = await klientDb.query(
+              `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
+               values ($1, $2, $3, $4, $5) on conflict (id) do nothing`,
+              [post.id, protokollVag[1], post.tidpunkt, post.anvandare, post.handelse],
+            );
+            if (r.rowCount === 0) dubbletter += 1;
+            else skrivna += 1;
+          }
+          await klientDb.query("commit");
+        } catch (fel) {
+          await klientDb.query("rollback");
+          throw fel;
+        } finally {
+          klientDb.release();
+        }
+
+        // Delvis lyckad inläsning är inte 200. Mottagaren ska behöva
+        // hantera att något inte kom in.
+        return svara(res, avvisade.length > 0 ? 207 : 200, {
+          kalla,
+          skrivna,
+          dubbletter,
+          avvisade,
+        });
       }
 
       // ---- Radering (dataskyddsförordningen art. 17) ------------------

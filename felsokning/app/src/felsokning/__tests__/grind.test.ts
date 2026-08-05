@@ -284,3 +284,169 @@ describe("metodikernas mätkontroller producerar mätevidens", () => {
     expect(underlagFinns(arende, "Mätresultat")).toBe(true);
   });
 });
+
+// ---- C-5 · Schemat är stängt --------------------------------------------
+//
+// Revision 2 fann att granskaHändelse itererade schemats nycklar och
+// aldrig händelsens. Följden: vilket okänt fält som helst accepterades och
+// sparades ordagrant. Ett registreringsnummer på en vanlig observation
+// hamnade aldrig i krypteringslistan, överlevde därför raderingen, och
+// gick ut i kundens delningslänk eftersom delningsfiltret arbetar på
+// typnivå.
+//
+// Testerna nedan låser tre saker: att okända fält avvisas, att avslaget
+// är hårt (inte en tyst strykning), och att deklarationen inte kan glida
+// från domänmodellen åt något håll.
+describe("händelseschemat är stängt", () => {
+  it("avvisar påhängda fält på en i övrigt giltig händelse", async () => {
+    const { granskaHändelse } = await import("../../../../services/gemensam/handelser.mjs");
+    const fel = granskaHändelse({
+      typ: "observation",
+      text: "Kontroll av bromsok.",
+      vin: "YV1DZ8256F2123456",
+      personnummer: "19800101-1234",
+    });
+    expect(fel).toMatch(/okända fält/);
+    expect(fel).toContain("vin");
+    expect(fel).toContain("personnummer");
+  });
+
+  it("avslaget är hårt — händelsen skrivs inte utan de okända fälten", async () => {
+    // En tyst strykning vore värre än att spara skräpet: anroparen tror
+    // att värdet finns i loggen och upptäcker motsatsen när det behövs.
+    const { tillPost } = await import("../../../../services/gemensam/handelser.mjs");
+    const { post, fel } = tillPost(
+      { id: "a1", handelse: { typ: "observation", text: "Kontroll.", vin: "ABC123" } },
+      { sub: "u1", namn: "Anna", org: "o1" },
+    );
+    expect(post).toBeUndefined();
+    expect(fel).toMatch(/okända fält/);
+  });
+
+  it("systemets egna fält passerar", async () => {
+    const { granskaHändelse } = await import("../../../../services/gemensam/handelser.mjs");
+    expect(
+      granskaHändelse({
+        typ: "observation",
+        text: "Kontroll av bromsok.",
+        anvandarId: "u1",
+        registrerad_tidpunkt: "2026-01-01T10:00:00.000Z",
+      }),
+    ).toBeNull();
+  });
+
+  it("protokollinläsningens härkomstfält är deklarerat", async () => {
+    // Integrationen fungerade tidigare bara därför att schemat var öppet.
+    // Stängs schemat utan att `kalla` deklareras slutar den fungera.
+    const { granskaHändelse } = await import("../../../../services/gemensam/handelser.mjs");
+    const { protokollTillHandelser } = await import("../../../../services/gemensam/integration.mjs");
+    const handelser = protokollTillHandelser(
+      { dtcs: [{ code: "P0420", description: "Katalysator under tröskel" }], liveData: [{ name: "Lambda", value: "0,81", unit: "V" }] },
+      { felkoder: { vag: "dtcs", kod: "code", text: "description" },
+        matvarden: { vag: "liveData", beskrivning: "name", varde: "value", enhet: "unit" } },
+      "Diagnosinstrument, bås 3",
+    );
+    expect(handelser.length).toBe(2);
+    for (const h of handelser) expect(granskaHändelse(h)).toBeNull();
+  });
+
+  it("varje valfritt fält i schemat finns i domänmodellen", async () => {
+    const { VALFRIA_FÄLT } = await import("../../../../services/gemensam/handelser.mjs");
+    const domain = readFileSync("src/felsokning/domain.ts", "utf8");
+    const ärvda = ["bilagaId", "bilagaHash", "dataUrl"];
+    const avvikelser: string[] = [];
+    for (const [typ, falt] of Object.entries(VALFRIA_FÄLT as Record<string, string[]>)) {
+      const start = domain.indexOf(`typ: "${typ}"`);
+      const block = domain.slice(start, start + 900);
+      for (const f of falt) {
+        if (ärvda.includes(f) || f === "kalla") continue; // Bilaga respektive härkomst
+        if (!new RegExp(`\\b${f}\\?:`).test(block)) avvikelser.push(`${typ}.${f}`);
+      }
+    }
+    expect(avvikelser).toEqual([]);
+  });
+
+  it("varje valfritt fält i domänmodellen är deklarerat i schemat", async () => {
+    // Den riktningen är den farliga: ett nytt valfritt fält i modellen
+    // som ingen deklarerar avvisas i produktion, inte i testet.
+    const { HÄNDELSESCHEMA, VALFRIA_FÄLT } = await import("../../../../services/gemensam/handelser.mjs");
+    const domain = readFileSync("src/felsokning/domain.ts", "utf8");
+    // Unionen måste avgränsas: annars svämmar den sista medlemmen in i
+    // resten av filen och testet rapporterar andra typers fält.
+    const fran = domain.indexOf("export type Handelse =");
+    const till = domain.indexOf("\n\nexport ", fran);
+    const union = domain.slice(fran, till > 0 ? till : undefined);
+    // `(?!\s*\|)` sållar bort ai_svar-radernas egen typunion
+    // (`typ: "observation" | "verifierat" | …`), som annars läses som en
+    // ny unionsmedlem och förskjuter alla block efter den.
+    const traffar = [...union.matchAll(/typ: "([a-z_]+)"(?!\s*\|)/g)];
+    const typer = traffar.map((m) => m[1]);
+    const avvikelser: string[] = [];
+
+    traffar.forEach((traff, i) => {
+      const typ = traff[1];
+      const start = traff.index!;
+      const nasta = i + 1 < traffar.length ? traffar[i + 1].index! : union.length;
+      const block = union.slice(start, nasta);
+      const deklarerade = new Set([
+        ...Object.keys((HÄNDELSESCHEMA as Record<string, object>)[typ] ?? {}),
+        ...((VALFRIA_FÄLT as Record<string, string[]>)[typ] ?? []),
+      ]);
+      for (const m of block.matchAll(/^\s+(\w+)\?:/gm)) {
+        if (!deklarerade.has(m[1])) avvikelser.push(`${typ}.${m[1]}`);
+      }
+    });
+    expect(avvikelser).toEqual([]);
+  });
+});
+
+// ---- Fotokontroller verifieras av foton ----------------------------------
+//
+// QUALITY-AUDIT-2 · M-7, funnet först när klienten slutade ha en egen,
+// mildare mening om avslut. Grinden krävde ett textresultat även på
+// kontroller vars krav är foto — trots att gränssnittet märker det fältet
+// "Observation (valfritt)". Servern hade alltså nekat avslut på nästan
+// varje riktigt ärende, och teknikern fått veta det först vid synk.
+describe("grinden räknar rätt sorts evidens per kontrolltyp", () => {
+  const kontrollHandelser = (metodik: { steg: { id: string; kontroller?: { id: string; krav?: string; text: string }[] }[] }, medResultat: boolean) =>
+    metodik.steg.flatMap((s) =>
+      (s.kontroller ?? []).map((k) => ({
+        typ: "kontroll_utford",
+        stegId: s.id,
+        kontrollId: k.id,
+        text: k.text,
+        ...(medResultat && k.krav !== "foto" ? { resultat: "Uppmätt inom tolerans." } : {}),
+      })),
+    );
+
+  it("en fotokontroll utan textresultat är inte ett hinder när fotot finns", async () => {
+    const { grinda } = await import("../../../../services/gemensam/grind.mjs");
+    const { VIBRATION } = await import("../../../../services/gemensam/metodiker.mjs");
+    const fotokrav = VIBRATION.steg.flatMap((s: { kontroller?: { krav?: string }[] }) =>
+      (s.kontroller ?? []).filter((k) => k.krav === "foto"),
+    ).length;
+    expect(fotokrav).toBeGreaterThan(0);
+
+    const logg = [
+      ...kontrollHandelser(VIBRATION, true),
+      ...Array.from({ length: fotokrav }, (_, i) => ({ typ: "foto", beskrivning: `Hjul ${i + 1}` })),
+    ];
+    const hinder = grinda(logg, VIBRATION).map((h: { id: string }) => h.id);
+    expect(hinder).not.toContain("metodik_kontroller");
+    expect(hinder).not.toContain("foton");
+  });
+
+  it("men saknas fotona spärrar det fortfarande", async () => {
+    const { grinda } = await import("../../../../services/gemensam/grind.mjs");
+    const { VIBRATION } = await import("../../../../services/gemensam/metodiker.mjs");
+    const hinder = grinda(kontrollHandelser(VIBRATION, true), VIBRATION).map((h: { id: string }) => h.id);
+    expect(hinder).toContain("foton");
+  });
+
+  it("en mät- eller kommentarkontroll utan resultat spärrar fortfarande", async () => {
+    const { grinda } = await import("../../../../services/gemensam/grind.mjs");
+    const { VIBRATION } = await import("../../../../services/gemensam/metodiker.mjs");
+    const hinder = grinda(kontrollHandelser(VIBRATION, false), VIBRATION).map((h: { id: string }) => h.id);
+    expect(hinder).toContain("metodik_kontroller");
+  });
+});

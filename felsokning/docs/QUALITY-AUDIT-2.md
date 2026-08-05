@@ -404,4 +404,67 @@ the metrics selection is, in this reviewer's experience, ahead of the segment.
 
 ---
 
+## Remediation status
+
+Recorded after the fixes were implemented. Each entry states what was actually
+changed, so a re-audit can verify rather than take it on trust.
+
+| # | Status | What changed |
+| --- | --- | --- |
+| **C-5** | ✅ Closed | `granskaHändelse` now iterates the *event's* keys as well as the schema's and rejects anything undeclared. `VALFRIA_FÄLT` declares every optional field per type, including `kalla` — the provenance field the protocol path depends on, which previously worked only because the schema was open. The rejection is hard, not a silent strip: a caller that believes it stored a value is never told it succeeded. Two structural tests lock the declaration against the domain model in both directions, so neither a new optional field in the model nor a stale declaration can drift. Verified against real traffic: all 41 events produced by driving a case through the interface pass the closed schema. |
+| **M-7** | ✅ Closed | The client no longer restates the rule. It calls `grinda()` with the local log and disables closing when the obstacle list is non-empty, rendering the gate's own obstacles as the explanation. The old test — which required the client to enumerate the gate's conditions — was inverted: it now requires the client to have no opinion of its own, because an expression cannot drift from itself. **This immediately exposed a real gate defect** (see below). |
+| **M-8** | ✅ Closed | Per-event outcomes replace the count: rejected events are returned with index, type and reason, and a partial import answers `207`, not `200`. Ids derive from a SHA-256 of case, source, index and content, which removes the millisecond collision and makes re-uploading the same protocol idempotent rather than duplicating. The whole import runs in one transaction. |
+| **M-9** | ✅ Closed | A generated secret is returned once at creation with an explicit note that it will not be shown again. A caller-supplied secret is still never echoed. |
+| **m-8** | ✅ Closed | Profile path lookups are restricted to own enumerable properties, so `__proto__` and `constructor.prototype` are unreachable from an external profile. |
+| **m-9** | ◐ Open | The portal remains a presentation shell with an authenticating-looking login. Deliberately deferred: the honest fix is to gate the route behind the real platform session, which is a product decision about what the portal is for. |
+| **m-10** | ✅ Closed | `observationer()` suppresses a `matvarde` whose description and value already appear as a check result, so a measurement taken through the methodology is reported once. |
+
+### The defect M-7 uncovered
+
+Removing the client's independent condition did what the finding predicted it
+would: it made the server's actual answer visible, and the server's answer was
+wrong.
+
+`grinda` required a text result on **every** methodology check — including
+checks whose requirement is `foto`, whose evidence is the photograph, and whose
+text field the interface explicitly labels *"Observation (valfritt)"*. The gate
+therefore refused to close nearly every real case, because most methodologies
+contain photo checks and most technicians leave an optional field empty.
+
+This had been true since the gate moved server-side. It was invisible for one
+reason only: the client had its own, weaker condition, so the close button lit
+up and the refusal would have arrived at sync. It is the exact failure mode M-7
+describes, and it was found within minutes of removing the duplicate rule.
+
+The gate now grades evidence by the check's own requirement: a photo check is
+satisfied by a photograph, a measurement or comment check by a result. Three
+tests lock the distinction, including the negative case — remove the photos and
+it still blocks.
+
+### What remains
+
+| From | Item | Why it is still open |
+| --- | --- | --- |
+| Rev 1 · C-4 | Processor agreement and transfer impact assessment | Documents to be written and signed, not code. |
+| Rev 1 · m-4 | Retiring the Supabase orchestrator | A deployment decision belonging to the product owner. |
+| Rev 1 · m-6 | Manual accessibility review | Automated tooling finds malformation, not usability. |
+| Rev 2 · m-9 | The portal mock | A product decision about what the portal is for. |
+
+### Re-audit verdict
+
+The finding that decided this revision — C-5 — is closed at the point where it
+had to be closed: erasure and the sharing boundary no longer depend on callers
+sending only the fields the system anticipated.
+
+The more valuable outcome is M-7. Removing one of two expressions of a rule did
+not merely prevent future drift; it revealed that the surviving expression had
+been wrong the whole time, in a way that would have refused almost every case at
+sync. That is the argument for single-sourcing a rule, made concrete.
+
+Applying the product's own standard: erasure has moved from `tested` to
+`validated`. Subject to the four items above, none of which are code, this
+product would pass supplier assessment for a pilot with customer data.
+
+---
+
 *ALVA-DOC-0002 · Revision 2 · Internal engineering review*

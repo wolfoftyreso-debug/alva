@@ -104,7 +104,7 @@ export function grinda(handelser, metodik) {
   for (const h of av(handelser, "kontroll_utford")) utforda.set(`${h.stegId}/${h.kontrollId}`, h);
 
   const saknade = [];
-  const utanFoto = [];
+  const fotokravande = [];
   const foton = av(handelser, "foto").length;
   for (const steg of metodik?.steg ?? []) {
     for (const kontroll of steg.kontroller ?? []) {
@@ -114,8 +114,17 @@ export function grinda(handelser, metodik) {
         continue;
       }
       if (UNDANTAG_MOTIVERAT(h)) continue;
+
+      // En fotokontroll verifieras av fotot. Regeln krävde tidigare ett
+      // textresultat även här — trots att gränssnittet märker fältet
+      // "Observation (valfritt)". Grinden nekade därmed avslut på nästan
+      // varje riktigt ärende, vilket inte syntes så länge klienten hade
+      // ett eget och mildare villkor (QUALITY-AUDIT-2 · M-7).
+      if (kontroll.krav === "foto") {
+        fotokravande.push(kontroll.text);
+        continue;
+      }
       if (!(h.resultat ?? "").trim()) saknade.push(`${steg.rubrik} · ${kontroll.text} (utan resultat)`);
-      else if (kontroll.krav === "foto") utanFoto.push(kontroll.text);
     }
   }
   krav(
@@ -124,7 +133,12 @@ export function grinda(handelser, metodik) {
     saknade.length === 0,
     saknade.slice(0, 5).join(" · "),
   );
-  krav("foton", "Foton finns för fotokrävande kontroller", utanFoto.length === 0 || foton >= utanFoto.length);
+  krav(
+    "foton",
+    "Foton finns för fotokrävande kontroller",
+    foton >= fotokravande.length,
+    fotokravande.length ? `${fotokravande.length} kontroller kräver foto, ${foton} foton i loggen.` : undefined,
+  );
 
   // ALVA-RULE-200 · Slutsatsen. Ett ärende stängs aldrig utan att
   // teknikern lämnat ett varför — motiveringen som knyter slutsatsen
