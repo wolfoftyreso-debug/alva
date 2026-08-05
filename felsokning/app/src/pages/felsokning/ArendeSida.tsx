@@ -803,7 +803,14 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
         </p>
       )}
 
-      {forslag.length === 0 && !forslagsLage && poster.length === 0 && (
+      {/* Förslaget hör före arbetet, och knappen står därför först. Men
+          den får inte försvinna när arbetet väl dokumenterats: grinden
+          kräver kundens besked för utfört arbete, och utan den här vägen
+          blir ett ärende där teknikern skrev åtgärden först omöjligt att
+          stänga — utan att någonstans säga varför. Loggen är append-only
+          med tidsstämplar, så ett besked som registreras i efterhand
+          syns som just det. */}
+      {forslag.length === 0 && !forslagsLage && (
         <StorKnapp
           variant="sekundar"
           className="mb-2"

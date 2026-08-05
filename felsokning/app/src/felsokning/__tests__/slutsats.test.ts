@@ -275,3 +275,28 @@ describe("klientens avslutsvillkor täcker hela grindens åtgärdskedja", () => 
     expect(rad).toContain("kundbeslut(arende)");
   });
 });
+
+// ---- Vägen ut måste alltid finnas ---------------------------------------
+//
+// När kundbeskedet blev ett avslutsvillkor i klienten uppstod en fälla:
+// knappen "Lämna åtgärdsförslag till kund" visades bara när ingen åtgärd
+// var dokumenterad, och beskedsrutan bara när ett förslag fanns. En
+// tekniker som skrev åtgärden först hade därmed inget sätt att registrera
+// beskedet — och ärendet gick inte att stänga, utan att gränssnittet
+// kunde tala om varför.
+//
+// Grinden avvisade redan sådana ärenden vid synk; villkoret i klienten
+// flyttade bara upptäckten. Ett spärrvillkor utan väg ut är ett fel även
+// när spärren i sig är riktig.
+describe("kundbeskedet går att registrera även när åtgärden skrevs först", () => {
+  const kod = readFileSync("src/pages/felsokning/ArendeSida.tsx", "utf8");
+
+  it("förslagsknappen döljs inte av att en åtgärd redan är dokumenterad", () => {
+    expect(kod).toContain("{forslag.length === 0 && !forslagsLage && (");
+    expect(kod).not.toContain("forslag.length === 0 && !forslagsLage && poster.length === 0");
+  });
+
+  it("beskedsrutan öppnas av att ett förslag finns", () => {
+    expect(kod).toContain("{forslag.length > 0 && !beslut && (");
+  });
+});
