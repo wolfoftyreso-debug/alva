@@ -55,9 +55,12 @@ detected.
 
 | Severity | Count | Meaning |
 | --- | --- | --- |
-| Critical | 1 | Blocks supplier approval. Must be closed before any pilot with customer data. |
+| Critical | 2 | Blocks supplier approval. Must be closed before any pilot with customer data. |
 | Major | 3 | Blocks series deployment. Closable within one release cycle. |
 | Minor | 3 | Track and schedule. |
+
+C-6 was raised during remediation, not during the review, and is recorded with
+the findings below.
 
 Revision 1's open items (processor agreement and DPIA under C-4, retiring the
 Supabase orchestrator under m-4, manual accessibility review under m-6) remain
@@ -440,6 +443,59 @@ The gate now grades evidence by the check's own requirement: a photo check is
 satisfied by a photograph, a measurement or comment check by a result. Three
 tests lock the distinction, including the negative case — remove the photos and
 it still blocks.
+
+### C-6 · The test suite did not gate anything (found during remediation)
+
+`.github/workflows/ci.yml` · root `package.json`
+
+Raised after the findings above were closed, while wiring the end-to-end
+walkthrough into the pipeline. It is the most consequential finding in this
+revision and it is embarrassing in a specific way: it invalidates the evidence
+both revisions relied on.
+
+CI runs `npm test` at the repository root, which delegates to
+`npm run test --workspaces`. The workspace list is `apps/mobile`,
+`services/api`, `infra`. **`felsokning/app` is not among them.** The pipeline
+therefore executed 30 tests from an unrelated service and **none of ALVA's
+311**. Neither `lint` nor `typecheck` reached the product either.
+
+The consequence is not that the tests were failing — they pass. It is that
+nothing enforced them. Every guarantee both revisions recorded as *"locked by a
+test"* — server-side provenance (C-1), the quality gate (C-2), erasure (C-3),
+instrument traceability (M-1), the high-voltage interlock (M-2), the closed
+schema (C-5), the client/gate drift guards (M-7) — was locked by a test that no
+pipeline ran. They held because one engineer ran them by hand before each
+commit. That is a person, not a control.
+
+A test nobody runs is documentation. Recording it as a closure is the same
+error this product refuses to make about integration profiles.
+
+**Closed.** Two new jobs. `alva` runs the product's lint, type check and full
+suite against its own lockfile. `genomgang` installs Chromium and runs the
+end-to-end walkthrough.
+
+### The walkthrough as a checked-in test
+
+`felsokning/app/e2e/genomgang.mjs` · `npm run genomgang`
+
+Four cases across four methodologies, each driven from an empty screen to a
+closed case, asserting three things:
+
+| Assertion | Why it is here |
+| --- | --- |
+| Every case reaches a closed state | A case that stalls is either an obstacle with no way out or a client/gate gap. Both have happened. |
+| Every event the client actually produces passes the closed schema | The schema was closed against what the code *ought* to send. Only real traffic proves what it *does* send. |
+| Interactions per case stay under 90 | A tool that quietly grows from 65 interactions to 90 is abandoned in the bay long before anyone files a defect report. |
+
+Both failing paths were verified rather than assumed: lowering the budget to 65
+fails three cases and exits 1, and forcing the schema filter to reject
+everything fails all four. An assertion that cannot fail is decoration.
+
+The script builds the app itself, with the two environment variables the build
+requires — hash routing, and placeholder credentials for the legacy store client
+that is still constructed at import and otherwise throws before the router
+mounts, blanking the page. Leaving that to whoever runs the command is how the
+walkthrough would quietly start testing a different application.
 
 ### What remains
 

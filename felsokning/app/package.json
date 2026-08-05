@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "typkontroll": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "genomgang": "node e2e/genomgang.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -85,6 +86,7 @@
     "globals": "^15.15.0",
     "jsdom": "^20.0.3",
     "lovable-tagger": "^1.1.13",
+    "playwright": "^1.62.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
