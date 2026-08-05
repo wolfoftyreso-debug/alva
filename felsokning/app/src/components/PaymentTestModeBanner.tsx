@@ -4,8 +4,10 @@ const clientToken = import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN as string | undef
 
 export function PaymentTestModeBanner() {
   const { pathname } = useLocation();
-  // Guidad Felsökning har inga betalningar — bannern gäller bara butiken.
-  if (pathname.startsWith("/felsokning")) {
+  // Bannern gäller butiken. ALVA och felsökningen har inga betalningar,
+  // och ett driftmeddelande från en annan produkt ovanför ALVA-huvudet
+  // säger till verkstaden att de tittar på något halvfärdigt.
+  if (["/felsokning", "/alva"].some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
     return null;
   }
   if (!clientToken) {

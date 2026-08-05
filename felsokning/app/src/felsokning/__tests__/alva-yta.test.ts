@@ -98,3 +98,24 @@ describe("ALVA-ytan följer designsystemet", () => {
     expect(udda).toEqual([]);
   });
 });
+
+// ---- Andra produkters meddelanden får inte synas på ALVA-ytan ----------
+//
+// Bakgrund: butikens banner "Skarpa betalningar är inte konfigurerade"
+// renderades ovanför ALVA-huvudet, eftersom den satt i App och bara
+// undantog /felsokning. En verkstad som ser ett driftmeddelande från en
+// annan produkt läser det som att den tittar på något halvfärdigt — och
+// det är ett trovärdighetsproblem, inte ett kosmetiskt.
+describe("ALVA-ytan är fri från andra produkters meddelanden", () => {
+  const banner = readFileSync("src/components/PaymentTestModeBanner.tsx", "utf8");
+
+  it("betalningsbannern undantar både /felsokning och /alva", () => {
+    expect(banner).toContain('"/felsokning"');
+    expect(banner).toContain('"/alva"');
+  });
+
+  it("undantaget matchar underliggande sökvägar, inte bara prefix på ordnivå", () => {
+    // "/alvarlig" ska inte räknas som ALVA. Regeln jämför hela segment.
+    expect(banner).toMatch(/pathname === p \|\| pathname\.startsWith\(`\$\{p\}\/`\)/);
+  });
+});
