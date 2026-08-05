@@ -4,6 +4,9 @@ import type { Arende, Handelse, TidKategori, Tillforlitlighet } from "@/felsokni
 import { KUNDBESLUT_LABEL, KVALITETSKONTROLL_LABEL, TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
 import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
+import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
+import { Fasrad } from "@/alva/komponenter";
+import { arendebeteckning, fasDefinition } from "@/alva/system";
 import {
   arAvslutat,
   arendeidentitet,
@@ -1278,6 +1281,27 @@ function GuideFlik({
   return (
     <>
       <KategoriRad arende={arende} skicka={skicka} />
+
+      {/* ALVA-modellen som tillstånd, inte som illustration. Den svarar
+          på den enda fråga en tekniker som återupptar ett ärende har:
+          var i metoden är vi? Fasen härleds ur steget, så indikatorn kan
+          aldrig visa något annat än vad metodiken faktiskt gör. */}
+      <div className="mb-4">
+        <div className="mb-2 flex items-baseline justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4D5662]">
+            {fasDefinition(fasFor(steg.steg.id)).namn} — {fasDefinition(fasFor(steg.steg.id)).syfte}
+          </span>
+          <span className="font-mono text-[11px] text-[#4D5662]">{arendebeteckning(arende.nummer)}</span>
+        </div>
+        <Fasrad
+          aktiv={fasFor(steg.steg.id)}
+          klara={klaraFaser(metodik, arende.handelser.map((p) => p.handelse))}
+        />
+        <p className="mt-2 text-[11px] leading-[16px] text-[#4D5662]">
+          {fasDefinition(fasFor(steg.steg.id)).avgransning}
+        </p>
+      </div>
+
       <Panel rubrik={`Metodik: ${metodik.namn} · Steg: ${steg.steg.rubrik}`}>
         {steg.klart ? (
           <>
