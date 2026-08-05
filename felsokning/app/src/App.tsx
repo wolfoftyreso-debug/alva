@@ -21,6 +21,11 @@ import DelatArende from "./pages/felsokning/DelatArende";
 import PublikDelning from "./pages/felsokning/PublikDelning";
 import Oversikt from "./pages/felsokning/Oversikt";
 import Installningar from "./pages/felsokning/Installningar";
+import AlvaStart from "./pages/alva/Start";
+import AlvaAnsokan from "./pages/alva/Ansokan";
+import AlvaLoggaIn from "./pages/alva/LoggaIn";
+import AlvaPortal from "./pages/alva/Portal";
+import AlvaKunskapskallor from "./pages/alva/Kunskapskallor";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 const queryClient = new QueryClient();
@@ -51,6 +56,14 @@ function AppContent() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/order-confirmation" element={<OrderConfirmation />} />
         <Route path="/account/change-subscription" element={<ChangeSubscription />} />
+        {/* ALVA — publik webbplats och kundportal. Samma system, samma
+            komponentbibliotek: besökaren lämnar aldrig marknadswebben
+            när den loggar in. */}
+        <Route path="/alva" element={<AlvaStart />} />
+        <Route path="/alva/ansokan" element={<AlvaAnsokan />} />
+        <Route path="/alva/logga-in" element={<AlvaLoggaIn />} />
+        <Route path="/alva/portal" element={<AlvaPortal />} />
+        <Route path="/alva/portal/kunskapskallor" element={<AlvaKunskapskallor />} />
         <Route path="/felsokning" element={<Arendelista />} />
         <Route path="/felsokning/nytt" element={<NyttArende />} />
         <Route path="/felsokning/arende/:id" element={<ArendeSida />} />

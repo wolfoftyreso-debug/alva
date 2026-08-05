@@ -123,7 +123,7 @@ export function Falt({ etikett, children }: { etikett: string; children: ReactNo
   return (
     <div className="border-t py-2" style={{ borderColor: FARG.lightSteel }}>
       <Etikett>{etikett}</Etikett>
-      <div className="mt-1 text-[14px] leading-[20px]" style={{ color: FARG.graphite }}>
+      <div className="mt-2 text-[14px] leading-[20px]" style={{ color: FARG.graphite }}>
         {children}
       </div>
     </div>
@@ -135,14 +135,14 @@ export function Block({ children, rubrik, beteckning }: { children: ReactNode; r
     <section className="mb-6 border bg-white" style={{ borderColor: FARG.lightSteel }}>
       {(rubrik || beteckning) && (
         <header
-          className="flex items-baseline justify-between border-b px-4 py-3"
+          className="flex items-baseline justify-between border-b px-4 py-2"
           style={{ borderColor: FARG.lightSteel, background: FARG.background }}
         >
           {rubrik && <Rubrik niva={3}>{rubrik}</Rubrik>}
           {beteckning && <span className="font-mono text-[11px]" style={{ color: FARG.steel }}>{beteckning}</span>}
         </header>
       )}
-      <div className="px-4 py-3">{children}</div>
+      <div className="px-4 py-2">{children}</div>
     </section>
   );
 }
@@ -164,7 +164,7 @@ export function Fasrad({ aktiv, klara = [] }: { aktiv: Fas; klara?: Fas[] }) {
           <li
             key={f.id}
             aria-current={ärAktiv ? "step" : undefined}
-            className="flex-1 border-r px-4 py-3 last:border-r-0"
+            className="flex-1 border-r px-4 py-2 last:border-r-0"
             style={{
               borderColor: FARG.lightSteel,
               background: ärAktiv ? FARG.blue : FARG.white,
@@ -175,8 +175,8 @@ export function Fasrad({ aktiv, klara = [] }: { aktiv: Fas; klara?: Fas[] }) {
               <span className="text-[18px] font-semibold leading-none">{f.bokstav}</span>
               <Symbol ikon={ärKlar ? "klar" : ärAktiv ? "pagaende" : "vantar"} ton={ärAktiv ? FARG.white : undefined} />
             </div>
-            <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.1em]">{f.namn}</div>
-            <div className="mt-1 text-[11px] leading-[16px]" style={{ opacity: ärAktiv ? 0.9 : 0.75 }}>
+            <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em]">{f.namn}</div>
+            <div className="mt-2 text-[11px] leading-[16px]" style={{ opacity: ärAktiv ? 0.9 : 0.75 }}>
               {f.syfte}
             </div>
           </li>
@@ -302,7 +302,7 @@ export function Tabell({ kolumner, rader }: { kolumner: string[]; rader: ReactNo
             <th
               key={k}
               scope="col"
-              className="border-b px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em]"
+              className="border-b px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em]"
               style={{ borderColor: FARG.lightSteel, color: FARG.steel }}
             >
               {k}
@@ -314,7 +314,7 @@ export function Tabell({ kolumner, rader }: { kolumner: string[]; rader: ReactNo
         {rader.map((rad, i) => (
           <tr key={i}>
             {rad.map((cell, j) => (
-              <td key={j} className="border-b px-3 py-2 align-top" style={{ borderColor: FARG.lightSteel, color: FARG.graphite }}>
+              <td key={j} className="border-b px-4 py-2 align-top" style={{ borderColor: FARG.lightSteel, color: FARG.graphite }}>
                 {cell}
               </td>
             ))}
