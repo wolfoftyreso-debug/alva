@@ -1527,7 +1527,19 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
   const filRef = useRef<HTMLInputElement>(null);
   const krav = kontroll.krav;
 
-  const utford = () =>
+  const utford = () => {
+    // En kontroll vars krav är ett mätvärde ger ett mätvärde. Tidigare
+    // loggades bara kontroll_utford, med följden att 56 av metodikernas
+    // 153 kontroller — drygt en tredjedel — mätte utan att det syntes:
+    // felorsaksanalysen nekade ”Mätresultat” som underlag, och
+    // evidensprofilen i analysvyn underskattade systematiskt hur mycket
+    // som faktiskt mättes. Mätningen loggas därför som det den är.
+    //
+    // Utan känt mätdon graderas den E1, inte E4 (QUALITY-AUDIT M-1) —
+    // ett avläst tal utan spårbart instrument är inte en spårbar mätning.
+    if (krav === "matvarde" && resultat.trim()) {
+      skicka({ typ: "matvarde", beskrivning: kontroll.text, varde: resultat.trim() });
+    }
     skicka({
       typ: "kontroll_utford",
       stegId: steg.steg.id,
@@ -1535,6 +1547,7 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
       text: kontroll.text,
       resultat: resultat.trim() || undefined,
     });
+  };
 
   const kravUppfyllt = krav === "foto" || !krav || resultat.trim().length > 0;
 

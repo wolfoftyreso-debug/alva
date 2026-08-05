@@ -245,3 +245,42 @@ describe("schemat följer domänmodellen", () => {
     expect([...new Set(avvisade)]).toEqual([]);
   });
 });
+
+// ---- En mätning ska loggas som en mätning -------------------------------
+//
+// Bakgrund: en kontroll vars krav är "matvarde" loggade bara
+// kontroll_utford. Följden var att 56 av metodikernas 153 kontroller —
+// drygt en tredjedel — mätte utan att det syntes någonstans:
+// felorsaksanalysen nekade "Mätresultat" som underlag trots att
+// teknikern just hade mätt, och evidensprofilen i analysvyn underskattade
+// systematiskt hur mycket som faktiskt mäts i verkstaden.
+//
+// Testet låser förhållandet mellan metodikernas krav och den evidens de
+// måste ge, så att en framtida kontrolltyp inte kan införas utan att
+// någon tar ställning till vilken evidens den producerar.
+describe("metodikernas mätkontroller producerar mätevidens", () => {
+  it("varje kontroll har ett känt krav", async () => {
+    const { ALLA_METODIKER } = await import("../../../../services/gemensam/metodiker.mjs");
+    const kravtyper = new Set<string>();
+    for (const m of ALLA_METODIKER) {
+      for (const steg of m.steg) {
+        for (const k of steg.kontroller ?? []) if (k.krav) kravtyper.add(k.krav);
+      }
+    }
+    expect([...kravtyper].sort()).toEqual(["foto", "kommentar", "matvarde"]);
+  });
+
+  it("KontrollKort loggar ett matvarde när kravet är matvarde", () => {
+    const kod = readFileSync("src/pages/felsokning/ArendeSida.tsx", "utf8");
+    expect(kod).toMatch(/krav === "matvarde" && resultat\.trim\(\)/);
+    expect(kod).toMatch(/skicka\(\{ typ: "matvarde", beskrivning: kontroll\.text/);
+  });
+
+  it('underlagskällan "Mätresultat" godtar just den händelsetypen', async () => {
+    const { underlagFinns } = await import("../ecm");
+    const arende = {
+      handelser: [{ id: "1", tidpunkt: "", anvandare: "A", handelse: { typ: "matvarde", beskrivning: "Lufttryck", varde: "2,4 bar" } }],
+    } as never;
+    expect(underlagFinns(arende, "Mätresultat")).toBe(true);
+  });
+});
