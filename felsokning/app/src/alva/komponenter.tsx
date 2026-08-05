@@ -164,7 +164,11 @@ export function Fasrad({ aktiv, klara = [] }: { aktiv: Fas; klara?: Fas[] }) {
           <li
             key={f.id}
             aria-current={ärAktiv ? "step" : undefined}
-            className="flex-1 border-r px-4 py-2 last:border-r-0"
+            // `min-w-0` gör att kolumnen får krympa under sitt innehåll.
+            // Utan det sköt raden ut hela ärendesidan i sidled på en
+            // telefon — och fasindikatorn är det första en tekniker som
+            // återupptar ett ärende tittar på.
+            className="min-w-0 flex-1 border-r px-2 py-2 last:border-r-0 sm:px-4"
             style={{
               borderColor: FARG.lightSteel,
               background: ärAktiv ? FARG.blue : FARG.white,
@@ -175,8 +179,15 @@ export function Fasrad({ aktiv, klara = [] }: { aktiv: Fas; klara?: Fas[] }) {
               <span className="text-[18px] font-semibold leading-none">{f.bokstav}</span>
               <Symbol ikon={ärKlar ? "klar" : ärAktiv ? "pagaende" : "vantar"} ton={ärAktiv ? FARG.white : undefined} />
             </div>
-            <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.1em]">{f.namn}</div>
-            <div className="mt-2 text-[11px] leading-[16px]" style={{ opacity: ärAktiv ? 0.9 : 0.75 }}>
+            {/* På en telefon ryms inte LOCALIZATION i en fjärdedels
+                skärmbredd, och ett tvingat radbrott mitt i ordet är inte
+                tydligare än inget namn alls. Under 640 px bär bokstaven
+                och statussymbolen informationen — vilket är precis vad
+                A·L·V·A är till för — medan raden ovanför namnger den
+                aktiva fasen och dess syfte i klartext. */}
+            <div className="mt-2 hidden text-[11px] font-semibold uppercase tracking-[0.1em] sm:block">{f.namn}</div>
+            <span className="sr-only">{f.namn}</span>
+            <div className="mt-2 hidden text-[11px] leading-[16px] sm:block" style={{ opacity: ärAktiv ? 0.9 : 0.75 }}>
               {f.syfte}
             </div>
           </li>
@@ -293,34 +304,84 @@ export function Knapp({
   );
 }
 
+/**
+ * Tabell — med en andra form för smala skärmar.
+ *
+ * En sexkolumnstabell på en telefon har två utfall, och bägge är dåliga:
+ * antingen tvingas hela sidan i sidled, eller så scrollar tabellen inuti
+ * sig själv och läsaren ser tre tecken av varje kolumn. Det första är vad
+ * som hände här — dokumentet blev 842 px brett på en 390 px-skärm och
+ * texten kapades.
+ *
+ * Under 640 px blir varje rad därför en grupp namngivna fält i stället:
+ * kolumnrubriken som etikett, cellen som värde. Det är samma form som
+ * `Falt` redan använder, och samma princip som resten av ytan — ett
+ * instrumentpanelsblad läser man uppifrån och ner, inte i sidled.
+ *
+ * Bägge formerna renderas och växlas med bredd, inte med JavaScript. Det
+ * håller markeringen fri från tillstånd och fungerar innan skriptet
+ * kört.
+ */
 export function Tabell({ kolumner, rader }: { kolumner: string[]; rader: ReactNode[][] }) {
   return (
-    <table className="w-full border-collapse text-[13px]">
-      <thead>
-        <tr>
-          {kolumner.map((k) => (
-            <th
-              key={k}
-              scope="col"
-              className="border-b px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em]"
-              style={{ borderColor: FARG.lightSteel, color: FARG.steel }}
-            >
-              {k}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rader.map((rad, i) => (
-          <tr key={i}>
-            {rad.map((cell, j) => (
-              <td key={j} className="border-b px-4 py-2 align-top" style={{ borderColor: FARG.lightSteel, color: FARG.graphite }}>
-                {cell}
-              </td>
+    <>
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="w-full border-collapse text-[13px]">
+          <thead>
+            <tr>
+              {kolumner.map((k) => (
+                <th
+                  key={k}
+                  scope="col"
+                  className="border-b px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em]"
+                  style={{ borderColor: FARG.lightSteel, color: FARG.steel }}
+                >
+                  {k}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rader.map((rad, i) => (
+              <tr key={i}>
+                {rad.map((cell, j) => (
+                  <td
+                    key={j}
+                    className="border-b px-4 py-2 align-top"
+                    style={{ borderColor: FARG.lightSteel, color: FARG.graphite }}
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="sm:hidden">
+        {rader.map((rad, i) => (
+          <dl
+            key={i}
+            className="border-b py-2 last:border-b-0"
+            style={{ borderColor: FARG.lightSteel }}
+          >
+            {rad.map((cell, j) => (
+              <div key={j} className="mt-2 flex flex-wrap items-baseline gap-2 first:mt-0">
+                <dt
+                  className="w-[96px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.1em]"
+                  style={{ color: FARG.steel }}
+                >
+                  {kolumner[j]}
+                </dt>
+                <dd className="m-0 min-w-0 flex-1 text-[13px] leading-[20px]" style={{ color: FARG.graphite }}>
+                  {cell}
+                </dd>
+              </div>
+            ))}
+          </dl>
         ))}
-      </tbody>
-    </table>
+      </div>
+    </>
   );
 }

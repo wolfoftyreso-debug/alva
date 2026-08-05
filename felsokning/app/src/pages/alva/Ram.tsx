@@ -40,8 +40,11 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
             </span>
           </Link>
 
+          {/* Portalens fem länkar fick inte plats på en telefon och sköt
+              ut dokumentet i sidled i stället för att brytas. Raden bryts
+              nu, med tätare mellanrum på smal skärm. */}
           <nav aria-label={portal ? "Portal" : "Site"}>
-            <ul className="flex gap-6">
+            <ul className="flex flex-wrap gap-2 sm:gap-6">
               {lankar.map((l) => {
                 const aktiv = plats.pathname === l.till;
                 return (

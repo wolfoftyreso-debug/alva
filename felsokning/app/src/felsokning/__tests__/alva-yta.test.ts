@@ -119,3 +119,40 @@ describe("ALVA-ytan är fri från andra produkters meddelanden", () => {
     expect(banner).toMatch(/pathname === p \|\| pathname\.startsWith\(`\$\{p\}\/`\)/);
   });
 });
+
+// ---- Mobil: ytan får aldrig bli bredare än skärmen ---------------------
+//
+// Portalens tabeller sköt ut dokumentet till 842 px på en 390 px-skärm.
+// Texten kapades i högerkanten och sidan gick att dra i sidled — det som
+// syntes i skärmdumpen från en telefon.
+//
+// Testet läser koden i stället för att rendera, vilket är trubbigt men
+// fångar just de konstruktioner som orsakade det: en tabell utan smal
+// form, en navigationsrad som inte bryts, och en flexkolumn som inte får
+// krympa under sitt innehåll. Den faktiska bredden mäts i genomgången.
+describe("ALVA-ytan håller sig inom skärmbredden", () => {
+  const komponenter = filer.find(([n]) => n.endsWith("alva/komponenter.tsx"))![1];
+  const ram = filer.find(([n]) => n.endsWith("pages/alva/Ram.tsx"))![1];
+
+  it("Tabell har en smal form för telefon, inte bara sidledsscroll", () => {
+    // En sexkolumnstabell som scrollar i sidled ryms, men går inte att
+    // läsa. Den smala formen är staplade namngivna fält.
+    expect(komponenter).toContain("sm:hidden");
+    expect(komponenter).toMatch(/<dt\b/);
+    expect(komponenter).toMatch(/<dd\b/);
+  });
+
+  it("den breda tabellen ligger i en egen scrollbehållare", () => {
+    expect(komponenter).toContain('className="hidden overflow-x-auto sm:block"');
+  });
+
+  it("navigationsraden bryts i stället för att bredda sidan", () => {
+    expect(ram).toMatch(/<ul className="flex flex-wrap/);
+  });
+
+  it("fasindikatorns kolumner får krympa under sitt innehåll", () => {
+    // Utan min-w-0 sätter innehållet golvet för kolumnbredden, och fyra
+    // kolumner blir bredare än telefonen.
+    expect(komponenter).toContain("min-w-0 flex-1");
+  });
+});
