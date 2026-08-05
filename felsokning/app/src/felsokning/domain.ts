@@ -189,6 +189,30 @@ export type Handelse =
       modell: string;
     }
   // Avslutet signeras av teknikern — slutsatsen får en ansvarig avsändare.
+  /**
+   * ALVA-RULE-200 · Teknikerns varför.
+   *
+   * Fyra frågor med olika adressat, som i dag blandas ihop till en rad i
+   * en arbetsorder — vilket är varför verkstadsprotokoll är svåra att
+   * använda i efterhand. Fälten valideras i
+   * services/gemensam/motivering.mjs och spärrar avslutet.
+   */
+  | {
+      typ: "slutsats";
+      /** Varför följer slutsatsen av evidensen? */
+      motivering: string;
+      /** Vad övervägdes och varför föll det bort? */
+      uteslutet: string;
+      /** Vad är fortfarande osäkert? Får vara "inget" — men aktivt sagt. */
+      kvarstaende: string;
+      /** Varför denna åtgärd och inte en annan? Krävs när arbete utförts. */
+      atgardsval?: string;
+      /**
+       * Falskt när orsaken inte kunnat fastställas. Det är ett giltigt
+       * utfall — men varför den inte kunde det är fortfarande ett varför.
+       */
+      orsakFastställd?: boolean;
+    }
   | { typ: "arende_avslutat"; signatur?: string };
 
 export interface LoggPost {

@@ -5,6 +5,7 @@
 // signerad behållare för overifierade påståenden, och kvalitetsgrinden
 // ett råd. Går något av testerna sönder har den garantin försvunnit —
 // och det syns inte i gränssnittet förrän någon bestrider ett ärende.
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { granskaHändelse, tillPost } from "../../../../services/gemensam/handelser.mjs";
 import { SPARRFRAGOR as SPARR_SERVER, grinda, grindaArendetyp } from "../../../../services/gemensam/grind.mjs";
@@ -23,9 +24,18 @@ function komplettLogg(extra: Record<string, unknown>[] = []) {
     { typ: "matarstallning", lage: "utgaende", varde: "14 205" },
     { typ: "reproducering", status: "ja", beskrivning: "Reproducerat vid 88 km/h." },
     { typ: "felorsak", avvikelse: "Obalans", orsaker: ["Normalt slitage"], underlag: ["Mätvärde"], sakerhet: "hog" },
-    { typ: "atgard_utford", text: "Balanserade hjulen." },
-    { typ: "kundbeslut", utfall: "godkant", kanal: "Telefon" },
-    { typ: "kvalitetskontroll", utfall: "borta", beskrivning: "Provkört, symptomet borta." },
+    { typ: "atgard_utford", beskrivning: "Balanserade hjulen.", utford: true },
+    { typ: "kundbeslut", beslut: "godkant", kanal: "Telefon" },
+    { typ: "kvalitetskontroll", resultat: "symptomet_borta", beskrivning: "Provkört, symptomet borta." },
+    {
+      typ: "slutsats",
+      motivering:
+        "Uppmätt obalans 38 g på höger framhjul mot toleransen 5 g, vilket förklarar varför vibrationen " +
+        "uppträder hastighetsberoende kring 88 km/h och försvann efter balansering.",
+      uteslutet: "Kast och bussningar kontrollerades utan anmärkning och uteslöts därför.",
+      kvarstaende: "Inget. Symptomet reproducerades före och uteblev efter åtgärd.",
+      atgardsval: "Balansering valdes framför däckbyte eftersom däcket är oskadat och slitaget inom gräns.",
+    },
     { typ: "matvarde", beskrivning: "Lufttryck", varde: "2,4" },
     { typ: "foto", beskrivning: "Objektet" },
     { typ: "foto", beskrivning: "Typskylt" },
@@ -117,7 +127,7 @@ describe("C-2 · kvalitetsgrinden spärrar på servern", () => {
 
   it("arbete utfört trots avböjt förslag är ett hårt fel, inte en varning", () => {
     const logg = komplettLogg().map((h) =>
-      h.typ === "kundbeslut" ? { ...h, utfall: "avbojt" } : h,
+      h.typ === "kundbeslut" ? { ...h, beslut: "avbojt" } : h,
     );
     expect(grinda(logg, GENERISK).map((h) => h.id)).toContain("avbojt_men_utfort");
   });
@@ -192,5 +202,46 @@ describe("ärendetypens regelpaket", () => {
     const trasigt = { arendetyper: { Garanti: { krav: [{ typ: "hittepa" }] } } };
     const logg = [{ typ: "arendetyp_satt", arendetyp: "Garanti" }];
     expect(grindaArendetyp(logg, trasigt)[0].rubrik).toMatch(/Okänt krav/);
+  });
+});
+
+// Skydd mot den drift som faktiskt inträffade: schemat på servern skrevs
+// mot antagna fältnamn i stället för mot domänmodellen. Följden var värre
+// än ett typfel — grinden såg utförd åtgärd som utebliven, och krävde
+// därför aldrig kundbesked eller kvalitetskontroll. Det syntes inte,
+// eftersom testfixturerna hade samma antagande.
+describe("schemat följer domänmodellen", () => {
+  it("varje obligatoriskt fält i schemat finns i domain.ts", async () => {
+    const { HÄNDELSESCHEMA } = await import("../../../../services/gemensam/handelser.mjs");
+    const domain = readFileSync("src/felsokning/domain.ts", "utf8");
+    const avvikelser: string[] = [];
+
+    for (const [typ, schema] of Object.entries(HÄNDELSESCHEMA as Record<string, object>)) {
+      // Klipp ut den del av unionen som beskriver typen.
+      const start = domain.indexOf(`typ: "${typ}"`);
+      if (start < 0) {
+        avvikelser.push(`${typ}: saknas i domain.ts`);
+        continue;
+      }
+      const block = domain.slice(start, start + 700);
+      for (const falt of Object.keys(schema)) {
+        // Bilagefälten ärvs via intersektion med Bilaga och står inte i blocket.
+        if (["bilagaId", "bilagaHash", "dataUrl"].includes(falt)) continue;
+        if (!new RegExp(`\\b${falt}\\??:`).test(block)) avvikelser.push(`${typ}.${falt}`);
+      }
+    }
+    expect(avvikelser).toEqual([]);
+  });
+
+  it("demoärendets händelser passerar serverns validering", async () => {
+    // Slutkontrollen: allt klienten faktiskt producerar måste gå igenom.
+    // Ett schema som avvisar riktig trafik är värre än inget schema.
+    const { granskaHändelse } = await import("../../../../services/gemensam/handelser.mjs");
+    const { byggDemoArende } = await import("../demo");
+    const avvisade = byggDemoArende(1)
+      .handelser.map((p) => [p.handelse.typ, granskaHändelse(p.handelse)] as const)
+      .filter(([, fel]) => fel !== null)
+      .map(([typ, fel]) => `${typ}: ${fel}`);
+    expect([...new Set(avvisade)]).toEqual([]);
   });
 });

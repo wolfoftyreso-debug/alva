@@ -40,18 +40,30 @@ export const HÄNDELSESCHEMA = {
   matarstallning: { lage: ["ingaende", "utgaende"], varde: "text" },
   historik_kontrollerad: { kontrollerad: "boolean" },
   reproducering: { status: ["ja", "delvis", "nej"], beskrivning: "text" },
-  felorsak: { avvikelse: "text", orsaker: "lista", underlag: "lista", sakerhet: ["hog", "medel", "lag"] },
-  atgardsforslag: { text: "text" },
-  kundbeslut: { utfall: ["godkant", "avbojt", "delvis"], kanal: "text" },
-  atgard_utford: { text: "text" },
-  kvalitetskontroll: { utfall: ["borta", "kvarstar", "delvis", "ej_verifierat"], beskrivning: "text" },
+  felorsak: {
+    avvikelse: "text",
+    orsaker: "lista",
+    underlag: "lista",
+    sakerhet: ["hog", "medel", "lag"],
+    atgard: "text",
+  },
+  atgardsforslag: { beskrivning: "text" },
+  kundbeslut: { beslut: ["godkant", "avbojt", "delvis"], kanal: "text" },
+  atgard_utford: { beskrivning: "text", utford: "boolean" },
+  kvalitetskontroll: {
+    resultat: ["symptomet_borta", "kvarstar", "delvis", "ej_verifierbar"],
+    beskrivning: "text",
+  },
   kommentar: { text: "text" },
   kategori_byte: { kategori: "text" },
   inaktivitet_forklarad: { text: "text", minuter: "tal" },
   overlamning: { fran: "text" },
   ansvarig_satt: { ansvarig: "text" },
-  ai_svar: { rader: "lista" },
+  ai_svar: { rader: "lista", nastaSteg: "text", modell: "text" },
   export_skapad: { format: "text", version: "tal" },
+  // ALVA-RULE-200: teknikerns varför. Fälten valideras utöver formen i
+  // services/gemensam/motivering.mjs — här kontrolleras bara att de finns.
+  slutsats: { motivering: "text", uteslutet: "text", kvarstaende: "text" },
   arende_avslutat: {},
 };
 

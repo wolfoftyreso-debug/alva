@@ -288,6 +288,17 @@ export const DELBART_KUND = [
   "atgard_utford",
   "kvalitetskontroll",
   "export_skapad",
+  // ALVA-RULE-200 · Teknikerns varför delas med kunden.
+  //
+  // Det är den enda raden som besvarar "varför kostade det här vad det
+  // kostade", och den enda en försäkringsbedömare faktiskt behöver.
+  // Att hålla den intern vore att bygga funktionen och sedan gömma den.
+  //
+  // Fältet "uteslutet" nämner hypoteser som förkastats. Det är inte
+  // samma sak som att dela en öppen hypotes: en utesluten misstanke,
+  // redovisad som utesluten, är stärkande — "vi kontrollerade hjullagret
+  // och det var helt" är precis vad kunden betalade för att få veta.
+  "slutsats",
   "arende_avslutat",
 ];
 

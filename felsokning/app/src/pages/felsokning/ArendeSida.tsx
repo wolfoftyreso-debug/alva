@@ -6,6 +6,7 @@ import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
 import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
 import { Fasrad } from "@/alva/komponenter";
+import { Slutsatspanel } from "@/felsokning/Slutsats";
 import { arendebeteckning, fasDefinition } from "@/alva/system";
 import {
   arAvslutat,
@@ -1301,6 +1302,11 @@ function GuideFlik({
           {fasDefinition(fasFor(steg.steg.id)).avgransning}
         </p>
       </div>
+
+      {/* ALVA-RULE-200. Panelen visas när metodiken är genomförd — det
+          är då varför-frågan har ett underlag att vila på. Att fråga
+          tidigare vore att be om en gissning. */}
+      {steg.klart && <Slutsatspanel arende={arende} skicka={skicka} />}
 
       <Panel rubrik={`Metodik: ${metodik.namn} · Steg: ${steg.steg.rubrik}`}>
         {steg.klart ? (

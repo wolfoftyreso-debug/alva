@@ -15,6 +15,8 @@
 // databasåtkomst, ingen tid, inget slumpmässigt — samma logg ger alltid
 // samma utfall, vilket är vad som gör en spärr granskbar.
 
+import { granskaSlutsats } from "./motivering.mjs";
+
 const UNDANTAG_MOTIVERAT = (h) => typeof h.undantag === "string" && h.undantag.trim().length > 0;
 
 // Frågor som måste besvaras jakande för att arbetet ska få avslutas.
@@ -69,7 +71,7 @@ export function grinda(handelser, metodik) {
   // Åtgärdskedjan. En utebliven åtgärd är ett giltigt utfall — men bara
   // när skälet står i loggen.
   const atgarder = av(handelser, "atgard_utford");
-  const utfordArbete = atgarder.some((h) => (h.text ?? "").trim().length > 0);
+  const utfordArbete = atgarder.some((h) => h.utford === true);
   krav(
     "atgard",
     "Åtgärd dokumenterad eller motiverad",
@@ -85,7 +87,7 @@ export function grinda(handelser, metodik) {
     krav(
       "avbojt_men_utfort",
       "Utfört arbete trots avböjt åtgärdsförslag",
-      !beslut.some((h) => h.utfall === "avbojt"),
+      !beslut.some((h) => h.beslut === "avbojt"),
       "Kunden avböjde förslaget men arbete har dokumenterats som utfört.",
     );
 
@@ -123,6 +125,19 @@ export function grinda(handelser, metodik) {
     saknade.slice(0, 5).join(" · "),
   );
   krav("foton", "Foton finns för fotokrävande kontroller", utanFoto.length === 0 || foton >= utanFoto.length);
+
+  // ALVA-RULE-200 · Slutsatsen. Ett ärende stängs aldrig utan att
+  // teknikern lämnat ett varför — motiveringen som knyter slutsatsen
+  // till underlaget, vad som uteslöts, och vad som kvarstår osäkert.
+  //
+  // Detta är den rad som saknas i varje verkstadsprotokoll: underlaget
+  // säger vad som mättes, slutsatsen vad som är fel, men ingenting
+  // varför det ena medför det andra. Det är precis det steget en
+  // garantihandläggare eller försäkringsbedömare behöver granska.
+  const slutsats = av(handelser, "slutsats").at(-1);
+  for (const brist of granskaSlutsats(slutsats, handelser)) {
+    hinder.push({ id: `slutsats_${brist.falt}`, rubrik: brist.text });
+  }
 
   // Säkerhetsspärrar. Ett nekande svar på en spärrfråga får aldrig
   // passera som "besvarad" — se SPARRFRAGOR i klientens metodik.ts.
