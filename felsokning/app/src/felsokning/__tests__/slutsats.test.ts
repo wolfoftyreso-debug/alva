@@ -178,3 +178,50 @@ describe("grinden spärrar avslutet utan slutsats", () => {
     expect(hinder).toContain("slutsats_slutsats");
   });
 });
+
+// ---- Klient och grind måste ge samma svar --------------------------------
+//
+// Bakgrunden till det här testet är en riktig bugg: kvalitetsgrinden på
+// servern krävde en slutsats, men klientens avslutsknapp gjorde inte det.
+// Demoärendet gick därför att stänga på skärmen utan ett varför, och
+// teknikern fick beskedet först vid synk — vilket är den sämsta tänkbara
+// tidpunkten, eftersom bilen då har lämnat verkstaden.
+//
+// Testet jämför inte texter utan verdikt: samma logg ska ge samma svar på
+// frågan "får detta ärende stängas?" i båda ändar.
+describe("avslutsvillkoret är detsamma i klienten och i grinden", () => {
+  const slutsatsHinder = async (handelser: unknown[]) => {
+    const { grinda } = await import("../../../../services/gemensam/grind.mjs");
+    const { ALLA_METODIKER } = await import("../../../../services/gemensam/metodiker.mjs");
+    return grinda(handelser, ALLA_METODIKER.at(-1))
+      .map((h) => h.id)
+      .filter((id) => id.startsWith("slutsats_"));
+  };
+
+  // Precis det uttryck klienten använder i ArendeSida.kanAvslutas.
+  const klientBrister = (handelser: Record<string, unknown>[]) =>
+    granskaSlutsats([...handelser].reverse().find((h) => h.typ === "slutsats"), handelser);
+
+  it("en logg utan slutsats spärras i båda ändar", async () => {
+    expect(klientBrister(ARBETE).length).toBeGreaterThan(0);
+    expect(await slutsatsHinder(ARBETE)).not.toHaveLength(0);
+  });
+
+  it("en logg med fullständig slutsats släpps igenom i båda ändar", async () => {
+    const logg = [...ARBETE, GILTIG];
+    expect(klientBrister(logg)).toEqual([]);
+    expect(await slutsatsHinder(logg)).toEqual([]);
+  });
+
+  it("en slutsats med tunn motivering spärras i båda ändar", async () => {
+    const logg = [...ARBETE, { ...GILTIG, motivering: "Klart." }];
+    expect(klientBrister(logg).length).toBeGreaterThan(0);
+    expect(await slutsatsHinder(logg)).not.toHaveLength(0);
+  });
+
+  it("en obemött hypotes spärras i båda ändar", async () => {
+    const logg = [...ARBETE, { typ: "hypotes", text: "Misstänkt glapp i hjullagret höger fram", niva: "medel" }, GILTIG];
+    expect(klientBrister(logg).length).toBeGreaterThan(0);
+    expect(await slutsatsHinder(logg)).not.toHaveLength(0);
+  });
+});

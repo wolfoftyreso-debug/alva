@@ -8,6 +8,7 @@ import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
 import { Fasrad } from "@/alva/komponenter";
 import { Slutsatspanel } from "@/felsokning/Slutsats";
 import { sammanfatta } from "../../../../services/gemensam/sammanfattning.mjs";
+import { granskaSlutsats } from "../../../../services/gemensam/motivering.mjs";
 import { arendebeteckning, fasDefinition } from "@/alva/system";
 import {
   arAvslutat,
@@ -1252,11 +1253,25 @@ function GuideFlik({
   // åtgärd faktiskt utförts — kvalitetskontroll av att symptomet är borta.
   const atgardsposter = atgarder(arende);
   const utfordAtgard = atgardsposter.some((p) => p.handelse.typ === "atgard_utford" && p.handelse.utford);
-  const kanAvslutas =
+
+  // Underlaget: det som gör att en slutsats över huvud taget går att
+  // motivera. Innan detta är på plats vore varför-frågan en begäran om
+  // en gissning.
+  const underlagKlart =
     !!reproducering(arende) &&
     felorsaker(arende).length > 0 &&
     atgardsposter.length > 0 &&
     (!utfordAtgard || !!kvalitetskontroll(arende));
+
+  // ALVA-RULE-200. Samma granskning som kvalitetsgrinden på servern kör
+  // — avsiktligt samma funktion, inte en klientkopia av regeln. En
+  // tekniker ska aldrig få veta vid synk att ärendet inte gick att
+  // stänga; hindret ska synas på skärmen där arbetet utförs.
+  const slutsatsbrister = granskaSlutsats(
+    [...arende.handelser].reverse().find((p) => p.handelse.typ === "slutsats")?.handelse,
+    arende.handelser.map((p) => p.handelse),
+  );
+  const kanAvslutas = underlagKlart && slutsatsbrister.length === 0;
 
   if (avslutat) {
     return (
@@ -1304,10 +1319,12 @@ function GuideFlik({
         </p>
       </div>
 
-      {/* ALVA-RULE-200. Panelen visas när metodiken är genomförd — det
-          är då varför-frågan har ett underlag att vila på. Att fråga
-          tidigare vore att be om en gissning. */}
-      {steg.klart && <Slutsatspanel arende={arende} skicka={skicka} />}
+      {/* ALVA-RULE-200. Panelen visas när det finns ett underlag att
+          vila på — antingen för att metodiken är genomförd eller för att
+          kedjan reproducering → felorsak → åtgärd → kvalitetskontroll är
+          hel. Att fråga tidigare vore att be om en gissning; att fråga
+          först vid avslutsknappen vore att neka någon som redan är klar. */}
+      {(steg.klart || underlagKlart) && <Slutsatspanel arende={arende} skicka={skicka} />}
 
       <Panel rubrik={`Metodik: ${metodik.namn} · Steg: ${steg.steg.rubrik}`}>
         {steg.klart ? (
@@ -1320,11 +1337,7 @@ function GuideFlik({
             <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare })}>
               Avsluta felsökning
             </StorKnapp>
-            {!kanAvslutas && (
-              <p className="mt-2 text-[12px] font-semibold text-[#9A6700]">
-                Avslut kräver symptomverifiering, felorsaksanalys, åtgärd och kvalitetskontroll — se panelerna nedan.
-              </p>
-            )}
+            {!kanAvslutas && <Avslutshinder underlagKlart={underlagKlart} brister={slutsatsbrister} />}
           </>
         ) : steg.sparr ? (
           // Säkerhetsspärr. Metodiken går inte vidare — svaret är ett
@@ -1397,12 +1410,7 @@ function GuideFlik({
         </Panel>
       )}
 
-      {!kanAvslutas && (
-        <p className="mb-2 text-[12px] font-semibold text-[#9A6700]">
-          Avslut kräver hela kedjan: symptomverifiering, felorsaksanalys, dokumenterad åtgärd och — vid utförd åtgärd
-          — kvalitetskontroll av att symptomet är borta.
-        </p>
-      )}
+      {!kanAvslutas && <Avslutshinder underlagKlart={underlagKlart} brister={slutsatsbrister} />}
       <div className="grid grid-cols-2 gap-2">
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
           Lämna över arbete
@@ -1416,6 +1424,36 @@ function GuideFlik({
         <OverlamningDialog arende={arende} metodik={metodik} nu={nu} skicka={skicka} stang={() => setVisaOverlamning(false)} />
       )}
     </>
+  );
+}
+
+/**
+ * Varför avslut är spärrat — i klartext, på skärmen, medan arbetet pågår.
+ *
+ * Ett hinder som bara säger "kraven är inte uppfyllda" tvingar teknikern
+ * att leta. Här står vad som fattas, i den ordning det behöver åtgärdas:
+ * först underlaget, sedan varför-frågan.
+ */
+function Avslutshinder({ underlagKlart, brister }: { underlagKlart: boolean; brister: { falt: string; text: string }[] }) {
+  return (
+    <div className="mb-2 border-l-2 border-[#9A6700] bg-[#FFFBF0] px-4 py-4">
+      <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#9A6700]">
+        Ärendet kan inte avslutas ännu
+      </p>
+      {!underlagKlart && (
+        <p className="mb-2 text-[13px] leading-[20px] text-[#333333]">
+          Underlaget är ofullständigt: avslut kräver symptomverifiering, felorsaksanalys, dokumenterad åtgärd och —
+          vid utförd åtgärd — kvalitetskontroll av att symptomet är borta. Se panelerna nedan.
+        </p>
+      )}
+      {brister.length > 0 && (
+        <ul className="ml-4 list-disc text-[13px] leading-[20px] text-[#333333]">
+          {brister.map((b) => (
+            <li key={b.falt}>{b.text}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
