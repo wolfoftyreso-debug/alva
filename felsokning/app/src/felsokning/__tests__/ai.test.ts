@@ -101,6 +101,15 @@ describe("AI-orkestern", () => {
       ["/api/arenden/{arendeId}/bilagor", "laddaUppVag"],
       ["/api/bilagor/{bilagaId}", "bilagaVag"],
       ["/api/delad/{delningskod}/bilagor/{bilagaId}", "delatBilaga"],
+      // ALVA: nya vägar. Ett API som inte är dokumenterat är inte ett API
+      // någon kan koppla in sig mot.
+      ["/api/arenden/{arendeId}/sammanfattning", "sammanfattningVag"],
+      ["/api/arenden/{arendeId}/protokoll", "protokollVag"],
+      ["/api/statistik/oversikt", "/api/statistik/oversikt"],
+      ["/api/integration/kategorier", "/api/integration/kategorier"],
+      ["/api/integration/prenumerationer", "/api/integration/prenumerationer"],
+      ["/api/radering", "/api/radering"],
+      ["/api/matdon", "/api/matdon"],
     ];
     for (const [iSpec, iServer] of vagar) {
       expect(spec).toContain(`${iSpec}:`);

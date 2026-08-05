@@ -10,6 +10,7 @@ import { KUNDBESLUT_LABEL, handelseRubrik } from "./domain";
 import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader, videor } from "./projektioner";
 import { metodikForArende } from "./store";
 import { Bild, Klipp } from "./Bilagevisning";
+import { sammanfatta } from "../../../services/gemensam/sammanfattning.mjs";
 import { tidDatum, tidKlockslag } from "./format";
 import { FelsokningSkal, Panel, StorKnapp } from "./ui";
 import { IkonCheck, IkonKlocka, IkonUppdatera } from "./ikoner";
@@ -156,6 +157,41 @@ export function DelatArendeVy({
           handläggare, kollega) ska aldrig tveka om vilket fordon och
           ärende vyn avser. Härledd ur det nivåfiltrerade underlaget. */}
       <IdentitetsPanel arende={arende} avslutat={avslutat} />
+
+      {/* ALVA-PROC-0030 · Sammanfattningen först. Mottagaren är oftast
+          inte tekniker: kunden, en försäkringshandläggare, en
+          flottansvarig. De ska få bilden på fem sekunder och sedan kunna
+          gå djupare — inte tvärtom. Texten härleds ur det nivåfiltrerade
+          underlaget, så den kan aldrig avslöja något som nivån döljer. */}
+      <Panel rubrik="Sammanfattning">
+        <p className="text-[15px] leading-[24px] text-[#1B1E22]">{sammanfatta(arende).text}</p>
+      </Panel>
+
+      {/* ALVA-RULE-200 · Teknikerns varför. Den enda rad en
+          försäkringsbedömare egentligen behöver, kunddelbar med avsikt. */}
+      {(() => {
+        const post = [...arende.handelser].reverse().find((p) => p.handelse.typ === "slutsats");
+        if (!post || post.handelse.typ !== "slutsats") return null;
+        const h = post.handelse;
+        const rader: [string, string][] = [
+          [h.orsakFastställd === false ? "Skäl till att orsaken inte fastställts" : "Motivering", h.motivering],
+          ["Uteslutna alternativ", h.uteslutet],
+          ...(h.atgardsval ? ([["Val av åtgärd", h.atgardsval]] as [string, string][]) : []),
+          ["Kvarstående osäkerhet", h.kvarstaende],
+        ];
+        return (
+          <Panel rubrik="Slutsats och motivering">
+            <dl className="text-[14px] leading-[22px]">
+              {rader.map(([etikett, text]) => (
+                <div key={etikett} className="border-t border-[#D7DCE2] py-2 first:border-t-0">
+                  <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4D5662]">{etikett}</dt>
+                  <dd className="mt-1 text-[#1B1E22]">{text}</dd>
+                </div>
+              ))}
+            </dl>
+          </Panel>
+        );
+      })()}
 
       <p className="mb-4 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-3 text-[12px] text-[#4A5560] print:hidden">
         {notis}

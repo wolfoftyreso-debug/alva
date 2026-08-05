@@ -952,6 +952,240 @@ paths:
         "502": { $ref: "#/components/responses/Fel" }
         "503": { $ref: "#/components/responses/Fel" }
 
+  /api/arenden/{arendeId}/sammanfattning:
+    get:
+      summary: Härledd sammanfattning av ärendet (ALVA-PROC-0030)
+      description: >
+        Några få meningar som ger vem som helst en bild av ärendet.
+        Sammanfattningen är HÄRLEDD ur händelseloggen, inte genererad:
+        samma ärende ger samma text i dag och om två år, den innehåller
+        inget som inte står i loggen, och den säger uttryckligen när något
+        saknas i stället för att utelämna det. Avsedd för handläggare,
+        kundtjänst och integrationer.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: arendeId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Sammanfattning
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: string, example: ALVA-PROC-0030 }
+                  text: { type: string }
+                  meningar: { type: array, items: { type: string } }
+                  enrading: { type: string }
+                  fullstandig:
+                    type: boolean
+                    description: Sant när inget obligatoriskt underlag saknas.
+                  saknas: { type: array, items: { type: string } }
+        "404": { description: Ärendet är inte tillgängligt }
+
+  /api/arenden/{arendeId}/protokoll:
+    post:
+      summary: Läs in ett diagnosprotokoll som evidens (ALVA-PROC-0020)
+      description: >
+        Avläsningar blir händelser i loggen, inte en bilaga. Härkomsten
+        bevaras i varje post, så ett värde som kommit utifrån aldrig ser ut
+        som något teknikern själv mätt. Lämnas instrumentets identitet
+        behålls den; utan den graderas värdet E1 i stället för E4.
+        Profilen beskriver var värdena ligger i leverantörens format —
+        ALVA antar aldrig ett visst leverantörsformat.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: arendeId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kalla, profil, protokoll]
+              properties:
+                kalla:
+                  type: string
+                  description: Vad som producerade protokollet. Följer med varje händelse.
+                  example: Diagnosinstrument, plats 3
+                profil:
+                  type: object
+                  properties:
+                    felkoder:
+                      type: object
+                      properties:
+                        vag: { type: string, example: dtcs }
+                        kod: { type: string, example: code }
+                        text: { type: string, example: description }
+                    matvarden:
+                      type: object
+                      properties:
+                        vag: { type: string, example: liveData }
+                        beskrivning: { type: string, example: name }
+                        varde: { type: string, example: value }
+                        enhet: { type: string, example: unit }
+                        instrumentId: { type: string, example: toolSerial }
+                protokoll:
+                  type: object
+                  description: Leverantörens nyttolast, oförändrad.
+      responses:
+        "200":
+          description: Antal skrivna händelser
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  handelser: { type: integer }
+                  kalla: { type: string }
+        "422": { description: Profilen gav inga händelser ur protokollet }
+
+  /api/statistik/oversikt:
+    get:
+      summary: Driftmått för organisationen (ALVA-REP-0100)
+      description: >
+        Samma underlag som portalens analysvy och kvartalsrapporten, så att
+        skärm och rapport aldrig visar olika siffror för samma period.
+        Ett mått utan underlag returneras som null, aldrig som noll.
+        Kräver arbetsledare eller administratör.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Driftmått
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: string, example: ALVA-REP-0100 }
+                  verifiering:
+                    type: object
+                    description: Andel avslut med fastställd orsak.
+                    properties:
+                      antal: { type: integer }
+                      fastställda: { type: integer }
+                      andel: { type: number, nullable: true }
+                  reproduktion: { type: object }
+                  omarbetning:
+                    type: object
+                    description: Samma fordon tillbaka med samma orsakskategori.
+                  undantag:
+                    type: array
+                    description: Kontroller som oftast hoppas över, per steg och ALVA-fas.
+                    items: { type: object }
+                  evidens: { type: object }
+                  faser: { type: object }
+                  orsaker: { type: array, items: { type: object } }
+        "403": { description: Kräver arbetsledare eller administratör }
+
+  /api/integration/kategorier:
+    get:
+      summary: Systemkategorier och utgående händelser (ALVA-SPEC-020)
+      description: >
+        ALVA är leverantörsoberoende. Kategorierna beskriver vilka slags
+        system som kan kopplas in och åt vilket håll data går; en profil
+        märks validated först efter att den körts mot leverantörens
+        faktiska gränssnitt.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Kategorier och händelsetyper
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kategorier: { type: object }
+                  handelser:
+                    type: object
+                    description: Utgående händelsetyper med beskrivning.
+
+  /api/integration/prenumerationer:
+    get:
+      summary: Organisationens utgående prenumerationer (ALVA-SPEC-021)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Prenumerationer }
+        "403": { description: Kräver administratörsbehörighet }
+    post:
+      summary: Registrera en mottagare för utgående händelser
+      description: >
+        Leveranser signeras med HMAC över tidsstämpel och kropp i huvudet
+        `alva-signatur` (`t=<unix>,v1=<hex>`). Tidsstämpeln ligger inne i
+        signaturen, så en fångad leverans inte går att spela upp senare;
+        toleransen är fem minuter. Adressen kontrolleras mot samma
+        SSRF-gräns som leverantörsuppslagen.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [namn, url, handelser]
+              properties:
+                namn: { type: string }
+                url: { type: string, format: uri }
+                handelser:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - arende.skapat
+                      - arende.fas
+                      - arende.slutsats
+                      - arende.avslutat
+                      - media.tillagt
+                      - atgardsforslag.lamnat
+                      - kundbeslut.registrerat
+                hemlighet:
+                  type: string
+                  description: Utelämnas för att låta servern generera en.
+      responses:
+        "200": { description: Skapad }
+        "400": { description: Ogiltig adress eller okänd händelsetyp }
+
+  /api/radering:
+    post:
+      summary: Radera personuppgifter för ett fordon (krypto-shredding)
+      description: >
+        Nyckeln förstörs; loggen står kvar. Det som raderas är
+        identifieringen, inte protokollet över vad som kontrollerades —
+        den enda konstruktion där bevisvärdet överlever en
+        raderingsbegäran. Kräver en bekräftelse som upprepar subjektet
+        exakt; åtgärden går inte att ångra.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subjekt, bekraftelse]
+              properties:
+                subjekt: { type: string, description: Registreringsnummer eller ärende-id. }
+                bekraftelse: { type: string, description: Måste vara identisk med subjekt. }
+      responses:
+        "200": { description: Verkställd }
+        "400": { description: Bekräftelsen matchar inte }
+        "404": { description: Inget skyddat underlag finns }
+
+  /api/matdon:
+    get:
+      summary: Organisationens mätdon med kalibreringsstatus (ALVA-SPEC-004)
+      description: >
+        Ett mätvärde graderas E4 endast med spårbart, kalibrerat
+        instrument. Utan register är påståendet inte kontrollerbart.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Mätdon }
+    post:
+      summary: Registrera eller uppdatera ett mätdon
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Sparat }
+        "403": { description: Kräver arbetsledare eller administratör }
+
 components:
   securitySchemes:
     bearerAuth:

@@ -7,6 +7,7 @@ import { nastaSteg } from "@/felsokning/metodik";
 import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
 import { Fasrad } from "@/alva/komponenter";
 import { Slutsatspanel } from "@/felsokning/Slutsats";
+import { sammanfatta } from "../../../../services/gemensam/sammanfattning.mjs";
 import { arendebeteckning, fasDefinition } from "@/alva/system";
 import {
   arAvslutat,
@@ -2317,6 +2318,33 @@ function RapportFlik({
           Delningslänken kräver att ärendet är synkat mot molnet (inloggad användare).
         </p>
       </Panel>
+      {/* ALVA-PROC-0030 · Sammanfattningen först. Den som öppnar
+          rapporten — kund, handläggare, nästa tekniker — ska få bilden
+          på fem sekunder och sedan kunna gå djupare. Texten är härledd
+          ur loggen, så den kan inte säga något som inte står där. */}
+      <Panel rubrik="Sammanfattning">
+        <p className="text-[15px] leading-[24px] text-[#1B1E22]">{sammanfatta(arende).text}</p>
+        <p className="mt-2 font-mono text-[11px] text-[#4D5662]">ALVA-PROC-0030 · härledd ur händelseloggen</p>
+      </Panel>
+
+      {/* ALVA-RULE-200 · Teknikerns varför. Placerad före underlaget:
+          en handläggare läser skälet först och kontrollerar det sedan. */}
+      {(() => {
+        const s = [...arende.handelser].reverse().find((p) => p.handelse.typ === "slutsats");
+        if (!s || s.handelse.typ !== "slutsats") return null;
+        const h = s.handelse;
+        return (
+          <Panel rubrik="Slutsats och motivering">
+            {identitetsRader([
+              [h.orsakFastställd === false ? "Skäl till att orsaken inte fastställts" : "Motivering", h.motivering],
+              ["Uteslutna alternativ", h.uteslutet],
+              ["Val av åtgärd", h.atgardsval ?? "—"],
+              ["Kvarstående osäkerhet", h.kvarstaende],
+            ])}
+          </Panel>
+        );
+      })()}
+
       {/* Rapportens första sida: ärendeidentiteten — registrerad en gång,
           återanvänd här automatiskt. */}
       <Panel rubrik="Ärendeinformation">
