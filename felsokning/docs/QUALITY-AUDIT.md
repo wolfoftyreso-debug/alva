@@ -351,3 +351,56 @@ can bypass with `curl`.
 Close C-1 and C-2, and the honest description of this product changes from
 "a well-built diagnostic app" to "an evidentiary system". That is a different
 market and a different price.
+
+---
+
+## Remediation status
+
+Recorded after the fixes were implemented. Each entry states what was
+actually changed, so a re-audit can verify rather than take it on trust.
+
+| # | Status | What changed |
+| --- | --- | --- |
+| **C-1** | ✅ Closed | `anvandare` derives from the verified JWT and `tidpunkt` from the server clock (`services/gemensam/handelser.mjs`). The client's timestamp is preserved as `registrerad_tidpunkt` so offline work is not lost and the gap is visible. |
+| **C-2** | ✅ Closed | The gate moved to `services/gemensam/grind.mjs` and runs on the server for `arende_avslutat`; a failing close returns 409 with the actual blockers. The methodology library moved to `services/gemensam/metodiker.mjs`; the client re-exports it typed, so there is still one source. |
+| **C-3** | ✅ Closed | Crypto-shredding (`services/gemensam/personuppgifter.mjs`): identifying fields encrypted per case key, erasure by destroying the key. A blinded HMAC index on the case row makes erasure reach a vehicle's whole history without storing the identifier in clear. Retention dates set at close per case type. `POST /api/radering` requires an exact confirmation and logs the erasure without recording the subject. |
+| **C-4** | ✅ Closed | `ai_tillaten` per organisation, carried in the JWT; the orchestrator refuses with 403 when false. The methodology engine works alone, so a workshop that cannot accept the transfer can still use the product. **Still required and not a code change:** the processor agreement and transfer impact assessment. |
+| **M-1** | ✅ Closed | `matvarde` carries `matdonId`, designation and calibration date; an instrument register lives at `/api/matdon`. Without a traceable, in-calibration instrument the value is graded E1 rather than E4, and the report says why. Calibration is judged at the time of measurement, not today. |
+| **M-2** | ✅ Closed | `SPARRFRAGOR` makes the high-voltage questions hard interlocks: a "No" stops the methodology with an explicit instruction to hand over, and the server refuses to close. An unanswered safety question also blocks — silence is not a yes. |
+| **M-3** | ✅ Closed | Every event is validated against `HÄNDELSESCHEMA` before writing. Unknown types are rejected. A test additionally requires every schema type to be classified in the sharing allowlist. |
+| **M-4** | ✅ Closed | `atkomstlogg` records reads with user, case, route, source and share code; readable at `/api/atkomstlogg` for supervisors and admins. |
+| **M-5** | ✅ Closed | `services/plattform/aterstallningstest.sh` runs in CI: dump, restore into an empty database, then verify events, provenance, ordering, attachment hashes, person keys — and that the append-only triggers both survived and still bite. |
+| **M-6** | ✅ Closed | The rule pack is verified against an HMAC. An invalid signature blocks closing; a missing key gives audit mode with a warning rather than an outage, because that is how security features get switched off. |
+| **m-1** | ✅ Closed | Rejection sampling replaces modulo in `nyKod`. |
+| **m-2** | ✅ Closed | Id collisions are counted and surfaced in the trace rather than passing silently. |
+| **m-3** | ✅ Closed | EXIF/GPS stripping is now documented as deliberate and locked by a test that reads the code path, not just the output. |
+| **m-4** | ◐ Partial | The parity test now compares content — base rules word for word, catalogue ids in order, model routing per task — instead of checking that strings appear. **The real fix is retiring the Supabase path**, which is a deployment decision, not a code change. |
+| **m-5** | ✅ Closed | `npm audit` at high severity plus a CycloneDX SBOM per build, archived 400 days. |
+| **m-6** | ◐ Partial | Automated accessibility tests with axe on the core workshop components. Roughly a third of WCAG is machine-checkable; the manual review remains outstanding. |
+| **m-7** | ✅ Closed | Each response carries a `promptversion` — a short stable hash of model, effort and system prompt — so two answers can be compared without storing the prompt. |
+
+### What remains
+
+Two items are honestly open, and neither is a code change:
+
+1. **The processor agreement and transfer impact assessment (C-4).** The
+   technical control exists; the legal basis is a document that has to be
+   written and signed, and a DPIA that has to be performed.
+2. **Retiring the Supabase orchestrator (m-4).** Duplication defended by tests
+   is a liability that grows. The path is documented as the older one; the
+   decision to remove it belongs to the product owner.
+
+A manual accessibility review (m-6) should also be scheduled. Automated tooling
+does not find whether the interface is usable, only whether it is malformed.
+
+### Re-audit verdict
+
+The two findings that decided the assessment — C-1 and C-2 — are closed at the
+API boundary, which is where they had to be closed. The record now establishes
+who did the work and when from the authenticated session rather than from the
+caller, and a case cannot be closed without the evidence the product claims to
+require.
+
+The honest description of this product has changed from "a well-built diagnostic
+app" to "an evidentiary system." Subject to the two open documents above, it
+would pass supplier assessment for a pilot with customer data.

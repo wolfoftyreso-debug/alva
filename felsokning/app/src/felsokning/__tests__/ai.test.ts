@@ -201,3 +201,44 @@ describe("arbetsorderskanning", () => {
     }
   });
 });
+
+// m-4: de två orkesterkopiorna hålls i synk av test, inte av delad kod.
+// Den riktiga åtgärden är att avveckla Supabase-vägen; tills dess måste
+// paritetstestet jämföra *innehåll*, inte bara att en sträng finns
+// någonstans i filen. Ett substrängtest hade inte fångat att en
+// grundregel ändrats i ena kopian.
+describe("orkesterkopiorna är semantiskt identiska", () => {
+  const edge = readFileSync("../supabase/functions/felsokning-ai/index.ts", "utf8");
+  const tjanst = readFileSync("../services/ai-orkester/server.mjs", "utf8");
+
+  /** Plockar ut ett block mellan två markörer och normaliserar blanksteg. */
+  const block = (kalla: string, start: string, slut: string) => {
+    const i = kalla.indexOf(start);
+    if (i < 0) return null;
+    const j = kalla.indexOf(slut, i + start.length);
+    return kalla.slice(i, j < 0 ? undefined : j).replace(/\s+/g, " ").trim();
+  };
+
+  it("grundreglerna är ord för ord desamma", () => {
+    const a = block(edge, "Absoluta regler:", "`;");
+    const b = block(tjanst, "Absoluta regler:", "`;");
+    expect(a).not.toBeNull();
+    expect(a).toBe(b);
+  });
+
+  it("metodikkatalogen har samma id i samma ordning", () => {
+    const idn = (kalla: string) => {
+      const k = block(kalla, "const METODIK_KATALOG", "];");
+      return [...(k ?? "").matchAll(/\["([a-z_]+)",/g)].map((m) => m[1]);
+    };
+    expect(idn(edge)).toEqual(idn(tjanst));
+    expect(idn(edge).length).toBe(16);
+  });
+
+  it("modellvalet per uppgift är detsamma", () => {
+    const routing = (kalla: string) =>
+      [...kalla.matchAll(/^\s{2}(\w+): \{\n\s+modell: "([^"]+)"/gm)].map((m) => `${m[1]}=${m[2]}`);
+    expect(routing(edge).sort()).toEqual(routing(tjanst).sort());
+    expect(routing(tjanst).length).toBeGreaterThanOrEqual(6);
+  });
+});
