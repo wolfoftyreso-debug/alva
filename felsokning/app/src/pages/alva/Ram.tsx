@@ -17,8 +17,9 @@ const PUBLIKT = [
 
 const PORTAL = [
   { till: "/alva/portal", text: "Dashboard" },
+  { till: "/alva/portal/analys", text: "Analysis" },
   { till: "/alva/portal/kunskapskallor", text: "Knowledge sources" },
-  { till: "/alva/portal/dokument", text: "Document library" },
+  { till: "/alva/portal/integration", text: "Integration" },
   { till: "/felsokning", text: "Diagnostics" },
 ];
 

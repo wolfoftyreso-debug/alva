@@ -30,6 +30,9 @@ import { avsluta, logga, mätvärde, spårFrån, starta, traceparent } from "./o
 import { tillPost } from "./handelser.mjs";
 import { grinda, grindaArendetyp } from "./grind.mjs";
 import { ALLA_METODIKER } from "./metodiker.mjs";
+import { oversikt as statistikOversikt } from "./statistik.mjs";
+import { KATEGORIER, UTGAENDE, protokollTillHandelser, signeraLeverans } from "./integration.mjs";
+import { enrading, sammanfatta } from "./sammanfattning.mjs";
 import {
   MASKERAT,
   gallringsdatum,
@@ -451,6 +454,50 @@ function loggaAtkomst(req, res, { org, anvandare, arende, delningskod }) {
       [org ?? null, anvandare ?? null, arende ?? null, req.url?.slice(0, 500) ?? "", kallaFor(req), delningskod ?? null],
     )
     .catch((fel) => logga("fel", "åtkomstlogg misslyckades", { spårId: res.spår.spårId, orsak: fel?.message }));
+}
+
+/**
+ * Levererar en utgående händelse till organisationens prenumeranter.
+ *
+ * Leveransen är signerad och sker i bakgrunden: en mottagare som är nere
+ * får inte hindra teknikern från att arbeta. Utfallet skrivs på
+ * prenumerationen, så ett trasigt mottagarsystem syns i inställningarna
+ * i stället för att tyst sluta få data (ALVA-SPEC-021).
+ */
+function leverera(orgId, handelse, nyttolast) {
+  pool
+    .query(
+      `select id, url, hemlighet_krypt from prenumerationer
+       where organisation_id = $1 and aktiv and $2 = any(handelser)`,
+      [orgId, handelse],
+    )
+    .then(async ({ rows }) => {
+      for (const p of rows) {
+        const kropp = JSON.stringify({ handelse, tid: new Date().toISOString(), ...nyttolast });
+        const t = Math.floor(Date.now() / 1000);
+        let status = "ok";
+        try {
+          const svar = await fetch(p.url, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "alva-signatur": signeraLeverans(kropp, dekryptera(p.hemlighet_krypt), t, createHmac),
+              "alva-handelse": handelse,
+            },
+            body: kropp,
+            signal: AbortSignal.timeout(10_000),
+          });
+          if (!svar.ok) status = `HTTP ${svar.status}`;
+        } catch (fel) {
+          status = fel?.message?.slice(0, 200) ?? "okänt fel";
+        }
+        await pool.query(
+          `update prenumerationer set senast_levererad = now(), senaste_status = $2 where id = $1`,
+          [p.id, status],
+        );
+      }
+    })
+    .catch((fel) => logga("fel", "leverans misslyckades", { handelse, orsak: fel?.message }));
 }
 
 function kravAuth(req, hemlighet) {
@@ -1308,6 +1355,133 @@ export function skapaServer() {
       }
 
 
+
+      // ---- ALVA-REP-0100 · Analysunderlag ------------------------------
+      //
+      // En enda källa för både portalens analysvy och kvartalsrapporten,
+      // så att skärmen och rapporten aldrig visar olika siffror för samma
+      // period. Det är den vanligaste orsaken till att ingen litar på en
+      // rapport.
+      if (req.method === "GET" && vag.startsWith("/api/statistik/oversikt")) {
+        if (anspr.roll === "tekniker") return svara(res, 403, { error: "Kräver arbetsledare eller administratör." });
+        const rader = await pool.query(
+          `select a.id, a.nummer,
+                  coalesce(json_agg(json_build_object('tidpunkt', h.tidpunkt, 'handelse', h.handelse)
+                    order by h.tidpunkt) filter (where h.id is not null), '[]') as handelser
+           from felsokning_arenden a
+           left join felsokning_handelser h on h.arende_id = a.id
+           where a.organisation_id = $1
+           group by a.id, a.nummer`,
+          [anspr.org],
+        );
+        const nycklar = await nycklarFor(anspr.org);
+        const arenden = rader.rows.map((r) => ({
+          ...r,
+          handelser: r.handelser.map((p) => ({ ...p, handelse: öppnaHändelse(p.handelse, nycklar) })),
+        }));
+        return svara(res, 200, statistikOversikt(arenden));
+      }
+
+      // ---- ALVA-SPEC-021 · Prenumerationer -----------------------------
+      if (vag === "/api/integration/prenumerationer") {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        if (req.method === "GET") {
+          const rader = await pool.query(
+            `select id, namn, url, handelser, aktiv, senast_levererad, senaste_status
+             from prenumerationer where organisation_id = $1 order by namn`,
+            [anspr.org],
+          );
+          return svara(res, 200, { prenumerationer: rader.rows });
+        }
+        if (req.method === "POST") {
+          const { namn, url, handelser, hemlighet } = await lasKropp(req);
+          if (typeof namn !== "string" || !namn.trim() || typeof url !== "string") {
+            return svara(res, 400, { error: "namn och url krävs." });
+          }
+          // Samma SSRF-gräns som leverantörsuppslagen: en prenumeration
+          // får inte peka in i klustret.
+          if (await pekarInat(url)) {
+            return svara(res, 400, { error: "Adressen pekar mot ett internt nät." });
+          }
+          if (!Array.isArray(handelser) || handelser.some((h) => !(h in UTGAENDE))) {
+            return svara(res, 400, { error: "handelser måste vara kända händelsetyper.", kanda: Object.keys(UTGAENDE) });
+          }
+          const rad = await pool.query(
+            `insert into prenumerationer (organisation_id, namn, url, hemlighet_krypt, handelser)
+             values ($1, $2, $3, $4, $5) returning id`,
+            [anspr.org, namn.trim(), url, kryptera(String(hemlighet ?? nyKod(32))), handelser],
+          );
+          return svara(res, 200, { id: rad.rows[0].id });
+        }
+      }
+
+      // ---- ALVA-PROC-0030 · Sammanfattning -----------------------------
+      //
+      // Härledd, inte genererad. En sammanfattning som en bedömare läser
+      // blir en del av beslutsunderlaget — är den genererad måste den
+      // granskas mot loggen varje gång, och då är den ingen genväg.
+      const sammanfattningVag = vag.match(/^\/api\/arenden\/([A-Za-z0-9_-]+)\/sammanfattning$/);
+      if (req.method === "GET" && sammanfattningVag) {
+        if (!(await arendeIOrg(sammanfattningVag[1], anspr.org))) {
+          return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
+        }
+        const rader = await pool.query(
+          `select tidpunkt, anvandare, handelse from felsokning_handelser
+           where arende_id = $1 order by tidpunkt, id`,
+          [sammanfattningVag[1]],
+        );
+        const nycklar = await nycklarFor(anspr.org);
+        const arende = {
+          id: sammanfattningVag[1],
+          handelser: rader.rows.map((r) => ({ ...r, handelse: öppnaHändelse(r.handelse, nycklar) })),
+        };
+        loggaAtkomst(req, res, { org: anspr.org, anvandare: anspr.sub, arende: sammanfattningVag[1] });
+        return svara(res, 200, { ...sammanfatta(arende), enrading: enrading(arende) });
+      }
+
+      // ---- ALVA-SPEC-020 · Integrationsgränssnitt ----------------------
+      if (req.method === "GET" && vag === "/api/integration/kategorier") {
+        return svara(res, 200, { kategorier: KATEGORIER, handelser: UTGAENDE });
+      }
+
+      // Inkommande diagnosprotokoll. Blir evidens, inte en bilaga — men
+      // härkomsten följer med i varje händelse, så ett värde som kommit
+      // utifrån aldrig ser ut som något teknikern själv mätt.
+      const protokollVag = vag.match(/^\/api\/arenden\/([A-Za-z0-9_-]+)\/protokoll$/);
+      if (req.method === "POST" && protokollVag) {
+        if (!(await arendeIOrg(protokollVag[1], anspr.org))) {
+          return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
+        }
+        const { protokoll, profil, kalla } = await lasKropp(req);
+        if (!protokoll || !profil || typeof kalla !== "string" || !kalla.trim()) {
+          return svara(res, 400, { error: "protokoll, profil och kalla krävs." });
+        }
+        const handelser = protokollTillHandelser(protokoll, profil, kalla.trim().slice(0, 120));
+        if (handelser.length === 0) {
+          return svara(res, 422, {
+            error: "Profilen gav inga händelser ur protokollet.",
+            atgard: "Kontrollera att profilens sökvägar matchar leverantörens format.",
+          });
+        }
+        const nyckel = await personnyckel(anspr.org, protokollVag[1]);
+        let skrivna = 0;
+        for (const [i, h] of handelser.entries()) {
+          const { post, fel } = tillPost(
+            { id: `prot-${Date.now()}-${i}`, handelse: h },
+            anspr,
+          );
+          if (fel) continue;
+          post.handelse = skyddaHändelse(post.handelse, nyckel.id, nyckel.nyckel);
+          await pool.query(
+            `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
+             values ($1, $2, $3, $4, $5) on conflict (id) do nothing`,
+            [post.id, protokollVag[1], post.tidpunkt, post.anvandare, post.handelse],
+          );
+          skrivna += 1;
+        }
+        return svara(res, 200, { handelser: skrivna, kalla });
+      }
+
       // ---- Radering (dataskyddsförordningen art. 17) ------------------
       //
       // Krypto-shredding: nyckeln förstörs, loggen står kvar. Vad som
@@ -1528,6 +1702,20 @@ export function skapaServer() {
               [p.id, handelserVag[1], p.tidpunkt, p.anvandare, p.handelse],
             );
             if (skrivet.rowCount === 0) res.spann.spår.kollisioner = (res.spann.spår.kollisioner ?? 0) + 1;
+          }
+          // Utgående integrationer underrättas efter att loggen skrivits,
+          // aldrig före: en mottagare ska aldrig kunna se en händelse som
+          // inte finns i loggen.
+          for (const p of attSkriva) {
+            if (p.handelse.typ === "arende_avslutat") {
+              leverera(anspr.org, "arende.avslutat", { arende: handelserVag[1] });
+            }
+            if (p.handelse.typ === "slutsats") {
+              leverera(anspr.org, "arende.slutsats", { arende: handelserVag[1] });
+            }
+            if (p.handelse.typ === "foto" || p.handelse.typ === "video") {
+              leverera(anspr.org, "media.tillagt", { arende: handelserVag[1], typ: p.handelse.typ });
+            }
           }
           return svara(res, 200, { ok: true });
         }

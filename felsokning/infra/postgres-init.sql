@@ -232,3 +232,19 @@ create table if not exists matdon (
 alter table felsokning_arenden add column if not exists identifierare_index text;
 create index if not exists felsokning_arenden_ident_idx
   on felsokning_arenden (organisation_id, identifierare_index);
+
+-- Utgående integrationer. En prenumeration per mottagare och
+-- händelsetyp — ett videooffertsystem bryr sig inte om varje mätvärde.
+create table if not exists prenumerationer (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references organisationer(id),
+  namn text not null,
+  url text not null,
+  hemlighet_krypt text not null,
+  handelser text[] not null default '{}',
+  aktiv boolean not null default true,
+  skapad timestamptz not null default now(),
+  senast_levererad timestamptz,
+  senaste_status text
+);
+create index if not exists prenumerationer_org on prenumerationer (organisation_id) where aktiv;

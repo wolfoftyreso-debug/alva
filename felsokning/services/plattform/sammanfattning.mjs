@@ -1,0 +1,1 @@
+../gemensam/sammanfattning.mjs
