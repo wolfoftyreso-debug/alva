@@ -168,3 +168,24 @@ export const PLATTFORMSVERSION = "ALVA 1.0";
 
 export const RUTNÄT = 8;
 export const steg = (antal: number) => `${antal * RUTNÄT}px`;
+
+// ---- Typografi (ALVA-SPEC-001 · paragraf 6) ---------------------------
+//
+// En familj genomgående, åtskild med vikt, storlek, spärrning och
+// versalisering. Produktionssnittet är DIN 2014; tillåtna alternativ är
+// FF DIN och IBM Plex Sans. Ordningen nedan är därför inte godtycklig:
+// en organisation som licensierat DIN får DIN, övriga faller ned genom
+// grotesker som delar dess karaktär — aldrig till en antikva.
+//
+// Detta var länge ett avsteg i praktiken. ALVA-ytan satte inget eget
+// snitt och ärvde därför värdapplikationens `Crimson Text` — en antikva.
+// Specen beskrev ett tyskt industrisystem medan skärmen visade en
+// bokstavsform från en helt annan tradition, och det syntes direkt på en
+// telefon där ingenting annat konkurrerade om intrycket.
+export const TYPSNITT =
+  '"DIN 2014", "FF DIN", "IBM Plex Sans", "Inter", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif';
+
+// Identifierare och mätvärden sätts med fast teckenbredd så att siffror
+// står i kolumn — beteckningar jämförs oftare än de läses.
+export const TYPSNITT_MONO =
+  'ui-monospace, "IBM Plex Mono", "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace';

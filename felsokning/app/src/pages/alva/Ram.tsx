@@ -28,7 +28,9 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
   const lankar = portal ? PORTAL : PUBLIKT;
 
   return (
-    <div className="min-h-screen" style={{ background: FARG.background, color: FARG.graphite }}>
+    // `alva-yta` bär typografin ur ALVA-SPEC-001 och håller den skild
+    // från värdapplikationens antikva. Se src/index.css.
+    <div className="alva-yta min-h-screen" style={{ background: FARG.background, color: FARG.graphite }}>
       <header className="border-b" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>
         <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-between gap-4 px-6 py-4">
           <Link to={portal ? "/alva/portal" : "/alva"} className="flex items-baseline gap-4">

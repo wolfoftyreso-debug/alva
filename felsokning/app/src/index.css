@@ -156,6 +156,57 @@
   }
 }
 
+/* ---- ALVA-ytan (ALVA-SPEC-001 · paragraf 6) --------------------------
+ *
+ * Värdapplikationen sätter en antikva på body. ALVA ärvde den, vilket är
+ * fel tradition för ett system som beskriver sig som ett tyskt
+ * industriverktyg. Reglerna nedan gäller bara ALVA-ytan; butiken lämnas
+ * som den är.
+ *
+ * Snittet deklareras i src/alva/system.ts och speglas här därför att
+ * kaskaden måste nå även de element komponenterna inte själva sätter
+ * stil på — rubriker fångas annars av värdapplikationens h1–h6-regel.
+ */
+.alva-yta,
+.alva-yta h1,
+.alva-yta h2,
+.alva-yta h3,
+.alva-yta h4,
+.alva-yta h5,
+.alva-yta h6,
+.alva-yta button,
+.alva-yta input,
+.alva-yta select,
+.alva-yta textarea {
+  font-family:
+    "DIN 2014",
+    "FF DIN",
+    "IBM Plex Sans",
+    "Inter",
+    "Helvetica Neue",
+    Helvetica,
+    Arial,
+    system-ui,
+    sans-serif;
+}
+
+/* Siffror står i kolumn. En beteckning jämförs oftare än den läses. */
+.alva-yta {
+  font-variant-numeric: tabular-nums;
+}
+
+.alva-yta .font-mono {
+  font-family:
+    ui-monospace,
+    "IBM Plex Mono",
+    "SF Mono",
+    "Cascadia Mono",
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+}
+
 @layer utilities {
   .animate-fade-up {
     animation: fadeUp 0.8s ease-out forwards;

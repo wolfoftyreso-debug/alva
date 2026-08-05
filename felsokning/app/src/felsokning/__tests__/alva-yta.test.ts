@@ -156,3 +156,41 @@ describe("ALVA-ytan håller sig inom skärmbredden", () => {
     expect(komponenter).toContain("min-w-0 flex-1");
   });
 });
+
+// ---- Typografin är specens, inte värdapplikationens --------------------
+//
+// ALVA-ytan satte länge inget eget snitt och ärvde därför butikens
+// `Crimson Text` — en antikva. Specen (ALVA-SPEC-001, paragraf 6)
+// föreskriver DIN 2014 med FF DIN och IBM Plex Sans som tillåtna
+// alternativ. Skillnaden är inte kosmetisk: bokstavsformen är det första
+// som säger vilken tradition ett verktyg tillhör, och på en telefon där
+// ingenting annat konkurrerar om intrycket var det allt man såg.
+describe("ALVA-ytan bär sin egen typografi", () => {
+  const css = readFileSync("src/index.css", "utf8");
+  const ram = filer.find(([n]) => n.endsWith("pages/alva/Ram.tsx"))![1];
+  const system = filer.find(([n]) => n.endsWith("alva/system.ts"))![1];
+
+  it("ramen märker ytan så att kaskaden når den", () => {
+    expect(ram).toContain("alva-yta");
+  });
+
+  it("snittet är deklarerat i systemfilen med specens ordning", () => {
+    const stack = system.match(/export const TYPSNITT =[\s\S]*?;/)?.[0] ?? "";
+    expect(stack).toContain("DIN 2014");
+    expect(stack).toContain("FF DIN");
+    expect(stack).toContain("IBM Plex Sans");
+    // Fallkedjan får aldrig sluta i en antikva. `sans-serif` är den
+    // generiska groteskfamiljen och alltså inte det som avses.
+    expect(stack).not.toMatch(/(?<!sans-)\bserif\b/);
+  });
+
+  it("regeln gäller ytan och når även rubriker", () => {
+    const regel = css.match(/\.alva-yta[\s\S]*?\{[\s\S]*?\}/)?.[0] ?? "";
+    expect(regel).toContain("DIN 2014");
+    expect(css).toContain(".alva-yta h1");
+  });
+
+  it("siffror sätts med fast bredd så beteckningar går att jämföra", () => {
+    expect(css).toContain("tabular-nums");
+  });
+});
