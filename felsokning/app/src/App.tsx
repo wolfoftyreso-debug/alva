@@ -27,6 +27,7 @@ import AlvaLoggaIn from "./pages/alva/LoggaIn";
 import AlvaPortal from "./pages/alva/Portal";
 import AlvaKunskapskallor from "./pages/alva/Kunskapskallor";
 import AlvaAnalys from "./pages/alva/Analys";
+import AlvaFakturor from "./pages/alva/Fakturor";
 import AlvaIntegration from "./pages/alva/Integration";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
@@ -68,6 +69,7 @@ function AppContent() {
         <Route path="/alva/portal/kunskapskallor" element={<AlvaKunskapskallor />} />
         <Route path="/alva/portal/analys" element={<AlvaAnalys />} />
         <Route path="/alva/portal/integration" element={<AlvaIntegration />} />
+        <Route path="/alva/portal/fakturor" element={<AlvaFakturor />} />
         <Route path="/felsokning" element={<Arendelista />} />
         <Route path="/felsokning/nytt" element={<NyttArende />} />
         <Route path="/felsokning/arende/:id" element={<ArendeSida />} />

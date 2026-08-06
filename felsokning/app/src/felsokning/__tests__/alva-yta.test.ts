@@ -310,3 +310,43 @@ describe("demonstrationsmärkningen är entydig", () => {
     expect(sida("LoggaIn.tsx")).not.toContain("Real authentication exists in the platform service");
   });
 });
+
+// ---- ALVA tar inte emot betalningar ------------------------------------
+//
+// `@stripe/stripe-js` injicerar sitt skript i sidan redan vid import,
+// inte när någon ska betala. ALVA laddade därför Stripe på varje
+// sidvisning trots att produkten faktureras och aldrig tar emot en
+// betalning — och bakom artefaktens CSP blockerades anropet och syntes
+// som ett fel i konsolen.
+//
+// `/pure` är samma modul utan sidoeffekten. Testet låser den, eftersom
+// en `import { loadStripe } from "@stripe/stripe-js"` någonstans räcker
+// för att skjuta upp skriptet igen.
+describe("ingen betalleverantör laddas", () => {
+  const stripe = readFileSync("src/lib/stripe.ts", "utf8");
+
+  it("stripe-modulen importeras utan sidoeffekt", () => {
+    expect(stripe).toContain('from "@stripe/stripe-js/pure"');
+    // Ett värdeimport från huvudmodulen skulle återinföra skriptladdningen.
+    expect(stripe).not.toMatch(/import \{[^}]*loadStripe[^}]*\} from "@stripe\/stripe-js"/);
+  });
+
+  it("ingen ALVA-yta rör en betalleverantör", () => {
+    for (const [namn, kod] of filer) {
+      expect(kod.toLowerCase(), namn).not.toContain("stripe");
+    }
+  });
+
+  it("fakturamodellen finns och tar inte emot betalningar", async () => {
+    const m = await import("../../../../services/gemensam/fakturering.mjs");
+    const f = m.fakturera({
+      nummer: 1,
+      org: { namn: "Verkstad Nord AB", moduler: [] },
+      aktiva: 3,
+      period: { fran: "2026-01-01", till: "2026-12-31" },
+      utfardad: "2026-01-15",
+    });
+    expect(f.betalningssatt).toMatch(/No online payment/i);
+    expect(Object.keys(m)).not.toContain("betala");
+  });
+});

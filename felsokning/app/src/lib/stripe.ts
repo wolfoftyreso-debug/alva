@@ -1,4 +1,16 @@
-import { loadStripe, Stripe } from "@stripe/stripe-js";
+// `@stripe/stripe-js` injicerar sitt skript i sidan redan vid IMPORT,
+// inte när någon ska betala. Följden var att ALVA — som varken har eller
+// vill ha en betalleverantör — laddade Stripe på varje sidvisning, och
+// bakom artefaktens CSP blockerades anropet och syntes som ett fel i
+// konsolen på en produkt som inte tar emot betalningar alls.
+//
+// `/pure` är samma modul utan den sidoeffekten: skriptet hämtas först om
+// och när loadStripe faktiskt anropas. ALVA anropar det aldrig — där
+// faktureras det, och fakturan skapas i systemet
+// (services/gemensam/fakturering.mjs). Butikens kassa fungerar som
+// tidigare, men bara när någon öppnar den.
+import type { Stripe } from "@stripe/stripe-js";
+import { loadStripe } from "@stripe/stripe-js/pure";
 
 export type StripeEnv = "sandbox" | "live";
 

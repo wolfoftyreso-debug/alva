@@ -99,7 +99,8 @@ export type Objektklass =
   | "ORG" // en organisation
   | "USER" // en användare
   | "SRC" // en kunskapskälla
-  | "REP"; // en rapport
+  | "REP" // en rapport
+  | "INV"; // en faktura
 
 const SIFFROR: Record<Objektklass, number> = {
   CASE: 5,
@@ -112,6 +113,7 @@ const SIFFROR: Record<Objektklass, number> = {
   USER: 4,
   SRC: 3,
   REP: 4,
+  INV: 4,
 };
 
 /** ALVA-CASE-91821 · ALVA-PROC-0042 · ALVA-RULE-120 */
