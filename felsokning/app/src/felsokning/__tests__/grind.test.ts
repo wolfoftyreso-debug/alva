@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { granskaHändelse, tillPost } from "../../../../services/gemensam/handelser.mjs";
 import { SPARRFRAGOR as SPARR_SERVER, grinda, grindaArendetyp } from "../../../../services/gemensam/grind.mjs";
 import { ALLA_METODIKER } from "../../../../services/gemensam/metodiker.mjs";
+import { t } from "../../../../services/gemensam/sprak/index.mjs";
 import { SPARRFRAGOR } from "../metodik";
 
 const GENERISK = ALLA_METODIKER.at(-1)!;
@@ -203,7 +204,8 @@ describe("ärendetypens regelpaket", () => {
   it("en okänd kravtyp spärrar i stället för att tolkas som uppfylld", () => {
     const trasigt = { arendetyper: { Garanti: { krav: [{ typ: "hittepa" }] } } };
     const logg = [{ typ: "arendetyp_satt", arendetyp: "Garanti" }];
-    expect(grindaArendetyp(logg, trasigt)[0].rubrik).toMatch(/Okänt krav/);
+    expect(grindaArendetyp(logg, trasigt)[0].nyckel).toBe("grind.arendetyp.okant");
+    expect(grindaArendetyp(logg, trasigt)[0].rubrik).toContain("hittepa");
   });
 });
 
@@ -470,8 +472,24 @@ describe("mätarställningen ska vara fotograferad, inte bara inskriven", () => 
   });
 
   it("hindret säger vad som saknas och vad man gör åt det", () => {
+    // Prövas mot nyckeln, inte mot texten: texten är översatt och byter
+    // språk med organisationen. Att pröva svenska ord här hade gjort
+    // testet till ett test av vilket språk som råkar vara standard.
     const h = grinda(utanFoto(), GENERISK).find((x) => x.id === "matarstallning_ingaende");
-    expect(h.detalj).toMatch(/fotografera/i);
+    expect(h.detaljNyckel).toBe("grind.matarstallning.ej_foto");
+    expect(h.detalj).toBe(t("en", "grind.matarstallning.ej_foto"));
+  });
+
+  it("hindret följer organisationens språk", () => {
+    // Det som faktiskt betyder något i drift: en tysk verkstad ska få
+    // veta på tyska varför avslutet nekas. Ett hinder ingen förstår är
+    // en spärr utan väg förbi.
+    const engelska = grinda(utanFoto(), GENERISK).find((x) => x.id === "matarstallning_ingaende");
+    const tyska = grinda(utanFoto(), GENERISK, "de").find((x) => x.id === "matarstallning_ingaende");
+    expect(tyska.id).toBe(engelska.id);
+    expect(tyska.nyckel).toBe(engelska.nyckel);
+    expect(tyska.rubrik).not.toBe(engelska.rubrik);
+    expect(tyska.rubrik).toBe(t("de", "grind.matarstallning.ingaende"));
   });
 
   it("ett dataUrl-foto duger lika bra som en bilaga", () => {

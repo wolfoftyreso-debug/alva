@@ -44,6 +44,13 @@ export const SV = {
   "grind.hogvolt.spanningslos": "Fordonet spänningslöst enligt tillverkarens metod",
   "grind.regelpaket": "Regelpaketets signatur stämmer inte — avslut spärrat.",
   "grind.regelpaket.osignerat": "Ett externt regelpaket används utan signatur — avslut spärrat.",
+  "grind.evidens": "Evidensnivå över E0",
+  "grind.evidens.saknas": "Ingen evidens av något slag finns i loggen.",
+  "grind.foton.detalj": "{kontroller} kontroller kräver foto, {foton} foton i loggen.",
+  "grind.sparr.ej_uppfyllt": "Säkerhetskravet är inte uppfyllt.",
+  "grind.arendetyp.okant": "Okänt krav i regelpaketet: {krav}",
+  "grind.arendetyp.krav": "Krav för ärendetypen: {krav}",
+
 
   // ---- Slutsatsen (ALVA-RULE-200) -----------------------------------------
   "slutsats.rubrik": "Slutsats",

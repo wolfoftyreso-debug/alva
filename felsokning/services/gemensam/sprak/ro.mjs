@@ -51,6 +51,13 @@ export const RO = {
   "grind.regelpaket": "Semnătura pachetului de reguli nu corespunde — închiderea este blocată.",
   "grind.regelpaket.osignerat":
     "Se utilizează un pachet de reguli extern fără semnătură — închiderea este blocată.",
+  "grind.evidens": "Nivel de dovadă peste E0",
+  "grind.evidens.saknas": "În jurnal nu există nicio dovadă.",
+  "grind.foton.detalj": "{kontroller} controale necesită o fotografie, {foton} fotografii în jurnal.",
+  "grind.sparr.ej_uppfyllt": "Cerința de siguranță nu este îndeplinită.",
+  "grind.arendetyp.okant": "Cerință necunoscută în pachetul de reguli: {krav}",
+  "grind.arendetyp.krav": "Cerință pentru acest tip de caz: {krav}",
+
 
   // ---- Concluzia finală (ALVA-RULE-200) -----------------------------------
   "slutsats.rubrik": "Concluzie finală",

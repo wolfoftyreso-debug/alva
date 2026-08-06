@@ -860,6 +860,53 @@ kontroll "utan huvudnyckel maskeras uppgiften" \
   "$(echo "$SVAR" | falt '.handelser[0].handelse.objekt.identifierare')" "[raderat på begäran]"
 kontroll "men anropet gar fortfarande igenom" "$(echo "$SVAR" | falt .handelser.length)" "1"
 
+# 18b. Grinden talar organisationens språk (ALVA-SPEC-060)
+#
+# Det som prövas är inte att en översättning finns — det gör testerna i
+# app/ — utan att språket följer HELA vägen: organisationens inställning,
+# genom servern, ut i det 409-svar som faktiskt nekar ett avslut.
+#
+# En spärr på fel språk är en spärr utan väg förbi. Teknikern ser att
+# systemet vägrar men inte varför, och den enda utvägen blir att ringa
+# någon. Det är då regeln slutar vara en regel.
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-sprak","nummer":77,"skapad":"2026-08-06T09:00:00Z"}' >/dev/null
+AVSLUT='{"handelser":[{"id":"h-sprak-avslut","tidpunkt":"2026-08-06T09:05:00Z","anvandare":"Anna","handelse":{"typ":"arende_avslutat"}}]}'
+
+SVAR=$(curl -s -X POST "$BAS/api/arenden/arende-sprak/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d "$AVSLUT")
+kontroll "avslut utan underlag nekas" "$(echo "$SVAR" | falt '.hinder.length > 0')" "true"
+kontroll "hindret star pa engelska som standard" \
+  "$(echo "$SVAR" | falt '.hinder.find(h=>h.id==="objekt").rubrik')" "Vehicle or object identification verified"
+kontroll "hindret bar sin nyckel" \
+  "$(echo "$SVAR" | falt '.hinder.find(h=>h.id==="objekt").nyckel')" "grind.objekt"
+
+# Organisationen byter dokumentationsspråk.
+curl -s -X POST "$BAS/api/organisation/installningar" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"objekttyper":["Personbil"],"identifieringsmetoder":["Registreringsnummer"],"sprak":"de"}' >/dev/null
+
+SVAR=$(curl -s -X POST "$BAS/api/arenden/arende-sprak/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d "$AVSLUT")
+kontroll "hindret foljer organisationens sprak" \
+  "$(echo "$SVAR" | falt '.hinder.find(h=>h.id==="objekt").rubrik')" \
+  "Identität des Fahrzeugs oder Objekts verifiziert"
+# Nyckeln ar oforandrad: identiteten pa hindret ar inte sprakberoende,
+# vilket ar hela poangen med att bara texten oversatts.
+kontroll "nyckeln ar densamma pa bada spraken" \
+  "$(echo "$SVAR" | falt '.hinder.find(h=>h.id==="objekt").nyckel')" "grind.objekt"
+
+# En felstavad sprakkod far inte hindra nagon fran att spara sina
+# objekttyper — sprakinstallningen ar en etikett, inte ett krav.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/organisation/installningar" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"objekttyper":["Personbil"],"identifieringsmetoder":["Registreringsnummer"],"sprak":"klingon"}')
+kontroll "okand sprakkod avvisas inte" "$KOD" "200"
+SVAR=$(curl -s -X POST "$BAS/api/arenden/arende-sprak/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d "$AVSLUT")
+kontroll "okand sprakkod blir engelska" \
+  "$(echo "$SVAR" | falt '.hinder.find(h=>h.id==="objekt").rubrik')" "Vehicle or object identification verified"
+
 # 19. Support och felanmälan (ALVA-PROC-0050)
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true

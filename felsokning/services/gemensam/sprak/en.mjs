@@ -73,6 +73,13 @@ export const EN = {
   "grind.hogvolt.spanningslos": "Vehicle de-energised per the manufacturer's procedure",
   "grind.regelpaket": "Rule package signature does not match — closing blocked.",
   "grind.regelpaket.osignerat": "An external rule package is in use without a signature — closing blocked.",
+  "grind.evidens": "Evidence above E0",
+  "grind.evidens.saknas": "No evidence of any kind is present in the log.",
+  "grind.foton.detalj": "{kontroller} checks require a photograph, {foton} photographs in the log.",
+  "grind.sparr.ej_uppfyllt": "The safety requirement is not met.",
+  "grind.arendetyp.okant": "Unknown requirement in the rule package: {krav}",
+  "grind.arendetyp.krav": "Requirement for this case type: {krav}",
+
 
   // ---- The closing statement (ALVA-RULE-200) ------------------------------
   "slutsats.rubrik": "Closing statement",

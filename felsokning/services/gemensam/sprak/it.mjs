@@ -45,6 +45,13 @@ export const IT = {
   "grind.hogvolt.spanningslos": "Veicolo messo fuori tensione secondo la procedura del costruttore",
   "grind.regelpaket": "La firma del pacchetto di regole non corrisponde — chiusura bloccata.",
   "grind.regelpaket.osignerat": "È in uso un pacchetto di regole esterno privo di firma — chiusura bloccata.",
+  "grind.evidens": "Livello di evidenza superiore a E0",
+  "grind.evidens.saknas": "Nel registro non è presente alcuna evidenza.",
+  "grind.foton.detalj": "{kontroller} controlli richiedono una fotografia, {foton} fotografie nel registro.",
+  "grind.sparr.ej_uppfyllt": "Il requisito di sicurezza non è soddisfatto.",
+  "grind.arendetyp.okant": "Requisito sconosciuto nel pacchetto di regole: {krav}",
+  "grind.arendetyp.krav": "Requisito per questo tipo di pratica: {krav}",
+
 
   // ---- La conclusione (ALVA-RULE-200) -------------------------------------
   "slutsats.rubrik": "Conclusione",

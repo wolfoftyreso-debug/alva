@@ -45,6 +45,13 @@ export const PT = {
   "grind.regelpaket": "A assinatura do pacote de regras não corresponde — encerramento bloqueado.",
   "grind.regelpaket.osignerat":
     "Está a ser utilizado um pacote de regras externo sem assinatura — encerramento bloqueado.",
+  "grind.evidens": "Nível de evidência superior a E0",
+  "grind.evidens.saknas": "Não existe qualquer evidência no registo.",
+  "grind.foton.detalj": "{kontroller} controlos exigem fotografia, {foton} fotografias no registo.",
+  "grind.sparr.ej_uppfyllt": "O requisito de segurança não está cumprido.",
+  "grind.arendetyp.okant": "Requisito desconhecido no pacote de regras: {krav}",
+  "grind.arendetyp.krav": "Requisito para este tipo de processo: {krav}",
+
 
   // ---- A conclusão (ALVA-RULE-200) ----------------------------------------
   "slutsats.rubrik": "Conclusão",

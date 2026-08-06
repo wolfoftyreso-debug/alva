@@ -16,6 +16,7 @@
 // samma utfall, vilket är vad som gör en spärr granskbar.
 
 import { granskaSlutsats } from "./motivering.mjs";
+import { STANDARD, t } from "./sprak/index.mjs";
 
 const UNDANTAG_MOTIVERAT = (h) => typeof h.undantag === "string" && h.undantag.trim().length > 0;
 
@@ -23,8 +24,8 @@ const UNDANTAG_MOTIVERAT = (h) => typeof h.undantag === "string" && h.undantag.t
 // Speglar SPARRFRAGOR i app/src/felsokning/metodik.ts; ett test jämför
 // listorna så de inte kan glida isär.
 export const SPARRFRAGOR = {
-  "hogvolt/sakerhet/behorighet": "Behörighet för högvoltsarbete bekräftad",
-  "hogvolt/sakerhet/avstangt": "Fordonet spänningslöst enligt tillverkarens rutin",
+  "hogvolt/sakerhet/behorighet": "grind.hogvolt.behorighet",
+  "hogvolt/sakerhet/avstangt": "grind.hogvolt.spanningslos",
 };
 
 /** Händelser av en viss typ. */
@@ -35,22 +36,42 @@ const av = (handelser, typ) => handelser.filter((h) => h.typ === typ);
  *
  * @returns lista med hinder; tom lista betyder att ärendet får avslutas.
  */
-export function grinda(handelser, metodik) {
+export function grinda(handelser, metodik, sprak = STANDARD) {
   const hinder = [];
-  const krav = (id, rubrik, ok, detalj) => {
-    if (!ok) hinder.push(detalj ? { id, rubrik, detalj } : { id, rubrik });
+
+  // Hindret bär både nyckeln och den färdiga texten. Nyckeln därför att
+  // en klient som byter språk ska kunna rendera om utan att fråga
+  // servern; texten därför att ett hinder som passerar genom en logg
+  // eller en PDF måste vara läsbart utan katalogen.
+  const krav = (id, nyckel, ok, detaljNyckel, variabler) => {
+    if (ok) return;
+    const post = { id, nyckel, rubrik: t(sprak, nyckel, variabler) };
+    if (detaljNyckel) {
+      post.detaljNyckel = detaljNyckel;
+      post.detalj = t(sprak, detaljNyckel, variabler);
+    }
+    hinder.push(post);
   };
 
-  krav("objekt", "Fordons-/objektidentifiering verifierad", handelser.some((h) => h.typ === "objekt_identifierat"));
+  // Fritext som kommer ur data, inte ur katalogen — namnen på metodikens
+  // kontroller. De står på metodikens språk och kan inte översättas här.
+  const kravMedData = (id, nyckel, ok, detalj) => {
+    if (ok) return;
+    const post = { id, nyckel, rubrik: t(sprak, nyckel) };
+    if (detalj) post.detalj = detalj;
+    hinder.push(post);
+  };
+
+  krav("objekt", "grind.objekt", handelser.some((h) => h.typ === "objekt_identifierat"));
 
   // Historiken får besvaras nekande, men då krävs en motivering — annars
   // vore "Nej" ett sätt att hoppa över kontrollen utan att det syns.
   const historik = av(handelser, "historik_kontrollerad").at(-1);
   krav(
     "historik",
-    "Fordonshistorik kontrollerad eller motiverad",
+    "grind.historik",
     Boolean(historik) && (historik.kontrollerad || (historik.kommentar ?? "").trim().length > 0),
-    historik ? "Nekad historikkontroll kräver en motivering." : "Ingen historikkontroll dokumenterad.",
+    historik ? "grind.historik.nekad" : "grind.historik.saknas",
   );
 
   // Mätarställningen ska vara FOTOGRAFERAD, inte bara inskriven.
@@ -71,9 +92,9 @@ export function grinda(handelser, metodik) {
   // som sitter oåtkomligt, en spegling som inte går att fota bort. Men
   // undantaget kräver en motivering, av samma skäl som ett nekat
   // historiksvar gör det.
-  for (const [lage, rubrik] of [
-    ["ingaende", "Ingående mätarställning fotograferad"],
-    ["utgaende", "Utgående mätarställning fotograferad"],
+  for (const [lage, nyckel] of [
+    ["ingaende", "grind.matarstallning.ingaende"],
+    ["utgaende", "grind.matarstallning.utgaende"],
   ]) {
     const poster = av(handelser, "matarstallning").filter((h) => h.lage === lage);
     const dokumenterad = poster.length > 0;
@@ -81,50 +102,35 @@ export function grinda(handelser, metodik) {
     const motiverat = poster.some((h) => (h.undantag ?? "").trim().length > 0);
     krav(
       `matarstallning_${lage}`,
-      rubrik,
+      nyckel,
       dokumenterad && (fotograferad || motiverat),
-      !dokumenterad
-        ? "Ingen mätarställning dokumenterad."
-        : "Mätarställningen är inskriven men inte fotograferad. Fotografera mätaren eller ange varför det inte går.",
+      dokumenterad ? "grind.matarstallning.ej_foto" : "grind.matarstallning.saknas",
     );
   }
 
-  krav(
-    "reproducering",
-    "Symptomverifiering: reproducerat eller dokumenterat ej reproducerbart",
-    handelser.some((h) => h.typ === "reproducering"),
-  );
+  krav("reproducering", "grind.reproducering", handelser.some((h) => h.typ === "reproducering"));
 
-  krav("felorsak", "Felorsaksanalys dokumenterad", handelser.some((h) => h.typ === "felorsak"));
+  krav("felorsak", "grind.felorsak", handelser.some((h) => h.typ === "felorsak"));
 
   // Åtgärdskedjan. En utebliven åtgärd är ett giltigt utfall — men bara
   // när skälet står i loggen.
   const atgarder = av(handelser, "atgard_utford");
   const utfordArbete = atgarder.some((h) => h.utford === true);
-  krav(
-    "atgard",
-    "Åtgärd dokumenterad eller motiverad",
-    atgarder.length > 0,
-    "Varken utförd åtgärd eller skäl till att den uteblev finns dokumenterat.",
-  );
+  krav("atgard", "grind.atgard", atgarder.length > 0, "grind.atgard.saknas");
 
   if (utfordArbete) {
     const beslut = av(handelser, "kundbeslut");
-    krav("kundbeslut", "Kundens besked på åtgärdsförslaget registrerat", beslut.length > 0);
+    krav("kundbeslut", "grind.kundbeslut", beslut.length > 0);
 
     // Hårt fel, inte en varning: arbete utfört trots att kunden avböjt.
     krav(
       "avbojt_men_utfort",
-      "Utfört arbete trots avböjt åtgärdsförslag",
+      "grind.kundbeslut.avbojt",
       !beslut.some((h) => h.beslut === "avbojt"),
-      "Kunden avböjde förslaget men arbete har dokumenterats som utfört.",
+      "grind.kundbeslut.avbojt.detalj",
     );
 
-    krav(
-      "kvalitetskontroll",
-      "Kvalitetskontroll genomförd — symptomet verifierat",
-      handelser.some((h) => h.typ === "kvalitetskontroll"),
-    );
+    krav("kvalitetskontroll", "grind.kvalitetskontroll", handelser.some((h) => h.typ === "kvalitetskontroll"));
   }
 
   // Metodikens kontroller: varje kontroll ska bära evidens eller ett
@@ -156,18 +162,11 @@ export function grinda(handelser, metodik) {
       if (!(h.resultat ?? "").trim()) saknade.push(`${steg.rubrik} · ${kontroll.text} (utan resultat)`);
     }
   }
-  krav(
-    "metodik_kontroller",
-    "Metodikens kontroller: evidens eller dokumenterat undantag",
-    saknade.length === 0,
-    saknade.slice(0, 5).join(" · "),
-  );
-  krav(
-    "foton",
-    "Foton finns för fotokrävande kontroller",
-    foton >= fotokravande.length,
-    fotokravande.length ? `${fotokravande.length} kontroller kräver foto, ${foton} foton i loggen.` : undefined,
-  );
+  kravMedData("metodik_kontroller", "grind.kontroller", saknade.length === 0, saknade.slice(0, 5).join(" · "));
+  krav("foton", "grind.foton", foton >= fotokravande.length, fotokravande.length ? "grind.foton.detalj" : undefined, {
+    kontroller: fotokravande.length,
+    foton,
+  });
 
   // ALVA-RULE-200 · Slutsatsen. Ett ärende stängs aldrig utan att
   // teknikern lämnat ett varför — motiveringen som knyter slutsatsen
@@ -185,22 +184,22 @@ export function grinda(handelser, metodik) {
   // Säkerhetsspärrar. Ett nekande svar på en spärrfråga får aldrig
   // passera som "besvarad" — se SPARRFRAGOR i klientens metodik.ts.
   // Klientens spärr är vägledning; den här är hindret (QUALITET M-2).
-  for (const [nyckel, text] of Object.entries(SPARRFRAGOR)) {
-    const [metodikId, stegId, frageId] = nyckel.split("/");
+  for (const [fraga, nyckel] of Object.entries(SPARRFRAGOR)) {
+    const [metodikId, stegId, frageId] = fraga.split("/");
     if (metodik?.id !== metodikId) continue;
     const svaret = av(handelser, "fraga_besvarad").findLast(
       (h) => h.stegId === stegId && h.frageId === frageId,
     );
-    krav(`sparr_${frageId}`, text, svaret?.svar === "Ja", "Säkerhetskravet är inte uppfyllt.");
+    krav(`sparr_${frageId}`, nyckel, svaret?.svar === "Ja", "grind.sparr.ej_uppfyllt");
   }
 
   // Evidensnivån måste överstiga E0 — annars avslutas ett ärende utan
   // att någonting alls har dokumenterats.
   krav(
     "evidens",
-    "Evidensnivå över E0",
+    "grind.evidens",
     handelser.some((h) => ["foto", "video", "matvarde", "observation", "kontroll_utford"].includes(h.typ)),
-    "Ingen evidens av något slag finns i loggen.",
+    "grind.evidens.saknas",
   );
 
   return hinder;
@@ -210,7 +209,7 @@ export function grinda(handelser, metodik) {
  * Extra krav som följer av ärendetypen. Reglerna kommer från regelpaketet
  * (ECM Knowledge Library) och är alltså data, inte kod.
  */
-export function grindaArendetyp(handelser, regelpaket) {
+export function grindaArendetyp(handelser, regelpaket, sprak = STANDARD) {
   const typ = av(handelser, "arendetyp_satt").at(-1)?.arendetyp;
   const regler = regelpaket?.arendetyper?.[typ]?.krav ?? [];
   const hinder = [];
@@ -227,10 +226,21 @@ export function grindaArendetyp(handelser, regelpaket) {
     const kontroll = uppfyllt[regel.typ ?? regel];
     // En okänd kravtyp får aldrig tolkas som uppfylld. Ett regelpaket som
     // inte går att utvärdera ska stoppa avslutet, inte släppa igenom det.
+    const krav = regel.typ ?? regel;
     if (!kontroll) {
-      hinder.push({ id: `arendetyp_${regel.typ ?? regel}`, rubrik: `Okänt krav i regelpaketet: ${regel.typ ?? regel}` });
+      hinder.push({
+        id: `arendetyp_${krav}`,
+        nyckel: "grind.arendetyp.okant",
+        rubrik: t(sprak, "grind.arendetyp.okant", { krav }),
+      });
     } else if (!kontroll()) {
-      hinder.push({ id: `arendetyp_${regel.typ ?? regel}`, rubrik: regel.rubrik ?? `Krav för ärendetypen: ${regel.typ ?? regel}` });
+      // Regelpaketets egen rubrik står på regelpaketets språk och går
+      // inte att översätta här — den är data från kunden, inte vår text.
+      hinder.push({
+        id: `arendetyp_${krav}`,
+        nyckel: regel.rubrik ? undefined : "grind.arendetyp.krav",
+        rubrik: regel.rubrik ?? t(sprak, "grind.arendetyp.krav", { krav }),
+      });
     }
   }
   return hinder;

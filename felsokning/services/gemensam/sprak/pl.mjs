@@ -47,6 +47,13 @@ export const PL = {
   "grind.hogvolt.spanningslos": "Pojazd odłączony od napięcia zgodnie z procedurą producenta",
   "grind.regelpaket": "Podpis pakietu reguł nie zgadza się — zamknięcie zablokowane.",
   "grind.regelpaket.osignerat": "Używany jest zewnętrzny pakiet reguł bez podpisu — zamknięcie zablokowane.",
+  "grind.evidens": "Poziom dowodu powyżej E0",
+  "grind.evidens.saknas": "W dzienniku nie ma żadnego dowodu.",
+  "grind.foton.detalj": "{kontroller} kontroli wymaga fotografii, {foton} fotografii w dzienniku.",
+  "grind.sparr.ej_uppfyllt": "Wymóg bezpieczeństwa nie jest spełniony.",
+  "grind.arendetyp.okant": "Nieznany wymóg w pakiecie reguł: {krav}",
+  "grind.arendetyp.krav": "Wymóg dla tego rodzaju sprawy: {krav}",
+
 
   // ---- Wniosek końcowy (ALVA-RULE-200) ------------------------------------
   "slutsats.rubrik": "Wniosek końcowy",

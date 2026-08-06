@@ -45,6 +45,13 @@ export const NL = {
   "grind.hogvolt.spanningslos": "Voertuig spanningsloos gemaakt volgens de procedure van de fabrikant",
   "grind.regelpaket": "Handtekening van het regelpakket komt niet overeen — afsluiten geblokkeerd.",
   "grind.regelpaket.osignerat": "Er wordt een extern regelpakket zonder handtekening gebruikt — afsluiten geblokkeerd.",
+  "grind.evidens": "Bewijsgraad boven E0",
+  "grind.evidens.saknas": "Er is geen enkel bewijs in het logboek aanwezig.",
+  "grind.foton.detalj": "{kontroller} controles vereisen een foto, {foton} foto's in het logboek.",
+  "grind.sparr.ej_uppfyllt": "Aan de veiligheidseis is niet voldaan.",
+  "grind.arendetyp.okant": "Onbekende eis in het regelpakket: {krav}",
+  "grind.arendetyp.krav": "Eis voor dit zaaktype: {krav}",
+
 
   // ---- De eindconclusie (ALVA-RULE-200) -----------------------------------
   "slutsats.rubrik": "Eindconclusie",

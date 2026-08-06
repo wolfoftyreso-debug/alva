@@ -41,6 +41,7 @@ import { fakturabeteckning, fakturastatus, fakturera, granskaPeriod, kreditera }
 import { STATUSAR, granskaAnmalan, sammanhang as byggSammanhang, supportbeteckning, supportstatus } from "./support.mjs";
 import { NIVAER, abonnemangstillstand, behorighet, besked, forfallenFakturering, nivaFor } from "./abonnemang.mjs";
 import { fakturaPdf } from "./fakturapdf.mjs";
+import { STANDARD, valjSprak, t } from "./sprak/index.mjs";
 import {
   MASKERAT,
   gallringsdatum,
@@ -445,11 +446,34 @@ function nyKod(langd = 16) {
 }
 
 /**
+ * Organisationens dokumentationsspråk.
+ *
+ * Organisationen och inte användaren, därför att grindens hinder hamnar
+ * i ärendets logg och i rapporten. En verkstad i Tyskland med en polsk
+ * tekniker ska ha ett gemensamt dokumentationsspråk — rapporten ska
+ * inte byta språk beroende på vem som råkade stänga ärendet.
+ *
+ * Faller tillbaka på engelska, tyst. Att neka ett avslut för att
+ * språkinställningen inte gick att läsa vore att låta en etikett stoppa
+ * arbetet.
+ */
+async function orgSprak(pool, orgId) {
+  try {
+    const rader = await pool.query(`select installningar->>'sprak' as sprak from organisationer where id = $1`, [
+      orgId,
+    ]);
+    return valjSprak({ organisation: rader.rows[0]?.sprak });
+  } catch {
+    return STANDARD;
+  }
+}
+
+/**
  * Avslutsspärren. Läser hela loggen ur databasen, lägger de inkommande
  * händelserna ovanpå och utvärderar grinden mot det samlade underlaget —
  * annars skulle ett avslut i samma anrop som evidensen felaktigt nekas.
  */
-async function grindHinder(pool, arendeId, nya) {
+async function grindHinder(pool, arendeId, nya, sprak = STANDARD) {
   const rader = await pool.query(
     `select h.handelse, a.metodik_id from felsokning_handelser h
      join felsokning_arenden a on a.id = h.arende_id
@@ -462,14 +486,17 @@ async function grindHinder(pool, arendeId, nya) {
 
   let regelpaket;
   if (REGELPAKET_STATUS === "ogiltig signatur") {
-    return [{ id: "regelpaket", rubrik: "Regelpaketets signatur stämmer inte — avslut spärrat." }];
+    return [{ id: "regelpaket", nyckel: "grind.regelpaket", rubrik: t(sprak, "grind.regelpaket") }];
   }
   if (REGELPAKET_STATUS === "osignerat externt") {
     return [
       {
         id: "regelpaket",
-        rubrik: "Ett externt regelpaket används utan signatur — avslut spärrat.",
-        detalj: "Sätt ECM_REGLER_NYCKEL och ECM_REGLER_SIGNATUR, eller ta bort ECM_REGLER_FIL.",
+        nyckel: "grind.regelpaket.osignerat",
+        rubrik: t(sprak, "grind.regelpaket.osignerat"),
+        // Driftanvisning till den som satt upp servern, inte text till
+        // teknikern. Den står därför på engelska och översätts inte.
+        detalj: "Set ECM_REGLER_NYCKEL and ECM_REGLER_SIGNATUR, or remove ECM_REGLER_FIL.",
       },
     ];
   }
@@ -477,9 +504,9 @@ async function grindHinder(pool, arendeId, nya) {
     regelpaket = JSON.parse(ECM_REGLER);
   } catch {
     // Ett trasigt regelpaket får aldrig tolkas som "inga extra krav".
-    return [{ id: "regelpaket", rubrik: "Regelpaketet gick inte att läsa — avslut spärrat." }];
+    return [{ id: "regelpaket", nyckel: "grind.regelpaket", rubrik: t(sprak, "grind.regelpaket") }];
   }
-  return [...grinda(handelser, metodik), ...grindaArendetyp(handelser, regelpaket)];
+  return [...grinda(handelser, metodik, sprak), ...grindaArendetyp(handelser, regelpaket, sprak)];
 }
 
 
@@ -1893,7 +1920,7 @@ export function skapaServer() {
 
       if (req.method === "POST" && vag === "/api/organisation/installningar") {
         if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
-        const { objekttyper, identifieringsmetoder, ai_tillaten } = await lasKropp(req);
+        const { objekttyper, identifieringsmetoder, ai_tillaten, sprak } = await lasKropp(req);
         const giltigLista = (lista) =>
           Array.isArray(lista) && lista.length > 0 && lista.length <= 50 &&
           lista.every((v) => typeof v === "string" && v.length <= 100);
@@ -1912,6 +1939,11 @@ export function skapaServer() {
               // överföringen till modelleverantören kan ändå använda
               // produkten (QUALITET C-4).
               ai_tillaten: ai_tillaten !== false,
+              // Dokumentationsspråket. Ett okänt värde blir engelska i
+              // stället för ett fel: språket är en etikett, och en
+              // felstavad landskod ska inte hindra en organisation från
+              // att spara sina objekttyper.
+              sprak: valjSprak({ organisation: sprak }),
             }),
           ],
         );
@@ -2459,7 +2491,7 @@ export function skapaServer() {
           // tidigare bara i webbläsaren, vilket gjorde hela ECM till ett
           // råd i stället för en spärr (QUALITET C-2).
           if (attSkriva.some((p) => p.handelse.typ === "arende_avslutat")) {
-            const hinder = await grindHinder(pool, handelserVag[1], attSkriva);
+            const hinder = await grindHinder(pool, handelserVag[1], attSkriva, await orgSprak(pool, anspr.org));
             if (hinder.length > 0) {
               return svara(res, 409, {
                 error: "Ärendet kan inte avslutas — kvalitetsgrinden är inte passerad.",

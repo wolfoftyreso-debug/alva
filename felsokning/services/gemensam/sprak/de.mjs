@@ -46,6 +46,13 @@ export const DE = {
   "grind.hogvolt.spanningslos": "Fahrzeug nach Herstellerverfahren spannungsfrei geschaltet",
   "grind.regelpaket": "Signatur des Regelpakets stimmt nicht — Abschluss gesperrt.",
   "grind.regelpaket.osignerat": "Ein externes Regelpaket wird ohne Signatur verwendet — Abschluss gesperrt.",
+  "grind.evidens": "Evidenzgrad über E0",
+  "grind.evidens.saknas": "Es liegt keinerlei Evidenz im Protokoll vor.",
+  "grind.foton.detalj": "{kontroller} Prüfpunkte erfordern ein Foto, {foton} Fotos im Protokoll.",
+  "grind.sparr.ej_uppfyllt": "Die Sicherheitsanforderung ist nicht erfüllt.",
+  "grind.arendetyp.okant": "Unbekannte Anforderung im Regelpaket: {krav}",
+  "grind.arendetyp.krav": "Anforderung für diese Vorgangsart: {krav}",
+
 
   // ---- Abschlussfeststellung (ALVA-RULE-200) ------------------------------
   "slutsats.rubrik": "Abschlussfeststellung",
