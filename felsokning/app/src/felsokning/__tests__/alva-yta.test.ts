@@ -52,9 +52,29 @@ describe("ALVA-ytan följer designsystemet", () => {
     expect(emojier.filter((t) => !["✓", "○", "□", "→"].includes(t))).toEqual([]);
   });
 
+  // Paletten LÄSES ur FARG i stället för att räknas upp här.
+  //
+  // Den stod tidigare som en andra lista i testet, vilket är samma
+  // dubblering som QUALITET M-7 handlade om: två uttryck för samma regel
+  // driver isär, och den som lade till en färg fick välja mellan att
+  // uppdatera testet eller att låta bli.
+  const palett = (() => {
+    const kod = readFileSync("src/alva/komponenter.tsx", "utf8");
+    const block = kod.slice(kod.indexOf("export const FARG"), kod.indexOf("} as const;"));
+    return (block.match(/#[0-9A-Fa-f]{3,8}\b/g) ?? []).map((f) => f.toUpperCase());
+  })();
+
+  it("paletten är liten nog att vara en palett", () => {
+    // Att läsa listan ur källan gör den självuppfyllande för
+    // komponenter.tsx. Taket är motvikten: en palett som växer förbi
+    // åtta värden är inte längre en palett utan en färglåda, och då ska
+    // någon behöva ändra det här talet och förklara varför.
+    expect(palett.length).toBeLessThanOrEqual(8);
+    expect(palett).toContain("#005CA9");
+  });
+
   it.each(filer)("%s använder bara färger ur paletten", (_namn, kod) => {
     const k = utanKommentarer(kod);
-    const palett = ["#1B1E22", "#4D5662", "#D7DCE2", "#F6F7F8", "#005CA9", "#FFFFFF"];
     const funna = (k.match(/#[0-9A-Fa-f]{3,8}\b/g) ?? []).map((f) => f.toUpperCase());
     expect(funna.filter((f) => !palett.includes(f))).toEqual([]);
   });

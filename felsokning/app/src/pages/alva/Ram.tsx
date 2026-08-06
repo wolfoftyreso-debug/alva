@@ -24,6 +24,7 @@ const PORTAL = [
   { till: "/alva/portal/garantier", text: "Warranty" },
   { till: "/alva/portal/forsakring", text: "Insurance" },
   { till: "/alva/portal/support", text: "Support" },
+  { till: "/alva/portal/abonnemang", text: "Subscription" },
   { till: "/alva/portal/fakturor", text: "Invoices" },
   { till: "/felsokning", text: "Diagnostics" },
 ];

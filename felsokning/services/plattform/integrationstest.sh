@@ -845,14 +845,27 @@ DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
   JWT_SECRET=integrationshemlighet PORT=$APPPORT node server.mjs >/dev/null 2>&1 &
 SERVER_PID=$!
 sleep 1
-KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden/arende-kuvert/handelser" -H "Authorization: Bearer $TOKEN_A")
-kontroll "utan huvudnyckel lamnas inget ut" "$KOD" "500"
+# Utan huvudnyckeln MASKERAS uppgiften — anropet kraschar inte.
+#
+# Forsta versionen av det har testet krävde 500, och det gick igenom
+# eftersom oppnaKuvert kastade. Men eftersom nycklarFor laddar HELA
+# organisationens nycklar gjorde en enda kuverterad nyckel varje ANNAT
+# arende i organisationen olasbart — en delvis migrerad organisation blev
+# helt stum av ett fel som bara gallde ett arende.
+#
+# Maskering ar dessutom ratt utfall i sak: det ar precis vad
+# krypto-shredding lamnar efter sig.
+SVAR=$(curl -s "$BAS/api/arenden/arende-kuvert/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "utan huvudnyckel maskeras uppgiften" \
+  "$(echo "$SVAR" | falt '.handelser[0].handelse.objekt.identifierare')" "[raderat på begäran]"
+kontroll "men anropet gar fortfarande igenom" "$(echo "$SVAR" | falt .handelser.length)" "1"
 
 # 19. Support och felanmälan (ALVA-PROC-0050)
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet PORT=$APPPORT SUPPORT_NYCKEL=supportnyckel node server.mjs &
+  JWT_SECRET=integrationshemlighet PORT=$APPPORT SUPPORT_NYCKEL=supportnyckel \
+  FAKTURERING_NYCKEL=utfardarnyckel node server.mjs &
 SERVER_PID=$!
 sleep 1
 
@@ -905,5 +918,95 @@ if PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokn
 else
   echo "✓ supportarenden gar inte att skriva om"
 fi
+
+# 20. Abonnemang (ALVA-PROC-0002)
+AB=$(curl -s "$BAS/api/abonnemang" -H "Authorization: Bearer $TOKEN_A")
+kontroll "registrering startar pa Free" "$(echo "$AB" | falt .niva)" "free"
+kontroll "nystartat abonnemang ar aktivt" "$(echo "$AB" | falt .tillstand)" "aktiv"
+kontroll "lasning ar tillaten" "$(echo "$AB" | falt .behorighet.lasa)" "true"
+
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/abonnemang/niva" \
+  -H "Authorization: Bearer $TOKEN_J" -H 'Content-Type: application/json' -d '{"niva":"premium"}')
+kontroll "tekniker kan inte byta niva" "$KOD" "403"
+
+curl -s -X POST "$BAS/api/abonnemang/niva" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"niva":"standard"}' >/dev/null
+kontroll "admin byter niva" "$(curl -s "$BAS/api/abonnemang" -H "Authorization: Bearer $TOKEN_A" | falt .niva)" "standard"
+
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/abonnemang/fakturaepost" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d '{"epost":"inte en adress"}')
+kontroll "ogiltig fakturaepost avvisas" "$KOD" "400"
+curl -s -X POST "$BAS/api/abonnemang/fakturaepost" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"epost":"faktura@verkstadnord.se"}' >/dev/null
+kontroll "fakturaepost sparas" \
+  "$(curl -s "$BAS/api/abonnemang" -H "Authorization: Bearer $TOKEN_A" | falt .fakturaepost)" "faktura@verkstadnord.se"
+# Tom adress ar ett giltigt val: kunden hamtar fakturan sjalv.
+curl -s -X POST "$BAS/api/abonnemang/fakturaepost" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"epost":""}' >/dev/null
+kontroll "tom fakturaepost ar tillaten" \
+  "$(curl -s "$BAS/api/abonnemang" -H "Authorization: Bearer $TOKEN_A" | falt '.fakturaepost')" ""
+
+# Nivan ar en HANDELSE — historiken finns kvar.
+NIVAER=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select count(*) from abonnemangshandelser h join organisationer o on o.id = h.organisation_id
+        where h.typ='niva' and o.namn='Verkstad A'")
+kontroll "nivabytet lamnade spar" "$NIVAER" "2"
+
+# 21. Fakturan som PDF, utan beroenden
+FAKTURA_PDF_ID=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select id from fakturor order by nummer limit 1")
+curl -s "$BAS/api/fakturor/$FAKTURA_PDF_ID/pdf" -H "Authorization: Bearer $TOKEN_A" -o /tmp/f.pdf
+kontroll "PDF-huvudet stammer" "$(head -c 8 /tmp/f.pdf)" "%PDF-1.4"
+case "$(tail -c 6 /tmp/f.pdf)" in
+  *"%%EOF"*) echo "✓ PDF avslutas korrekt" ;;
+  *) echo "✗ PDF saknar EOF"; exit 1 ;;
+esac
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/fakturor/$FAKTURA_PDF_ID/pdf" -H "Authorization: Bearer $TOKEN_B")
+kontroll "org B kommer inte at org A:s faktura-PDF" "$KOD" "404"
+
+# 22. Manadsfaktureringen ar idempotent pa perioden
+# `registrerad` gar inte att andra — triggern skyddar startdatumet, och
+# den fangade det har testet nar det forsokte backdatera. Perioden flyttas
+# i stallet via senast_fakturerad, som ar en HARLEDD kolumn och darfor
+# skrivbar. Att testet fick boja sig for regeln och inte tvartom ar
+# poangen med regeln.
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "update abonnemang set senast_fakturerad = current_date - 60"
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  node manadsfakturering.mjs > /tmp/mf1.json
+ANTAL1=$(cat /tmp/mf1.json | falt .antal)
+if [ "$ANTAL1" -ge 1 ]; then echo "✓ manadsjobbet fakturerade $ANTAL1"; else echo "✗ manadsjobbet fakturerade inget"; exit 1; fi
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  node manadsfakturering.mjs > /tmp/mf2.json
+kontroll "andra korningen dubbelfakturerar inte" "$(cat /tmp/mf2.json | falt .antal)" "0"
+
+# 23. Spärren: last abonnemang stoppar nya arenden men aldrig lasning
+# Fakturor ar oforanderliga, sa forfallet kan inte backas in i en
+# befintlig. Det utfardas i stallet en faktura med gammalt
+# utfardandedatum — forfallodagen harleds ur det, och blir da passerad.
+ORG_A_AB=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select id from organisationer where namn='Verkstad A'")
+curl -s -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' -H 'X-Fakturering: utfardarnyckel' \
+  -d "{\"organisation_id\":\"$ORG_A_AB\",\"period\":{\"fran\":\"2025-01-01\",\"till\":\"2025-01-31\"},\"utfardad\":\"2025-01-01\"}" >/dev/null
+
+AB=$(curl -s "$BAS/api/abonnemang" -H "Authorization: Bearer $TOKEN_A")
+kontroll "en langt forfallen faktura laser abonnemanget" "$(echo "$AB" | falt .tillstand)" "last"
+kontroll "beskedet namner fakturan" "$(echo "$AB" | falt '.besked.includes("ALVA-INV") ? "ja" : "nej"')" "ja"
+
+# Sparren stoppar nya arenden.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"id":"arende-last","nummer":99,"skapad":"2026-08-06T10:00:00Z"}')
+kontroll "last abonnemang stoppar nya arenden" "$KOD" "402"
+
+# Men ALDRIG lasningen. Det ar regeln som inte far tummas pa: loggen ar
+# verkstadens underlag i en tvist som galler DERAS kund.
+kontroll "lasning ar sann aven i last lage" "$(echo "$AB" | falt .behorighet.lasa)" "true"
+kontroll "export ar sann aven i last lage" "$(echo "$AB" | falt .behorighet.exportera)" "true"
+# Statuskoden, inte kroppen: det som ska bevisas ar att lasningen slapps
+# igenom i last lage, och en kropp som tolkas fel skulle dolja det.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "historiken ar fortfarande lasbar i last lage" "$KOD" "200"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/fakturor" -H "Authorization: Bearer $TOKEN_A")
+kontroll "fakturorna gar att lasa i last lage" "$KOD" "200"
 
 echo "Integrationstest: allt grönt"

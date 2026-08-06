@@ -30,6 +30,18 @@ export const FARG = {
   background: "#F6F7F8",
   blue: "#005CA9",
   white: "#FFFFFF",
+
+  // ---- Allvarlighetsgrad ----------------------------------------------
+  //
+  // Semantik, inte accent. Blått är ytans enda accent och ska förbli det;
+  // de här två säger något annat — att något är förfallet respektive
+  // stoppat — och den skillnaden får inte bäras av enbart text.
+  //
+  // Oxidtonerna är de som redan används i felsökningsgränssnittet för
+  // återkallat och spärrat. Att införa nya nyanser för samma betydelse
+  // hade gett systemet två språk för samma sak.
+  varning: "#8A5A00",
+  stoppat: "#8B1A1A",
 } as const;
 
 // ---- Typografi --------------------------------------------------------

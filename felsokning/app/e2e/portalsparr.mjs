@@ -35,6 +35,7 @@ const VYER = [
   "/alva/portal/kunskapskallor",
   "/alva/portal/integration",
   "/alva/portal/fakturor",
+  "/alva/portal/abonnemang",
   "/alva/portal/garantier",
   "/alva/portal/forsakring",
   "/alva/portal/support",

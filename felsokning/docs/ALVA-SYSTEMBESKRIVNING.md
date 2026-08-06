@@ -151,6 +151,15 @@ ett register över svenska bolags noterade gränser med avläsningsdatum. Poster
 ärende, metodik, plattformsversion, spår-id — och identifierande fält kan inte
 smugglas med. Anmälan är oföränderlig, statusen en projektion.
 
+**Abonnemang (ALVA-PROC-0002).** Kontot startar på Free och stannar där tills
+någon väljer annat — ingen provperiod som tyst börjar kosta. Faktura utfärdas vid
+registreringen (på noll) och sedan månadsvis av ett eget jobb, idempotent på
+perioden. Fyra nivåer: Free, Standard, Premium, Enterprise (per avtal, utan
+listpris). Basavgift plus per aktiv användare. PDF genereras utan beroenden —
+formatet skrivs för hand. Vid utebliven betalning: synlig nedräkning på 14 dagar,
+sedan låsning av nya ärenden. **Läsning och export påverkas aldrig, i något
+tillstånd** — loggen är verkstadens underlag i en tvist som gäller deras kund.
+
 **Fakturering (ALVA-PROC-0001).** Fakturan härleds ur organisationens tillstånd.
 Utfärdad faktura ändras aldrig; betalning är en händelse. Nummerserie utan
 luckor. Ingen betalleverantör.
@@ -239,7 +248,6 @@ portalspärren), `plattform` (157 integrationskontroller mot riktig Postgres).
 
 | Punkt | Läge |
 |---|---|
-| **Abonnemang och prisplaner** | **Ej byggt.** Modell och vyer för fakturering finns; prenumeration, gratisstart, månadsgenerering, PDF-utskick, nivåer och nedräkning till spärr finns inte. |
 | **TÜV T-3, restdel** | Kuverteringen stänger "nyckeln bredvid chiffertexten", inte backupfönstret. En backup tagen före en radering plus huvudnyckeln återställer uppgifterna. Kräver nyckel per subjekt i KMS. |
 | **T-12** | Ingen react-router-version är fri från bägge avvikelserna; den som bärs gäller RSC-läge som inte används. |
 | **Terraform** | CronJob och hemlighetskoppling skrivna men **ej applicerade** — ingen terraform-binär i miljön. |
@@ -269,8 +277,10 @@ sina gränser.
 rapporten är genomarbetade, prövade mot riktig databas och riktigt gränssnitt,
 och har överlevt tre revisioner som letade fel på allvar.
 
-**Kommersiellt är den ofärdig.** Fakturering finns som mekanism men det finns
-ingen abonnemangsmodell, ingen prisplan i drift, ingen kundhantering över tid.
+**Kommersiellt finns nu hela kedjan** — registrering, gratisnivå, månadsfaktura,
+PDF, nivåbyte, betalningspåminnelse och spärr. Prislistan är platshållare och
+ska sättas per marknad; utskicket av PDF per e-post har ingen avsändartjänst
+konfigurerad, så kunden hämtar den från portalen tills en sådan finns.
 
 **Juridiskt är strukturen på plats men inte fylld.** Impressum, dataskydd,
 tillgänglighet och tvistlösning har sina platser och sina rättsliga grunder;
@@ -280,8 +290,7 @@ skrivna.
 **Driftsmässigt är den beskriven men inte driftsatt.** Terraform beskriver hela
 klustret; ingenting har applicerats mot ett riktigt AWS-konto.
 
-Rimligaste nästa steg, i ordning: abonnemangsmodellen · applicera Terraform mot
-en riktig miljö · fyll Impressum · skriv biträdesavtal och DPIA · stäng T-3 med
+Rimligaste nästa steg, i ordning: applicera Terraform mot en riktig miljö · fyll Impressum · skriv biträdesavtal och DPIA · stäng T-3 med
 KMS.
 
 ---

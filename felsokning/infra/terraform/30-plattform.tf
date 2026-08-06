@@ -284,3 +284,80 @@ resource "kubernetes_cron_job_v1" "gallring" {
     }
   }
 }
+
+# ---- Månadsfaktureringen (ALVA-PROC-0002) ------------------------------
+#
+# Egen körning av samma skäl som gallringen: en körning som avbryts mitt i
+# ska kunna köras om, och den ska synas som en egen körning i driften.
+#
+# Jobbet är idempotent på perioden — andra körningen samma dygn fakturerar
+# ingenting. Det är viktigare än det låter: ett fakturajobb som
+# dubbelfakturerar vid en omstart är värre än ett som inte kör alls.
+resource "kubernetes_cron_job_v1" "manadsfakturering" {
+  metadata {
+    name      = "manadsfakturering"
+    namespace = kubernetes_namespace_v1.denna.metadata[0].name
+    labels    = merge(local.etiketter, { app = "manadsfakturering" })
+  }
+
+  spec {
+    # Dagligen. Perioden avgör vem som faktureras, inte schemat — en
+    # organisation som registrerade sig den 20:e faktureras den 20:e.
+    schedule                      = "40 3 * * *"
+    concurrency_policy            = "Forbid"
+    successful_jobs_history_limit = 7
+    failed_jobs_history_limit     = 7
+    starting_deadline_seconds     = 3600
+
+    job_template {
+      metadata {
+        labels = merge(local.etiketter, { app = "manadsfakturering" })
+      }
+
+      spec {
+        backoff_limit = 2
+
+        template {
+          metadata {
+            labels = merge(local.etiketter, { app = "manadsfakturering" })
+          }
+
+          spec {
+            restart_policy       = "Never"
+            service_account_name = kubernetes_service_account_v1.plattform.metadata[0].name
+
+            security_context {
+              run_as_non_root = true
+
+              seccomp_profile {
+                type = "RuntimeDefault"
+              }
+            }
+
+            container {
+              name    = "manadsfakturering"
+              image   = local.tjanster.plattform.bild
+              command = ["node", "manadsfakturering.mjs"]
+
+              env_from {
+                secret_ref {
+                  name = "felsokning-hemligheter"
+                }
+              }
+
+              resources {
+                requests = {
+                  cpu    = "50m"
+                  memory = "128Mi"
+                }
+                limits = {
+                  memory = "256Mi"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -471,3 +471,52 @@ drop trigger if exists supportinlagg_append_only on supportinlagg;
 create trigger supportinlagg_append_only
   before update or delete on supportinlagg
   for each row execute function forbjud_andring();
+
+-- ---- Abonnemang (ALVA-PROC-0002) ---------------------------------------
+--
+-- Kontot startar på Free och stannar där tills någon väljer annat. En
+-- provperiod som tyst börjar kosta är samma sorts fälla produkten finns
+-- för att undvika.
+--
+-- Nivån och fakturamejlen är HÄNDELSER, inte kolumner: vilken nivå som
+-- gällde när en faktura utfärdades måste gå att svara på i efterhand, och
+-- en kolumn som skrivits över kan inte svara.
+create table if not exists abonnemang (
+  organisation_id uuid primary key references organisationer(id),
+  registrerad timestamptz not null default now(),
+  -- Härledd: sista period som fakturerats. Skrivs av månadsjobbet.
+  senast_fakturerad date
+);
+
+create or replace function skydda_abonnemang() returns trigger
+language plpgsql as $$
+begin
+  if TG_OP = 'DELETE' then
+    raise exception 'Ett abonnemang kan inte raderas — historiken hör till fakturaunderlaget';
+  end if;
+  if (new.organisation_id, new.registrerad) is distinct from (old.organisation_id, old.registrerad) then
+    raise exception 'Abonnemangets identitet och startdatum kan inte ändras';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists abonnemang_skydd on abonnemang;
+create trigger abonnemang_skydd
+  before update or delete on abonnemang
+  for each row execute function skydda_abonnemang();
+
+create table if not exists abonnemangshandelser (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references organisationer(id),
+  typ text not null check (typ in ('niva', 'fakturaepost')),
+  varde text not null,
+  satt_av uuid references anvandare(id),
+  skapad timestamptz not null default now()
+);
+create index if not exists abonnemangshandelser_idx
+  on abonnemangshandelser (organisation_id, skapad);
+
+drop trigger if exists abonnemangshandelser_append_only on abonnemangshandelser;
+create trigger abonnemangshandelser_append_only
+  before update or delete on abonnemangshandelser
+  for each row execute function forbjud_andring();

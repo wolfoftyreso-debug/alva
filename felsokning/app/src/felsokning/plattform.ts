@@ -276,6 +276,51 @@ export async function anmalSupport(anmalan: {
   return { beteckning: data.beteckning ?? "" };
 }
 
+// Abonnemang (ALVA-PROC-0002). Tillståndet härleds på servern ur
+// organisationens förfallna fakturor — det lagras inte.
+export interface Abonnemang {
+  niva: string;
+  nivanamn: string;
+  tillstand: "aktiv" | "varning" | "last";
+  dagarKvar: number | null;
+  aldsta: string | null;
+  besked: string | null;
+  fakturaepost: string | null;
+  registrerad: string;
+  senast_fakturerad: string | null;
+  behorighet: { lasa: boolean; exportera: boolean; nyttArende: boolean; dokumentera: boolean; avsluta: boolean };
+}
+
+export async function hamtaAbonnemang(): Promise<Abonnemang> {
+  const res = await plattformFetch("/api/abonnemang");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return (await res.json()) as Abonnemang;
+}
+
+export async function sattNiva(niva: string): Promise<void> {
+  const res = await plattformFetch("/api/abonnemang/niva", { method: "POST", body: JSON.stringify({ niva }) });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Fel ${res.status}`);
+  }
+}
+
+export async function sattFakturaepost(epost: string): Promise<void> {
+  const res = await plattformFetch("/api/abonnemang/fakturaepost", {
+    method: "POST",
+    body: JSON.stringify({ epost }),
+  });
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Fel ${res.status}`);
+  }
+}
+
+/** Fakturans PDF. Kunden hämtar sitt eget underlag själv. */
+export function fakturaPdfUrl(id: string): string {
+  return `${PLATTFORM_URL}/api/fakturor/${id}/pdf`;
+}
+
 // Märkesspecifika kopplingar. Uppgifterna lagras krypterat på servern
 // och returneras alltid maskerade — klienten ser aldrig hemligheterna.
 export interface LeverantorsFalt {

@@ -39,6 +39,8 @@ import { KATEGORIER, UTGAENDE, protokollTillHandelser, signeraLeverans } from ".
 import { enrading, sammanfatta } from "./sammanfattning.mjs";
 import { fakturabeteckning, fakturastatus, fakturera, granskaPeriod, kreditera } from "./fakturering.mjs";
 import { STATUSAR, granskaAnmalan, sammanhang as byggSammanhang, supportbeteckning, supportstatus } from "./support.mjs";
+import { NIVAER, abonnemangstillstand, behorighet, besked, forfallenFakturering, nivaFor } from "./abonnemang.mjs";
+import { fakturaPdf } from "./fakturapdf.mjs";
 import {
   MASKERAT,
   gallringsdatum,
@@ -573,7 +575,38 @@ async function nycklarFor(orgId) {
     `select id, nyckel from personnycklar where organisation_id = $1`,
     [orgId],
   );
-  return new Map(rader.rows.map((r) => [r.id, oppnaKuvert(r.nyckel)]));
+  // En nyckel som inte går att öppna hoppas över — den fäller inte de
+  // andra.
+  //
+  // Fyndet kom ur integrationstestet: `oppnaKuvert` kastade, och eftersom
+  // den här funktionen laddar HELA organisationens nycklar gjorde en enda
+  // kuverterad nyckel varje annat ärende i organisationen oläsbart när
+  // huvudnyckeln saknades. En delvis migrerad organisation blev alltså
+  // helt stum, av ett fel som bara gällde ett ärende.
+  //
+  // Att hoppa över är dessutom rätt utfall i sak: en nyckel som inte går
+  // att öppna är precis vad krypto-shredding lämnar efter sig, och
+  // öppnaHändelse maskerar då fälten — vilket är vad som ska hända.
+  //
+  // Men tyst får det inte vara. Saknad huvudnyckel är ett
+  // konfigurationsfel, och ett sådant ska synas i driften.
+  const nycklar = new Map();
+  let ejOppnade = 0;
+  for (const r of rader.rows) {
+    try {
+      nycklar.set(r.id, oppnaKuvert(r.nyckel));
+    } catch {
+      ejOppnade += 1;
+    }
+  }
+  if (ejOppnade > 0) {
+    logga("varning", "personnycklar kunde inte öppnas", {
+      organisation: orgId,
+      antal: ejOppnade,
+      konsekvens: "Berörda fält maskeras. Kontrollera PERSONNYCKEL_HUVUD.",
+    });
+  }
+  return nycklar;
 }
 
 /**
@@ -701,6 +734,49 @@ async function medSupportnummer(arbete) {
   } finally {
     klient.release();
   }
+}
+
+/**
+ * Abonnemangets nuvarande nivå och tillstånd.
+ *
+ * Nivån är senaste nivåhändelsen; saknas den är den Free. Tillståndet
+ * härleds ur organisationens obetalda, förfallna fakturor.
+ */
+async function abonnemanget(orgId, nu = new Date()) {
+  const rad = await pool.query(
+    `select a.registrerad, a.senast_fakturerad,
+            (select varde from abonnemangshandelser
+              where organisation_id = a.organisation_id and typ = 'niva'
+              order by skapad desc limit 1) as niva,
+            (select varde from abonnemangshandelser
+              where organisation_id = a.organisation_id and typ = 'fakturaepost'
+              order by skapad desc limit 1) as fakturaepost
+     from abonnemang a where a.organisation_id = $1`,
+    [orgId],
+  );
+  if (rad.rowCount === 0) return null;
+
+  const fakturor = await pool.query(
+    `select f.beteckning, f.forfaller, f.totalt,
+            coalesce(json_agg(json_build_object('typ', h.typ)) filter (where h.id is not null), '[]') as handelser
+     from fakturor f
+     left join fakturahandelser h on h.faktura_id = f.id
+     where f.organisation_id = $1 group by f.id`,
+    [orgId],
+  );
+  const status = abonnemangstillstand(
+    fakturor.rows.map((f) => ({ ...f, status: fakturastatus(f.handelser) })),
+    nu,
+  );
+  const niva = nivaFor(rad.rows[0].niva ?? "free");
+  return {
+    ...rad.rows[0],
+    niva: niva.id,
+    nivanamn: niva.namn,
+    ...status,
+    behorighet: behorighet(status.tillstand),
+    besked: besked(status),
+  };
 }
 
 // Fakturan med sitt härledda tillstånd. Statusen finns inte i tabellen
@@ -1007,6 +1083,17 @@ export function skapaServer() {
             await klientDb.query("rollback");
             return svara(res, 409, { error: "E-postadressen är redan registrerad." });
           }
+          // Abonnemanget startar på Free vid registreringen. Ingen provperiod
+          // som tyst börjar kosta — kontot stannar på Free tills någon väljer
+          // annat (ALVA-PROC-0002).
+          await klientDb.query(
+            `insert into abonnemang (organisation_id) values ($1) on conflict do nothing`,
+            [org.rows[0].id],
+          );
+          await klientDb.query(
+            `insert into abonnemangshandelser (organisation_id, typ, varde) values ($1, 'niva', 'free')`,
+            [org.rows[0].id],
+          );
           await klientDb.query("commit");
           return loggaIn(res, { ...rad.rows[0], org_namn: org.rows[0].namn }, hemlighet);
         } catch (fel) {
@@ -1334,6 +1421,64 @@ export function skapaServer() {
       if (!anspr?.org) return svara(res, 401, { error: "Inloggning krävs." });
       if (!(await kontoGiltigt(anspr))) {
         return svara(res, 401, { error: "Sessionen gäller inte längre — logga in på nytt." });
+      }
+
+      // ---- Abonnemang (ALVA-PROC-0002) --------------------------------
+      if (req.method === "GET" && vag === "/api/abonnemang") {
+        const a = await abonnemanget(anspr.org);
+        if (!a) return svara(res, 404, { error: "Inget abonnemang är registrerat." });
+        return svara(res, 200, { ...a, nivaer: NIVAER });
+      }
+
+      if (req.method === "POST" && vag === "/api/abonnemang/niva") {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        const { niva } = await lasKropp(req);
+        if (!NIVAER.some((n) => n.id === niva)) return svara(res, 400, { error: "Okänd nivå." });
+        // Nivån är en HÄNDELSE. Vilken nivå som gällde när en faktura
+        // utfärdades måste gå att svara på i efterhand, och en kolumn som
+        // skrivits över kan inte svara.
+        await pool.query(
+          `insert into abonnemangshandelser (organisation_id, typ, varde, satt_av) values ($1, 'niva', $2, $3)`,
+          [anspr.org, niva, anspr.sub],
+        );
+        logga("info", "abonnemangsnivå ändrad", { organisation: anspr.org, niva });
+        return svara(res, 200, { ok: true, niva });
+      }
+
+      if (req.method === "POST" && vag === "/api/abonnemang/fakturaepost") {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        const { epost } = await lasKropp(req);
+        // Tom sträng är ett giltigt val: kunden hämtar fakturan själv.
+        const rensad = String(epost ?? "").trim();
+        if (rensad && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rensad)) {
+          return svara(res, 400, { error: "Ogiltig e-postadress." });
+        }
+        await pool.query(
+          `insert into abonnemangshandelser (organisation_id, typ, varde, satt_av) values ($1, 'fakturaepost', $2, $3)`,
+          [anspr.org, rensad, anspr.sub],
+        );
+        return svara(res, 200, { ok: true, epost: rensad });
+      }
+
+      // Fakturan som PDF. Kunden hämtar den själv — utskicket per e-post
+      // är ett tillägg, inte den enda vägen till sitt eget underlag.
+      const pdfVag = vag.match(/^\/api\/fakturor\/([0-9a-fA-F-]{36})\/pdf$/);
+      if (req.method === "GET" && pdfVag) {
+        const rad = await pool.query(
+          `select organisation_id, beteckning, dokument from fakturor where id = $1`,
+          [pdfVag[1]],
+        );
+        if (rad.rowCount === 0 || rad.rows[0].organisation_id !== anspr.org) {
+          return svara(res, 404, { error: "Fakturan är inte tillgänglig." });
+        }
+        const pdf = fakturaPdf(rad.rows[0].dokument);
+        res.writeHead(200, {
+          "Content-Type": "application/pdf",
+          "Content-Length": pdf.length,
+          "Content-Disposition": `attachment; filename="${rad.rows[0].beteckning}.pdf"`,
+          ...korsHuvuden(res),
+        });
+        return res.end(pdf);
       }
 
       // ---- Support och felanmälan (ALVA-PROC-0050) -------------------
@@ -1870,6 +2015,14 @@ export function skapaServer() {
       }
 
       if (req.method === "POST" && vag === "/api/arenden") {
+        // Låst abonnemang stoppar NYA ärenden. Det rör aldrig historiken —
+        // se abonnemang.mjs: ärendeloggen är verkstadens underlag i en
+        // tvist som gäller DERAS kund, och den tredje parten har ingen del
+        // i vår obetalda faktura.
+        const ab = await abonnemanget(anspr.org);
+        if (ab && !ab.behorighet.nyttArende) {
+          return svara(res, 402, { error: ab.besked, tillstand: ab.tillstand });
+        }
         const { id, nummer, skapad, delningskod, metodikId } = await lasKropp(req);
         if (typeof id !== "string" || typeof nummer !== "number" || !skapad) {
           return svara(res, 400, { error: "Ogiltigt ärende." });
