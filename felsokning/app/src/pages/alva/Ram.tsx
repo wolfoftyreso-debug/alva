@@ -34,10 +34,10 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
       <header className="border-b" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>
         <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-between gap-4 px-6 py-4">
           <Link to={portal ? "/alva/portal" : "/alva"} className="flex items-baseline gap-4">
-            <span className="text-[20px] font-semibold tracking-[0.04em]" style={{ color: FARG.graphite }}>
+            <span className="text-[20px] font-semibold tracking-[0.02em]" style={{ color: FARG.graphite }}>
               {ALVA.namn}
             </span>
-            <span className="hidden text-[10px] uppercase tracking-[0.16em] sm:inline" style={{ color: FARG.steel }}>
+            <span className="hidden text-[10px] uppercase tracking-[0.08em] sm:inline" style={{ color: FARG.steel }}>
               {ALVA.utlast}
             </span>
           </Link>
@@ -54,7 +54,7 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
                     <Link
                       to={l.till}
                       aria-current={aktiv ? "page" : undefined}
-                      className="text-[12px] font-semibold uppercase tracking-[0.1em]"
+                      className="text-[12px] font-semibold uppercase tracking-[0.08em]"
                       style={{ color: aktiv ? FARG.blue : FARG.steel }}
                     >
                       {l.text}

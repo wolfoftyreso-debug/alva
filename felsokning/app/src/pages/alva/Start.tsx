@@ -40,10 +40,10 @@ export default function Start() {
           <h1 className="text-[64px] font-semibold leading-none tracking-[0.02em]" style={{ color: FARG.graphite }}>
             {ALVA.namn}
           </h1>
-          <p className="mt-4 text-[15px] uppercase tracking-[0.18em]" style={{ color: FARG.steel }}>
+          <p className="mt-4 text-[15px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
             {ALVA.utlast}
           </p>
-          <p className="mt-2 text-[13px] uppercase tracking-[0.14em]" style={{ color: FARG.steel }}>
+          <p className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
             {ALVA.position}
           </p>
 
@@ -80,7 +80,7 @@ export default function Start() {
                   {String(i + 1).padStart(2, "0")}
                 </span>
               </div>
-              <div className="mt-4 text-[13px] font-semibold uppercase tracking-[0.1em]" style={{ color: FARG.graphite }}>
+              <div className="mt-4 text-[13px] font-semibold uppercase tracking-[0.08em]" style={{ color: FARG.graphite }}>
                 {f.namn}
               </div>
               <p className="mt-2 text-[14px] leading-[20px]" style={{ color: FARG.graphite }}>
@@ -191,7 +191,7 @@ export default function Start() {
               <div className="mt-4 text-[15px] font-semibold" style={{ color: FARG.graphite }}>
                 {namn}
               </div>
-              <div className="mt-2 text-[12px] uppercase tracking-[0.1em]" style={{ color: FARG.steel }}>
+              <div className="mt-2 text-[12px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
                 {status}
               </div>
             </div>

@@ -89,7 +89,7 @@ export default function Ansokan() {
           <Block>
             {FALT.map((f) => (
               <div key={f.namn} className="border-t py-2 first:border-t-0" style={{ borderColor: FARG.lightSteel }}>
-                <label htmlFor={f.namn} className="block text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: FARG.steel }}>
+                <label htmlFor={f.namn} className="block text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
                   {f.etikett}
                   {f.kravs && <span aria-hidden="true"> ·</span>}
                   {f.kravs && <span className="sr-only"> (required)</span>}
@@ -105,7 +105,7 @@ export default function Ansokan() {
               </div>
             ))}
             <div className="border-t py-2" style={{ borderColor: FARG.lightSteel }}>
-              <label htmlFor="noteringar" className="block text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: FARG.steel }}>
+              <label htmlFor="noteringar" className="block text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
                 Notes
               </label>
               <textarea

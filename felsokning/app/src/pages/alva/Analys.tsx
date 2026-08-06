@@ -52,7 +52,7 @@ function Tal({ tal }: { tal: Nyckeltal }) {
           </>
         )}
       </div>
-      <div className="mt-2 text-[11px] uppercase tracking-[0.1em]" style={{ color: FARG.steel }}>
+      <div className="mt-2 text-[11px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
         {tal.riktning === "hogre" ? "↑ bättre" : "↓ bättre"} · {tal.underlag}
       </div>
       <p className="mt-4 border-t pt-4 text-[12px] leading-[18px]" style={{ borderColor: FARG.lightSteel, color: FARG.steel }}>

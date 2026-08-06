@@ -9,7 +9,7 @@ import { Fasrad } from "@/alva/komponenter";
 import { Slutsatspanel } from "@/felsokning/Slutsats";
 import { sammanfatta } from "../../../../services/gemensam/sammanfattning.mjs";
 import { grinda } from "../../../../services/gemensam/grind.mjs";
-import { arendebeteckning, fasDefinition } from "@/alva/system";
+import { PLATTFORMSVERSION, arendebeteckning, fasDefinition } from "@/alva/system";
 import {
   arAvslutat,
   arendeidentitet,
@@ -188,12 +188,12 @@ export default function ArendeSida() {
       {/* Klassisk trekolumnslayout på skrivbord: navigationsträd till
           vänster, arbetsyta i mitten, kontextpanel till höger. På smala
           skärmar: flikrad + en kolumn. */}
-      <nav className="mb-3 grid grid-cols-4 gap-1 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-1 lg:hidden">
+      <nav className="mb-3 grid grid-cols-4 gap-1 border border-[#C6C6C6] bg-[#F7F7F7] p-1 lg:hidden">
         {FLIKAR.map((f) => (
           <button
             key={f.id}
             onClick={() => setFlik(f.id)}
-            className={`min-h-9 rounded text-[13px] font-semibold transition-colors ${
+            className={`min-h-9 text-[13px] font-semibold transition-colors ${
               flik === f.id ? "bg-[#00437A] text-white" : "text-[#333333] hover:bg-[#E4E9EE]"
             }`}
           >
@@ -252,7 +252,7 @@ function IdentitetsRad({ arende, skicka }: { arende: Arende; skicka: (h: Handels
       </span>
     ) : null;
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 text-[12px] print:hidden">
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 text-[12px] print:hidden">
       {del("AO", idn.arbetsorder)}
       {del("Claim", idn.claim)}
       {del("Skadenr", idn.skadenummer)}
@@ -267,7 +267,7 @@ function IdentitetsRad({ arende, skicka }: { arende: Arende; skicka: (h: Handels
           value={typ}
           disabled={idn.avslutat}
           onChange={(e) => skicka({ typ: "arendetyp_satt", arendetyp: e.target.value })}
-          className="rounded border border-[#ADADAD] bg-white px-1.5 py-0.5 text-[12px] focus:border-[#00437A] focus:outline-none"
+          className="border border-[#ADADAD] bg-white px-1.5 py-0.5 text-[12px] focus:border-[#00437A] focus:outline-none"
         >
           {ARENDETYPER.map((t) => (
             <option key={t}>{t}</option>
@@ -329,11 +329,11 @@ function MatarstallningSteg({ lage, skicka }: { lage: "ingaende" | "utgaende"; s
       {foto && !laser && (
         <div className="mt-2">
           {demo && (
-            <p className="mb-2 rounded border border-[#E0C36A] bg-[#FFF8E1] p-1.5 text-[11px] font-semibold text-[#9A6700]">
+            <p className="mb-2 border border-[#E0C36A] bg-[#FFF8E1] p-1.5 text-[11px] font-semibold text-[#9A6700]">
               Demo-avläsning — bildtolkningen kräver inloggning. Kontrollera värdet.
             </p>
           )}
-          <img src={foto} alt="Instrumentpanel" className="mb-2 max-h-40 rounded border border-[#C6C6C6]" />
+          <img src={foto} alt="Instrumentpanel" className="mb-2 max-h-40 border border-[#C6C6C6]" />
           <TextFalt label={`Mätarställning (${lage === "ingaende" ? "ingående" : "utgående"})`} varde={varde} satt={setVarde} platshallare="T.ex. 84 320 km" />
           <StorKnapp
             disabled={!varde.trim()}
@@ -390,7 +390,7 @@ function TidigareArenden({ arende, skicka }: { arende: Arende; skicka: (h: Hande
 
   if (rader.length === 0) return null;
   return (
-    <div className="mb-2 rounded border border-[#C6C6C6] bg-white p-2">
+    <div className="mb-2 border border-[#C6C6C6] bg-white p-2">
       <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
         Tidigare ärenden på {identifierare} — granska innan historiken kvitteras
       </p>
@@ -663,7 +663,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
               <button
                 key={o}
                 onClick={() => vaxla(orsaker, setOrsaker, o)}
-                className={`min-h-8 rounded border px-1.5 text-[12px] font-medium ${
+                className={`min-h-8 border px-1.5 text-[12px] font-medium ${
                   orsaker.includes(o) ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
                 }`}
               >
@@ -677,7 +677,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
               <button
                 key={k}
                 onClick={() => vaxla(underlag, setUnderlag, k)}
-                className={`min-h-8 rounded border px-1.5 text-[12px] font-medium ${
+                className={`min-h-8 border px-1.5 text-[12px] font-medium ${
                   underlag.includes(k) ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
                 }`}
               >
@@ -691,7 +691,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
               <button
                 key={n}
                 onClick={() => setSakerhet(n)}
-                className={`min-h-9 rounded border text-[12px] font-semibold ${
+                className={`min-h-9 border text-[12px] font-semibold ${
                   sakerhet === n ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
                 }`}
               >
@@ -824,7 +824,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
       )}
 
       {forslagsLage && (
-        <div className="mb-3 rounded border border-[#C6C6C6] bg-white p-2">
+        <div className="mb-3 border border-[#C6C6C6] bg-white p-2">
           <TextFalt
             label="Föreslagen åtgärd (visas för kunden i delningsvyn)"
             varde={forslagText}
@@ -858,7 +858,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
       )}
 
       {forslag.length > 0 && !beslut && (
-        <div className="mb-3 rounded border border-[#E0C36A] bg-[#FFF8E1] p-2">
+        <div className="mb-3 border border-[#E0C36A] bg-[#FFF8E1] p-2">
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#9A6700]">
             Registrera kundens besked innan arbetet påbörjas
           </p>
@@ -867,7 +867,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
               <button
                 key={val}
                 onClick={() => setBeslutsVal(val)}
-                className={`min-h-9 rounded border text-[12px] font-semibold ${
+                className={`min-h-9 border text-[12px] font-semibold ${
                   beslutsVal === val ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
                 }`}
               >
@@ -883,7 +883,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
                   <button
                     key={k}
                     onClick={() => setKanal(k)}
-                    className={`min-h-8 rounded border px-1 text-[12px] font-medium ${
+                    className={`min-h-8 border px-1 text-[12px] font-medium ${
                       kanal === k ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
                     }`}
                   >
@@ -973,7 +973,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
               <button
                 key={val}
                 onClick={() => setOrsak(val)}
-                className={`min-h-8 rounded border px-2 text-left text-[12px] font-medium ${
+                className={`min-h-8 border px-2 text-left text-[12px] font-medium ${
                   orsak === val ? "border-[#00437A] bg-[#D6E4F2]" : "border-[#C6C6C6] bg-white"
                 }`}
               >
@@ -1020,7 +1020,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
               <button
                 key={val}
                 onClick={() => setKkResultat(val)}
-                className={`min-h-9 rounded border px-2 text-[12px] font-semibold ${
+                className={`min-h-9 border px-2 text-[12px] font-semibold ${
                   kkResultat === val ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
                 }`}
               >
@@ -1078,7 +1078,7 @@ function VyTrad({
   const steg = nastaSteg(arende, metodik);
   const aktuellIndex = metodik.steg.findIndex((s) => s.id === steg.steg.id);
   return (
-    <nav className="overflow-hidden rounded border border-[#C6C6C6] bg-[#F7F7F7] shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
+    <nav className="overflow-hidden border border-[#C6C6C6] bg-[#F7F7F7] shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
       <p className="border-b border-[#DDDDDD] bg-[#EFEFEF] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#4A5560]">
         Ärendevyer
       </p>
@@ -1200,7 +1200,7 @@ function InaktivitetsBanner({
   const minuter = Math.floor((new Date(nu).getTime() - new Date(sista.tidpunkt).getTime()) / 60000);
   if (minuter < 20) return null;
   return (
-    <div className="mb-4 rounded border border-[#00437A] bg-[#F7F7F7] p-4">
+    <div className="mb-4 border border-[#00437A] bg-[#F7F7F7] p-4">
       <p className="mb-2 text-[14px] font-semibold text-[#00437A]">
         Ingen aktivitet har registrerats de senaste {minuter} minuterna.
       </p>
@@ -1472,7 +1472,7 @@ function KategoriRad({ arende, skicka }: { arende: Arende; skicka: (h: Handelse)
         <button
           key={k}
           onClick={() => k !== aktiv && skicka({ typ: "kategori_byte", kategori: k })}
-          className={`whitespace-nowrap rounded border px-4 py-2 text-[12px] font-semibold transition-colors ${
+          className={`whitespace-nowrap border px-4 py-2 text-[12px] font-semibold transition-colors ${
             k === aktiv
               ? "border-[#00437A] bg-[#00437A] text-white"
               : "border-[#ADADAD] bg-[#F7F7F7] text-[#333333] hover:border-[#8FA8C0]"
@@ -1638,7 +1638,7 @@ function Undantag({ vidUndantag }: { vidUndantag: (orsak: string) => void }) {
     );
   }
   return (
-    <div className="mt-3 rounded border border-[#E0C36A] bg-[#FFF8E1] p-2">
+    <div className="mt-3 border border-[#E0C36A] bg-[#FFF8E1] p-2">
       <p className="mb-2 text-[12px] font-semibold text-[#9A6700]">
         Kontrollen dokumenteras utan underlag — ange orsak (obligatoriskt). Detta flaggas i brief och rapport.
       </p>
@@ -1647,7 +1647,7 @@ function Undantag({ vidUndantag }: { vidUndantag: (orsak: string) => void }) {
           <button
             key={val}
             onClick={() => setOrsak(val)}
-            className={`min-h-8 rounded border px-2 text-left text-[12px] font-medium ${
+            className={`min-h-8 border px-2 text-left text-[12px] font-medium ${
               orsak === val ? "border-[#00437A] bg-[#D6E4F2]" : "border-[#C6C6C6] bg-white"
             }`}
           >
@@ -1780,7 +1780,7 @@ function SnabbDokumentation({
                     ? instRef.current?.click()
                     : setTyp(typ === d.id ? null : d.id)
             }
-            className={`min-h-9 rounded border text-[12px] font-semibold transition-colors ${
+            className={`min-h-9 border text-[12px] font-semibold transition-colors ${
               typ === d.id
                 ? "border-[#00437A] bg-[#00437A] text-white"
                 : "border-[#ADADAD] bg-[#F7F7F7] text-[#333333] hover:border-[#8FA8C0]"
@@ -1836,8 +1836,8 @@ function SnabbDokumentation({
       />
       {videoFel && <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">{videoFel}</p>}
       {video && (
-        <div className="mt-3 rounded border border-[#C6C6C6] bg-white p-2">
-          <video src={video.dataUrl} controls className="mb-2 max-h-48 w-full rounded border border-[#C6C6C6]" />
+        <div className="mt-3 border border-[#C6C6C6] bg-white p-2">
+          <video src={video.dataUrl} controls className="mb-2 max-h-48 w-full border border-[#C6C6C6]" />
           <TextFalt
             label="Vad visar videon? (obligatoriskt — det som låter eller rör sig)"
             varde={video.beskrivning}
@@ -1864,9 +1864,9 @@ function SnabbDokumentation({
       )}
       {laserAv && <p className="mt-2 animate-pulse text-center text-[12px] font-semibold text-[#00437A]">Systemet läser av instrumentet …</p>}
       {avlasning && (
-        <div className="mt-3 rounded border border-[#C6C6C6] bg-white p-2">
+        <div className="mt-3 border border-[#C6C6C6] bg-white p-2">
           {avlasning.demo && (
-            <p className="mb-2 rounded border border-[#E0C36A] bg-[#FFF8E1] p-1.5 text-[11px] font-semibold text-[#9A6700]">
+            <p className="mb-2 border border-[#E0C36A] bg-[#FFF8E1] p-1.5 text-[11px] font-semibold text-[#9A6700]">
               Demo-avläsning — bildtolkningen kräver inloggning. Värdena är exempeldata.
             </p>
           )}
@@ -1954,9 +1954,9 @@ function OverlamningDialog({
 
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-      <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded border border-[#ADADAD] bg-[#F7F7F7] p-4">
+      <div className="max-h-full w-full max-w-2xl overflow-y-auto border border-[#ADADAD] bg-[#F7F7F7] p-4">
         <h2 className="mb-3 text-[15px] font-semibold">Överlämningsrapport</h2>
-        <pre className="mb-3 overflow-x-auto whitespace-pre-wrap rounded bg-white p-4 text-[12px] text-[#333333]">
+        <pre className="mb-3 overflow-x-auto whitespace-pre-wrap bg-white p-4 text-[12px] text-[#333333]">
           {text}
         </pre>
         {aiLage === "vilar" && (
@@ -1969,7 +1969,7 @@ function OverlamningDialog({
           <p className="mb-3 font-semibold text-[#8B1A1A]">Kunde inte hämtas — kräver inloggning. Överlämningen fungerar ändå.</p>
         )}
         {aiLage === "klar" && aiRader.length > 0 && (
-          <div className="mb-3 rounded bg-white p-4">
+          <div className="mb-3 bg-white p-4">
             {aiRader.map((rad, i) => (
               <p key={i} className="py-0.5 text-[12px] text-[#333333]">
                 <span className="font-semibold text-[#4A5560]">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
@@ -2035,7 +2035,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
   }
 
   return (
-    <div className="mt-3 rounded border border-[#C6C6C6] bg-white p-3">
+    <div className="mt-3 border border-[#C6C6C6] bg-white p-3">
       {fel && <p className="mb-2 font-semibold text-[#8B1A1A]">{fel}</p>}
       {delningar.map((delning) => (
         <div key={delning.kod} className="flex items-center justify-between gap-2 border-b border-[#DDDDDD] py-2 last:border-0">
@@ -2046,7 +2046,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
           {!delning.aterkallad && (
             <span className="flex gap-2">
               <button
-                className="rounded border border-[#ADADAD] px-3 py-1 font-semibold text-[#333333] hover:border-[#00437A]"
+                className="border border-[#ADADAD] px-3 py-1 font-semibold text-[#333333] hover:border-[#00437A]"
                 onClick={() =>
                   navigator.clipboard.writeText(`${window.location.origin}/felsokning/delad/${delning.kod}`)
                 }
@@ -2054,7 +2054,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
                 Kopiera
               </button>
               <button
-                className="rounded border border-[#ADADAD] px-3 py-1 font-semibold text-[#8B1A1A] hover:border-[#8B1A1A]"
+                className="border border-[#ADADAD] px-3 py-1 font-semibold text-[#8B1A1A] hover:border-[#8B1A1A]"
                 onClick={async () => {
                   await aterkallaDelning(delning.kod);
                   skicka({ typ: "kommentar", text: `Delningslänk (${NIVA_LABEL[delning.niva]}) återkallad.` });
@@ -2071,7 +2071,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
         {(Object.keys(NIVA_LABEL) as DelningsNiva[]).map((niva) => (
           <button
             key={niva}
-            className="min-h-9 rounded border border-[#ADADAD] text-[12px] font-semibold text-[#333333] hover:border-[#00437A]"
+            className="min-h-9 border border-[#ADADAD] text-[12px] font-semibold text-[#333333] hover:border-[#00437A]"
             onClick={async () => {
               try {
                 await skapaDelning(arende.id, niva);
@@ -2105,10 +2105,10 @@ function LoggFlik({ arende }: { arende: Arende }) {
               <p className="text-[13px] text-[#1A1A1A]">{handelseRubrik(post)}</p>
               <p className="text-[11px] text-[#707070]">{post.anvandare}</p>
               {post.handelse.typ === "foto" && (
-                <Bild bilaga={post.handelse} alt={post.handelse.beskrivning} className="mt-1 max-h-40 rounded border border-[#C6C6C6]" />
+                <Bild bilaga={post.handelse} alt={post.handelse.beskrivning} className="mt-1 max-h-40 border border-[#C6C6C6]" />
               )}
               {post.handelse.typ === "video" && (
-                <Klipp bilaga={post.handelse} className="mt-1 max-h-40 rounded border border-[#C6C6C6]" />
+                <Klipp bilaga={post.handelse} className="mt-1 max-h-40 border border-[#C6C6C6]" />
               )}
             </div>
           </li>
@@ -2526,7 +2526,7 @@ function RapportFlik({
         <Panel rubrik="Dokumenterad video">
           {klipp.map((v, i) => (
             <figure key={i} className="mb-2">
-              <Klipp bilaga={v.bilaga} className="w-full rounded border border-[#C6C6C6]" />
+              <Klipp bilaga={v.bilaga} className="w-full border border-[#C6C6C6]" />
               <figcaption className="mt-1 text-[11px] text-[#4A5560]">{v.beskrivning}</figcaption>
             </figure>
           ))}
@@ -2537,7 +2537,7 @@ function RapportFlik({
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
-                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} className="rounded border border-[#C6C6C6]" />
+                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} className="border border-[#C6C6C6]" />
                 <figcaption className="mt-1 text-[11px] text-[#4A5560]">{bild.beskrivning}</figcaption>
               </figure>
             ))}
@@ -2554,6 +2554,46 @@ function RapportFlik({
       <p className="text-center text-[11px] text-[#8A8A8A]">
         Genererad ur ärendets händelselogg · Observationer och mätvärden redovisas utan slutsatser som saknar stöd.
       </p>
+      <Ritningsstampel arende={arende} />
     </>
+  );
+}
+
+/**
+ * Ritningsstämpel.
+ *
+ * En teknisk ritning bär alltid ett hörn med beteckning, revision och
+ * status, så att ett papper på en verkstadsbänk går att härleda till
+ * exakt vilken utgåva det kom ur. En rapport som ska hålla i en tvist
+ * behöver samma sak: läsaren måste kunna se vilket regelpaket och vilken
+ * evidensmodell som gällde när ärendet stängdes — inte vilka som gäller
+ * den dag rapporten läses.
+ *
+ * Varje fält är något en granskare efterfrågar innan den litar på resten
+ * av dokumentet. Inget av dem är dekoration.
+ */
+function Ritningsstampel({ arende }: { arende: Arende }) {
+  const paket = aktivtRegelpaket();
+  const avslutad = [...arende.handelser].reverse().find((p) => p.handelse.typ === "arende_avslutat");
+  const falt: [string, string][] = [
+    ["Beteckning", arendebeteckning(arende.nummer)],
+    ["Regelpaket", paket.version],
+    ["Evidensmodell", `ECM ${ECM_VERSION}`],
+    ["Plattform", PLATTFORMSVERSION],
+    ["Status", avslutad ? "Closed" : "In progress"],
+    ["Utgåva", avslutad ? new Date(avslutad.tidpunkt).toISOString().slice(0, 10) : "—"],
+  ];
+
+  return (
+    <div className="alva-yta mt-3 border border-[#C6C6C6] bg-white">
+      <div className="grid grid-cols-2 sm:grid-cols-3">
+        {falt.map(([etikett, varde]) => (
+          <div key={etikett} className="border-b border-r border-[#DDDDDD] px-2 py-2 last:border-r-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#4A5560]">{etikett}</div>
+            <div className="mt-2 font-mono text-[11px] text-[#1B1E22]">{varde}</div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

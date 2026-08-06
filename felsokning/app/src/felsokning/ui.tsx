@@ -90,7 +90,7 @@ export function StorKnapp({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`min-h-10 w-full rounded px-3 py-1.5 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 print:hidden ${farg} ${className}`}
+      className={`min-h-10 w-full px-3 py-1.5 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 print:hidden ${farg} ${className}`}
     >
       {children}
     </button>
@@ -99,7 +99,7 @@ export function StorKnapp({
 
 export function Panel({ rubrik, children }: { rubrik?: string; children: ReactNode }) {
   return (
-    <section className="mb-3 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-3 shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
+    <section className="mb-3 border border-[#C6C6C6] bg-[#F7F7F7] p-3 shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
       {rubrik && (
         <h2 className="mb-2 border-b border-[#DDDDDD] pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#4A5560]">
           {rubrik}
@@ -147,7 +147,7 @@ export function TextFalt({
   const vardeRef = useRef(varde);
   vardeRef.current = varde;
   const klass =
-    "w-full rounded border border-[#ADADAD] bg-white px-2.5 py-1.5 text-[13px] text-[#1A1A1A] placeholder-[#9AA0A6] focus:border-[#00437A] focus:outline-none focus:ring-1 focus:ring-[#00437A]";
+    "w-full border border-[#ADADAD] bg-white px-2.5 py-1.5 text-[13px] text-[#1A1A1A] placeholder-[#9AA0A6] focus:border-[#00437A] focus:outline-none focus:ring-1 focus:ring-[#00437A]";
   return (
     <label className="mb-2.5 block">
       <span className="mb-1 flex min-h-6 items-center justify-between gap-2">

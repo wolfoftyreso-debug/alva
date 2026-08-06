@@ -41,7 +41,7 @@ function Vallista({
           <button
             key={val}
             onClick={() => vidByte(aktiv ? valda.filter((v) => v !== val) : [...valda, val])}
-            className={`min-h-10 rounded border px-2 font-semibold transition-colors ${
+            className={`min-h-10 border px-2 font-semibold transition-colors ${
               aktiv
                 ? "border-[#00437A] bg-[#00437A] text-white"
                 : "border-[#ADADAD] bg-[#F7F7F7] text-[#4A5560]"
@@ -90,7 +90,7 @@ function Integrationer() {
         plattformen och används bara av servern — de skickas aldrig till teknikernas enheter.
       </p>
       {!krypteringKlar && (
-        <p className="mb-2 rounded border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
+        <p className="mb-2 border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
           Kryptering är inte konfigurerad i driften (INTEGRATION_NYCKEL) — uppgifter kan inte sparas förrän
           nyckeln finns.
         </p>
@@ -119,7 +119,7 @@ function Integrationer() {
             </div>
 
             {oppen === lev.id ? (
-              <div className="mt-2 rounded border border-[#C6C6C6] bg-white p-2">
+              <div className="mt-2 border border-[#C6C6C6] bg-white p-2">
                 {lev.falt.map((falt) => (
                   <TextFalt
                     key={falt.nyckel}

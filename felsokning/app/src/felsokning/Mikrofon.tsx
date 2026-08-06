@@ -48,7 +48,7 @@ export function MikrofonKnapp({ paText }: { paText: (text: string) => void }) {
         type="button"
         onClick={() => (lyssnar ? stoppa() : starta())}
         aria-label={lyssnar ? "Stoppa inspelning" : "Starta röstinmatning"}
-        className={`min-h-8 min-w-11 rounded border px-3 text-[14px] font-semibold transition-colors ${
+        className={`min-h-8 min-w-11 border px-3 text-[14px] font-semibold transition-colors ${
           lyssnar
             ? "animate-pulse border-[#6E1414] bg-[#8B1A1A] text-white"
             : "border-[#ADADAD] bg-white text-[#1A1A1A] hover:border-[#00437A]"

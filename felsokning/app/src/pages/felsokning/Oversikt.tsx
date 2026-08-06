@@ -45,13 +45,13 @@ function Omfordela({ rad, vidKlar }: { rad: OversiktsRad; vidKlar: () => void })
     );
   }
   return (
-    <div className="col-span-2 rounded border border-[#C6C6C6] bg-white p-2">
+    <div className="col-span-2 border border-[#C6C6C6] bg-white p-2">
       <p className="mb-2 text-[12px] font-semibold uppercase text-[#4A5560]">Ny ansvarig tekniker</p>
       <div className="grid grid-cols-2 gap-2">
         {personer.map((person) => (
           <button
             key={person.id}
-            className="min-h-9 rounded border border-[#ADADAD] font-semibold text-[#333333] hover:border-[#00437A]"
+            className="min-h-9 border border-[#ADADAD] font-semibold text-[#333333] hover:border-[#00437A]"
             onClick={async () => {
               const post = nyLoggPost(konto?.namn ?? "arbetsledare", {
                 typ: "ansvarig_satt",
@@ -69,7 +69,7 @@ function Omfordela({ rad, vidKlar }: { rad: OversiktsRad; vidKlar: () => void })
           </button>
         ))}
         <button
-          className="min-h-9 rounded border border-[#ADADAD] font-semibold text-[#4A5560]"
+          className="min-h-9 border border-[#ADADAD] font-semibold text-[#4A5560]"
           onClick={() => setOppen(false)}
         >
           Avbryt
@@ -188,7 +188,7 @@ export default function Oversikt() {
                 <div key={rad.orsak} className="flex items-center gap-2 py-0.5 text-[13px]">
                   <span className="w-52 shrink-0 text-[#333333]">{rad.orsak}</span>
                   <span
-                    className="h-3 rounded-sm bg-[#00437A]"
+                    className="h-3 bg-[#00437A]"
                     style={{ width: `${Math.min(100, (rad.antal / felorsaker[0].antal) * 100)}%`, minWidth: 6 }}
                   />
                   <span className="font-semibold">{rad.antal}</span>
@@ -203,13 +203,13 @@ export default function Oversikt() {
           {rader.length === 0 && <p className="text-center text-[14px] text-[#4A5560]">Inga ärenden i organisationen ännu.</p>}
 
           {rader.map((rad) => (
-            <div key={rad.id} className="mb-3 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-4">
+            <div key={rad.id} className="mb-3 border border-[#C6C6C6] bg-[#F7F7F7] p-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">
                   Ärende #{rad.nummer}
                 </span>
                 <span
-                  className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase ${
+                  className={`px-2 py-0.5 text-[11px] font-semibold uppercase ${
                     rad.avslutat ? "bg-[#8A94A0] text-white" : "bg-[#00437A] text-white"
                   }`}
                 >

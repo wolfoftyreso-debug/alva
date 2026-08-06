@@ -1,0 +1,62 @@
+/* ALVA-SPEC-001 · paragraf 6 — bokstavsformen som fil.
+ *
+ * Fallkedjan i src/alva/system.ts sätter DIN 2014 först, därför att en
+ * organisation som licensierat DIN ska få DIN. Men de flesta har inte
+ * DIN installerat, och då föll ALVA tidigare ned till vad enheten råkade
+ * ha — Helvetica på en iPhone, Roboto på en Android, något annat på en
+ * verkstadsdator. Ett system som beskriver sig som en standard får inte
+ * se olika ut beroende på var det öppnas.
+ *
+ * IBM Plex Sans är därför inbakad. Den är specens tredje tillåtna snitt,
+ * fritt licensierad under SIL Open Font License (se LICENSE i den här
+ * katalogen), och delar DIN:s karaktär: rak, teknisk, byggd för
+ * ingenjörsdokument snarare än för löptext.
+ *
+ * Bara latinsk delmängd och tre vikter — 400 för text, 600 för etiketter
+ * och rubriker, 700 för ordmärket. Plus två vikter Plex Mono för
+ * beteckningar och mätvärden. Fem filer, drygt 100 kB.
+ *
+ * `font-display: swap` är avsiktligt: texten ska synas direkt i
+ * fallkedjans snitt och bytas när filen kommit fram. Ett tomt fält i en
+ * verkstad är sämre än ett fält i fel bokstavsform.
+ */
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./typsnitt/ibm-plex-sans-latin-400-normal.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./typsnitt/ibm-plex-sans-latin-600-normal.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./typsnitt/ibm-plex-sans-latin-700-normal.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./typsnitt/ibm-plex-mono-latin-400-normal.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./typsnitt/ibm-plex-mono-latin-600-normal.woff2) format("woff2");
+}

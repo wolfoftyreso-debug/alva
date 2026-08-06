@@ -1,3 +1,7 @@
+/* ALVA:s eget snitt, inbakat som data. Se src/alva/typsnitt.css.
+   @import måste stå före allt annat, inklusive Tailwind-direktiven. */
+@import './alva/typsnitt.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

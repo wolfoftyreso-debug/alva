@@ -216,7 +216,7 @@ export default function NyttArende() {
         tillbaka={{ till: "/felsokning", text: "Ärenden" }}
       >
         {tolkning.demo && (
-          <p className="mb-3 rounded border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
+          <p className="mb-3 border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
             Demo-tolkning — plattformens dokumenttolkning kräver inloggning. Värdena nedan är exempeldata.
           </p>
         )}
@@ -273,7 +273,7 @@ export default function NyttArende() {
           />
           {skannarKod ? (
             <div>
-              <video ref={videoRef} playsInline muted className="mb-2 w-full rounded border border-[#C6C6C6]" />
+              <video ref={videoRef} playsInline muted className="mb-2 w-full border border-[#C6C6C6]" />
               <p className="mb-2 text-[12px] text-[#707070]">
                 Rikta kameran mot QR-koden, streckkoden eller VIN-etiketten.
               </p>
@@ -405,10 +405,10 @@ function GranskaTolkning({
     <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
       <Panel rubrik="Skannad arbetsorder">
         <div className="relative">
-          <img src={foto} alt="Skannad arbetsorder" className="w-full rounded border border-[#C6C6C6]" />
+          <img src={foto} alt="Skannad arbetsorder" className="w-full border border-[#C6C6C6]" />
           {vald?.omrade && (
             <div
-              className="pointer-events-none absolute rounded-sm border-2 border-[#00437A] bg-[#00437A]/15"
+              className="pointer-events-none absolute border-2 border-[#00437A] bg-[#00437A]/15"
               style={{
                 left: `${vald.omrade.x * 100}%`,
                 top: `${vald.omrade.y * 100}%`,
@@ -437,7 +437,7 @@ function GranskaTolkning({
                   <div
                     key={rad.id}
                     onClick={() => setMarkerad(rad.id)}
-                    className={`mb-1.5 cursor-pointer rounded border p-2 ${
+                    className={`mb-1.5 cursor-pointer border p-2 ${
                       markerad === rad.id ? "border-[#00437A]" : "border-transparent"
                     } ${niva === "gul" ? "bg-[#FFF8E1]" : niva === "rod" ? "bg-[#FBE9E9]" : "bg-white"}`}
                   >
@@ -457,7 +457,7 @@ function GranskaTolkning({
                       <input
                         value={rad.varde}
                         onChange={(e) => uppdatera(rad.id, { varde: e.target.value, bekraftad: true })}
-                        className="w-full rounded border border-[#ADADAD] bg-white px-2 py-1 text-[13px] focus:border-[#00437A] focus:outline-none"
+                        className="w-full border border-[#ADADAD] bg-white px-2 py-1 text-[13px] focus:border-[#00437A] focus:outline-none"
                       />
                       {niva === "rod" && !rad.bekraftad && (
                         <button
@@ -465,7 +465,7 @@ function GranskaTolkning({
                             e.stopPropagation();
                             uppdatera(rad.id, { bekraftad: true });
                           }}
-                          className="whitespace-nowrap rounded border border-[#6E1414] bg-[#8B1A1A] px-3 py-1 text-[12px] font-semibold text-white"
+                          className="whitespace-nowrap border border-[#6E1414] bg-[#8B1A1A] px-3 py-1 text-[12px] font-semibold text-white"
                         >
                           Bekräfta
                         </button>

@@ -194,3 +194,47 @@ describe("ALVA-ytan bär sin egen typografi", () => {
     expect(css).toContain("tabular-nums");
   });
 });
+
+// ---- Snittet måste följa med i bygget ----------------------------------
+//
+// Fallkedjan säkrar ordningen men inte utfallet: utan DIN installerad
+// föll ALVA ned till vad enheten råkade ha — Helvetica på en iPhone,
+// Roboto på en Android. Ett system som beskriver sig som en standard får
+// inte se olika ut beroende på var det öppnas.
+//
+// IBM Plex Sans är därför inbakad som fil. Den måste dessutom ligga som
+// data i CSS:en och inte som en separat asset: ALVA publiceras bland
+// annat som en självbärande sida bakom en CSP där varje extern begäran
+// blockeras, och en @font-face mot en assetfil hade tyst fallit tillbaka
+// till enhetens eget snitt — alltså precis det inbäddningen avskaffar.
+describe("ALVA:s snitt följer med i bygget", () => {
+  const typsnitt = readFileSync("src/alva/typsnitt.css", "utf8");
+  const vite = readFileSync("vite.config.ts", "utf8");
+
+  it("de tre textvikterna och två monovikterna finns som filer", () => {
+    for (const fil of [
+      "ibm-plex-sans-latin-400-normal.woff2",
+      "ibm-plex-sans-latin-600-normal.woff2",
+      "ibm-plex-sans-latin-700-normal.woff2",
+      "ibm-plex-mono-latin-400-normal.woff2",
+      "ibm-plex-mono-latin-600-normal.woff2",
+    ]) {
+      expect(typsnitt, fil).toContain(fil);
+      expect(readFileSync(`src/alva/typsnitt/${fil}`).byteLength).toBeGreaterThan(8000);
+    }
+  });
+
+  it("licensen ligger bredvid filerna", () => {
+    // SIL Open Font License kräver att licenstexten följer med.
+    expect(readFileSync("src/alva/typsnitt/LICENSE", "utf8")).toMatch(/SIL OPEN FONT LICENSE/i);
+  });
+
+  it("bygget bakar in woff2 som data i stället för som separata filer", () => {
+    expect(vite).toContain("assetsInlineLimit");
+    expect(vite).toContain(".woff2");
+  });
+
+  it("ingen @font-face hämtar från en extern värd", () => {
+    expect(typsnitt).not.toMatch(/url\(\s*["']?https?:/);
+  });
+});

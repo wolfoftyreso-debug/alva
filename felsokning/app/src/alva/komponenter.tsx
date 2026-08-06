@@ -41,7 +41,7 @@ export const FARG = {
 export function Etikett({ children, ton = "steel" }: { children: ReactNode; ton?: "steel" | "blue" | "graphite" }) {
   const färg = ton === "blue" ? FARG.blue : ton === "graphite" ? FARG.graphite : FARG.steel;
   return (
-    <div className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: färg }}>
+    <div className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: färg }}>
       {children}
     </div>
   );
@@ -51,7 +51,7 @@ export function Rubrik({ children, niva = 2 }: { children: ReactNode; niva?: 1 |
   const storlek = niva === 1 ? "text-[32px] leading-[40px]" : niva === 2 ? "text-[22px] leading-[32px]" : "text-[16px] leading-[24px]";
   const Tagg = (niva === 1 ? "h1" : niva === 2 ? "h2" : "h3") as "h1";
   return (
-    <Tagg className={`${storlek} font-semibold uppercase tracking-[0.06em]`} style={{ color: FARG.graphite }}>
+    <Tagg className={`${storlek} font-semibold uppercase tracking-[0.02em]`} style={{ color: FARG.graphite }}>
       {children}
     </Tagg>
   );
@@ -101,7 +101,7 @@ export function Statusmärke({ status }: { status: Status }) {
   const ram = status === "failed" || status === "blocked";
   return (
     <span
-      className="inline-block border px-2 py-[2px] text-[11px] font-semibold uppercase tracking-[0.1em]"
+      className="inline-block border px-2 py-[2px] text-[11px] font-semibold uppercase tracking-[0.08em]"
       style={{
         color: STATUSFARG[status],
         borderColor: ram ? FARG.graphite : FARG.lightSteel,
@@ -185,7 +185,7 @@ export function Fasrad({ aktiv, klara = [] }: { aktiv: Fas; klara?: Fas[] }) {
                 och statussymbolen informationen — vilket är precis vad
                 A·L·V·A är till för — medan raden ovanför namnger den
                 aktiva fasen och dess syfte i klartext. */}
-            <div className="mt-2 hidden text-[11px] font-semibold uppercase tracking-[0.1em] sm:block">{f.namn}</div>
+            <div className="mt-2 hidden text-[11px] font-semibold uppercase tracking-[0.08em] sm:block">{f.namn}</div>
             <span className="sr-only">{f.namn}</span>
             <div className="mt-2 hidden text-[11px] leading-[16px] sm:block" style={{ opacity: ärAktiv ? 0.9 : 0.75 }}>
               {f.syfte}
@@ -333,7 +333,7 @@ export function Tabell({ kolumner, rader }: { kolumner: string[]; rader: ReactNo
                 <th
                   key={k}
                   scope="col"
-                  className="border-b px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.1em]"
+                  className="border-b px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.08em]"
                   style={{ borderColor: FARG.lightSteel, color: FARG.steel }}
                 >
                   {k}
@@ -369,7 +369,7 @@ export function Tabell({ kolumner, rader }: { kolumner: string[]; rader: ReactNo
             {rad.map((cell, j) => (
               <div key={j} className="mt-2 flex flex-wrap items-baseline gap-2 first:mt-0">
                 <dt
-                  className="w-[96px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.1em]"
+                  className="w-[96px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]"
                   style={{ color: FARG.steel }}
                 >
                   {kolumner[j]}

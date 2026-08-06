@@ -50,7 +50,7 @@ function BeslutsKnappar({
               value={kommentar}
               maxLength={500}
               onChange={(e) => setKommentar(e.target.value)}
-              className="w-full rounded border border-[#ADADAD] bg-white px-2.5 py-1.5 text-[13px] focus:border-[#00437A] focus:outline-none"
+              className="w-full border border-[#ADADAD] bg-white px-2.5 py-1.5 text-[13px] focus:border-[#00437A] focus:outline-none"
             />
           </label>
           {fel && <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">{fel}</p>}
@@ -88,7 +88,7 @@ function IdentitetsPanel({ arende, avslutat }: { arende: Arende; avslutat: boole
     ["Status", avslutat ? "Avslutat" : "Felsökning pågår"],
   ];
   return (
-    <div className="sticky top-11 z-10 mb-3 rounded border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.1)] print:static">
+    <div className="sticky top-11 z-10 mb-3 border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.1)] print:static">
       {idn.beskrivning && <p className="text-[13px] font-semibold">{idn.beskrivning}</p>}
       <p className="flex flex-wrap gap-x-4 gap-y-0.5 text-[12px]">
         {falt
@@ -145,7 +145,7 @@ export function DelatArendeVy({
       rubrik={b.objekt?.beskrivning ?? "Ärende"}
       hoger={
         <span
-          className={`rounded px-3 py-1 text-[12px] font-semibold uppercase ${
+          className={`px-3 py-1 text-[12px] font-semibold uppercase ${
             avslutat ? "bg-[#3E5A78] text-white" : "bg-[#1E6B34] text-white"
           }`}
         >
@@ -193,7 +193,7 @@ export function DelatArendeVy({
         );
       })()}
 
-      <p className="mb-4 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-3 text-[12px] text-[#4A5560] print:hidden">
+      <p className="mb-4 border border-[#C6C6C6] bg-[#F7F7F7] p-3 text-[12px] text-[#4A5560] print:hidden">
         {notis}
       </p>
 
@@ -246,7 +246,7 @@ export function DelatArendeVy({
         <Panel rubrik="Video">
           {klipp.map((v, i) => (
             <figure key={i} className="mb-2">
-              <Klipp bilaga={v.bilaga} delningskod={delningskod} className="w-full rounded border border-[#C6C6C6]" />
+              <Klipp bilaga={v.bilaga} delningskod={delningskod} className="w-full border border-[#C6C6C6]" />
               <figcaption className="mt-1 text-[11px] text-[#4A5560]">{v.beskrivning}</figcaption>
             </figure>
           ))}
@@ -257,7 +257,7 @@ export function DelatArendeVy({
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
-                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} delningskod={delningskod} className="rounded border border-[#C6C6C6]" />
+                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} delningskod={delningskod} className="border border-[#C6C6C6]" />
                 <figcaption className="mt-1 text-[11px] text-[#4A5560]">{bild.beskrivning}</figcaption>
               </figure>
             ))}

@@ -50,7 +50,7 @@ function PlattformInloggning() {
               {konto.organisation} — synk och beslutsstöd aktiva.
             </p>
             <button
-              className="whitespace-nowrap rounded border border-[#ADADAD] px-4 py-2 font-semibold text-[#333333] hover:border-[#8FA8C0]"
+              className="whitespace-nowrap border border-[#ADADAD] px-4 py-2 font-semibold text-[#333333] hover:border-[#8FA8C0]"
               onClick={() => {
                 loggaUtPlattform();
                 setKonto(null);
@@ -189,7 +189,7 @@ function AnvandarAdmin() {
           </p>
           <button
             type="button"
-            className={`shrink-0 rounded border px-2 py-1 text-[12px] font-semibold ${
+            className={`shrink-0 border px-2 py-1 text-[12px] font-semibold ${
               anv.aktiv === false
                 ? "border-[#1E6B34] bg-white text-[#1E6B34]"
                 : "border-[#6E1414] bg-white text-[#8B1A1A]"
@@ -236,7 +236,7 @@ function AnvandarAdmin() {
               key={valbar}
               type="button"
               onClick={() => setRoll(valbar)}
-              className={`min-h-9 rounded border text-[12px] font-semibold ${
+              className={`min-h-9 border text-[12px] font-semibold ${
                 roll === valbar
                   ? "border-[#00437A] bg-[#00437A] text-white"
                   : "border-[#ADADAD] bg-[#F7F7F7] text-[#333333]"
@@ -312,12 +312,12 @@ export default function Arendelista() {
       </Link>
 
       {alla.length > 0 && (
-        <div className="mb-4 grid grid-cols-3 gap-1 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-1">
+        <div className="mb-4 grid grid-cols-3 gap-1 border border-[#C6C6C6] bg-[#F7F7F7] p-1">
           {FILTER.map((f) => (
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
-              className={`min-h-9 rounded text-[13px] font-semibold transition-colors ${
+              className={`min-h-9 text-[13px] font-semibold transition-colors ${
                 filter === f.id ? "bg-[#00437A] text-white" : "text-[#333333] hover:bg-[#E4E9EE]"
               }`}
             >
@@ -369,13 +369,13 @@ export default function Arendelista() {
         const b = brief(arende, metodikForArende(arende), new Date().toISOString());
         return (
           <Link key={arende.id} to={`/felsokning/arende/${arende.id}`} className="block">
-            <div className="mb-3 rounded border border-[#C6C6C6] bg-[#F7F7F7] p-4 transition-colors hover:border-[#00437A]">
+            <div className="mb-3 border border-[#C6C6C6] bg-[#F7F7F7] p-4 transition-colors hover:border-[#00437A]">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">
                   Ärende #{arende.nummer}
                 </span>
                 <span
-                  className={`rounded px-2 py-0.5 text-[11px] font-semibold uppercase ${
+                  className={`px-2 py-0.5 text-[11px] font-semibold uppercase ${
                     avslutat ? "bg-[#8A94A0] text-white" : "bg-[#00437A] text-white"
                   }`}
                 >

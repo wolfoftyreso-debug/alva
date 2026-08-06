@@ -44,7 +44,7 @@ export default function LoggaIn() {
               <div key={f.namn} className="border-t py-2 first:border-t-0" style={{ borderColor: FARG.lightSteel }}>
                 <label
                   htmlFor={f.namn}
-                  className="block text-[11px] font-semibold uppercase tracking-[0.12em]"
+                  className="block text-[11px] font-semibold uppercase tracking-[0.08em]"
                   style={{ color: FARG.steel }}
                 >
                   {f.etikett}
@@ -69,7 +69,7 @@ export default function LoggaIn() {
 
           <div className="flex items-center justify-between">
             <Knapp type="submit">Sign in</Knapp>
-            <a href="/alva/ansokan" className="text-[12px] uppercase tracking-[0.1em]" style={{ color: FARG.steel }}>
+            <a href="/alva/ansokan" className="text-[12px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
               Forgot password
             </a>
           </div>
