@@ -502,7 +502,8 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
             Correct — verified
           </StorKnapp>
           <p className="mt-1 text-[11px] text-[#707070]">
-            Ytterligare symptom dokumenteras som separata observationer — blanda dem inte med kundens beskrivning.
+            Additional symptoms are documented as separate observations — do not mix them
+            with the customer's description.
           </p>
         </div>
       )}
