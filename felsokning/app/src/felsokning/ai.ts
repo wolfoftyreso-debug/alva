@@ -54,9 +54,9 @@ export interface AiSvarMedModell extends AiSvar {
 
 export function byggAnvandarPrompt(brief: Brief, metodikNamn: string, inmatning?: string): string {
   const rader: string[] = [];
-  rader.push(`Metodik: ${metodikNamn}`);
-  if (brief.objekt) rader.push(`Objekt: ${brief.objekt.beskrivning} (${brief.objekt.identifierare})`);
-  if (brief.felbeskrivning) rader.push(`Felbeskrivning: ${brief.felbeskrivning}`);
+  rader.push(`Methodology: ${metodikNamn}`);
+  if (brief.objekt) rader.push(`Object: ${brief.objekt.beskrivning} (${brief.objekt.identifierare})`);
+  if (brief.felbeskrivning) rader.push(`Fault description: ${brief.felbeskrivning}`);
   if (brief.utfordaKontroller.length > 0) {
     rader.push("Checks performed:");
     for (const k of brief.utfordaKontroller) rader.push(`- ${k.text}${k.resultat ? `: ${k.resultat}` : ""}`);
@@ -81,7 +81,7 @@ export function byggGranskningsPrompt(arende: Arende, metodik: Metodik): string 
   const logg = arende.handelser
     .map((p) => `${p.tidpunkt.slice(11, 16)} ${p.anvandare}: ${handelseRubrik(p)}`)
     .join("\n");
-  return `${kontext}\n\nFullständig arbetslogg:\n${logg}`;
+  return `${kontext}\n\nFull work log:\n${logg}`;
 }
 
 export function tolkaAiSvar(data: unknown): AiSvar {

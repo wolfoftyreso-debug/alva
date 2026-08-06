@@ -341,7 +341,19 @@ export function Knapp({
       // `h-full` och inte bara `w-full`: lika breda knappar där den ena
       // texten bryts till två rader blir olika HÖGA, vilket är samma
       // obalans en rad ned. Bägge fyller sin cell.
-      className={`border px-4 py-2 text-[13px] font-semibold uppercase tracking-[0.08em] disabled:opacity-40${
+      // Gemener, inte versaler.
+      //
+      // Etiketter och rubriker är versala i ALVA — de är uppmärkning, och
+      // ett tekniskt dokument märker upp sina fält så. En knapp är inte
+      // uppmärkning utan en uppmaning, och i arbetsvyn är uppmaningen ofta
+      // en hel mening: "Photograph the instrument panel". Versal sats är
+      // långsammare att läsa och bryts sämre, och just den knappen trycks
+      // med handskar bredvid ett fordon.
+      //
+      // Regeln gäller båda ytorna. Att låta portalen behålla versaler hade
+      // gett två knappspråk i samma produkt, vilket är precis det som
+      // skulle bort.
+      className={`border px-4 py-2 text-[13px] font-semibold tracking-[0.02em] disabled:opacity-40${
         bred ? " h-full w-full" : ""
       }`}
       style={{

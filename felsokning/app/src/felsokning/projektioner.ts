@@ -252,7 +252,7 @@ export function formateraTid(ms: number): string {
   const h = Math.floor(minuter / 60);
   const m = minuter % 60;
   if (h === 0) return `${m} min`;
-  return `${h} tim ${m} min`;
+  return `${h} h ${m} min`;
 }
 
 export interface TillforlitlighetsRad {
@@ -328,9 +328,9 @@ export function brief(arende: Arende, metodik: Metodik, nu?: string): Brief {
 export function overlamningstext(arende: Arende, metodik: Metodik, nu?: string): string {
   const b = brief(arende, metodik, nu);
   const rader: string[] = [];
-  rader.push(`ÖVERLÄMNING – Ärende #${arende.nummer}`);
-  if (b.objekt) rader.push(`Objekt: ${b.objekt.beskrivning} (${b.objekt.identifierare})${b.objekt.kund ? ` – Kund: ${b.objekt.kund}` : ""}`);
-  if (b.felbeskrivning) rader.push(`Felbeskrivning: ${b.felbeskrivning}`);
+  rader.push(`HANDOVER – Case #${arende.nummer}`);
+  if (b.objekt) rader.push(`Object: ${b.objekt.beskrivning} (${b.objekt.identifierare})${b.objekt.kund ? ` – Customer: ${b.objekt.kund}` : ""}`);
+  if (b.felbeskrivning) rader.push(`Fault description: ${b.felbeskrivning}`);
   rader.push("");
   rader.push("Checks performed:");
   if (b.utfordaKontroller.length === 0) rader.push("  (none yet)");

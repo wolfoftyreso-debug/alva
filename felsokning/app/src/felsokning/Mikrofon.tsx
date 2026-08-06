@@ -48,10 +48,10 @@ export function MikrofonKnapp({ paText }: { paText: (text: string) => void }) {
         type="button"
         onClick={() => (lyssnar ? stoppa() : starta())}
         aria-label={lyssnar ? "Stop recording" : "Start voice input"}
-        className={`min-h-8 min-w-11 border px-3 text-[14px] font-semibold transition-colors ${
+        className={`min-h-8 min-w-11 border px-4 text-[14px] font-semibold ${
           lyssnar
-            ? "animate-pulse border-[#6E1414] bg-[#8B1A1A] text-white"
-            : "border-[#ADADAD] bg-white text-[#1A1A1A] hover:border-[#00437A]"
+            ? "border-[#8B1A1A] bg-[#8B1A1A] text-white"
+            : "border-[#D7DCE2] bg-white text-[#1B1E22] hover:border-[#005CA9]"
         }`}
       >
         {lyssnar ? "■" : <IkonMik />}

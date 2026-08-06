@@ -380,7 +380,7 @@ describe("Videoevidens (E3) och signerat avslut", () => {
 
   it("avslutet signeras och grinden redovisar signaturen", async () => {
     const { handelseRubrik, nyLoggPost: ny } = await import("../domain");
-    expect(handelseRubrik(ny("Erik", { typ: "arende_avslutat", signatur: "Erik" }))).toContain("signerad av Erik");
+    expect(handelseRubrik(ny("Erik", { typ: "arende_avslutat", signatur: "Erik" }))).toContain("signed by Erik");
     const stangd = byggArende([OBJEKT, ...PREDIAG, { typ: "arende_avslutat", signatur: "Erik" }]);
     const rad = kvalitetsgrind(stangd, VIBRATION_METODIK).find((r) => r.id === "signering");
     expect(rad?.ok).toBe(true);

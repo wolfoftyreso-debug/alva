@@ -147,7 +147,7 @@ describe("AI-orkestern", () => {
       "Reläet klickar inte.",
     );
     expect(prompt).toContain("Volvo XC60 D4 2019");
-    expect(prompt).toContain("Felbeskrivning:");
+    expect(prompt).toContain("Fault description:");
     expect(prompt).toContain("Kontrollera lufttryck");
     expect(prompt).toContain("Ej kontrollerat enligt metodiken:");
     expect(prompt).toContain("Teknikerns nya inmatning: Reläet klickar inte.");
@@ -156,8 +156,8 @@ describe("AI-orkestern", () => {
   it("granskningsprompten innehåller hela arbetsloggen men ingen ny inmatning", () => {
     const arende = byggDemoArende(1);
     const prompt = byggGranskningsPrompt(arende, VIBRATION_METODIK);
-    expect(prompt).toContain("Fullständig arbetslogg:");
-    expect(prompt).toContain("Arbete överlämnat från Anna till Johan");
+    expect(prompt).toContain("Full work log:");
+    expect(prompt).toContain("Work handed over from Anna to Johan");
     expect(prompt).not.toContain("Teknikerns nya inmatning");
   });
 

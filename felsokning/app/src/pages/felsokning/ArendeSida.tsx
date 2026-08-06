@@ -5,7 +5,7 @@ import { KUNDBESLUT_LABEL, KVALITETSKONTROLL_LABEL, TIDKATEGORI_LABEL, TILLFORLI
 import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
 import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
-import { Fasrad } from "@/alva/komponenter";
+import { FARG, Fasrad } from "@/alva/komponenter";
 import { Slutsatspanel } from "@/felsokning/Slutsats";
 import { sammanfatta } from "../../../../services/gemensam/sammanfattning.mjs";
 import { grinda } from "../../../../services/gemensam/grind.mjs";
@@ -145,7 +145,7 @@ export default function ArendeSida() {
   if (!arende || !id) {
     return (
       <FelsokningSkal rubrik="Case not found" tillbaka={{ till: "/felsokning", text: "Cases" }}>
-        <p className="text-[14px] text-[#333333]">The case does not exist on this device.</p>
+        <p className="text-[14px] text-[#1B1E22]">The case does not exist on this device.</p>
       </FelsokningSkal>
     );
   }
@@ -175,9 +175,24 @@ export default function ArendeSida() {
       tillbaka={{ till: "/felsokning", text: "Cases" }}
       hoger={
         <div className="text-right">
-          <p className="text-[13px] font-semibold text-white">{total}</p>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#A9C3DE]">
-            {avslutat ? "Closed" : "In progress"} · {SYNKSTATUS_LABEL[synkStatus]}
+          {/* Vit text var rätt när verktygsraden var mörkt marinblå. När
+              raden blev vit försvann tiden helt och statusraden blev en
+              grå skugga — det syntes först i en skärmdump från en
+              telefon, vilket är den enda kontroll som ser vad
+              teknikern ser. */}
+          <p className="font-mono text-[13px] font-semibold" style={{ color: FARG.graphite }}>
+            {total}
+          </p>
+          {/* Synkläget bryts bort på telefon i stället för att bryta
+              raden. Ärendets tillstånd är det som måste synas; var
+              loggen ligger är en driftdetalj och står kvar under
+              Technical information. */}
+          <p
+            className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em]"
+            style={{ color: FARG.steel }}
+          >
+            {avslutat ? "Closed" : "In progress"}
+            <span className="hidden sm:inline"> · {SYNKSTATUS_LABEL[synkStatus]}</span>
           </p>
         </div>
       }
@@ -189,13 +204,13 @@ export default function ArendeSida() {
       {/* Klassisk trekolumnslayout på skrivbord: navigationsträd till
           vänster, arbetsyta i mitten, kontextpanel till höger. På smala
           skärmar: flikrad + en kolumn. */}
-      <nav className="mb-3 grid grid-cols-4 gap-1 border border-[#C6C6C6] bg-[#F7F7F7] p-1 lg:hidden">
+      <nav className="mb-4 grid grid-cols-4 gap-2 border border-[#D7DCE2] bg-[#F6F7F8] p-2 lg:hidden">
         {FLIKAR.map((f) => (
           <button
             key={f.id}
             onClick={() => setFlik(f.id)}
-            className={`min-h-9 text-[13px] font-semibold transition-colors ${
-              flik === f.id ? "bg-[#00437A] text-white" : "text-[#333333] hover:bg-[#E4E9EE]"
+            className={`min-h-9 text-[13px] font-semibold ${
+              flik === f.id ? "bg-[#005CA9] text-white" : "text-[#1B1E22] hover:bg-[#D7DCE2]"
             }`}
           >
             {f.label}
@@ -203,7 +218,7 @@ export default function ArendeSida() {
         ))}
       </nav>
 
-      <div className="lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:items-start lg:gap-3 xl:grid-cols-[210px_minmax(0,1fr)_300px]">
+      <div className="lg:grid lg:grid-cols-[210px_minmax(0,1fr)] lg:items-start lg:gap-4 xl:grid-cols-[210px_minmax(0,1fr)_300px]">
         <aside className="sticky top-14 hidden lg:block print:hidden">
           <VyTrad flik={flik} sattFlik={setFlik} arende={arende} metodik={metodik} />
         </aside>
@@ -232,8 +247,8 @@ function identitetsRader(rader: [string, string | undefined][]) {
   return rader
     .filter(([, varde]) => varde)
     .map(([etikett, varde]) => (
-      <div key={etikett} className="flex justify-between gap-2 border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
-        <span className="text-[#4A5560]">{etikett}</span>
+      <div key={etikett} className="flex justify-between gap-2 border-b border-[#D7DCE2] py-2 text-[13px] last:border-0">
+        <span className="text-[#4D5662]">{etikett}</span>
         <span className="text-right font-medium">{varde}</span>
       </div>
     ));
@@ -248,12 +263,12 @@ function IdentitetsRad({ arende, skicka }: { arende: Arende; skicka: (h: Handels
   const del = (etikett: string, varde?: string) =>
     varde ? (
       <span className="whitespace-nowrap">
-        {etikett && <span className="text-[#707070]">{etikett} </span>}
-        <span className="font-semibold text-[#1A1A1A]">{varde}</span>
+        {etikett && <span className="text-[#4D5662]">{etikett} </span>}
+        <span className="font-semibold text-[#1B1E22]">{varde}</span>
       </span>
     ) : null;
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 text-[12px] print:hidden">
+    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 border border-[#D7DCE2] bg-[#F6F7F8] px-4 py-2 text-[12px] print:hidden">
       {del("WO", idn.arbetsorder)}
       {del("Claim", idn.claim)}
       {del("Claim no.", idn.skadenummer)}
@@ -262,13 +277,13 @@ function IdentitetsRad({ arende, skicka }: { arende: Arende; skicka: (h: Handels
       {del("VIN", idn.vin)}
       {del("Mileage", idn.miltal)}
       {del("Responsible", idn.ansvarig)}
-      <label className="ml-auto flex items-center gap-1">
-        <span className="text-[#707070]">Case type</span>
+      <label className="ml-auto flex items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">Case type</span>
         <select
           value={typ}
           disabled={idn.avslutat}
           onChange={(e) => skicka({ typ: "arendetyp_satt", arendetyp: e.target.value })}
-          className="border border-[#ADADAD] bg-white px-1.5 py-0.5 text-[12px] focus:border-[#00437A] focus:outline-none"
+          className="border border-[#4D5662] bg-white px-2 py-2 text-[12px] focus:outline-none"
         >
           {ARENDETYPER.map((t) => (
             <option key={t}>{t}</option>
@@ -326,15 +341,15 @@ function MatarstallningSteg({ lage, skicka }: { lage: "ingaende" | "utgaende"; s
           <IkonKamera /> Photograph the instrument panel
         </StorKnapp>
       )}
-      {laser && <p className="animate-pulse py-1 text-center text-[12px] font-semibold text-[#00437A]">Reading the odometer …</p>}
+      {laser && <p className="py-2 text-center text-[12px] font-semibold text-[#005CA9]">Reading the odometer …</p>}
       {foto && !laser && (
         <div className="mt-2">
           {demo && (
-            <p className="mb-2 border border-[#E0C36A] bg-[#FFF8E1] p-1.5 text-[11px] font-semibold text-[#9A6700]">
+            <p className="mb-2 border border-[#8A5A00] bg-[#FFFFFF] p-2 text-[11px] font-semibold text-[#8A5A00]">
               Demo reading — image interpretation requires sign-in. Check the value.
             </p>
           )}
-          <img src={foto} alt="Instrument panel" className="mb-2 max-h-40 border border-[#C6C6C6]" />
+          <img src={foto} alt="Instrument panel" className="mb-2 max-h-40 border border-[#D7DCE2]" />
           <TextFalt label={`Odometer reading (${lage === "ingaende" ? "incoming" : "outgoing"})`} varde={varde} satt={setVarde} platshallare="e.g. 84,320 km" />
           <StorKnapp
             disabled={!varde.trim()}
@@ -391,24 +406,24 @@ function TidigareArenden({ arende, skicka }: { arende: Arende; skicka: (h: Hande
 
   if (rader.length === 0) return null;
   return (
-    <div className="mb-2 border border-[#C6C6C6] bg-white p-2">
-      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
+    <div className="mb-2 border border-[#D7DCE2] bg-white p-2">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">
         Previous cases for {identifierare} — review before signing off the history
       </p>
       {rader.map((rad) => (
-        <div key={rad.id} className="border-b border-[#EBEBEB] py-1.5 text-[12px] last:border-0">
+        <div key={rad.id} className="border-b border-[#D7DCE2] py-2 text-[12px] last:border-0">
           <p>
             <span className="font-semibold">Case #{rad.nummer}</span> · {tidDatum(rad.skapad)} ·{" "}
             {rad.avslutat ? "closed" : "in progress"}
-            {rad.felbeskrivning && <span className="text-[#4A5560]"> — ”{rad.felbeskrivning}”</span>}
+            {rad.felbeskrivning && <span className="text-[#4D5662]"> — ”{rad.felbeskrivning}”</span>}
           </p>
           {rad.felorsaker.map((f, i) => (
-            <p key={i} className="pl-3 text-[#4A5560]">
+            <p key={i} className="pl-4 text-[#4D5662]">
               Felorsak: {f.avvikelse} ({f.orsaker.join(", ")})
             </p>
           ))}
           <button
-            className="mt-1 text-[11px] font-semibold text-[#00437A] underline-offset-2 hover:underline"
+            className="mt-2 text-[11px] font-semibold text-[#005CA9] underline-offset-2 hover:underline"
             onClick={() =>
               skicka({
                 typ: "kommentar",
@@ -439,15 +454,15 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
   return (
     <Panel rubrik="Pre-diagnostics — before the work begins">
       {rader.map((r) => (
-        <p key={r.id} className="py-0.5 text-[13px]">
-          <span className={r.klar ? "text-[#1E6B34]" : "text-[#8B1A1A]"}>{r.klar ? <IkonCheck /> : "☐"}</span> {r.rubrik}
-          {r.varning && <span className="ml-1 text-[11px] font-semibold text-[#9A6700]"><IkonVarning /> {r.varning}</span>}
+        <p key={r.id} className="py-0 text-[13px]">
+          <span className={r.klar ? "text-[#005CA9]" : "text-[#8B1A1A]"}>{r.klar ? <IkonCheck /> : "☐"}</span> {r.rubrik}
+          {r.varning && <span className="ml-2 text-[11px] font-semibold text-[#8A5A00]"><IkonVarning /> {r.varning}</span>}
         </p>
       ))}
 
       {!rad("historik").klar && (
-        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
-          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+        <div className="mt-4 border-t border-[#D7DCE2] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
             Has the vehicle's history been checked? (previous work, recurring faults, TSBs, campaigns)
           </p>
           <TidigareArenden arende={arende} skicka={skicka} />
@@ -484,8 +499,8 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
       )}
 
       {!rad("matarstallning_in").klar && (
-        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
-          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+        <div className="mt-4 border-t border-[#D7DCE2] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
             Incoming odometer reading — photograph the instrument panel
           </p>
           <MatarstallningSteg lage="ingaende" skicka={skicka} />
@@ -493,15 +508,15 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
       )}
 
       {!rad("felbeskrivning").klar && (
-        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
-          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+        <div className="mt-4 border-t border-[#D7DCE2] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
             Is the customer's fault description correctly recorded?
           </p>
           {fb && <p className="mb-2 text-[13px]">”{fb}”</p>}
           <StorKnapp variant="sekundar" onClick={() => skicka({ typ: "kommentar", text: `${MARKOR_FELBESKRIVNING_VERIFIERAD}.` })}>
             Correct — verified
           </StorKnapp>
-          <p className="mt-1 text-[11px] text-[#707070]">
+          <p className="mt-2 text-[11px] text-[#4D5662]">
             Additional symptoms are documented as separate observations — do not mix them
             with the customer's description.
           </p>
@@ -509,8 +524,8 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
       )}
 
       {!rad("tidiga_observationer").klar && (
-        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
-          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+        <div className="mt-4 border-t border-[#D7DCE2] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
             Anything else on receipt? (traces of repair, modifications, damage, leaks, corrosion …)
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -525,7 +540,7 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
               The observations are documented
             </StorKnapp>
           </div>
-          <p className="mt-1 text-[11px] text-[#707070]">
+          <p className="mt-2 text-[11px] text-[#4D5662]">
             Document with a photograph or an observation in the panel below — the button unlocks once something is logged.
           </p>
         </div>
@@ -548,7 +563,7 @@ function ReproduceringPanel({ skicka }: { skicka: (h: Handelse) => void }) {
         : "Rationale (required) — why could the fault not be reproduced?";
   return (
     <Panel rubrik="Symptom verification — reproduction">
-      <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+      <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
         Har kundens fel kunnat reproduceras?
       </p>
       <div className="mb-2 grid grid-cols-3 gap-2">
@@ -603,7 +618,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
     if (orsaker.length === 0) return setFel("Select at least one cause category.");
     if (underlag.length === 0) return setFel("Link at least one evidence source to the assessment.");
     const saknat = underlag.find((k) => !underlagFinns(arende, k));
-    if (saknat) return setFel(`Underlaget ”${saknat}” finns inte i ärendets logg — dokumentera det först eller välj en annan källa.`);
+    if (saknat) return setFel(`The evidence source “${saknat}” is not in the case log — document it first, or choose another source.`);
     if (orsaker.includes("Unknown cause") && !motivering.trim())
       return setFel("An unknown cause requires a reason why the cause could not be established.");
     if (sakerhet !== "hog" && !ytterligare.trim())
@@ -636,9 +651,9 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
         const h = p.handelse;
         if (h.typ !== "felorsak") return null;
         return (
-          <div key={p.id} className="mb-2 border-b border-[#EBEBEB] pb-2 text-[13px] last:border-0">
+          <div key={p.id} className="mb-2 border-b border-[#D7DCE2] pb-2 text-[13px] last:border-0">
             <p className="font-semibold">{h.avvikelse}</p>
-            <p className="text-[#4A5560]">
+            <p className="text-[#4D5662]">
               Cause: {h.orsaker.join(", ")} · Evidence: {h.underlag.join(", ")} · Confidence: {TILLFORLITLIGHET_LABEL[h.sakerhet]}
             </p>
             <p>Action: {h.atgard}</p>
@@ -659,42 +674,42 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
             rost
             platshallare="e.g. The starter motor does not engage despite correct supply voltage and a good earth connection."
           />
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">2. Most probable cause (one or more)</p>
-          <div className="mb-3 grid grid-cols-2 gap-1 sm:grid-cols-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">2. Most probable cause (one or more)</p>
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
             {aktivtRegelpaket().orsakskategorier.map((o) => (
               <button
                 key={o}
                 onClick={() => vaxla(orsaker, setOrsaker, o)}
-                className={`min-h-8 border px-1.5 text-[12px] font-medium ${
-                  orsaker.includes(o) ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
+                className={`min-h-8 border px-2 text-[12px] font-medium ${
+                  orsaker.includes(o) ? "border-[#005CA9] bg-[#FFFFFF] text-[#005CA9]" : "border-[#D7DCE2] bg-white text-[#1B1E22]"
                 }`}
               >
                 {o}
               </button>
             ))}
           </div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">3. Evidence supporting the assessment</p>
-          <div className="mb-3 grid grid-cols-2 gap-1 sm:grid-cols-4">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">3. Evidence supporting the assessment</p>
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {aktivtRegelpaket().underlagskallor.map((k) => (
               <button
                 key={k}
                 onClick={() => vaxla(underlag, setUnderlag, k)}
-                className={`min-h-8 border px-1.5 text-[12px] font-medium ${
-                  underlag.includes(k) ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
+                className={`min-h-8 border px-2 text-[12px] font-medium ${
+                  underlag.includes(k) ? "border-[#005CA9] bg-[#FFFFFF] text-[#005CA9]" : "border-[#D7DCE2] bg-white text-[#1B1E22]"
                 }`}
               >
                 {k}
               </button>
             ))}
           </div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">4. Confidence in the assessment</p>
-          <div className="mb-3 grid grid-cols-3 gap-2">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">4. Confidence in the assessment</p>
+          <div className="mb-4 grid grid-cols-3 gap-2">
             {(["hog", "medel", "lag"] as const).map((n) => (
               <button
                 key={n}
                 onClick={() => setSakerhet(n)}
                 className={`min-h-9 border text-[12px] font-semibold ${
-                  sakerhet === n ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
+                  sakerhet === n ? "border-[#005CA9] bg-[#005CA9] text-white" : "border-[#D7DCE2] bg-white text-[#1B1E22]"
                 }`}
               >
                 {TILLFORLITLIGHET_LABEL[n]}
@@ -768,20 +783,20 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
         const h = p.handelse;
         if (h.typ !== "atgard_utford") return null;
         return (
-          <p key={p.id} className="border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
+          <p key={p.id} className="border-b border-[#D7DCE2] py-2 text-[13px] last:border-0">
             {h.utford ? (
               <>
                 <span className="font-semibold">Action performed:</span> {h.beskrivning}
-                {h.delar && <span className="text-[#4A5560]"> · Delar: {h.delar}</span>}
+                {h.delar && <span className="text-[#4D5662]"> · Delar: {h.delar}</span>}
               </>
             ) : (
-              <span className="text-[#9A6700]">No action performed — {h.motivering}</span>
+              <span className="text-[#8A5A00]">No action performed — {h.motivering}</span>
             )}
           </p>
         );
       })}
       {kk && (
-        <p className={`py-1 text-[13px] font-semibold ${kk.resultat === "symptomet_borta" ? "text-[#1E6B34]" : "text-[#9A6700]"}`}>
+        <p className={`py-2 text-[13px] font-semibold ${kk.resultat === "symptomet_borta" ? "text-[#005CA9]" : "text-[#8A5A00]"}`}>
           Kvalitetskontroll: {KVALITETSKONTROLL_LABEL[kk.resultat]} — <span className="font-normal">{kk.beskrivning}</span>
         </p>
       )}
@@ -792,14 +807,14 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
         const h = p.handelse;
         if (h.typ !== "atgardsforslag") return null;
         return (
-          <p key={p.id} className="border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
+          <p key={p.id} className="border-b border-[#D7DCE2] py-2 text-[13px] last:border-0">
             <span className="font-semibold">Proposed action for the customer:</span> {h.beskrivning}
-            {h.uppskattadKostnad && <span className="text-[#4A5560]"> · Uppskattad kostnad: {h.uppskattadKostnad}</span>}
+            {h.uppskattadKostnad && <span className="text-[#4D5662]"> · Uppskattad kostnad: {h.uppskattadKostnad}</span>}
           </p>
         );
       })}
       {beslut && (
-        <p className={`py-1 text-[13px] font-semibold ${beslut.beslut === "godkant" ? "text-[#1E6B34]" : beslut.beslut === "avbojt" ? "text-[#8B1A1A]" : "text-[#9A6700]"}`}>
+        <p className={`py-2 text-[13px] font-semibold ${beslut.beslut === "godkant" ? "text-[#005CA9]" : beslut.beslut === "avbojt" ? "text-[#8B1A1A]" : "text-[#8A5A00]"}`}>
           Kundens besked ({beslut.kanal}): {KUNDBESLUT_LABEL[beslut.beslut]}
           {beslut.kommentar && <span className="font-normal"> — {beslut.kommentar}</span>}
         </p>
@@ -826,7 +841,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
       )}
 
       {forslagsLage && (
-        <div className="mb-3 border border-[#C6C6C6] bg-white p-2">
+        <div className="mb-4 border border-[#D7DCE2] bg-white p-2">
           <TextFalt
             label="Proposed action (shown to the customer in the shared view)"
             varde={forslagText}
@@ -860,8 +875,8 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
       )}
 
       {forslag.length > 0 && !beslut && (
-        <div className="mb-3 border border-[#E0C36A] bg-[#FFF8E1] p-2">
-          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#9A6700]">
+        <div className="mb-4 border border-[#8A5A00] bg-[#FFFFFF] p-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#8A5A00]">
             Record the customer's decision before the work begins
           </p>
           <div className="mb-2 grid grid-cols-3 gap-2">
@@ -870,7 +885,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
                 key={val}
                 onClick={() => setBeslutsVal(val)}
                 className={`min-h-9 border text-[12px] font-semibold ${
-                  beslutsVal === val ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
+                  beslutsVal === val ? "border-[#005CA9] bg-[#005CA9] text-white" : "border-[#D7DCE2] bg-white text-[#1B1E22]"
                 }`}
               >
                 {KUNDBESLUT_LABEL[val]}
@@ -879,14 +894,14 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
           </div>
           {beslutsVal && (
             <>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">How was the decision given?</p>
-              <div className="mb-2 grid grid-cols-3 gap-1">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">How was the decision given?</p>
+              <div className="mb-2 grid grid-cols-3 gap-2">
                 {KUNDKANALER.map((k) => (
                   <button
                     key={k}
                     onClick={() => setKanal(k)}
-                    className={`min-h-8 border px-1 text-[12px] font-medium ${
-                      kanal === k ? "border-[#00437A] bg-[#D6E4F2] text-[#00437A]" : "border-[#C6C6C6] bg-white text-[#333333]"
+                    className={`min-h-8 border px-2 text-[12px] font-medium ${
+                      kanal === k ? "border-[#005CA9] bg-[#FFFFFF] text-[#005CA9]" : "border-[#D7DCE2] bg-white text-[#1B1E22]"
                     }`}
                   >
                     {k}
@@ -967,16 +982,16 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
 
       {lage === "ingen" && (
         <div className="mt-2">
-          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
             Reason no action was performed (required)
           </p>
-          <div className="mb-2 grid gap-1">
+          <div className="mb-2 grid gap-2">
             {INGEN_ATGARD_ORSAKER.map((val) => (
               <button
                 key={val}
                 onClick={() => setOrsak(val)}
                 className={`min-h-8 border px-2 text-left text-[12px] font-medium ${
-                  orsak === val ? "border-[#00437A] bg-[#D6E4F2]" : "border-[#C6C6C6] bg-white"
+                  orsak === val ? "border-[#005CA9] bg-[#FFFFFF]" : "border-[#D7DCE2] bg-white"
                 }`}
               >
                 {val}
@@ -985,7 +1000,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
           </div>
           <TextFalt label="Or a cause of your own" varde={orsak && !INGEN_ATGARD_ORSAKER.includes(orsak) ? orsak : ""} satt={setOrsak} rost />
           {beslut?.beslut === "avbojt" && (
-            <p className="mb-2 text-[11px] text-[#707070]">
+            <p className="mb-2 text-[11px] text-[#4D5662]">
               The customer has declined the action via {beslut.kanal} — the decision is recorded in the log.
             </p>
           )}
@@ -1008,12 +1023,12 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
       )}
 
       {utford && !kk && (
-        <div className="mt-3 border-t border-[#DDDDDD] pt-2">
-          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+        <div className="mt-4 border-t border-[#D7DCE2] pt-2">
+          <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
             Quality check — is the symptom gone after the action?
           </p>
           {repro?.status === "ja" && (
-            <p className="mb-2 text-[12px] text-[#707070]">
+            <p className="mb-2 text-[12px] text-[#4D5662]">
               The symptom was reproduced during the examination — recreate the same conditions to verify.
             </p>
           )}
@@ -1023,7 +1038,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
                 key={val}
                 onClick={() => setKkResultat(val)}
                 className={`min-h-9 border px-2 text-[12px] font-semibold ${
-                  kkResultat === val ? "border-[#00437A] bg-[#00437A] text-white" : "border-[#ADADAD] bg-white text-[#333333]"
+                  kkResultat === val ? "border-[#005CA9] bg-[#005CA9] text-white" : "border-[#D7DCE2] bg-white text-[#1B1E22]"
                 }`}
               >
                 {KVALITETSKONTROLL_LABEL[val]}
@@ -1080,24 +1095,24 @@ function VyTrad({
   const steg = nastaSteg(arende, metodik);
   const aktuellIndex = metodik.steg.findIndex((s) => s.id === steg.steg.id);
   return (
-    <nav className="overflow-hidden border border-[#C6C6C6] bg-[#F7F7F7] shadow-[0_1px_2px_rgba(0,0,0,0.06)]">
-      <p className="border-b border-[#DDDDDD] bg-[#EFEFEF] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#4A5560]">
+    <nav className="overflow-hidden border border-[#D7DCE2] bg-[#F6F7F8]">
+      <p className="border-b border-[#D7DCE2] bg-[#D7DCE2] px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#4D5662]">
         Case views
       </p>
       {FLIKAR.map((f) => (
         <button
           key={f.id}
           onClick={() => sattFlik(f.id)}
-          className={`block w-full border-l-2 px-3 py-1.5 text-left text-[13px] transition-colors ${
+          className={`block w-full border-l-2 px-4 py-2 text-left text-[13px] ${
             flik === f.id
-              ? "border-[#00437A] bg-[#D6E4F2] font-semibold text-[#00437A]"
-              : "border-transparent text-[#333333] hover:bg-[#E4E9EE]"
+              ? "border-[#005CA9] bg-[#FFFFFF] font-semibold text-[#005CA9]"
+              : "border-transparent text-[#1B1E22] hover:bg-[#D7DCE2]"
           }`}
         >
           {f.label}
         </button>
       ))}
-      <p className="border-y border-[#DDDDDD] bg-[#EFEFEF] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#4A5560]">
+      <p className="border-y border-[#D7DCE2] bg-[#D7DCE2] px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#4D5662]">
         {metodik.namn}
       </p>
       {metodik.steg.map((s, i) => {
@@ -1106,8 +1121,8 @@ function VyTrad({
         return (
           <p
             key={s.id}
-            className={`px-3 py-1 text-[12px] ${
-              aktuell ? "bg-[#FFF8E1] font-semibold text-[#9A6700]" : klar ? "text-[#1E6B34]" : "text-[#707070]"
+            className={`px-4 py-2 text-[12px] ${
+              aktuell ? "bg-[#FFFFFF] font-semibold text-[#8A5A00]" : klar ? "text-[#005CA9]" : "text-[#4D5662]"
             }`}
           >
             {klar ? "✓" : aktuell ? "▸" : "·"} {s.rubrik}
@@ -1135,9 +1150,9 @@ function KontextPanel({
   const senasteAi = [...arende.handelser].reverse().find((p) => p.handelse.typ === "ai_svar");
   const rad = (etikett: string, varde: string | undefined) =>
     varde ? (
-      <div className="flex justify-between gap-2 border-b border-[#EBEBEB] py-1 text-[12px] last:border-0">
-        <span className="shrink-0 text-[#4A5560]">{etikett}</span>
-        <span className="text-right font-medium text-[#1A1A1A]">{varde}</span>
+      <div className="flex justify-between gap-2 border-b border-[#D7DCE2] py-2 text-[12px] last:border-0">
+        <span className="shrink-0 text-[#4D5662]">{etikett}</span>
+        <span className="text-right font-medium text-[#1B1E22]">{varde}</span>
       </div>
     ) : null;
   return (
@@ -1153,7 +1168,7 @@ function KontextPanel({
       </Panel>
       <Panel rubrik="Reliability">
         {b.tillforlitlighet.map((r, i) => (
-          <p key={i} className="py-0.5 text-[12px]">
+          <p key={i} className="py-0 text-[12px]">
             <NivaBadge niva={r.niva} /> {r.text}
           </p>
         ))}
@@ -1161,7 +1176,7 @@ function KontextPanel({
       {!b.avslutat && b.rekommenderatNastaSteg.length > 0 && (
         <Panel rubrik="Recommended next step">
           {b.rekommenderatNastaSteg.map((s, i) => (
-            <p key={i} className="py-0.5 text-[12px] text-[#333333]">
+            <p key={i} className="py-0 text-[12px] text-[#1B1E22]">
               {i + 1}. {s}
             </p>
           ))}
@@ -1170,14 +1185,14 @@ function KontextPanel({
       {senasteAi && senasteAi.handelse.typ === "ai_svar" && (
         <Panel rubrik="Technical recommendation">
           {senasteAi.handelse.rader.map((r, i) => (
-            <p key={i} className="py-0.5 text-[12px]">
-              <span className="font-semibold text-[#4A5560]">{AI_RADTYP_LABEL[r.typ]}:</span> {r.text}
+            <p key={i} className="py-0 text-[12px]">
+              <span className="font-semibold text-[#4D5662]">{AI_RADTYP_LABEL[r.typ]}:</span> {r.text}
             </p>
           ))}
-          <p className="mt-1 text-[12px]">
-            <span className="font-semibold text-[#00437A]">Next step:</span> {senasteAi.handelse.nastaSteg}
+          <p className="mt-2 text-[12px]">
+            <span className="font-semibold text-[#005CA9]">Next step:</span> {senasteAi.handelse.nastaSteg}
           </p>
-          <p className="mt-1 text-[10px] uppercase tracking-wide text-[#707070]">
+          <p className="mt-2 text-[10px] uppercase tracking-wide text-[#4D5662]">
             Decision support · never presented as an established fault
           </p>
         </Panel>
@@ -1202,11 +1217,11 @@ function InaktivitetsBanner({
   const minuter = Math.floor((new Date(nu).getTime() - new Date(sista.tidpunkt).getTime()) / 60000);
   if (minuter < 20) return null;
   return (
-    <div className="mb-4 border border-[#00437A] bg-[#F7F7F7] p-4">
-      <p className="mb-2 text-[14px] font-semibold text-[#00437A]">
+    <div className="mb-4 border border-[#005CA9] bg-[#F6F7F8] p-4">
+      <p className="mb-2 text-[14px] font-semibold text-[#005CA9]">
         Ingen aktivitet har registrerats de senaste {minuter} minuterna.
       </p>
-      <p className="mb-3 text-[#333333]">Briefly describe what was done during this period.</p>
+      <p className="mb-4 text-[#1B1E22]">Briefly describe what was done during this period.</p>
       <TextFalt label="What has been done?" varde={text} satt={setText} platshallare="e.g. Removed the instrument panel to reach the wiring harness." rost />
       <StorKnapp
         disabled={!text.trim()}
@@ -1286,7 +1301,7 @@ function GuideFlik({
   if (avslutat) {
     return (
       <Panel rubrik="The diagnosis is closed">
-        <p className="text-[14px] text-[#333333]">
+        <p className="text-[14px] text-[#1B1E22]">
           The case is locked for new guided steps. The log, the brief and the report remain available for traceability and export.
         </p>
       </Panel>
@@ -1339,8 +1354,8 @@ function GuideFlik({
       <Panel rubrik={`Methodology: ${metodik.namn} · Step: ${steg.steg.rubrik}`}>
         {steg.klart ? (
           <>
-            <p className="mb-3 text-[15px] font-semibold">Every step in the methodology is documented.</p>
-            <p className="mb-4 text-[#333333]">
+            <p className="mb-4 text-[15px] font-semibold">Every step in the methodology is documented.</p>
+            <p className="mb-4 text-[#1B1E22]">
               If the root cause is not verified: document a hypothesis and extend the diagnosis, or close the case
               with recommended next steps.
             </p>
@@ -1353,11 +1368,11 @@ function GuideFlik({
           // Säkerhetsspärr. Metodiken går inte vidare — svaret är ett
           // hinder, inte en varning. Enda vägen framåt är att ändra
           // förutsättningen, inte att klicka förbi.
-          <div className="border-2 border-[#B42318] bg-[#FEF3F2] p-4">
-            <p className="mb-2 text-[15px] font-semibold text-[#B42318]">Work must not continue</p>
-            <p className="mb-2 text-[#333333]">{steg.sparr.orsak}</p>
-            <p className="mb-3 font-semibold text-[#333333]">{steg.sparr.atgard}</p>
-            <p className="text-[12px] text-[#666666]">
+          <div className="border-2 border-[#8B1A1A] bg-[#FFFFFF] p-4">
+            <p className="mb-2 text-[15px] font-semibold text-[#8B1A1A]">Work must not continue</p>
+            <p className="mb-2 text-[#1B1E22]">{steg.sparr.orsak}</p>
+            <p className="mb-4 font-semibold text-[#1B1E22]">{steg.sparr.atgard}</p>
+            <p className="text-[12px] text-[#4D5662]">
               The answer is documented in the log. The methodology opens when the precondition is met and the question is answered
               jakande.
             </p>
@@ -1377,19 +1392,19 @@ function GuideFlik({
               : "Guidance"
           }
         >
-          {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">Analyzing …</p>}
+          {aiStatus === "arbetar" && <p className="mb-2 font-semibold text-[#005CA9]">Analyzing …</p>}
           {aiStatus === "fel" && (
             <p className="mb-2 font-semibold text-[#8B1A1A]">The analysis could not be retrieved — try again. The methodology continues unaffected.</p>
           )}
           {senasteAiSvar && senasteAiSvar.handelse.typ === "ai_svar" && (
             <>
               {senasteAiSvar.handelse.rader.map((rad, i) => (
-                <p key={i} className="py-0.5 text-[14px]">
-                  <span className="font-semibold text-[#4A5560]">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
+                <p key={i} className="py-0 text-[14px]">
+                  <span className="font-semibold text-[#4D5662]">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
                 </p>
               ))}
               <p className="mt-2 text-[14px]">
-                <span className="font-semibold text-[#00437A]">Next step:</span>{" "}
+                <span className="font-semibold text-[#005CA9]">Next step:</span>{" "}
                 {senasteAiSvar.handelse.nastaSteg}
               </p>
             </>
@@ -1447,15 +1462,15 @@ function GuideFlik({
  */
 function Avslutshinder({ hinder }: { hinder: { id: string; rubrik: string; detalj?: string }[] }) {
   return (
-    <div className="mb-2 border-l-2 border-[#9A6700] bg-[#FFFBF0] px-4 py-4">
-      <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#9A6700]">
+    <div className="mb-2 border-l-2 border-[#8A5A00] bg-[#FFFFFF] px-4 py-4">
+      <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#8A5A00]">
         The case cannot be closed yet
       </p>
-      <ul className="ml-4 list-disc text-[13px] leading-[20px] text-[#333333]">
+      <ul className="ml-4 list-disc text-[13px] leading-[20px] text-[#1B1E22]">
         {hinder.map((h) => (
           <li key={h.id}>
             {h.rubrik}
-            {h.detalj && <span className="text-[#4A5560]"> — {h.detalj}</span>}
+            {h.detalj && <span className="text-[#4D5662]"> — {h.detalj}</span>}
           </li>
         ))}
       </ul>
@@ -1469,15 +1484,15 @@ function KategoriRad({ arende, skicka }: { arende: Arende; skicka: (h: Handelse)
     if (post.handelse.typ === "kategori_byte") aktiv = post.handelse.kategori;
   }
   return (
-    <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+    <div className="mb-4 flex gap-2 overflow-x-auto pb-2">
       {(Object.keys(TIDKATEGORI_LABEL) as TidKategori[]).map((k) => (
         <button
           key={k}
           onClick={() => k !== aktiv && skicka({ typ: "kategori_byte", kategori: k })}
-          className={`whitespace-nowrap border px-4 py-2 text-[12px] font-semibold transition-colors ${
+          className={`whitespace-nowrap border px-4 py-2 text-[12px] font-semibold ${
             k === aktiv
-              ? "border-[#00437A] bg-[#00437A] text-white"
-              : "border-[#ADADAD] bg-[#F7F7F7] text-[#333333] hover:border-[#8FA8C0]"
+              ? "border-[#005CA9] bg-[#005CA9] text-white"
+              : "border-[#D7DCE2] bg-[#F6F7F8] text-[#1B1E22] hover:border-[#4D5662]"
           }`}
         >
           {TIDKATEGORI_LABEL[k]}
@@ -1559,7 +1574,7 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
 
   return (
     <>
-      {steg.steg.beskrivning && <p className="mb-2 text-[#4A5560]">{steg.steg.beskrivning}</p>}
+      {steg.steg.beskrivning && <p className="mb-2 text-[#4D5662]">{steg.steg.beskrivning}</p>}
       <p className="mb-4 text-[17px] font-semibold leading-snug">{kontroll.text}</p>
       {krav === "foto" ? (
         <>
@@ -1579,7 +1594,7 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
           />
           <TextFalt label="Observation (optional)" varde={resultat} satt={setResultat} rost />
           <StorKnapp onClick={() => filRef.current?.click()}><IkonKamera /> Take a photograph — verifies the check</StorKnapp>
-          <p className="mt-2 text-[12px] text-[#707070]">This check is verified with a photograph.</p>
+          <p className="mt-2 text-[12px] text-[#4D5662]">This check is verified with a photograph.</p>
         </>
       ) : (
         <>
@@ -1597,7 +1612,7 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
             rost
           />
           {!kravUppfyllt && (
-            <p className="mb-3 text-[12px] font-semibold text-[#00437A]">
+            <p className="mb-4 text-[12px] font-semibold text-[#005CA9]">
               No {krav === "matvarde" ? "measurement" : "observation"} has been recorded — add a short{" "}
               {krav === "matvarde" ? "measurement entry" : "comment"} before the check can be verified.
             </p>
@@ -1633,24 +1648,24 @@ function Undantag({ vidUndantag }: { vidUndantag: (orsak: string) => void }) {
     return (
       <button
         onClick={() => setOppen(true)}
-        className="mt-2 w-full py-1 text-[12px] font-medium text-[#707070] underline-offset-2 hover:text-[#8B1A1A] hover:underline print:hidden"
+        className="mt-2 w-full py-2 text-[12px] font-medium text-[#4D5662] underline-offset-2 hover:text-[#8B1A1A] hover:underline print:hidden"
       >
         Evidence cannot be produced …
       </button>
     );
   }
   return (
-    <div className="mt-3 border border-[#E0C36A] bg-[#FFF8E1] p-2">
-      <p className="mb-2 text-[12px] font-semibold text-[#9A6700]">
+    <div className="mt-4 border border-[#8A5A00] bg-[#FFFFFF] p-2">
+      <p className="mb-2 text-[12px] font-semibold text-[#8A5A00]">
         Kontrollen dokumenteras utan underlag — ange orsak (obligatoriskt). Detta flaggas i brief och rapport.
       </p>
-      <div className="mb-2 grid grid-cols-1 gap-1">
+      <div className="mb-2 grid grid-cols-1 gap-2">
         {aktivtRegelpaket().undantagsorsaker.map((val) => (
           <button
             key={val}
             onClick={() => setOrsak(val)}
             className={`min-h-8 border px-2 text-left text-[12px] font-medium ${
-              orsak === val ? "border-[#00437A] bg-[#D6E4F2]" : "border-[#C6C6C6] bg-white"
+              orsak === val ? "border-[#005CA9] bg-[#FFFFFF]" : "border-[#D7DCE2] bg-white"
             }`}
           >
             {val}
@@ -1794,10 +1809,10 @@ function SnabbDokumentation({
                     ? instRef.current?.click()
                     : setTyp(typ === d.id ? null : d.id)
             }
-            className={`min-h-9 border text-[12px] font-semibold transition-colors ${
+            className={`min-h-9 border text-[12px] font-semibold ${
               typ === d.id
-                ? "border-[#00437A] bg-[#00437A] text-white"
-                : "border-[#ADADAD] bg-[#F7F7F7] text-[#333333] hover:border-[#8FA8C0]"
+                ? "border-[#005CA9] bg-[#005CA9] text-white"
+                : "border-[#D7DCE2] bg-[#F6F7F8] text-[#1B1E22] hover:border-[#4D5662]"
             }`}
           >
             + {d.label}
@@ -1850,8 +1865,8 @@ function SnabbDokumentation({
       />
       {videoFel && <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">{videoFel}</p>}
       {video && (
-        <div className="mt-3 border border-[#C6C6C6] bg-white p-2">
-          <video src={video.dataUrl} controls className="mb-2 max-h-48 w-full border border-[#C6C6C6]" />
+        <div className="mt-4 border border-[#D7DCE2] bg-white p-2">
+          <video src={video.dataUrl} controls className="mb-2 max-h-48 w-full border border-[#D7DCE2]" />
           <TextFalt
             label="What does the video show? (required — what makes the noise or moves)"
             varde={video.beskrivning}
@@ -1876,23 +1891,23 @@ function SnabbDokumentation({
           </div>
         </div>
       )}
-      {laserAv && <p className="mt-2 animate-pulse text-center text-[12px] font-semibold text-[#00437A]">Reading the instrument …</p>}
+      {laserAv && <p className="mt-2 text-center text-[12px] font-semibold text-[#005CA9]">Reading the instrument …</p>}
       {avlasning && (
-        <div className="mt-3 border border-[#C6C6C6] bg-white p-2">
+        <div className="mt-4 border border-[#D7DCE2] bg-white p-2">
           {avlasning.demo && (
-            <p className="mb-2 border border-[#E0C36A] bg-[#FFF8E1] p-1.5 text-[11px] font-semibold text-[#9A6700]">
+            <p className="mb-2 border border-[#8A5A00] bg-[#FFFFFF] p-2 text-[11px] font-semibold text-[#8A5A00]">
               Demo reading — image interpretation requires sign-in. The values are sample data.
             </p>
           )}
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">
             Read: {avlasning.tolkning.instrumenttyp} — confirm before anything is logged
           </p>
           {avlasning.tolkning.varden.map((v, i) => (
-            <div key={i} className="flex items-center justify-between gap-2 border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
+            <div key={i} className="flex items-center justify-between gap-2 border-b border-[#D7DCE2] py-2 text-[13px] last:border-0">
               <span>
                 {v.beskrivning}: <span className="font-semibold">{v.varde}{v.enhet ? ` ${v.enhet}` : ""}</span>
               </span>
-              <span className={`text-[11px] font-semibold ${v.konfidens >= 0.95 ? "text-[#1E6B34]" : v.konfidens >= 0.8 ? "text-[#9A6700]" : "text-[#8B1A1A]"}`}>
+              <span className={`text-[11px] font-semibold ${v.konfidens >= 0.95 ? "text-[#005CA9]" : v.konfidens >= 0.8 ? "text-[#8A5A00]" : "text-[#8B1A1A]"}`}>
                 {v.konfidens >= 0.95 ? "✓" : `${Math.round(v.konfidens * 100)} %`}
               </span>
             </div>
@@ -1906,7 +1921,7 @@ function SnabbDokumentation({
         </div>
       )}
       {typ && typ !== "foto" && typ !== "instrument" && (
-        <div className="mt-3">
+        <div className="mt-4">
           {typ === "hypotes" && (
             <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">
               <IkonPunkt farg="#8B1A1A" /> A hypothesis is a possible root cause that requires verification — it is never logged as an established fault.
@@ -1968,25 +1983,25 @@ function OverlamningDialog({
 
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-      <div className="max-h-full w-full max-w-2xl overflow-y-auto border border-[#ADADAD] bg-[#F7F7F7] p-4">
-        <h2 className="mb-3 text-[15px] font-semibold">Handover report</h2>
-        <pre className="mb-3 overflow-x-auto whitespace-pre-wrap bg-white p-4 text-[12px] text-[#333333]">
+      <div className="max-h-full w-full max-w-2xl overflow-y-auto border border-[#D7DCE2] bg-[#F6F7F8] p-4">
+        <h2 className="mb-4 text-[15px] font-semibold">Handover report</h2>
+        <pre className="mb-4 overflow-x-auto whitespace-pre-wrap bg-white p-4 text-[12px] text-[#1B1E22]">
           {text}
         </pre>
         {aiLage === "vilar" && (
-          <StorKnapp variant="sekundar" className="mb-3" onClick={komplettera}>
+          <StorKnapp variant="sekundar" className="mb-4" onClick={komplettera}>
             Extend the analysis: risks &amp; uncertainties
           </StorKnapp>
         )}
-        {aiLage === "arbetar" && <p className="mb-3 animate-pulse font-semibold text-[#00437A]">Summarizing …</p>}
+        {aiLage === "arbetar" && <p className="mb-4 font-semibold text-[#005CA9]">Summarizing …</p>}
         {aiLage === "fel" && (
-          <p className="mb-3 font-semibold text-[#8B1A1A]">Could not be retrieved — requires sign-in. The handover works regardless.</p>
+          <p className="mb-4 font-semibold text-[#8B1A1A]">Could not be retrieved — requires sign-in. The handover works regardless.</p>
         )}
         {aiLage === "klar" && aiRader.length > 0 && (
-          <div className="mb-3 bg-white p-4">
+          <div className="mb-4 bg-white p-4">
             {aiRader.map((rad, i) => (
-              <p key={i} className="py-0.5 text-[12px] text-[#333333]">
-                <span className="font-semibold text-[#4A5560]">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
+              <p key={i} className="py-0 text-[12px] text-[#1B1E22]">
+                <span className="font-semibold text-[#4D5662]">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
               </p>
             ))}
           </div>
@@ -2049,10 +2064,10 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
   }
 
   return (
-    <div className="mt-3 border border-[#C6C6C6] bg-white p-3">
+    <div className="mt-4 border border-[#D7DCE2] bg-white p-4">
       {fel && <p className="mb-2 font-semibold text-[#8B1A1A]">{fel}</p>}
       {delningar.map((delning) => (
-        <div key={delning.kod} className="flex items-center justify-between gap-2 border-b border-[#DDDDDD] py-2 last:border-0">
+        <div key={delning.kod} className="flex items-center justify-between gap-2 border-b border-[#D7DCE2] py-2 last:border-0">
           <span className="text-[14px]">
             {NIVA_LABEL[delning.niva]}{" "}
             {delning.aterkallad && <span className="text-[12px] font-semibold text-[#8B1A1A]">(revoked)</span>}
@@ -2060,7 +2075,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
           {!delning.aterkallad && (
             <span className="flex gap-2">
               <button
-                className="border border-[#ADADAD] px-3 py-1 font-semibold text-[#333333] hover:border-[#00437A]"
+                className="border border-[#D7DCE2] px-4 py-2 font-semibold text-[#1B1E22] hover:border-[#005CA9]"
                 onClick={() =>
                   navigator.clipboard.writeText(`${window.location.origin}/felsokning/delad/${delning.kod}`)
                 }
@@ -2068,7 +2083,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
                 Copy
               </button>
               <button
-                className="border border-[#ADADAD] px-3 py-1 font-semibold text-[#8B1A1A] hover:border-[#8B1A1A]"
+                className="border border-[#D7DCE2] px-4 py-2 font-semibold text-[#8B1A1A] hover:border-[#8B1A1A]"
                 onClick={async () => {
                   await aterkallaDelning(delning.kod);
                   skicka({ typ: "kommentar", text: `Share link (${NIVA_LABEL[delning.niva]}) revoked.` });
@@ -2085,7 +2100,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
         {(Object.keys(NIVA_LABEL) as DelningsNiva[]).map((niva) => (
           <button
             key={niva}
-            className="min-h-9 border border-[#ADADAD] text-[12px] font-semibold text-[#333333] hover:border-[#00437A]"
+            className="min-h-9 border border-[#D7DCE2] text-[12px] font-semibold text-[#1B1E22] hover:border-[#005CA9]"
             onClick={async () => {
               try {
                 await skapaDelning(arende.id, niva);
@@ -2100,7 +2115,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
           </button>
         ))}
       </div>
-      <p className="mt-2 text-[11px] text-[#707070]">
+      <p className="mt-2 text-[11px] text-[#4D5662]">
         Customer: what can be shared with the customer · External partner: also hypotheses (marked unverified) ·
             Internal: full visibility. Filtering happens on the server.
       </p>
@@ -2113,16 +2128,16 @@ function LoggFlik({ arende }: { arende: Arende }) {
     <Panel rubrik="Work log — append-only, nothing is overwritten">
       <ol>
         {arende.handelser.map((post) => (
-          <li key={post.id} className="flex gap-3 border-b border-[#DDDDDD] py-2 last:border-0">
-            <span className="w-14 shrink-0 font-mono text-[12px] font-semibold text-[#00437A]">{tidKlockslag(post.tidpunkt)}</span>
+          <li key={post.id} className="flex gap-4 border-b border-[#D7DCE2] py-2 last:border-0">
+            <span className="w-14 shrink-0 font-mono text-[12px] font-semibold text-[#005CA9]">{tidKlockslag(post.tidpunkt)}</span>
             <div className="min-w-0">
-              <p className="text-[13px] text-[#1A1A1A]">{handelseRubrik(post)}</p>
-              <p className="text-[11px] text-[#707070]">{post.anvandare}</p>
+              <p className="text-[13px] text-[#1B1E22]">{handelseRubrik(post)}</p>
+              <p className="text-[11px] text-[#4D5662]">{post.anvandare}</p>
               {post.handelse.typ === "foto" && (
-                <Bild bilaga={post.handelse} alt={post.handelse.beskrivning} className="mt-1 max-h-40 border border-[#C6C6C6]" />
+                <Bild bilaga={post.handelse} alt={post.handelse.beskrivning} className="mt-2 max-h-40 border border-[#D7DCE2]" />
               )}
               {post.handelse.typ === "video" && (
-                <Klipp bilaga={post.handelse} className="mt-1 max-h-40 border border-[#C6C6C6]" />
+                <Klipp bilaga={post.handelse} className="mt-2 max-h-40 border border-[#D7DCE2]" />
               )}
             </div>
           </li>
@@ -2164,25 +2179,25 @@ function BriefFlik({
     <>
       {!b.avslutat && (
         <Panel rubrik="Review of the evidence">
-          <p className="mb-2 text-[#333333]">
+          <p className="mb-2 text-[#1B1E22]">
             Have the system review the whole record before you hand it on: contradictions between
             observations, gaps in the documentation, and conclusions that lack support.
           </p>
-          {granskning === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">Reviewing the evidence …</p>}
+          {granskning === "arbetar" && <p className="mb-2 font-semibold text-[#005CA9]">Reviewing the evidence …</p>}
           {granskning === "fel" && (
             <p className="mb-2 font-semibold text-[#8B1A1A]">The review could not be retrieved — requires sign-in. Try again.</p>
           )}
           {senasteAi && senasteAi.handelse.typ === "ai_svar" && granskning === "vilar" && (
             <div className="mb-2">
               {senasteAi.handelse.rader.map((rad, i) => (
-                <p key={i} className="py-0.5 text-[14px]">
-                  <span className="font-semibold text-[#4A5560]">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
+                <p key={i} className="py-0 text-[14px]">
+                  <span className="font-semibold text-[#4D5662]">{AI_RADTYP_LABEL[rad.typ]}:</span> {rad.text}
                 </p>
               ))}
-              <p className="mt-1 text-[14px]">
-                <span className="font-semibold text-[#00437A]">Next step:</span> {senasteAi.handelse.nastaSteg}
+              <p className="mt-2 text-[14px]">
+                <span className="font-semibold text-[#005CA9]">Next step:</span> {senasteAi.handelse.nastaSteg}
               </p>
-              <p className="mt-1 text-[11px] text-[#707070]">Senaste analys ({senasteAi.handelse.modell})</p>
+              <p className="mt-2 text-[11px] text-[#4D5662]">Senaste analys ({senasteAi.handelse.modell})</p>
             </div>
           )}
           <StorKnapp variant="sekundar" disabled={granskning === "arbetar"} onClick={granska}>
@@ -2194,63 +2209,63 @@ function BriefFlik({
         {b.objekt ? (
           <>
             <p className="text-[15px] font-semibold">{b.objekt.beskrivning}</p>
-            <p className="font-semibold text-[#00437A]">{b.objekt.identifierare}</p>
-            {b.objekt.kund && <p className="text-[#333333]">Kund: {b.objekt.kund}</p>}
-            {b.ansvarig && <p className="text-[#333333]">Ansvarig tekniker: {b.ansvarig}</p>}
+            <p className="font-semibold text-[#005CA9]">{b.objekt.identifierare}</p>
+            {b.objekt.kund && <p className="text-[#1B1E22]">Kund: {b.objekt.kund}</p>}
+            {b.ansvarig && <p className="text-[#1B1E22]">Ansvarig tekniker: {b.ansvarig}</p>}
           </>
         ) : (
-          <p className="text-[#4A5560]">Not identified</p>
+          <p className="text-[#4D5662]">Not identified</p>
         )}
       </Panel>
       <Panel rubrik="Customer's description">
         <p className="text-[14px]">{b.felbeskrivning ? `”${b.felbeskrivning}”` : "—"}</p>
       </Panel>
       <Panel rubrik="Checks performed">
-        {b.utfordaKontroller.length === 0 && <p className="text-[#4A5560]">None yet.</p>}
+        {b.utfordaKontroller.length === 0 && <p className="text-[#4D5662]">None yet.</p>}
         {b.utfordaKontroller.map((k, i) =>
           k.undantag ? (
-            <p key={i} className="py-0.5 text-[14px] text-[#9A6700]">
+            <p key={i} className="py-0 text-[14px] text-[#8A5A00]">
               <IkonVarning /> {k.text} — underlag saknas: {k.undantag}
             </p>
           ) : (
-            <p key={i} className="py-0.5 text-[14px]">
+            <p key={i} className="py-0 text-[14px]">
               ✓ {k.text}
-              {k.resultat && <span className="text-[#4A5560]"> — {k.resultat}</span>}
+              {k.resultat && <span className="text-[#4D5662]"> — {k.resultat}</span>}
             </p>
           ),
         )}
       </Panel>
       <Panel rubrik="Observations">
-        {b.observationer.length === 0 && <p className="text-[#4A5560]">None yet.</p>}
+        {b.observationer.length === 0 && <p className="text-[#4D5662]">None yet.</p>}
         {b.observationer.map((o, i) => (
-          <p key={i} className="py-0.5 text-[14px]">• {o}</p>
+          <p key={i} className="py-0 text-[14px]">• {o}</p>
         ))}
       </Panel>
       {b.hypoteser.length > 0 && (
         <Panel rubrik="Hypotheses — require verification">
           {b.hypoteser.map((h, i) => (
-            <p key={i} className="py-0.5 text-[14px]">
+            <p key={i} className="py-0 text-[14px]">
               <NivaBadge niva={h.niva} /> {h.text}
             </p>
           ))}
         </Panel>
       )}
       <Panel rubrik="Not checked">
-        {b.ejKontrollerat.length === 0 && <p className="text-[#4A5560]">Every step in the methodology is complete.</p>}
+        {b.ejKontrollerat.length === 0 && <p className="text-[#4D5662]">Every step in the methodology is complete.</p>}
         {b.ejKontrollerat.map((e, i) => (
-          <p key={i} className="py-0.5 text-[14px] text-[#333333]">– {e}</p>
+          <p key={i} className="py-0 text-[14px] text-[#1B1E22]">– {e}</p>
         ))}
       </Panel>
       {!b.avslutat && (
         <Panel rubrik="Recommended next step">
           {b.rekommenderatNastaSteg.map((s, i) => (
-            <p key={i} className="py-0.5 text-[14px]">{i + 1}. {s}</p>
+            <p key={i} className="py-0 text-[14px]">{i + 1}. {s}</p>
           ))}
         </Panel>
       )}
       <Panel rubrik="Reliability">
         {b.tillforlitlighet.map((r, i) => (
-          <p key={i} className="py-0.5 text-[14px]">
+          <p key={i} className="py-0 text-[14px]">
             <NivaBadge niva={r.niva} /> {r.text}
           </p>
         ))}
@@ -2333,15 +2348,15 @@ function RapportFlik({
           undantag i händelseloggen. */}
       <Panel rubrik={`Kvalitetsgrind — ECM v${ECM_VERSION}`}>
         {grind.map((rad) => (
-          <div key={rad.id} className="border-b border-[#EBEBEB] py-1 last:border-0">
+          <div key={rad.id} className="border-b border-[#D7DCE2] py-2 last:border-0">
             <p className="text-[13px]">
-              <span className={rad.ok ? "text-[#1E6B34]" : rad.kravs ? "text-[#8B1A1A]" : "text-[#9A6700]"}>
+              <span className={rad.ok ? "text-[#005CA9]" : rad.kravs ? "text-[#8B1A1A]" : "text-[#8A5A00]"}>
                 {rad.ok ? <IkonCheck /> : rad.kravs ? <IkonKryss /> : <IkonVarning />}
               </span>{" "}
               {rad.rubrik}
-              {!rad.kravs && <span className="text-[11px] text-[#707070]"> (recommended)</span>}
+              {!rad.kravs && <span className="text-[11px] text-[#4D5662]"> (recommended)</span>}
             </p>
-            {rad.detalj && <p className="pl-6 text-[12px] text-[#707070]">{rad.detalj}</p>}
+            {rad.detalj && <p className="pl-6 text-[12px] text-[#4D5662]">{rad.detalj}</p>}
           </div>
         ))}
         {!godkand && (
@@ -2352,7 +2367,7 @@ function RapportFlik({
         )}
       </Panel>
       <Panel rubrik="Customer report">
-        <p className="mb-2 text-[#333333]">
+        <p className="mb-2 text-[#1B1E22]">
           A shareable summary of the work performed. Review the content before the report is shared — images may
             contain details about other customers.
         </p>
@@ -2365,7 +2380,7 @@ function RapportFlik({
           </StorKnapp>
         </div>
         <Link to={`/felsokning/dela/${arende.id}`} className="mt-2 block">
-          <StorKnapp variant="sekundar"><IkonPunkt farg="#1E6B34" /> Open Live Share view</StorKnapp>
+          <StorKnapp variant="sekundar"><IkonPunkt farg="#005CA9" /> Open Live Share view</StorKnapp>
         </Link>
         {plattformAktiv() ? (
           <DelningsHanterare arende={arende} skicka={skicka} />
@@ -2383,7 +2398,7 @@ function RapportFlik({
             </StorKnapp>
           )
         )}
-        <p className="mt-2 text-[12px] text-[#707070]">
+        <p className="mt-2 text-[12px] text-[#4D5662]">
           The share link requires the case to be synchronized (signed-in user).
         </p>
       </Panel>
@@ -2445,19 +2460,19 @@ function RapportFlik({
         {repro ? (
           <>
             <p className="text-[14px] font-semibold">{reproduceringsText(repro.status)}</p>
-            <p className="text-[13px] text-[#4A5560]">{repro.beskrivning}</p>
+            <p className="text-[13px] text-[#4D5662]">{repro.beskrivning}</p>
           </>
         ) : (
-          <p className="text-[14px] text-[#4A5560]">Reproduction not documented yet.</p>
+          <p className="text-[14px] text-[#4D5662]">Reproduction not documented yet.</p>
         )}
       </Panel>
       <Panel rubrik="Root cause analysis">
-        {orsakerLista.length === 0 && <p className="text-[14px] text-[#4A5560]">Root cause analysis not documented yet.</p>}
+        {orsakerLista.length === 0 && <p className="text-[14px] text-[#4D5662]">Root cause analysis not documented yet.</p>}
         {orsakerLista.map((p) => {
           const h = p.handelse;
           if (h.typ !== "felorsak") return null;
           return (
-            <div key={p.id} className="mb-3 border-b border-[#EBEBEB] pb-2 last:mb-0 last:border-0">
+            <div key={p.id} className="mb-4 border-b border-[#D7DCE2] pb-2 last:mb-0 last:border-0">
               <p className="text-[14px] font-semibold">{h.avvikelse}</p>
               {identitetsRader([
                 ["Assessed root cause", h.orsaker.join(", ")],
@@ -2495,7 +2510,7 @@ function RapportFlik({
         </Panel>
       )}
       <Panel rubrik="Action performed and verification">
-        {atgardsRader.length === 0 && <p className="text-[14px] text-[#4A5560]">No action documented yet.</p>}
+        {atgardsRader.length === 0 && <p className="text-[14px] text-[#4D5662]">No action documented yet.</p>}
         {atgardsRader.map((p) => {
           const h = p.handelse;
           if (h.typ !== "atgard_utford") return null;
@@ -2507,7 +2522,7 @@ function RapportFlik({
                   ["Parts", h.delar],
                 ])
               ) : (
-                <p className="text-[14px] text-[#9A6700]">No action performed — {h.motivering}</p>
+                <p className="text-[14px] text-[#8A5A00]">No action performed — {h.motivering}</p>
               )}
             </div>
           );
@@ -2523,15 +2538,15 @@ function RapportFlik({
         {fordelning.length > 0 && (
           <div className="mt-2">
             {fordelning.map((r) => (
-              <p key={r.label} className="text-[#333333]">{r.label}: {r.tid}</p>
+              <p key={r.label} className="text-[#1B1E22]">{r.label}: {r.tid}</p>
             ))}
           </div>
         )}
       </Panel>
       <Panel rubrik="Timeline">
         {kundposter.map((post) => (
-          <p key={post.id} className="py-0.5 text-[13px]">
-            <span className="font-mono font-semibold text-[#00437A]">{tidKlockslag(post.tidpunkt)}</span>{" "}
+          <p key={post.id} className="py-0 text-[13px]">
+            <span className="font-mono font-semibold text-[#005CA9]">{tidKlockslag(post.tidpunkt)}</span>{" "}
             {handelseRubrik(post)}
           </p>
         ))}
@@ -2540,8 +2555,8 @@ function RapportFlik({
         <Panel rubrik="Documented video">
           {klipp.map((v, i) => (
             <figure key={i} className="mb-2">
-              <Klipp bilaga={v.bilaga} className="w-full border border-[#C6C6C6]" />
-              <figcaption className="mt-1 text-[11px] text-[#4A5560]">{v.beskrivning}</figcaption>
+              <Klipp bilaga={v.bilaga} className="w-full border border-[#D7DCE2]" />
+              <figcaption className="mt-2 text-[11px] text-[#4D5662]">{v.beskrivning}</figcaption>
             </figure>
           ))}
         </Panel>
@@ -2551,8 +2566,8 @@ function RapportFlik({
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
-                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} className="border border-[#C6C6C6]" />
-                <figcaption className="mt-1 text-[11px] text-[#4A5560]">{bild.beskrivning}</figcaption>
+                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} className="border border-[#D7DCE2]" />
+                <figcaption className="mt-2 text-[11px] text-[#4D5662]">{bild.beskrivning}</figcaption>
               </figure>
             ))}
           </div>
@@ -2561,11 +2576,11 @@ function RapportFlik({
       {!b.avslutat || b.ejKontrollerat.length > 0 ? (
         <Panel rubrik="Recommended next steps">
           {(b.avslutat ? b.ejKontrollerat : b.rekommenderatNastaSteg).map((s, i) => (
-            <p key={i} className="py-0.5 text-[14px]">{i + 1}. {s}</p>
+            <p key={i} className="py-0 text-[14px]">{i + 1}. {s}</p>
           ))}
         </Panel>
       ) : null}
-      <p className="text-center text-[11px] text-[#8A8A8A]">
+      <p className="text-center text-[11px] text-[#4D5662]">
         Generated from the case log · Observations and measurements are reported without conclusions that lack support.
       </p>
       <Ritningsstampel arende={arende} />
@@ -2632,7 +2647,7 @@ function Felanmalan({ arende, metodik }: { arende: Arende; metodik: Metodik | nu
         <button
           type="button"
           onClick={() => setOppen(true)}
-          className="text-[12px] uppercase tracking-wide text-[#4A5560] underline"
+          className="text-[12px] uppercase tracking-wide text-[#4D5662] underline"
         >
           Report a problem with the system
         </button>
@@ -2642,7 +2657,7 @@ function Felanmalan({ arende, metodik }: { arende: Arende; metodik: Metodik | nu
 
   return (
     <Panel rubrik="Report a problem with the system">
-      <p className="mb-2 text-[12px] text-[#707070]">
+      <p className="mb-2 text-[12px] text-[#4D5662]">
         Case, methodology and platform version are included automatically. Nothing about the vehicle or the customer is sent.
       </p>
       <div className="mb-2 grid grid-cols-3 gap-2">
@@ -2664,7 +2679,7 @@ function Felanmalan({ arende, metodik }: { arende: Arende; metodik: Metodik | nu
         platshallare="Whoever answers cannot see your screen."
         flerRad
       />
-      {utfall.ok && <p className="mt-2 text-[13px] text-[#1E6B34]">Reported as {utfall.ok}.</p>}
+      {utfall.ok && <p className="mt-2 text-[13px] text-[#005CA9]">Reported as {utfall.ok}.</p>}
       {utfall.fel && <p className="mt-2 text-[13px] text-[#8B1A1A]">{utfall.fel}</p>}
       <div className="mt-2 grid grid-cols-2 gap-2">
         <StorKnapp onClick={skicka} disabled={skickar || rubrik.trim().length < 5 || text.trim().length < 20}>
@@ -2708,11 +2723,11 @@ function Ritningsstampel({ arende }: { arende: Arende }) {
   ];
 
   return (
-    <div className="alva-yta mt-3 border border-[#C6C6C6] bg-white">
+    <div className="alva-yta mt-4 border border-[#D7DCE2] bg-white">
       <div className="grid grid-cols-2 sm:grid-cols-3">
         {falt.map(([etikett, varde]) => (
-          <div key={etikett} className="border-b border-r border-[#DDDDDD] px-2 py-2 last:border-r-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#4A5560]">{etikett}</div>
+          <div key={etikett} className="border-b border-r border-[#D7DCE2] px-2 py-2 last:border-r-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">{etikett}</div>
             <div className="mt-2 font-mono text-[11px] text-[#1B1E22]">{varde}</div>
           </div>
         ))}

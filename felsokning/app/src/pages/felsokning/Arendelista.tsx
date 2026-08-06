@@ -44,13 +44,13 @@ function PlattformInloggning() {
     return (
       <>
         <Panel rubrik="Platform account">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-4">
             <p className="text-[14px]">
               <span className="font-semibold">{konto.namn}</span> · {ROLL_LABEL[konto.roll]} ·{" "}
               {konto.organisation} — synchronization and decision support active.
             </p>
             <button
-              className="whitespace-nowrap border border-[#ADADAD] px-4 py-2 font-semibold text-[#333333] hover:border-[#8FA8C0]"
+              className="whitespace-nowrap border border-[#D7DCE2] px-4 py-2 font-semibold text-[#1B1E22] hover:border-[#4D5662]"
               onClick={() => {
                 loggaUtPlattform();
                 setKonto(null);
@@ -60,7 +60,7 @@ function PlattformInloggning() {
             </button>
           </div>
           {(konto.roll === "arbetsledare" || konto.roll === "admin") && (
-            <Link to="/felsokning/oversikt" className="mt-3 block">
+            <Link to="/felsokning/oversikt" className="mt-4 block">
               <StorKnapp variant="sekundar"><IkonDiagram /> Organization overview</StorKnapp>
             </Link>
           )}
@@ -79,7 +79,7 @@ function PlattformInloggning() {
     <Panel rubrik="Platform account">
       {lage === "stangd" ? (
         <>
-          <p className="mb-2 text-[#333333]">
+          <p className="mb-2 text-[#1B1E22]">
             Sign in for synchronization across devices, collaboration on cases and decision support. Without sign-in the app works in local mode. New organization? Create an account — you become the system administrator.
           </p>
           <div className="grid grid-cols-2 gap-2">
@@ -113,7 +113,7 @@ function PlattformInloggning() {
           )}
           <TextFalt label="E-mail" varde={epost} satt={setEpost} platshallare="anna@workshop.example" />
           <TextFalt label="Password (at least 8 characters)" varde={losenord} satt={setLosenord} losenord />
-          {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
+          {fel && <p className="mb-4 font-semibold text-[#8B1A1A]">{fel}</p>}
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setLage("stangd")}>
               Cancel
@@ -175,23 +175,23 @@ function AnvandarAdmin() {
       {lista.map((anv) => (
         <div
           key={anv.id}
-          className="flex items-center justify-between gap-3 border-b border-[#DDDDDD] py-1.5 last:border-0"
+          className="flex items-center justify-between gap-4 border-b border-[#D7DCE2] py-2 last:border-0"
         >
           <p className="min-w-0 text-[14px]">
-            <span className={`font-semibold ${anv.aktiv === false ? "text-[#8A8A8A] line-through" : ""}`}>
+            <span className={`font-semibold ${anv.aktiv === false ? "text-[#4D5662] line-through" : ""}`}>
               {anv.namn}
             </span>{" "}
-            · {ROLL_LABEL[anv.roll]} <span className="text-[#707070]">{anv.epost}</span>
+            · {ROLL_LABEL[anv.roll]} <span className="text-[#4D5662]">{anv.epost}</span>
             {anv.aktiv === false && (
-              <span className="ml-1 text-[12px] font-semibold text-[#8B1A1A]">Disabled</span>
+              <span className="ml-2 text-[12px] font-semibold text-[#8B1A1A]">Disabled</span>
             )}
           </p>
           <button
             type="button"
-            className={`shrink-0 border px-2 py-1 text-[12px] font-semibold ${
+            className={`shrink-0 border px-2 py-2 text-[12px] font-semibold ${
               anv.aktiv === false
-                ? "border-[#1E6B34] bg-white text-[#1E6B34]"
-                : "border-[#6E1414] bg-white text-[#8B1A1A]"
+                ? "border-[#005CA9] bg-white text-[#005CA9]"
+                : "border-[#8B1A1A] bg-white text-[#8B1A1A]"
             }`}
             onClick={async () => {
               setFel("");
@@ -207,11 +207,11 @@ function AnvandarAdmin() {
           </button>
         </div>
       ))}
-      <p className="mt-1 text-[12px] text-[#707070]">
+      <p className="mt-2 text-[12px] text-[#4D5662]">
         Disabling takes effect immediately — active sessions on that person's devices end at once.
       </p>
       <form
-        className="mt-3"
+        className="mt-4"
         onSubmit={async (e) => {
           e.preventDefault();
           setFel("");
@@ -229,7 +229,7 @@ function AnvandarAdmin() {
         <TextFalt label="Name" varde={namn} satt={setNamn} />
         <TextFalt label="E-mail" varde={epost} satt={setEpost} />
         <TextFalt label="Password (at least 8 characters)" varde={losenord} satt={setLosenord} losenord />
-        <div className="mb-3 grid grid-cols-3 gap-2">
+        <div className="mb-4 grid grid-cols-3 gap-2">
           {(Object.keys(ROLL_LABEL) as PlattformRoll[]).map((valbar) => (
             <button
               key={valbar}
@@ -237,15 +237,15 @@ function AnvandarAdmin() {
               onClick={() => setRoll(valbar)}
               className={`min-h-9 border text-[12px] font-semibold ${
                 roll === valbar
-                  ? "border-[#00437A] bg-[#00437A] text-white"
-                  : "border-[#ADADAD] bg-[#F7F7F7] text-[#333333]"
+                  ? "border-[#005CA9] bg-[#005CA9] text-white"
+                  : "border-[#D7DCE2] bg-[#F6F7F8] text-[#1B1E22]"
               }`}
             >
               {ROLL_LABEL[valbar]}
             </button>
           ))}
         </div>
-        {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
+        {fel && <p className="mb-4 font-semibold text-[#8B1A1A]">{fel}</p>}
         <StorKnapp type="submit" disabled={!epost.trim() || !namn.trim() || losenord.length < 8}>
           Create user
         </StorKnapp>
@@ -271,7 +271,7 @@ export default function Arendelista() {
     return (
       <FelsokningSkal rubrik="Guided Diagnostics">
         <Panel rubrik="Who is working?">
-          <p className="mb-3 text-[14px] text-[#333333]">
+          <p className="mb-4 text-[14px] text-[#1B1E22]">
             All work is logged with user and timestamp. Enter your name to begin.
           </p>
           <form
@@ -304,20 +304,20 @@ export default function Arendelista() {
   return (
     <FelsokningSkal
       rubrik="Guided Diagnostics"
-      hoger={<span className="text-[12px] font-semibold text-[#A9C3DE]">{anvandare}</span>}
+      hoger={<span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">{anvandare}</span>}
     >
       <Link to="/felsokning/nytt">
         <StorKnapp className="mb-4">+ New case</StorKnapp>
       </Link>
 
       {alla.length > 0 && (
-        <div className="mb-4 grid grid-cols-3 gap-1 border border-[#C6C6C6] bg-[#F7F7F7] p-1">
+        <div className="mb-4 grid grid-cols-3 gap-2 border border-[#D7DCE2] bg-[#F6F7F8] p-2">
           {FILTER.map((f) => (
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
-              className={`min-h-9 text-[13px] font-semibold transition-colors ${
-                filter === f.id ? "bg-[#00437A] text-white" : "text-[#333333] hover:bg-[#E4E9EE]"
+              className={`min-h-9 text-[13px] font-semibold ${
+                filter === f.id ? "bg-[#005CA9] text-white" : "text-[#1B1E22] hover:bg-[#D7DCE2]"
               }`}
             >
               {f.label} · {f.antal}
@@ -328,7 +328,7 @@ export default function Arendelista() {
 
       {alla.length === 0 && (
         <Panel rubrik="Get started">
-          <p className="mb-3 text-[14px] text-[#333333]">
+          <p className="mb-4 text-[14px] text-[#1B1E22]">
             No cases yet. Start by identifying an object — or explore a finished demo case with a complete work log, brief and customer report.
           </p>
           <StorKnapp variant="sekundar" onClick={() => laggInArende(byggDemoArende(nastaNummer, anvandare))}>
@@ -338,7 +338,7 @@ export default function Arendelista() {
       )}
 
       {lista.length === 0 && alla.length > 0 && (
-        <p className="text-center text-[14px] text-[#4A5560]">No cases in this filter.</p>
+        <p className="text-center text-[14px] text-[#4D5662]">No cases in this filter.</p>
       )}
 
       {plattformAktiv() && <PlattformInloggning />}
@@ -350,7 +350,7 @@ export default function Arendelista() {
       )}
 
       <Panel rubrik="Decision support">
-        <p className="text-[#333333]">
+        <p className="text-[#1B1E22]">
           When you are signed in the system helps while you work: it proposes the next step from what you document, reviews the whole case on request and drafts the handover. It always separates verified from hypothesis — and never states a root cause that is not confirmed. Nothing to install or configure; it is part of the service. Without sign-in the checklist guides you step by step.
         </p>
       </Panel>
@@ -363,24 +363,24 @@ export default function Arendelista() {
         const b = brief(arende, metodikForArende(arende), new Date().toISOString());
         return (
           <Link key={arende.id} to={`/felsokning/arende/${arende.id}`} className="block">
-            <div className="mb-3 border border-[#C6C6C6] bg-[#F7F7F7] p-4 transition-colors hover:border-[#00437A]">
+            <div className="mb-4 border border-[#D7DCE2] bg-[#F6F7F8] p-4 hover:border-[#005CA9]">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">
+                <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4D5662]">
                   Case #{arende.nummer}
                 </span>
                 <span
-                  className={`px-2 py-0.5 text-[11px] font-semibold uppercase ${
-                    avslutat ? "bg-[#8A94A0] text-white" : "bg-[#00437A] text-white"
+                  className={`px-2 py-0 text-[11px] font-semibold uppercase ${
+                    avslutat ? "bg-[#4D5662] text-white" : "bg-[#005CA9] text-white"
                   }`}
                 >
                   {avslutat ? "Closed" : "In progress"}
                 </span>
               </div>
-              <p className="mt-1 text-[15px] font-semibold">{o ? o.beskrivning : "Unknown object"}</p>
-              {o && <p className="text-[12px] font-semibold text-[#4A5560]">{o.identifierare}{o.kund ? ` · ${o.kund}` : ""}</p>}
-              {fel && <p className="mt-2 text-[14px] text-[#333333]">”{fel}”</p>}
-              <p className="mt-2 text-[12px] text-[#707070]">
-                {sista ? `Senaste aktivitet ${tidDatum(sista.tidpunkt)} ${tidKlockslag(sista.tidpunkt)}` : ""}
+              <p className="mt-2 text-[15px] font-semibold">{o ? o.beskrivning : "Unknown object"}</p>
+              {o && <p className="text-[12px] font-semibold text-[#4D5662]">{o.identifierare}{o.kund ? ` · ${o.kund}` : ""}</p>}
+              {fel && <p className="mt-2 text-[14px] text-[#1B1E22]">”{fel}”</p>}
+              <p className="mt-2 text-[12px] text-[#4D5662]">
+                {sista ? `Last activity ${tidDatum(sista.tidpunkt)} ${tidKlockslag(sista.tidpunkt)}` : ""}
                 {" · "}
                 {b.totalArbetstid}
               </p>

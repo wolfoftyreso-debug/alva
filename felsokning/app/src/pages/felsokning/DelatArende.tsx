@@ -21,7 +21,7 @@ export default function DelatArende() {
   if (!arende) {
     return (
       <FelsokningSkal rubrik="Shared case">
-        <p className="text-[14px] text-[#333333]">The case is not available.</p>
+        <p className="text-[14px] text-[#1B1E22]">The case is not available.</p>
       </FelsokningSkal>
     );
   }

@@ -28,8 +28,8 @@ function BeslutsKnappar({
   const [fel, setFel] = useState("");
 
   return (
-    <div className="mt-2 border-t border-[#DDDDDD] pt-2 print:hidden">
-      <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
+    <div className="mt-2 border-t border-[#D7DCE2] pt-2 print:hidden">
+      <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
         Your decision to the workshop
       </p>
       <div className="mb-2 grid grid-cols-2 gap-2">
@@ -43,14 +43,14 @@ function BeslutsKnappar({
       {val && (
         <>
           <label className="mb-2 block">
-            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">
               {val === "avbojt" ? "Short rationale (optional)" : "Comment (optional)"}
             </span>
             <input
               value={kommentar}
               maxLength={500}
               onChange={(e) => setKommentar(e.target.value)}
-              className="w-full border border-[#ADADAD] bg-white px-2.5 py-1.5 text-[13px] focus:border-[#00437A] focus:outline-none"
+              className="w-full border border-[#D7DCE2] bg-white px-2 py-2 text-[13px] focus:border-[#005CA9] focus:outline-none"
             />
           </label>
           {fel && <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">{fel}</p>}
@@ -66,7 +66,7 @@ function BeslutsKnappar({
           >
             {skickar ? "Sending …" : "Send decision"}
           </StorKnapp>
-          <p className="mt-1 text-[11px] text-[#707070]">
+          <p className="mt-2 text-[11px] text-[#4D5662]">
             The decision is recorded in the case and cannot be changed here — contact the workshop if you change your mind.
           </p>
         </>
@@ -88,14 +88,14 @@ function IdentitetsPanel({ arende, avslutat }: { arende: Arende; avslutat: boole
     ["Status", avslutat ? "Closed" : "Diagnosis in progress"],
   ];
   return (
-    <div className="sticky top-11 z-10 mb-3 border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.1)] print:static">
+    <div className="sticky top-12 z-10 mb-4 border border-[#D7DCE2] bg-[#F6F7F8] px-4 py-2 print:static">
       {idn.beskrivning && <p className="text-[13px] font-semibold">{idn.beskrivning}</p>}
       <p className="flex flex-wrap gap-x-4 gap-y-0.5 text-[12px]">
         {falt
           .filter(([, varde]) => varde)
           .map(([etikett, varde]) => (
             <span key={etikett} className="whitespace-nowrap">
-              <span className="text-[#707070]">{etikett}:</span> <span className="font-medium">{varde}</span>
+              <span className="text-[#4D5662]">{etikett}:</span> <span className="font-medium">{varde}</span>
             </span>
           ))}
       </p>
@@ -145,8 +145,8 @@ export function DelatArendeVy({
       rubrik={b.objekt?.beskrivning ?? "Case"}
       hoger={
         <span
-          className={`px-3 py-1 text-[12px] font-semibold uppercase ${
-            avslutat ? "bg-[#3E5A78] text-white" : "bg-[#1E6B34] text-white"
+          className={`px-4 py-2 text-[12px] font-semibold uppercase ${
+            avslutat ? "bg-[#4D5662] text-white" : "bg-[#005CA9] text-white"
           }`}
         >
           {avslutat ? "Closed" : "Diagnosis in progress"}
@@ -185,7 +185,7 @@ export function DelatArendeVy({
               {rader.map(([etikett, text]) => (
                 <div key={etikett} className="border-t border-[#D7DCE2] py-2 first:border-t-0">
                   <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#4D5662]">{etikett}</dt>
-                  <dd className="mt-1 text-[#1B1E22]">{text}</dd>
+                  <dd className="mt-2 text-[#1B1E22]">{text}</dd>
                 </div>
               ))}
             </dl>
@@ -193,7 +193,7 @@ export function DelatArendeVy({
         );
       })()}
 
-      <p className="mb-4 border border-[#C6C6C6] bg-[#F7F7F7] p-3 text-[12px] text-[#4A5560] print:hidden">
+      <p className="mb-4 border border-[#D7DCE2] bg-[#F6F7F8] p-4 text-[12px] text-[#4D5662] print:hidden">
         {notis}
       </p>
 
@@ -212,20 +212,20 @@ export function DelatArendeVy({
               <div key={p.id} className="mb-2 last:mb-0">
                 <p className="text-[14px]">{h.beskrivning}</p>
                 {h.uppskattadKostnad && (
-                  <p className="text-[13px] text-[#4A5560]">Uppskattad kostnad: {h.uppskattadKostnad}</p>
+                  <p className="text-[13px] text-[#4D5662]">Uppskattad kostnad: {h.uppskattadKostnad}</p>
                 )}
               </div>
             );
           })}
           {beslut?.handelse.typ === "kundbeslut" ? (
-            <p className="mt-2 border-t border-[#DDDDDD] pt-2 text-[13px] font-semibold">
+            <p className="mt-2 border-t border-[#D7DCE2] pt-2 text-[13px] font-semibold">
               Ditt besked: {KUNDBESLUT_LABEL[beslut.handelse.beslut]}{" "}
-              <span className="font-normal text-[#4A5560]">(registrerat via {beslut.handelse.kanal})</span>
+              <span className="font-normal text-[#4D5662]">(registrerat via {beslut.handelse.kanal})</span>
             </p>
           ) : vidBeslut ? (
             <BeslutsKnappar vidBeslut={vidBeslut} />
           ) : (
-            <p className="mt-2 border-t border-[#DDDDDD] pt-2 text-[12px] text-[#707070]">
+            <p className="mt-2 border-t border-[#D7DCE2] pt-2 text-[12px] text-[#4D5662]">
               Awaiting your decision — contact the workshop to approve or decline.
             </p>
           )}
@@ -234,11 +234,11 @@ export function DelatArendeVy({
 
       <Panel rubrik="Current status">
         {b.utfordaKontroller.map((k, i) => (
-          <p key={`u${i}`} className="py-0.5 text-[14px]"><span className="text-[#1E6B34]"><IkonCheck /></span> {k.text}</p>
+          <p key={`u${i}`} className="py-0 text-[14px]"><span className="text-[#005CA9]"><IkonCheck /></span> {k.text}</p>
         ))}
-        {!avslutat && pagaende && <p className="py-0.5 text-[14px] text-[#00437A]"><IkonUppdatera /> {pagaende}</p>}
+        {!avslutat && pagaende && <p className="py-0 text-[14px] text-[#005CA9]"><IkonUppdatera /> {pagaende}</p>}
         {b.ejKontrollerat.slice(avslutat ? 0 : 1).map((e, i) => (
-          <p key={`e${i}`} className="py-0.5 text-[14px] text-[#4A5560]"><IkonKlocka /> {e}</p>
+          <p key={`e${i}`} className="py-0 text-[14px] text-[#4D5662]"><IkonKlocka /> {e}</p>
         ))}
       </Panel>
 
@@ -246,8 +246,8 @@ export function DelatArendeVy({
         <Panel rubrik="Video">
           {klipp.map((v, i) => (
             <figure key={i} className="mb-2">
-              <Klipp bilaga={v.bilaga} delningskod={delningskod} className="w-full border border-[#C6C6C6]" />
-              <figcaption className="mt-1 text-[11px] text-[#4A5560]">{v.beskrivning}</figcaption>
+              <Klipp bilaga={v.bilaga} delningskod={delningskod} className="w-full border border-[#D7DCE2]" />
+              <figcaption className="mt-2 text-[11px] text-[#4D5662]">{v.beskrivning}</figcaption>
             </figure>
           ))}
         </Panel>
@@ -257,8 +257,8 @@ export function DelatArendeVy({
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
-                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} delningskod={delningskod} className="border border-[#C6C6C6]" />
-                <figcaption className="mt-1 text-[11px] text-[#4A5560]">{bild.beskrivning}</figcaption>
+                <Bild bilaga={bild.bilaga} alt={bild.beskrivning} delningskod={delningskod} className="border border-[#D7DCE2]" />
+                <figcaption className="mt-2 text-[11px] text-[#4D5662]">{bild.beskrivning}</figcaption>
               </figure>
             ))}
           </div>
@@ -273,9 +273,9 @@ export function DelatArendeVy({
                 const h = p.handelse;
                 if (h.typ !== "matvarde") return null;
                 return (
-                  <tr key={p.id} className="border-b border-[#DDDDDD] last:border-0">
-                    <td className="py-1 pr-3 text-[#333333]">{h.beskrivning}</td>
-                    <td className="py-1 font-semibold">
+                  <tr key={p.id} className="border-b border-[#D7DCE2] last:border-0">
+                    <td className="py-2 pr-4 text-[#1B1E22]">{h.beskrivning}</td>
+                    <td className="py-2 font-semibold">
                       {h.varde}
                       {h.enhet ? ` ${h.enhet}` : ""}
                     </td>
@@ -289,8 +289,8 @@ export function DelatArendeVy({
 
       <Panel rubrik="Timeline">
         {kundposter.map((post) => (
-          <p key={post.id} className="py-0.5 text-[13px]">
-            <span className="font-mono font-semibold text-[#00437A]">{tidKlockslag(post.tidpunkt)}</span>{" "}
+          <p key={post.id} className="py-0 text-[13px]">
+            <span className="font-mono font-semibold text-[#005CA9]">{tidKlockslag(post.tidpunkt)}</span>{" "}
             {handelseRubrik(post)}
           </p>
         ))}
@@ -305,13 +305,13 @@ export function DelatArendeVy({
       <Panel rubrik="Labour time">
         <p className="text-[17px] font-semibold">{b.totalArbetstid}</p>
         {tidsfordelningsRader(arende, nu).map((r) => (
-          <p key={r.label} className="text-[#333333]">
+          <p key={r.label} className="text-[#1B1E22]">
             {r.label}: {r.tid}
           </p>
         ))}
       </Panel>
 
-      <p className="text-center text-[11px] text-[#8A8A8A]">
+      <p className="text-center text-[11px] text-[#4D5662]">
         Case #{arende.nummer} · started {tidDatum(arende.skapad)} · generated from the case log
       </p>
     </FelsokningSkal>

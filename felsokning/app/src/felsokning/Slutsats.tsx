@@ -171,7 +171,7 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
               >
                 {etikett}
               </label>
-              <p className="mt-1 text-[13px]" style={{ color: FARG.graphite }}>
+              <p className="mt-2 text-[13px]" style={{ color: FARG.graphite }}>
                 {f.fraga}
               </p>
               <textarea
@@ -189,7 +189,7 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
                   color: FARG.graphite,
                 }}
               />
-              <p id={`slutsats-${f.id}-hjalp`} className="mt-1 text-[12px] leading-[16px]" style={{ color: FARG.steel }}>
+              <p id={`slutsats-${f.id}-hjalp`} className="mt-2 text-[12px] leading-[16px]" style={{ color: FARG.steel }}>
                 {fel ? fel.text : f.hjalp}
               </p>
             </div>

@@ -176,7 +176,7 @@ export default function NyttArende() {
     return (
       <FelsokningSkal rubrik="Start case" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel rubrik="Scan work order">
-          <p className="mb-3 text-[#333333]">
+          <p className="mb-4 text-[#1B1E22]">
             Photograph the front of the work order. The system reads customer, vehicle and case details automatically — you review only the uncertain fields and press Start diagnosis.
           </p>
           <input
@@ -192,7 +192,7 @@ export default function NyttArende() {
             }}
           />
           {skannar ? (
-            <p className="animate-pulse py-2 text-center font-semibold text-[#00437A]">Interpreting the document …</p>
+            <p className="py-2 text-center font-semibold text-[#005CA9]">Interpreting the document …</p>
           ) : (
             <StorKnapp onClick={() => skanRef.current?.click()}><IkonKamera /> Skanna arbetsorder</StorKnapp>
           )}
@@ -215,7 +215,7 @@ export default function NyttArende() {
         tillbaka={{ till: "/felsokning", text: "Cases" }}
       >
         {tolkning.demo && (
-          <p className="mb-3 border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
+          <p className="mb-4 border border-[#8A5A00] bg-[#FFFFFF] p-2 text-[12px] font-semibold text-[#8A5A00]">
             Demo interpretation — the platform's document interpretation requires sign-in. The values below are sample data.
           </p>
         )}
@@ -253,7 +253,7 @@ export default function NyttArende() {
               </StorKnapp>
             ))}
           </div>
-          <p className="mt-3 text-[12px] text-[#707070]">
+          <p className="mt-4 text-[12px] text-[#4D5662]">
             QR code, barcode and type plate can be read in the next step — or enter the identity manually.
           </p>
         </Panel>
@@ -272,8 +272,8 @@ export default function NyttArende() {
           />
           {skannarKod ? (
             <div>
-              <video ref={videoRef} playsInline muted className="mb-2 w-full border border-[#C6C6C6]" />
-              <p className="mb-2 text-[12px] text-[#707070]">
+              <video ref={videoRef} playsInline muted className="mb-2 w-full border border-[#D7DCE2]" />
+              <p className="mb-2 text-[12px] text-[#4D5662]">
                 Point the camera at the QR code, barcode or VIN label.
               </p>
               <StorKnapp variant="sekundar" onClick={stangSkanning}>
@@ -293,7 +293,7 @@ export default function NyttArende() {
             </div>
           )}
           {avlastKod && (
-            <p className="mt-2 text-[12px] font-semibold text-[#1E6B34]">
+            <p className="mt-2 text-[12px] font-semibold text-[#005CA9]">
               Read {avlastKod.typ}: {avlastKod.varde}
               {avlastKod.format ? ` (${avlastKod.format})` : ""} — check the value below.
             </p>
@@ -316,11 +316,11 @@ export default function NyttArende() {
     return (
       <FelsokningSkal rubrik="Confirm object" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel>
-          <p className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">{objektet.typ}</p>
-          <p className="mt-1 text-[20px] font-semibold">{objektet.beskrivning}</p>
-          <p className="mt-1 text-[15px] font-semibold text-[#00437A]">{objektet.identifierare}</p>
-          <p className="mt-1 text-[12px] text-[#4A5560]">Identifierad via: {objektet.identifieringsmetod}</p>
-          {objektet.kund && <p className="mt-1 text-[14px] text-[#333333]">Kund: {objektet.kund}</p>}
+          <p className="text-[12px] font-semibold uppercase tracking-widest text-[#4D5662]">{objektet.typ}</p>
+          <p className="mt-2 text-[20px] font-semibold">{objektet.beskrivning}</p>
+          <p className="mt-2 text-[15px] font-semibold text-[#005CA9]">{objektet.identifierare}</p>
+          <p className="mt-2 text-[12px] text-[#4D5662]">Identifierad via: {objektet.identifieringsmetod}</p>
+          {objektet.kund && <p className="mt-2 text-[14px] text-[#1B1E22]">Kund: {objektet.kund}</p>}
         </Panel>
         <div className="grid grid-cols-2 gap-2">
           <StorKnapp variant="sekundar" onClick={() => setSteg("identifiera")}>
@@ -346,8 +346,8 @@ export default function NyttArende() {
           rost
         />
         {metodik && (
-          <p className="mb-3 text-[12px] font-semibold text-[#4A5560]">
-            Vald metodik: <span className="text-[#00437A]">{metodik.namn}</span>
+          <p className="mb-4 text-[12px] font-semibold text-[#4D5662]">
+            Vald metodik: <span className="text-[#005CA9]">{metodik.namn}</span>
           </p>
         )}
         <StorKnapp
@@ -401,13 +401,13 @@ function GranskaTolkning({
     setRader((r) => r.map((rad) => (rad.id === id ? { ...rad, ...andring } : rad)));
 
   return (
-    <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
+    <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
       <Panel rubrik="Scanned work order">
         <div className="relative">
-          <img src={foto} alt="Scanned work order" className="w-full border border-[#C6C6C6]" />
+          <img src={foto} alt="Scanned work order" className="w-full border border-[#D7DCE2]" />
           {vald?.omrade && (
             <div
-              className="pointer-events-none absolute border-2 border-[#00437A] bg-[#00437A]/15"
+              className="pointer-events-none absolute border-2 border-[#005CA9] bg-[#005CA9]/15"
               style={{
                 left: `${vald.omrade.x * 100}%`,
                 top: `${vald.omrade.y * 100}%`,
@@ -417,7 +417,7 @@ function GranskaTolkning({
             />
           )}
         </div>
-        <p className="mt-1 text-[11px] text-[#707070]">
+        <p className="mt-2 text-[11px] text-[#4D5662]">
           {vald?.omrade
             ? `Markerat: ${vald.etikett} (approximate position)`
             : "Select a field to see where in the document the value was found."}
@@ -436,27 +436,27 @@ function GranskaTolkning({
                   <div
                     key={rad.id}
                     onClick={() => setMarkerad(rad.id)}
-                    className={`mb-1.5 cursor-pointer border p-2 ${
-                      markerad === rad.id ? "border-[#00437A]" : "border-transparent"
-                    } ${niva === "gul" ? "bg-[#FFF8E1]" : niva === "rod" ? "bg-[#FBE9E9]" : "bg-white"}`}
+                    className={`mb-2 cursor-pointer border p-2 ${
+                      markerad === rad.id ? "border-[#005CA9]" : "border-transparent"
+                    } ${niva === "gul" ? "bg-[#FFFFFF]" : niva === "rod" ? "bg-[#FFFFFF]" : "bg-white"}`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">
                         {rad.etikett}
                       </span>
                       <span
                         className={`text-[11px] font-semibold ${
-                          niva === "gron" ? "text-[#1E6B34]" : niva === "gul" ? "text-[#9A6700]" : "text-[#8B1A1A]"
+                          niva === "gron" ? "text-[#005CA9]" : niva === "gul" ? "text-[#8A5A00]" : "text-[#8B1A1A]"
                         }`}
                       >
                         {niva === "gron" ? "✓" : `${Math.round(rad.konfidens * 100)} %`}
                       </span>
                     </div>
-                    <div className="mt-1 flex items-center gap-2">
+                    <div className="mt-2 flex items-center gap-2">
                       <input
                         value={rad.varde}
                         onChange={(e) => uppdatera(rad.id, { varde: e.target.value, bekraftad: true })}
-                        className="w-full border border-[#ADADAD] bg-white px-2 py-1 text-[13px] focus:border-[#00437A] focus:outline-none"
+                        className="w-full border border-[#D7DCE2] bg-white px-2 py-2 text-[13px] focus:border-[#005CA9] focus:outline-none"
                       />
                       {niva === "rod" && !rad.bekraftad && (
                         <button
@@ -464,7 +464,7 @@ function GranskaTolkning({
                             e.stopPropagation();
                             uppdatera(rad.id, { bekraftad: true });
                           }}
-                          className="whitespace-nowrap border border-[#6E1414] bg-[#8B1A1A] px-3 py-1 text-[12px] font-semibold text-white"
+                          className="whitespace-nowrap border border-[#8B1A1A] bg-[#8B1A1A] px-4 py-2 text-[12px] font-semibold text-white"
                         >
                           Confirm
                         </button>

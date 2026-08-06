@@ -28,7 +28,7 @@ function useKalla(bilaga: Bilaga, delningskod?: string): string | null | "laddar
 
 function Platshallare({ text }: { text: string }) {
   return (
-    <p className="border border-dashed border-[#C6C6C6] bg-[#F7F7F7] p-3 text-[12px] text-[#707070]">
+    <p className="border border-dashed border-[#D7DCE2] bg-[#F6F7F8] p-4 text-[12px] text-[#4D5662]">
       {text}
     </p>
   );

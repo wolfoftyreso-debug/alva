@@ -751,7 +751,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     rubrik: "Photographs present for checks that require them",
     ok: fotoKravUtanFoto === 0,
     kravs: true,
-    detalj: fotoKravUtanFoto > 0 ? `${fotoKravUtanFoto} fotokrävande kontroll(er) utan bild i loggen.` : undefined,
+    detalj: fotoKravUtanFoto > 0 ? `${fotoKravUtanFoto} check(s) requiring a photograph have no image in the log.` : undefined,
   });
 
   // Compliance Engine: ärendetypens regler ur det aktiva regelpaketet
@@ -794,7 +794,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
 
   rader.push({
     id: "evidensniva",
-    rubrik: `Evidensnivå: ${EVIDENS_LABEL[evidensNiva(arende)]}`,
+    rubrik: `Evidence level: ${EVIDENS_LABEL[evidensNiva(arende)]}`,
     ok: evidensNiva(arende) !== "E0",
     kravs: true,
     detalj: evidensNiva(arende) === "E0" ? "No evidence in the log yet." : undefined,

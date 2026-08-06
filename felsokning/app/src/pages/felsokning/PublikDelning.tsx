@@ -89,7 +89,7 @@ export default function PublikDelning() {
     return (
       <FelsokningSkal rubrik="Shared case">
         <Panel>
-          <p className="text-[14px] text-[#333333]">
+          <p className="text-[14px] text-[#1B1E22]">
             {status === "laddar"
               ? "Retrieving the case …"
               : "The case is not available. Check the link with the workshop — the share may have been revoked."}

@@ -16,14 +16,14 @@ function demoFoto(text: string): string {
     canvas.height = 360;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("canvas saknas");
-    ctx.fillStyle = "#27272a";
+    ctx.fillStyle = "#1B1E22";
     ctx.fillRect(0, 0, 480, 360);
-    ctx.strokeStyle = "#52525b";
+    ctx.strokeStyle = "#4D5662";
     ctx.lineWidth = 22;
     ctx.beginPath();
     ctx.arc(240, 170, 110, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.strokeStyle = "#a1a1aa";
+    ctx.strokeStyle = "#4D5662";
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.arc(240, 170, 58, 0, Math.PI * 2);
@@ -35,11 +35,11 @@ function demoFoto(text: string): string {
       ctx.lineTo(240 + Math.cos(v) * 58, 170 + Math.sin(v) * 58);
       ctx.stroke();
     }
-    ctx.fillStyle = "#fbbf24";
+    ctx.fillStyle = "#8A5A00";
     ctx.font = "bold 22px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(text, 240, 330);
-    ctx.fillStyle = "#71717a";
+    ctx.fillStyle = "#4D5662";
     ctx.font = "14px sans-serif";
     ctx.fillText("Demobild", 240, 26);
     return canvas.toDataURL("image/jpeg", 0.7);

@@ -279,18 +279,18 @@ export function handelseRubrik(post: LoggPost): string {
     case "objekt_identifierat":
       return `Objekt identifierat: ${h.objekt.beskrivning} (${h.objekt.identifierare})`;
     case "arbetsorder_skannad":
-      return `Arbetsorder skannad — ${h.falt.length} fält tolkade`;
+      return `Work order scanned — ${h.falt.length} fields interpreted`;
     case "felbeskrivning":
       return `Felbeskrivning registrerad`;
     case "fraga_besvarad":
       return `${h.fraga} — ${h.svar}`;
     case "kontroll_utford":
       if (h.undantag) return `${h.text} — underlag kunde inte tas fram: ${h.undantag}`;
-      return h.resultat ? `${h.text} — ${h.resultat}` : `${h.text} — utförd`;
+      return h.resultat ? `${h.text} — ${h.resultat}` : `${h.text} — performed`;
     case "observation":
       return `Observation: ${h.text}`;
     case "matvarde":
-      return `Mätvärde: ${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""}`;
+      return `Measurement: ${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""}`;
     case "hypotes":
       return `Hypotes (${TILLFORLITLIGHET_LABEL[h.niva]}): ${h.text}`;
     case "foto":
@@ -304,18 +304,18 @@ export function handelseRubrik(post: LoggPost): string {
     case "inaktivitet_forklarad":
       return `Komplettering (${h.minuter} min utan aktivitet): ${h.text}`;
     case "overlamning":
-      return h.till ? `Arbete överlämnat från ${h.fran} till ${h.till}` : `Arbete överlämnat av ${h.fran}`;
+      return h.till ? `Work handed over from ${h.fran} to ${h.till}` : `Work handed over by ${h.fran}`;
     case "ansvarig_satt":
       return `Ansvarig tekniker: ${h.ansvarig}`;
     case "arendetyp_satt":
-      return `Ärendetyp: ${h.arendetyp}`;
+      return `Case type: ${h.arendetyp}`;
     case "historik_kontrollerad":
       return h.kontrollerad
         ? `Fordonshistorik kontrollerad${h.kommentar ? `: ${h.kommentar}` : ""}`
         : `Fordonshistorik EJ kontrollerad — orsak: ${h.kommentar ?? "saknas"}`;
     case "matarstallning":
-      if (h.undantag) return `Mätarställning (${h.lage === "ingaende" ? "in" : "ut"}) kunde inte dokumenteras: ${h.undantag}`;
-      return `Mätarställning ${h.lage === "ingaende" ? "in" : "ut"}: ${h.varde}`;
+      if (h.undantag) return `Odometer reading (${h.lage === "ingaende" ? "in" : "out"}) could not be documented: ${h.undantag}`;
+      return `Odometer ${h.lage === "ingaende" ? "in" : "out"}: ${h.varde}`;
     case "reproducering":
       return h.status === "ja"
         ? `Symptomet reproducerat: ${h.beskrivning}`
@@ -325,22 +325,22 @@ export function handelseRubrik(post: LoggPost): string {
     case "felorsak":
       return `Felorsak (${TILLFORLITLIGHET_LABEL[h.sakerhet]}): ${h.avvikelse} — ${h.orsaker.join(", ")}`;
     case "atgardsforslag":
-      return `Åtgärdsförslag till kund: ${h.beskrivning}${h.uppskattadKostnad ? ` — uppskattad kostnad ${h.uppskattadKostnad}` : ""}`;
+      return `Proposed action for the customer: ${h.beskrivning}${h.uppskattadKostnad ? ` — uppskattad kostnad ${h.uppskattadKostnad}` : ""}`;
     case "kundbeslut":
       return `Kundens besked (${h.kanal}): ${KUNDBESLUT_LABEL[h.beslut]}${h.kommentar ? ` — ${h.kommentar}` : ""}`;
     case "atgard_utford":
       return h.utford
-        ? `Åtgärd utförd: ${h.beskrivning}${h.delar ? ` (delar: ${h.delar})` : ""}`
-        : `Ingen åtgärd utförd — ${h.motivering ?? "reason missing"}`;
+        ? `Action performed: ${h.beskrivning}${h.delar ? ` (delar: ${h.delar})` : ""}`
+        : `No action performed — ${h.motivering ?? "reason missing"}`;
     case "kvalitetskontroll":
       return `Kvalitetskontroll: ${KVALITETSKONTROLL_LABEL[h.resultat]} — ${h.beskrivning}`;
     case "export_skapad":
       return `Export skapad: ${h.format}, version ${h.version}`;
     case "ai_svar": {
       const forsta = h.rader[0];
-      return `AI: ${forsta ? `${forsta.text} ` : ""}— Nästa steg: ${h.nastaSteg}`;
+      return `AI: ${forsta ? `${forsta.text} ` : ""}— Next step: ${h.nastaSteg}`;
     }
     case "arende_avslutat":
-      return h.signatur ? `Felsökning avslutad — signerad av ${h.signatur}` : "Diagnosis closed";
+      return h.signatur ? `Diagnosis closed — signed by ${h.signatur}` : "Diagnosis closed";
   }
 }

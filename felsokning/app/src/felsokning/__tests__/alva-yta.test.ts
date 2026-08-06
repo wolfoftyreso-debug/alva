@@ -14,7 +14,16 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FORBJUDNA_ORD } from "@/alva/sprak";
 
-const KATALOGER = ["src/alva", "src/pages/alva"];
+// ---- Vad testet omfattar ------------------------------------------------
+//
+// Arbetsvyn låg länge utanför. Följden var förutsägbar och blev verklig:
+// portalen höll åtta färger, arbetsvyn fyrtiosju, och de två delarna av
+// samma produkt såg ut som två produkter. Ett designsystem som bara gäller
+// halva ytan är en stilguide, inte ett system.
+//
+// Katalogerna nedan är därför hela ALVA-ytan — marknadswebb, portal OCH
+// det gränssnitt teknikern faktiskt arbetar i.
+const KATALOGER = ["src/alva", "src/pages/alva", "src/felsokning", "src/pages/felsokning"];
 
 const filer = KATALOGER.flatMap((katalog) =>
   readdirSync(katalog)
@@ -28,7 +37,17 @@ const utanKommentarer = (kod: string) =>
 
 describe("ALVA-ytan följer designsystemet", () => {
   it("hittar filerna att granska", () => {
-    expect(filer.length).toBeGreaterThanOrEqual(7);
+    // Höjt från 7 när arbetsvyn kom med. Talet är motvikten mot en
+    // katalog som råkar tömmas: ett test som granskar noll filer är
+    // grönt av fel skäl.
+    expect(filer.length).toBeGreaterThanOrEqual(25);
+  });
+
+  it("granskar både portalen och arbetsvyn", () => {
+    // Det som gick fel var att halva produkten stod utanför regeln.
+    expect(filer.some(([n]) => n.startsWith("src/pages/alva/"))).toBe(true);
+    expect(filer.some(([n]) => n.startsWith("src/pages/felsokning/"))).toBe(true);
+    expect(filer.some(([n]) => n === "src/felsokning/ui.tsx")).toBe(true);
   });
 
   it.each(filer)("%s använder ingen gradient, glaseffekt eller skugga", (_namn, kod) => {

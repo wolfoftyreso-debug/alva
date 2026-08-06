@@ -25,7 +25,7 @@ describe("demoärendet", () => {
 
   it("har cirka 1,5 timmars loggad arbetstid och en överlämning", () => {
     const b = brief(arende, VIBRATION_METODIK);
-    expect(b.totalArbetstid).toBe("1 tim 35 min");
+    expect(b.totalArbetstid).toBe("1 h 35 min");
     expect(arende.handelser.some((p) => p.handelse.typ === "overlamning")).toBe(true);
     expect(new Set(arende.handelser.map((p) => p.anvandare)).size).toBeGreaterThanOrEqual(2);
   });
