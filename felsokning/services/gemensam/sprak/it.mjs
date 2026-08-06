@@ -1,11 +1,11 @@
 // ALVA-SPEC-060 · Italiano.
 //
-// I pulsanti usano l'imperativo breve («Salva», «Annulla»), come vuole
-// la convenzione delle interfacce italiane; le istruzioni all'interno
-// delle frasi restano all'infinito («Fotografare il contachilometri»),
-// senza rivolgersi all'operatore — ALVA-SPEC-001 §7.
+// I pulsanti usano l’imperativo breve («Salva», «Annulla»), come vuole
+// la convenzione delle interfacce italiane; le istruzioni all’interno
+// delle frasi restano all’infinito («Fotografare il contachilometri»),
+// senza rivolgersi all’operatore — ALVA-SPEC-001 §7.
 //
-// `granskat: false`: l'interfaccia è tradotta, il testo delle procedure
+// `granskat: false`: l’interfaccia è tradotta, il testo delle procedure
 // non è revisionato da uno specialista. Vedi index.mjs.
 
 export const IT = {
@@ -20,7 +20,7 @@ export const IT = {
   "evidens.ej_fotograferad": "inserito, non fotografato",
 
   // ---- Il controllo di chiusura -------------------------------------------
-  "grind.objekt": "Identificazione del veicolo o dell'oggetto verificata",
+  "grind.objekt": "Identificazione del veicolo o dell’oggetto verificata",
   "grind.historik": "Storico del veicolo verificato o motivato",
   "grind.historik.nekad": "Un controllo dello storico rifiutato richiede un motivo indicato.",
   "grind.historik.saknas": "Nessun controllo dello storico documentato.",
@@ -51,8 +51,8 @@ export const IT = {
   "grind.sparr.ej_uppfyllt": "Il requisito di sicurezza non è soddisfatto.",
   "grind.arendetyp.okant": "Requisito sconosciuto nel pacchetto di regole: {krav}",
   "grind.arendetyp.krav": "Requisito per questo tipo di pratica: {krav}",
-  "grind.sakerhet": "Livello di confidenza entro quanto sostiene l'evidenza",
-  "grind.sakerhet.detalj": "La confidenza indicata ({niva}) supera quanto sostiene l'evidenza ({tak}). Integrare l'evidenza, oppure abbassare il livello — l'incertezza onesta è informazione.",
+  "grind.sakerhet": "Livello di confidenza entro quanto sostiene l’evidenza",
+  "grind.sakerhet.detalj": "La confidenza indicata ({niva}) supera quanto sostiene l’evidenza ({tak}). Integrare l’evidenza, oppure abbassare il livello — l’incertezza onesta è informazione.",
 
 
   // ---- La conclusione (ALVA-RULE-200) -------------------------------------
@@ -67,13 +67,13 @@ export const IT = {
   "slutsats.falt.motivering_ej": "Motivo per cui la causa non è stata accertata",
   "slutsats.falt.uteslutet": "Alternative escluse",
   "slutsats.falt.kvarstaende": "Incertezza residua",
-  "slutsats.falt.atgardsval": "Scelta dell'intervento",
+  "slutsats.falt.atgardsval": "Scelta dell’intervento",
   "slutsats.saknas": "{falt} manca.",
   "slutsats.ickesvar.falt": "{falt}: «{text}» non è una motivazione. Indicare che cosa vale realmente, e perché.",
   "slutsats.for_kort": "{falt} è troppo breve ({langd} su almeno {minsta} caratteri) per poter essere verificato in seguito.",
-  "slutsats.utan_varfor": "{falt} indica il che cosa, non il perché. Collegare la conclusione all'evidenza — che cosa in essa la sostiene?",
-  "slutsats.utan_slutsats": "La pratica non può essere chiusa senza una conclusione. Indicare perché la conclusione discende dall'evidenza.",
-  "slutsats.hypotes_obemott": "L'ipotesi «{text}» è presente nel registro ma non viene trattata. Indicare perché è stata esclusa, o perché resta aperta.",
+  "slutsats.utan_varfor": "{falt} indica il che cosa, non il perché. Collegare la conclusione all’evidenza — che cosa in essa la sostiene?",
+  "slutsats.utan_slutsats": "La pratica non può essere chiusa senza una conclusione. Indicare perché la conclusione discende dall’evidenza.",
+  "slutsats.hypotes_obemott": "L’ipotesi «{text}» è presente nel registro ma non viene trattata. Indicare perché è stata esclusa, o perché resta aperta.",
 
 
   // ---- Flusso della pratica -----------------------------------------------
@@ -88,7 +88,7 @@ export const IT = {
   "arende.ansvarig": "Responsabile",
 
   // ---- Controllo preliminare ----------------------------------------------
-  "pre.rubrik": "Controllo preliminare — prima dell'inizio del lavoro",
+  "pre.rubrik": "Controllo preliminare — prima dell’inizio del lavoro",
   "pre.historik.fraga":
     "Lo storico del veicolo è stato verificato? (lavori precedenti, guasti ricorrenti, TSB, campagne)",
   "pre.historik.ja": "Sì — verificato",
@@ -133,10 +133,10 @@ export const IT = {
   "sprak.valj": "Lingua",
   "sprak.granskat": "Revisionato",
   "sprak.ogranskat": "Non revisionato",
-  "sprak.tackning": "{procent} % dell'interfaccia",
+  "sprak.tackning": "{procent} % dell’interfaccia",
 
   "metodik.ogranskad":
-    "Il testo delle procedure non è stato revisionato da uno specialista tecnico in {sprak}. I passaggi e i punti di controllo sono mostrati in inglese dove non esiste una traduzione revisionata — una traduzione non revisionata di un'istruzione di sicurezza è peggiore di una in lingua straniera, perché non sembra straniera.",
+    "Il testo delle procedure non è stato revisionato da uno specialista tecnico in {sprak}. I passaggi e i punti di controllo sono mostrati in inglese dove non esiste una traduzione revisionata — una traduzione non revisionata di un’istruzione di sicurezza è peggiore di una in lingua straniera, perché non sembra straniera.",
   "metodik.pa_engelska": "Mostrato in inglese — nessuna traduzione revisionata in {sprak}",
 
   // ---- Sito pubblico (webb.) ---------------------------------------------

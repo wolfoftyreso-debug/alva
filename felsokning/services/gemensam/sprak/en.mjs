@@ -70,7 +70,7 @@ export const EN = {
   "grind.foton": "Photographs present for checks that require them",
   "grind.slutsats": "Closing statement (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "High-voltage authorisation confirmed",
-  "grind.hogvolt.spanningslos": "Vehicle de-energised per the manufacturer's procedure",
+  "grind.hogvolt.spanningslos": "Vehicle de-energised per the manufacturer’s procedure",
   "grind.regelpaket": "Rule package signature does not match — closing blocked.",
   "grind.regelpaket.osignerat": "An external rule package is in use without a signature — closing blocked.",
   "grind.evidens": "Evidence above E0",
@@ -116,14 +116,14 @@ export const EN = {
 
   // ---- Pre-diagnostics ------------------------------------------------------
   "pre.rubrik": "Pre-diagnostics — before the work begins",
-  "pre.historik.fraga": "Has the vehicle's history been checked? (previous work, recurring faults, TSBs, campaigns)",
+  "pre.historik.fraga": "Has the vehicle’s history been checked? (previous work, recurring faults, TSBs, campaigns)",
   "pre.historik.ja": "Yes — checked",
   "pre.historik.nej": "No",
   "pre.historik.skal": "Reason the history was not checked (required)",
   "pre.historik.relevant": "Relevant previous work (optional — causal chain)",
   "pre.matarstallning": "Odometer reading",
   "pre.fotografera": "Photograph the instrument panel",
-  "pre.felbeskrivning": "Customer's description verified",
+  "pre.felbeskrivning": "Customer’s description verified",
   "pre.observationer": "Anything else on receipt?",
 
   // ---- Common actions --------------------------------------------------------
@@ -161,7 +161,7 @@ export const EN = {
   "sprak.tackning": "{procent} % of the interface",
 
   // Shown when the methodology content has not been reviewed by a
-  // specialist in the user's language. Deliberately specific: a general
+  // specialist in the user’s language. Deliberately specific: a general
   // disclaimer is read by nobody.
   "metodik.ogranskad":
     "Procedure text has not been reviewed by a technical specialist in {sprak}. Steps and checks are shown in English where no reviewed translation exists — an unreviewed translation of a safety instruction is worse than a foreign-language one, because it does not look foreign.",
@@ -173,7 +173,7 @@ export const EN = {
   // speaks through the same catalogue. Keys follow the page order. The
   // portal chrome is deliberately absent: the portal is the product, and
   // its language is governed by account and organization, not by the
-  // visitor's footer choice.
+  // visitor’s footer choice.
   "webb.nav.oversikt": "Overview",
   "webb.ansok": "Request account",
   "webb.loggain": "Login",
