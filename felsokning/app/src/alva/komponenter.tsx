@@ -457,33 +457,41 @@ export function Tabell({ kolumner, rader }: { kolumner: string[]; rader: ReactNo
         </table>
       </div>
 
-      <div className="sm:hidden">
+      {/* ---- Smal skärm ------------------------------------------------
+          Den staplade formen upprepade kolumnnamnet före VARJE cell: sex
+          rader gånger tre kolumner blev arton etiketter av samma vikt,
+          och innehållet drunknade i dem. Etiketten för första kolumnen
+          var dessutom rent brus — den cellen ÄR radens identitet, och att
+          skriva "SEKTION" ovanför den säger ingenting.
+
+          Första cellen är därför rubrik utan etikett, och resten
+          etiketteras. Blocken skiljs med bakgrund i stället för med en
+          hårstreckslinje, så att ögat ser var en post börjar utan att
+          läsa. */}
+      <div className="grid gap-2 sm:hidden">
         {rader.map((rad, i) => (
-          <dl
-            key={i}
-            className="border-b py-2 last:border-b-0"
-            style={{ borderColor: FARG.lightSteel }}
-          >
-            {rad.map((cell, j) => (
-              <div key={j} className="mt-2 flex flex-wrap items-baseline gap-2 first:mt-0">
-                {/* `min-w` och inte `w`: en etikett som AUTHENTICATION är
-                    bredare än 96 px och kan inte brytas, så en fast bredd
-                    fick den att spilla ut ur sin ruta och lägga sig ovanpå
-                    värdet. Med en minimibredd håller korta etiketter
-                    kolumnen, och långa knuffar i stället värdet till nästa
-                    rad — behållaren bryter redan. */}
-                <dt
-                  className="min-w-[96px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]"
-                  style={{ color: FARG.steel }}
-                >
-                  {kolumner[j]}
-                </dt>
-                <dd className="m-0 min-w-0 flex-1 text-[13px] leading-[20px]" style={{ color: FARG.graphite }}>
-                  {cell}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <div key={i} className="border p-4" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>
+            <p className="text-[14px] font-semibold leading-[21px]" style={{ color: FARG.graphite }}>
+              {rad[0]}
+            </p>
+            {rad.length > 1 && (
+              <dl className="mt-4 grid gap-2">
+                {rad.slice(1).map((cell, j) => (
+                  <div key={j}>
+                    <dt
+                      className="text-[10px] font-semibold uppercase tracking-[0.08em]"
+                      style={{ color: FARG.steel }}
+                    >
+                      {kolumner[j + 1]}
+                    </dt>
+                    <dd className="m-0 mt-2 text-[13px] leading-[20px]" style={{ color: FARG.graphite }}>
+                      {cell}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
         ))}
       </div>
     </>
