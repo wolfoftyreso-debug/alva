@@ -1022,6 +1022,52 @@ OMSKRIVNING=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform
   "update felsokning_arenden set forsegling = 'ffff' where id = 'arende-forseglat'" 2>&1 || true)
 kontroll "förseglingen kan inte skrivas om" "$(echo "$OMSKRIVNING" | grep -c 'kan inte ändras')" "1"
 
+# 18e. Skrivning efter avslut får inte ogiltigförklara förseglingen
+#
+# Offline-synk är en kärnfunktion: en annan enhet kan lämna in händelser
+# EFTER att någon stängt ärendet. Förseglingen intygar loggen fram till
+# avslutet — den får varken larma falskt för att livet fortsatte, eller
+# tyst låtsas täcka det som kom efteråt.
+curl -s -o /dev/null -X POST "$BAS/api/arenden/arende-forseglat/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"sen-1","tidpunkt":"2026-08-06T12:00:00Z","anvandare":"Johan","handelse":{"typ":"observation","text":"Sent synkad observation fran en annan enhet."}}]}'
+EFTER=$(curl -s "$BAS/api/arenden/arende-forseglat/kedja" -H "Authorization: Bearer $TOKEN_A")
+kontroll "kedjan verifierar med efterhandelsen" "$(echo "$EFTER" | falt .ok)" "true"
+kontroll "förseglingen är fortfarande giltig — den täcker sitt prefix" "$(echo "$EFTER" | falt .forsegling)" "giltig"
+kontroll "men efterhandelserna redovisas" "$(echo "$EFTER" | falt .efterForsegling)" "1"
+
+# 18f. Prefixsemantikens motvikt: sabotage INUTI prefixet fäller den
+#
+# Prefixfixen (K-1) får inte vara för snäll. En rad ändrad FÖRE
+# förseglingspunkten ska fälla både kedjan och förseglingen — annars
+# vore "täcker sitt prefix" bara ett artigare ord för "täcker ingenting".
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning -q <<'SQL'
+drop trigger handelser_append_only on felsokning_handelser;
+update felsokning_handelser
+  set handelse = jsonb_set(handelse, '{beskrivning}', '"Manipulerad reproducering."')
+  where arende_id = 'arende-forseglat' and handelse->>'typ' = 'reproducering';
+create trigger handelser_append_only
+  before update or delete on felsokning_handelser
+  for each row execute function forbjud_andring();
+SQL
+SABOT2=$(curl -s "$BAS/api/arenden/arende-forseglat/kedja" -H "Authorization: Bearer $TOKEN_A")
+kontroll "sabotage i prefixet bryter kedjan" "$(echo "$SABOT2" | falt .ok)" "false"
+kontroll "sabotage i prefixet fäller förseglingen" "$(echo "$SABOT2" | falt .forsegling)" "OGILTIG"
+
+# 18g. Siffror i händelsen överlever databasens rundresa
+#
+# Kedjans digest räknas om ur lagrad jsonb. Tal normaliseras av Postgres
+# — om normaliseringen skilde sig från JavaScripts vore varje händelse
+# med ett tal ett falsklarm. Konfidensvärden är de enda talen i schemat,
+# så de provas med de former som brukar gå sönder: decimaler, exponenter,
+# stora tal.
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-tal","nummer":90,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
+curl -s -o /dev/null -X POST "$BAS/api/arenden/arende-tal/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"tal-1","tidpunkt":"2026-08-06T10:01:00Z","anvandare":"Anna","handelse":{"typ":"arbetsorder_skannad","falt":[{"id":"kund_namn","varde":"Test","konfidens":0.9},{"id":"fordon_regnr","varde":"ABC123","konfidens":0.55},{"id":"ao_nummer","varde":"1","konfidens":1},{"id":"fordon_vin","varde":"X","konfidens":1e-7},{"id":"fordon_marke","varde":"Y","konfidens":0.10000000000000009}]}}]}'
+TAL=$(curl -s "$BAS/api/arenden/arende-tal/kedja" -H "Authorization: Bearer $TOKEN_A")
+kontroll "kedjan överlever numerisk rundresa genom jsonb" "$(echo "$TAL" | falt .ok)" "true"
+
 # 19. Support och felanmälan (ALVA-PROC-0050)
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true

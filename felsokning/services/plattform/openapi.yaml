@@ -776,7 +776,19 @@ paths:
                       den är.
                   forsegling:
                     type: string
-                    description: saknas · giltig · OGILTIG · kan inte prövas
+                    description: >
+                      saknas · giltig · OGILTIG · kan inte prövas.
+                      Förseglingen täcker sitt PREFIX — loggen fram till
+                      avslutet. Händelser som tillkommit efter (sen
+                      offline-synk, sena kundbesked) gör den inte
+                      ogiltig; de redovisas i `efterForsegling`.
+                  efterForsegling:
+                    type: integer
+                    nullable: true
+                    description: >
+                      Kedjade händelser efter förseglingspunkten. Noll är
+                      det normala; ett tal är inte ett fel utan ett
+                      faktum läsaren ska se.
                   bevisar: { type: string }
         "401": { $ref: "#/components/responses/Fel" }
         "404": { $ref: "#/components/responses/Fel" }

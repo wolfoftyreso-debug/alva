@@ -516,22 +516,31 @@ async function skrivKedjat(arendeId, poster) {
     );
     let sekvens = Number(sista.rows[0]?.sekvens ?? 0);
     let h = sista.rows[0]?.kedjehash ?? grund(arendeId);
+    let skrivna = 0;
 
     for (const p of poster) {
       const digest = innehallsHash(kanoniskt(p.handelse));
-      const nastaH = lank(h, { id: p.id, tidpunkt: p.tidpunkt, anvandare: p.anvandare, digest });
+      // Tidpunkten normaliseras HÄR, till exakt den form verifieringen
+      // räknar om ur databasen (millisekunders ISO). Alla nuvarande
+      // vägar går genom tillPost som redan ger den formen — men länken
+      // får inte vila på att det förblir sant. En kedja som bryts av ett
+      // tidsformat är ett falsklarm, och falsklarm dödar förtroendet
+      // för verifieringen (revision 3, m-1).
+      const tid = new Date(p.tidpunkt).toISOString();
+      const nastaH = lank(h, { id: p.id, tidpunkt: tid, anvandare: p.anvandare, digest });
       const r = await db.query(
         `insert into felsokning_handelser
            (id, arende_id, tidpunkt, anvandare, handelse, klientdigest, sekvens, kedjehash)
          values ($1, $2, $3, $4, $5, $6, $7, $8)
          on conflict (arende_id, id) do nothing`,
-        [p.id, arendeId, p.tidpunkt, p.anvandare, p.handelse, p.klientdigest ?? null, sekvens + 1, nastaH],
+        [p.id, arendeId, tid, p.anvandare, p.handelse, p.klientdigest ?? null, sekvens + 1, nastaH],
       );
       // En dubblett skrivs inte och får därför inte heller flytta kedjan:
       // länken ovan förbrukas bara när raden faktiskt sattes in.
       if (r.rowCount > 0) {
         sekvens += 1;
         h = nastaH;
+        skrivna += 1;
       }
     }
 
@@ -556,7 +565,7 @@ async function skrivKedjat(arendeId, poster) {
     }
 
     await db.query("commit");
-    return { rot: h };
+    return { rot: h, skrivna, dubbletter: poster.length - skrivna };
   } catch (fel) {
     await db.query("rollback").catch(() => {});
     throw fel;
@@ -569,7 +578,7 @@ async function grindHinder(pool, arendeId, nya, sprak = STANDARD) {
   const rader = await pool.query(
     `select h.handelse, a.metodik_id from felsokning_handelser h
      join felsokning_arenden a on a.id = h.arende_id
-     where h.arende_id = $1 order by h.tidpunkt, h.id`,
+     where h.arende_id = $1 order by h.sekvens nulls first, h.tidpunkt, h.id`,
     [arendeId],
   );
   const handelser = [...rader.rows.map((r) => r.handelse), ...nya.map((p) => p.handelse)];
@@ -1288,12 +1297,12 @@ export function skapaServer() {
           ? await pool.query(
               `select id, tidpunkt, anvandare, handelse from felsokning_handelser
                where arende_id = $1 and handelse->>'typ' = any($2)
-               order by tidpunkt, id`,
+               order by sekvens nulls first, tidpunkt, id`,
               [arendeId, synliga],
             )
           : await pool.query(
               `select id, tidpunkt, anvandare, handelse from felsokning_handelser
-               where arende_id = $1 order by tidpunkt, id`,
+               where arende_id = $1 order by sekvens nulls first, tidpunkt, id`,
               [arendeId],
             );
         return svara(res, 200, { arende: arende.rows[0], handelser: handelser.rows, niva });
@@ -2305,7 +2314,7 @@ export function skapaServer() {
         }
         const rader = await pool.query(
           `select tidpunkt, anvandare, handelse from felsokning_handelser
-           where arende_id = $1 order by tidpunkt, id`,
+           where arende_id = $1 order by sekvens nulls first, tidpunkt, id`,
           [sammanfattningVag[1]],
         );
         const nycklar = await nycklarFor(anspr.org);
@@ -2380,23 +2389,11 @@ export function skapaServer() {
           poster.push(post);
         }
 
-        let skrivna = 0;
-        let dubbletter = 0;
-        {
-          // Kedjat via samma väg som allt annat. Räkningen görs mot
-          // loggen efteråt — skrivKedjat äger transaktionen.
-          const fore = await pool.query(
-            `select count(*)::int as n from felsokning_handelser where arende_id = $1`,
-            [protokollVag[1]],
-          );
-          await skrivKedjat(protokollVag[1], poster);
-          const efter = await pool.query(
-            `select count(*)::int as n from felsokning_handelser where arende_id = $1`,
-            [protokollVag[1]],
-          );
-          skrivna = efter.rows[0].n - fore.rows[0].n;
-          dubbletter = poster.length - skrivna;
-        }
+        // Kedjat via samma väg som allt annat, och räkningen kommer ur
+        // transaktionen som gjorde jobbet — inte ur två count-frågor
+        // runtomkring, där en samtidig skrivning från någon annan
+        // hamnade i vår siffra (revision 3, m-2).
+        const { skrivna, dubbletter } = await skrivKedjat(protokollVag[1], poster);
 
         // Delvis lyckad inläsning är inte 200. Mottagaren ska behöva
         // hantera att något inte kom in.
@@ -2565,31 +2562,64 @@ export function skapaServer() {
         );
         const okedjade = rader.rows.filter((r) => r.sekvens == null).length;
 
-        // Förseglingen prövas mot den OMRÄKNADE roten, inte den lagrade:
-        // en angripare som räknat om kedjan och roten stoppas av att
-        // HMAC:en inte går att räkna om utan nyckeln.
+        // Förseglingen täcker sitt PREFIX, inte kedjans nuvarande rot.
+        //
+        // Skillnaden är inte akademisk. Offline-synk är en kärnfunktion:
+        // en annan enhet kan lämna in händelser EFTER att ärendet
+        // stängts, och då flyttar kedjans rot förbi den förseglade.
+        // Revision 3 (K-1) fann att verifieringen då svarade OGILTIG —
+        // ett falsklarm i normal drift, och en verifiering som larmar
+        // falskt avfärdas snart som trasig. Det är så ett skydd dör.
+        //
+        // Rätt semantik: den förseglade roten ska vara EN LÄNK I den
+        // omräknade kedjan. Är den det bevisar förseglingen loggen fram
+        // till den punkten, och det som kom efter redovisas som
+        // oförseglat i stället för att smittas eller smitta. En
+        // angripare som räknat om kedjan stoppas fortfarande: den
+        // omräknade kedjan innehåller inte den gamla roten, och en ny
+        // försegling kan inte skapas utan nyckeln.
         const arende = await pool.query(
           `select kedjerot, forsegling, forseglad from felsokning_arenden where id = $1`,
           [kedjeVag[1]],
         );
         const a = arende.rows[0] ?? {};
         let forsegling = "saknas";
+        let efterForsegling = null;
         if (a.forsegling) {
-          if (!FORSEGLING_NYCKEL) forsegling = "kan inte prövas — FORSEGLING_NYCKEL saknas";
-          else if (
-            kedja.ok &&
-            a.kedjerot === kedja.rot &&
-            provaForsegling(
-              FORSEGLING_NYCKEL,
-              kedjeVag[1],
-              a.kedjerot,
-              new Date(a.forseglad).toISOString(),
-              a.forsegling,
-            )
-          ) {
-            forsegling = "giltig";
+          if (!FORSEGLING_NYCKEL) {
+            forsegling = "kan inte prövas — FORSEGLING_NYCKEL saknas";
           } else {
-            forsegling = "OGILTIG";
+            const kedjade = rader.rows.filter((r) => r.sekvens != null);
+            const idx = kedjade.findIndex((r) => r.kedjehash === a.kedjerot);
+            // Prefixet prövas för sig: ett brott EFTER förseglingspunkten
+            // gör inte prefixet mindre bevisat — brottet pekas ut ovan.
+            const prefixOk =
+              idx >= 0 &&
+              verifieraKedja(
+                kedjeVag[1],
+                kedjade.slice(0, idx + 1).map((r) => ({
+                  id: r.id,
+                  tidpunkt: new Date(r.tidpunkt).toISOString(),
+                  anvandare: r.anvandare,
+                  digest: innehallsHash(kanoniskt(r.handelse)),
+                  kedjehash: r.kedjehash,
+                })),
+              ).ok;
+            if (
+              prefixOk &&
+              provaForsegling(
+                FORSEGLING_NYCKEL,
+                kedjeVag[1],
+                a.kedjerot,
+                new Date(a.forseglad).toISOString(),
+                a.forsegling,
+              )
+            ) {
+              forsegling = "giltig";
+              efterForsegling = kedjade.length - (idx + 1);
+            } else {
+              forsegling = "OGILTIG";
+            }
           }
         }
 
@@ -2604,6 +2634,10 @@ export function skapaServer() {
           kedjade: rader.rows.length - okedjade,
           okedjade,
           forsegling,
+          // Hur många kedjade händelser som ligger EFTER förseglingen.
+          // Noll är det normala; ett tal här är inte ett fel utan ett
+          // faktum som läsaren ska se: sen synk, sena kundbesked.
+          efterForsegling,
           bevisar:
             "Content unchanged since receipt, in the recorded order. Nothing about the time before receipt, nothing about accuracy.",
         });
@@ -2618,7 +2652,7 @@ export function skapaServer() {
         if (req.method === "GET") {
           const rader = await pool.query(
             `select id, tidpunkt, anvandare, handelse from felsokning_handelser
-             where arende_id = $1 order by tidpunkt, id`,
+             where arende_id = $1 order by sekvens nulls first, tidpunkt, id`,
             [handelserVag[1]],
           );
           const nycklar = await nycklarFor(anspr.org);
