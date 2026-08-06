@@ -278,6 +278,15 @@ async function kor(sida, fall) {
       await fyll(fo.locator("textarea").first(), fall.avvikelse);
       await klicka(btn(/^Normal wear$/, fo));
       await klicka(btn(/^Measurement result$/, fo));
+      // Säkerhetsnivån är ett tak sedan ALVA-SPEC-071: utan spårbart
+      // mätdon (lokalt läge har inget register) är taket som högst
+      // medel, och vid medel/låg kräver panelen att teknikern anger
+      // vilka ytterligare kontroller som skulle stärka bedömningen.
+      // Genomgången fyller fältet som en tekniker skulle.
+      const ytterligare = fo.locator("label").filter({ hasText: /further checks/i }).locator("textarea, input");
+      if (await finns(ytterligare)) {
+        await fyll(ytterligare.first(), "Mätning med kalibrerat mätdon skulle stärka bedömningen.");
+      }
       await fyll(fo.locator('input[type="text"], textarea').last(), fall.atgard);
       await klicka(btn(/Save root cause/i, fo));
       // En metodik utan mätkontroller har inga mätresultat att luta sig

@@ -51,6 +51,8 @@ export const IT = {
   "grind.sparr.ej_uppfyllt": "Il requisito di sicurezza non è soddisfatto.",
   "grind.arendetyp.okant": "Requisito sconosciuto nel pacchetto di regole: {krav}",
   "grind.arendetyp.krav": "Requisito per questo tipo di pratica: {krav}",
+  "grind.sakerhet": "Livello di confidenza entro quanto sostiene l'evidenza",
+  "grind.sakerhet.detalj": "La confidenza indicata ({niva}) supera quanto sostiene l'evidenza ({tak}). Integrare l'evidenza, oppure abbassare il livello — l'incertezza onesta è informazione.",
 
 
   // ---- La conclusione (ALVA-RULE-200) -------------------------------------

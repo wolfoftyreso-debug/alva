@@ -42,6 +42,7 @@ import { STATUSAR, granskaAnmalan, sammanhang as byggSammanhang, supportbeteckni
 import { NIVAER, abonnemangstillstand, behorighet, besked, forfallenFakturering, nivaFor } from "./abonnemang.mjs";
 import { fakturaPdf } from "./fakturapdf.mjs";
 import { STANDARD, valjSprak, t } from "./sprak/index.mjs";
+import { forsegla, grund, lank, provaForsegling, verifiera as verifieraKedja } from "./kedja.mjs";
 import {
   MASKERAT,
   gallringsdatum,
@@ -135,6 +136,13 @@ const ROLLER = ["tekniker", "arbetsledare", "admin"];
 // faktura utfärdas alls: fakturering fallerar stängt, av samma skäl som
 // ett ärende utan evidens inte kan avslutas.
 const FAKTURERING_NYCKEL = process.env.FAKTURERING_NYCKEL ?? "";
+
+// Förseglingsnyckeln hålls utanför databasen av samma skäl som
+// PERSONNYCKEL_HUVUD: det den skyddar mot är den som HAR databasen.
+// Utan nyckel skrivs kedjan ändå — den skyddar mot radändring — men
+// avslut förseglas inte, och verifieringen säger det rakt ut i stället
+// för att låtsas.
+const FORSEGLING_NYCKEL = process.env.FORSEGLING_NYCKEL ?? "";
 
 // Vår egen support. Verkstaden anmäler och svarar i sitt eget ärende;
 // att sätta status är vår sida av bordet, och den skiljs med en egen
@@ -473,6 +481,90 @@ async function orgSprak(pool, orgId) {
  * händelserna ovanpå och utvärderar grinden mot det samlade underlaget —
  * annars skulle ett avslut i samma anrop som evidensen felaktigt nekas.
  */
+/**
+ * Skriver händelser till loggen MED kedjelänk (ALVA-SPEC-070).
+ *
+ * All skrivning till felsokning_handelser går genom den här funktionen.
+ * En händelse som skrivs vid sidan av kedjan är ett hål i beviset, så
+ * det får inte finnas en bekväm väg förbi.
+ *
+ * Ordningen säkras med radlås på ärendet: två samtidiga batchar mot
+ * samma ärende serialiseras, annars hade båda läst samma "senaste länk"
+ * och kedjan forkat — en fork ser ut som manipulation utan att vara det,
+ * och en verifiering som larmar falskt avfärdas snart som trasig.
+ *
+ * Länkens digest tas över den LAGRADE händelsen — efter kryptering —
+ * inte över klientens klartext. Det är avsiktligt: verifieringen ska
+ * kunna räkna om digesten ur databasen för all framtid, och den lagrade
+ * formen är den enda som aldrig ändras. Krypto-shredding förstör
+ * nycklar, inte rader, så kedjan överlever en radering.
+ *
+ * @returns {rot} kedjans sista länk efter batchen
+ */
+async function skrivKedjat(arendeId, poster) {
+  const db = await pool.connect();
+  try {
+    await db.query("begin");
+    // Radlåset serialiserar kedjan per ärende. Ärendet finns alltid här —
+    // org-gränsen är redan prövad av anroparen.
+    await db.query(`select 1 from felsokning_arenden where id = $1 for update`, [arendeId]);
+    const sista = await db.query(
+      `select sekvens, kedjehash from felsokning_handelser
+       where arende_id = $1 and sekvens is not null
+       order by sekvens desc limit 1`,
+      [arendeId],
+    );
+    let sekvens = Number(sista.rows[0]?.sekvens ?? 0);
+    let h = sista.rows[0]?.kedjehash ?? grund(arendeId);
+
+    for (const p of poster) {
+      const digest = innehallsHash(kanoniskt(p.handelse));
+      const nastaH = lank(h, { id: p.id, tidpunkt: p.tidpunkt, anvandare: p.anvandare, digest });
+      const r = await db.query(
+        `insert into felsokning_handelser
+           (id, arende_id, tidpunkt, anvandare, handelse, klientdigest, sekvens, kedjehash)
+         values ($1, $2, $3, $4, $5, $6, $7, $8)
+         on conflict (arende_id, id) do nothing`,
+        [p.id, arendeId, p.tidpunkt, p.anvandare, p.handelse, p.klientdigest ?? null, sekvens + 1, nastaH],
+      );
+      // En dubblett skrivs inte och får därför inte heller flytta kedjan:
+      // länken ovan förbrukas bara när raden faktiskt sattes in.
+      if (r.rowCount > 0) {
+        sekvens += 1;
+        h = nastaH;
+      }
+    }
+
+    // Avslut förseglar kedjan: roten och en HMAC med nyckeln som aldrig
+    // finns i databasen. Skrivs i samma transaktion som avslutshändelsen —
+    // ett avslut utan försegling ska inte kunna uppstå av en krasch
+    // mittemellan.
+    if (poster.some((p) => p.handelse?.typ === "arende_avslutat")) {
+      const nu = new Date().toISOString();
+      if (FORSEGLING_NYCKEL) {
+        await db.query(
+          `update felsokning_arenden set kedjerot = $2, forsegling = $3, forseglad = $4
+           where id = $1 and forsegling is null`,
+          [arendeId, h, forsegla(FORSEGLING_NYCKEL, arendeId, h, nu), nu],
+        );
+      } else {
+        logga("varning", "avslut utan försegling", {
+          arende: arendeId,
+          konsekvens: "Kedjan är skriven men roten är inte förseglad. Sätt FORSEGLING_NYCKEL.",
+        });
+      }
+    }
+
+    await db.query("commit");
+    return { rot: h };
+  } catch (fel) {
+    await db.query("rollback").catch(() => {});
+    throw fel;
+  } finally {
+    db.release();
+  }
+}
+
 async function grindHinder(pool, arendeId, nya, sprak = STANDARD) {
   const rader = await pool.query(
     `select h.handelse, a.metodik_id from felsokning_handelser h
@@ -1288,11 +1380,16 @@ export function skapaServer() {
           kanal: "Delningslänk",
           ...(kommentar?.trim() ? { kommentar: kommentar.trim() } : {}),
         };
-        await pool.query(
-          `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
-           values ($1, $2, now(), $3, $4)`,
-          [`kb-${nyKod()}`, arendeId, "Kund via delningslänk", handelse],
-        );
+        // Kedjat som allt annat — kundens besked är den händelse som
+        // oftast åberopas i en tvist, och just den fick inte stå utanför.
+        await skrivKedjat(arendeId, [
+          {
+            id: `kb-${nyKod()}`,
+            tidpunkt: new Date().toISOString(),
+            anvandare: "Kund via delningslänk",
+            handelse,
+          },
+        ]);
         return svara(res, 200, { ok: true });
       }
 
@@ -2283,26 +2380,22 @@ export function skapaServer() {
           poster.push(post);
         }
 
-        const klientDb = await pool.connect();
         let skrivna = 0;
         let dubbletter = 0;
-        try {
-          await klientDb.query("begin");
-          for (const post of poster) {
-            const r = await klientDb.query(
-              `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
-               values ($1, $2, $3, $4, $5) on conflict (arende_id, id) do nothing`,
-              [post.id, protokollVag[1], post.tidpunkt, post.anvandare, post.handelse],
-            );
-            if (r.rowCount === 0) dubbletter += 1;
-            else skrivna += 1;
-          }
-          await klientDb.query("commit");
-        } catch (fel) {
-          await klientDb.query("rollback");
-          throw fel;
-        } finally {
-          klientDb.release();
+        {
+          // Kedjat via samma väg som allt annat. Räkningen görs mot
+          // loggen efteråt — skrivKedjat äger transaktionen.
+          const fore = await pool.query(
+            `select count(*)::int as n from felsokning_handelser where arende_id = $1`,
+            [protokollVag[1]],
+          );
+          await skrivKedjat(protokollVag[1], poster);
+          const efter = await pool.query(
+            `select count(*)::int as n from felsokning_handelser where arende_id = $1`,
+            [protokollVag[1]],
+          );
+          skrivna = efter.rows[0].n - fore.rows[0].n;
+          dubbletter = poster.length - skrivna;
         }
 
         // Delvis lyckad inläsning är inte 200. Mottagaren ska behöva
@@ -2435,6 +2528,85 @@ export function skapaServer() {
         );
         if (rad.rowCount === 0) return svara(res, 404, { error: "Delningen är inte tillgänglig." });
         return svara(res, 200, { ok: true });
+      }
+
+      // ---- Kedjeverifiering (ALVA-SPEC-070) ---------------------------
+      //
+      // Räknar om varje länk ur det som faktiskt står i databasen och
+      // jämför med de lagrade. Svaret pekar ut FÖRSTA brottet — allt
+      // efter det är följdfel.
+      //
+      // Digesten räknas ur den lagrade händelsen, så en ändrad rad
+      // upptäcks även om kolumnen kedjehash lämnats orörd. Det är hela
+      // skillnaden mot att lita på triggern: verifieringen frågar inte
+      // databasen om den är ärlig, den räknar.
+      const kedjeVag = vag.match(/^\/api\/arenden\/([A-Za-z0-9_-]+)\/kedja$/);
+      if (req.method === "GET" && kedjeVag) {
+        if (!(await arendeIOrg(kedjeVag[1], anspr.org))) {
+          return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
+        }
+        const rader = await pool.query(
+          `select id, tidpunkt, anvandare, handelse, sekvens, kedjehash
+           from felsokning_handelser where arende_id = $1
+           order by sekvens nulls first, tidpunkt, id`,
+          [kedjeVag[1]],
+        );
+        const kedja = verifieraKedja(
+          kedjeVag[1],
+          rader.rows
+            .filter((r) => r.sekvens != null)
+            .map((r) => ({
+              id: r.id,
+              tidpunkt: new Date(r.tidpunkt).toISOString(),
+              anvandare: r.anvandare,
+              digest: innehallsHash(kanoniskt(r.handelse)),
+              kedjehash: r.kedjehash,
+            })),
+        );
+        const okedjade = rader.rows.filter((r) => r.sekvens == null).length;
+
+        // Förseglingen prövas mot den OMRÄKNADE roten, inte den lagrade:
+        // en angripare som räknat om kedjan och roten stoppas av att
+        // HMAC:en inte går att räkna om utan nyckeln.
+        const arende = await pool.query(
+          `select kedjerot, forsegling, forseglad from felsokning_arenden where id = $1`,
+          [kedjeVag[1]],
+        );
+        const a = arende.rows[0] ?? {};
+        let forsegling = "saknas";
+        if (a.forsegling) {
+          if (!FORSEGLING_NYCKEL) forsegling = "kan inte prövas — FORSEGLING_NYCKEL saknas";
+          else if (
+            kedja.ok &&
+            a.kedjerot === kedja.rot &&
+            provaForsegling(
+              FORSEGLING_NYCKEL,
+              kedjeVag[1],
+              a.kedjerot,
+              new Date(a.forseglad).toISOString(),
+              a.forsegling,
+            )
+          ) {
+            forsegling = "giltig";
+          } else {
+            forsegling = "OGILTIG";
+          }
+        }
+
+        // Vad svaret bevisar och inte: innehållet är oförändrat sedan
+        // mottagandet. Ingenting om tiden före serverns klocka, ingenting
+        // om sanningshalten. Texten står i svaret så att den följer med
+        // in i varje rapport som citerar det.
+        return svara(res, 200, {
+          ok: kedja.ok,
+          rot: kedja.rot,
+          brott: kedja.brott ?? null,
+          kedjade: rader.rows.length - okedjade,
+          okedjade,
+          forsegling,
+          bevisar:
+            "Content unchanged since receipt, in the recorded order. Nothing about the time before receipt, nothing about accuracy.",
+        });
       }
 
       const handelserVag = vag.match(/^\/api\/arenden\/([A-Za-z0-9_-]+)\/handelser$/);
@@ -2575,16 +2747,10 @@ export function skapaServer() {
             });
           }
 
-          for (const p of attSkriva) {
-            // Append-only: on conflict do nothing — en befintlig händelse
-            // skrivs aldrig över, och databastriggern stoppar allt annat.
-            // Här är kollisionen redan bedömd ofarlig ovan.
-            await pool.query(
-              `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse, klientdigest)
-               values ($1, $2, $3, $4, $5, $6) on conflict (arende_id, id) do nothing`,
-              [p.id, handelserVag[1], p.tidpunkt, p.anvandare, p.handelse, p.klientdigest],
-            );
-          }
+          // Append-only och kedjat: dubbletter skrivs inte över, triggern
+          // stoppar allt annat, och varje insatt händelse får sin länk.
+          // Kollisionen är redan bedömd ofarlig ovan.
+          await skrivKedjat(handelserVag[1], attSkriva);
           // Utgående integrationer underrättas efter att loggen skrivits,
           // aldrig före: en mottagare ska aldrig kunna se en händelse som
           // inte finns i loggen.

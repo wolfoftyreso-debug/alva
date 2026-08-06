@@ -53,6 +53,8 @@ export const PL = {
   "grind.sparr.ej_uppfyllt": "Wymóg bezpieczeństwa nie jest spełniony.",
   "grind.arendetyp.okant": "Nieznany wymóg w pakiecie reguł: {krav}",
   "grind.arendetyp.krav": "Wymóg dla tego rodzaju sprawy: {krav}",
+  "grind.sakerhet": "Poziom pewności w granicach tego, co potwierdzają dowody",
+  "grind.sakerhet.detalj": "Podany poziom pewności ({niva}) przekracza to, co potwierdzają dowody ({tak}). Uzupełnić dowody lub obniżyć poziom — uczciwa niepewność to informacja.",
 
 
   // ---- Wniosek końcowy (ALVA-RULE-200) ------------------------------------

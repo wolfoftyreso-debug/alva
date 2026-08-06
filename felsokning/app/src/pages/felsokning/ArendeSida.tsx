@@ -6,6 +6,7 @@ import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
 import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
 import { FARG, Fasrad } from "@/alva/komponenter";
+import { inomTak, sakerhetstak } from "../../../../services/gemensam/sakerhet.mjs";
 import { Slutsatspanel } from "@/felsokning/Slutsats";
 import { sammanfatta } from "../../../../services/gemensam/sammanfattning.mjs";
 import { grinda } from "../../../../services/gemensam/grind.mjs";
@@ -599,11 +600,17 @@ function ReproduceringPanel({ skicka }: { skicka: (h: Handelse) => void }) {
 // och evidenskällor som inte finns i loggen.
 function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
   const dokumenterade = felorsaker(arende);
+  // Taket härleds ur underlaget (ALVA-SPEC-071). Knappar över taket är
+  // avstängda i stället för att låta valet nekas av grinden vid avslut —
+  // spärren är serverns, men att visa den först då vore att spara
+  // beskedet till det ögonblick det är som dyrast att åtgärda.
+  const tak = sakerhetstak(arende.handelser.map((h) => h.handelse)) as Tillforlitlighet;
+  const inom = (n: Tillforlitlighet) => inomTak(n, tak);
   const [oppen, setOppen] = useState(false);
   const [avvikelse, setAvvikelse] = useState("");
   const [orsaker, setOrsaker] = useState<string[]>([]);
   const [underlag, setUnderlag] = useState<string[]>([]);
-  const [sakerhet, setSakerhet] = useState<Tillforlitlighet>("hog");
+  const [sakerhet, setSakerhet] = useState<Tillforlitlighet>(tak);
   const [atgard, setAtgard] = useState("");
   const [motivering, setMotivering] = useState("");
   const [ytterligare, setYtterligare] = useState("");
@@ -638,7 +645,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
     setAvvikelse("");
     setOrsaker([]);
     setUnderlag([]);
-    setSakerhet("hog");
+    setSakerhet(tak);
     setAtgard("");
     setMotivering("");
     setYtterligare("");
@@ -707,8 +714,10 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
             {(["hog", "medel", "lag"] as const).map((n) => (
               <button
                 key={n}
-                onClick={() => setSakerhet(n)}
-                className={`min-h-9 border text-[12px] font-semibold ${
+                disabled={!inom(n)}
+                title={inom(n) ? undefined : "The evidence does not support this level yet — add evidence, or choose a lower level."}
+                onClick={() => inom(n) && setSakerhet(n)}
+                className={`min-h-9 border text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
                   sakerhet === n ? "border-[#005CA9] bg-[#005CA9] text-white" : "border-[#D7DCE2] bg-white text-[#1B1E22]"
                 }`}
               >

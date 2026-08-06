@@ -730,6 +730,57 @@ paths:
         "400": { $ref: "#/components/responses/Fel" }
         "401": { $ref: "#/components/responses/Fel" }
 
+  /api/arenden/{arendeId}/kedja:
+    parameters:
+      - name: arendeId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Ärenden]
+      summary: Verifiera ärendets hashkedja (ALVA-SPEC-070)
+      description: >
+        Räknar om varje kedjelänk ur det som står i databasen och jämför
+        med de lagrade. Svaret pekar ut FÖRSTA brottet; allt efter det är
+        följdfel. `forsegling` prövas mot den omräknade roten med en
+        nyckel som aldrig finns i databasen.
+
+
+        Vad svaret bevisar, och inte: att innehållet är oförändrat sedan
+        mottagandet, i den ordning det togs emot. Ingenting om tiden före
+        serverns klocka, ingenting om sanningshalten — det är grindens
+        och evidensmodellens ansvar.
+      responses:
+        "200":
+          description: Verifieringens utfall.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  rot: { type: string, nullable: true, description: Kedjans sista länk (SHA-256, hex). }
+                  brott:
+                    type: object
+                    nullable: true
+                    description: Första raden som inte stämmer.
+                    properties:
+                      index: { type: integer }
+                      id: { type: string }
+                  kedjade: { type: integer }
+                  okedjade:
+                    type: integer
+                    description: >
+                      Rader skrivna innan kedjan fanns. De bryter ingenting
+                      men räknas — gammal data ska inte se starkare ut än
+                      den är.
+                  forsegling:
+                    type: string
+                    description: saknas · giltig · OGILTIG · kan inte prövas
+                  bevisar: { type: string }
+        "401": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+
   /api/arenden/{arendeId}/handelser:
     parameters:
       - name: arendeId

@@ -57,6 +57,8 @@ export const RO = {
   "grind.sparr.ej_uppfyllt": "Cerința de siguranță nu este îndeplinită.",
   "grind.arendetyp.okant": "Cerință necunoscută în pachetul de reguli: {krav}",
   "grind.arendetyp.krav": "Cerință pentru acest tip de caz: {krav}",
+  "grind.sakerhet": "Nivel de încredere în limitele a ceea ce susțin dovezile",
+  "grind.sakerhet.detalj": "Încrederea indicată ({niva}) depășește ceea ce susțin dovezile ({tak}). Completează dovezile sau coboară nivelul — incertitudinea onestă este informație.",
 
 
   // ---- Concluzia finală (ALVA-RULE-200) -----------------------------------

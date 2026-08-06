@@ -50,6 +50,8 @@ export const SV = {
   "grind.sparr.ej_uppfyllt": "Säkerhetskravet är inte uppfyllt.",
   "grind.arendetyp.okant": "Okänt krav i regelpaketet: {krav}",
   "grind.arendetyp.krav": "Krav för ärendetypen: {krav}",
+  "grind.sakerhet": "Säkerhetsnivån inom vad underlaget bär",
+  "grind.sakerhet.detalj": "Angiven säkerhet ({niva}) överstiger vad underlaget bär ({tak}). Komplettera underlaget, eller sänk nivån — ärlig osäkerhet är information.",
 
 
   // ---- Slutsatsen (ALVA-RULE-200) -----------------------------------------

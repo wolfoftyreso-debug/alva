@@ -196,6 +196,13 @@ export function tillPost(post, anspr, nu = new Date()) {
         // Fälten nedan går inte att sätta utifrån; skrivs de över här är det
         // just poängen.
         anvandarId: anspr.sub,
+        // Signaturen vid avslut var teknikerns egen text — ett fält som
+        // HETER signatur men inte var en (panelgranskningen, Volvo-sätet).
+        // Nu skrivs den ur verifierad token, precis som `anvandare`.
+        // Vad den intygar är därmed exakt vad den kan intyga: vem som var
+        // inloggad när avslutet togs emot. Kedjans försegling intygar
+        // resten — att loggen är den som förelåg då.
+        ...(post.handelse.typ === "arende_avslutat" ? { signatur: anspr.namn } : {}),
         ...(klientTid && klientTid !== nu.toISOString() ? { registrerad_tidpunkt: klientTid } : {}),
       },
     },

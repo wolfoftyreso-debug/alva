@@ -51,6 +51,8 @@ export const NL = {
   "grind.sparr.ej_uppfyllt": "Aan de veiligheidseis is niet voldaan.",
   "grind.arendetyp.okant": "Onbekende eis in het regelpakket: {krav}",
   "grind.arendetyp.krav": "Eis voor dit zaaktype: {krav}",
+  "grind.sakerhet": "Betrouwbaarheidsniveau binnen wat het bewijs draagt",
+  "grind.sakerhet.detalj": "De opgegeven betrouwbaarheid ({niva}) overstijgt wat het bewijs draagt ({tak}). Vul het bewijs aan, of verlaag het niveau — eerlijke onzekerheid is informatie.",
 
 
   // ---- De eindconclusie (ALVA-RULE-200) -----------------------------------

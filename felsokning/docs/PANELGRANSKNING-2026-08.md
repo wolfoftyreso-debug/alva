@@ -910,3 +910,21 @@ nästa generations standard bör innehålla:
 > Panelen noterar avslutningsvis att den under granskningen inte funnit
 > något ställe där systemet påstår mer än det kan belägga. Det är
 > ovanligt, och det är det som gör rekommendationen möjlig.
+
+---
+
+## Bilaga A · Åtgärdat efter granskningen (ALVA 3.3)
+
+Granskningen ovan är ett ögonblicksfoto av 3.2 och står orörd. Följande
+har åtgärdats efteråt; resten av åtgärdslistan gäller fortfarande.
+
+| Fynd | Åtgärd | Var |
+|---|---|---|
+| Ingen kryptografisk kedja (§2.13 p1) | Hashkedja per ärende, beräknad av servern vid insättning. Digest tas över den lagrade händelsen, så en ändrad rad upptäcks även om hashkolumnen lämnas orörd. Integrationstestet provar panelens hotmodell ordagrant: triggern släpps, en rad ändras som databasägare, triggern återskapas — verifieringen pekar ut raden. | `services/gemensam/kedja.mjs`, `GET /api/arenden/{id}/kedja` |
+| Förseglingen (§2.13 p2, delvis) | Avslut förseglar kedjans rot med HMAC under `FORSEGLING_NYCKEL`, som aldrig finns i databasen. Förseglingen är engångs — triggern vägrar skriva om den. **Extern förankring (RFC 3161) återstår.** | `skrivKedjat`, `skydda_arende` |
+| Signaturen är ett namn (§2.2 p1) | `signatur` skrivs ur verifierad token, klientens värde ignoreras. Fältet intygar nu exakt vad det kan intyga. | `services/gemensam/handelser.mjs` |
+| Självskattad säkerhetsnivå (§2.7 p1, §3) | Nivån är ett tak härlett ur underlaget — hög kräver reproducerat symptom och spårbart mätvärde ur mätdonsregistret. Teknikern kan sänka, aldrig höja, precis som paneldiskussionen enades om. Grinden spärrar ett påstående över taket, och gränssnittet visar taket medan arbetet pågår i stället för vid avslutsknappen. | `services/gemensam/sakerhet.mjs`, `grind.mjs` |
+| Vad fotot bevisar (§2.8, delvis) | Verifieringssvaret säger uttryckligen vad kedjan bevisar och inte: *"Content unchanged since receipt … nothing about the time before receipt, nothing about accuracy."* Klienthashning vid upptagning återstår. | `GET /api/arenden/{id}/kedja` |
+
+Provat med 766 enhetstester och 200 integrationskontroller mot riktig
+Postgres, inklusive sabotage med full databasbehörighet.

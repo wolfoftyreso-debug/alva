@@ -16,6 +16,7 @@
 // samma utfall, vilket är vad som gör en spärr granskbar.
 
 import { granskaSlutsats } from "./motivering.mjs";
+import { inomTak, sakerhetstak } from "./sakerhet.mjs";
 import { STANDARD, arJakande, arendetypNu, t } from "./sprak/index.mjs";
 
 const UNDANTAG_MOTIVERAT = (h) => typeof h.undantag === "string" && h.undantag.trim().length > 0;
@@ -111,6 +112,22 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
   krav("reproducering", "grind.reproducering", handelser.some((h) => h.typ === "reproducering"));
 
   krav("felorsak", "grind.felorsak", handelser.some((h) => h.typ === "felorsak"));
+
+  // Säkerhetsnivån är ett tak, inte ett val (ALVA-SPEC-071). En felorsak
+  // som påstår högre säkerhet än underlaget bär spärrar avslutet — inte
+  // för att slutsatsen är fel, utan för att PÅSTÅENDET om den är det.
+  // Sänkning prövas aldrig: ärlig osäkerhet är information.
+  const felorsaken = av(handelser, "felorsak").at(-1);
+  if (felorsaken?.sakerhet) {
+    const tak = sakerhetstak(handelser);
+    krav(
+      "sakerhetstak",
+      "grind.sakerhet",
+      inomTak(felorsaken.sakerhet, tak),
+      "grind.sakerhet.detalj",
+      { niva: felorsaken.sakerhet, tak },
+    );
+  }
 
   // Åtgärdskedjan. En utebliven åtgärd är ett giltigt utfall — men bara
   // när skälet står i loggen.

@@ -51,6 +51,8 @@ export const ES = {
   "grind.sparr.ej_uppfyllt": "El requisito de seguridad no se cumple.",
   "grind.arendetyp.okant": "Requisito desconocido en el paquete de reglas: {krav}",
   "grind.arendetyp.krav": "Requisito para este tipo de expediente: {krav}",
+  "grind.sakerhet": "Nivel de confianza dentro de lo que sustenta la evidencia",
+  "grind.sakerhet.detalj": "La confianza indicada ({niva}) supera lo que sustenta la evidencia ({tak}). Completar la evidencia, o bajar el nivel — la incertidumbre honesta es información.",
 
 
   // ---- La conclusión (ALVA-RULE-200) --------------------------------------

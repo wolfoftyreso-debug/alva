@@ -52,6 +52,8 @@ export const FR = {
   "grind.sparr.ej_uppfyllt": "L'exigence de sécurité n'est pas satisfaite.",
   "grind.arendetyp.okant": "Exigence inconnue dans le paquet de règles : {krav}",
   "grind.arendetyp.krav": "Exigence pour ce type de dossier : {krav}",
+  "grind.sakerhet": "Niveau de confiance dans les limites de ce que les preuves soutiennent",
+  "grind.sakerhet.detalj": "La confiance indiquée ({niva}) dépasse ce que les preuves soutiennent ({tak}). Compléter les preuves, ou abaisser le niveau — une incertitude honnête est une information.",
 
 
   // ---- La conclusion (ALVA-RULE-200) --------------------------------------

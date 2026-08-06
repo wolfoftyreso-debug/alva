@@ -22,6 +22,19 @@
 
 export const UTGAVOR = [
   {
+    version: "3.3",
+    datum: "2026-08-06",
+    commit: "9378089",
+    rubrik: "Härdning: kedjad logg, förseglat avslut, härledd säkerhetsnivå",
+    andringar: [
+      "Varje händelse bär en hash av sitt innehåll och föregående händelses hash, beräknad av servern. Den som ändrar en rad i efterhand — även med full databasbehörighet — bryter varje efterföljande länk, och brottet pekar ut sig självt.",
+      "Avslut förseglas: kedjans rot och en HMAC med en nyckel som aldrig finns i databasen. En omräknad kedja kan inte förseglas om.",
+      "Verifieringen säger vad den bevisar och inte: innehållet är oförändrat sedan mottagandet — ingenting om tiden före, ingenting om sanningshalten.",
+      "Signaturen vid avslut skrivs ur verifierad token i stället för att tas emot som text. Fältet intygar nu exakt vad det kan intyga.",
+      "Säkerhetsnivån i felorsaksanalysen är ett tak härlett ur underlaget: hög kräver reproducerat symptom och spårbart mätvärde. Teknikern kan sänka — ärlig osäkerhet är information — men aldrig höja.",
+    ],
+  },
+  {
     version: "3.2",
     datum: "2026-08-06",
     commit: "af27275",

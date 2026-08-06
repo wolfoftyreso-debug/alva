@@ -79,6 +79,8 @@ export const EN = {
   "grind.sparr.ej_uppfyllt": "The safety requirement is not met.",
   "grind.arendetyp.okant": "Unknown requirement in the rule package: {krav}",
   "grind.arendetyp.krav": "Requirement for this case type: {krav}",
+  "grind.sakerhet": "Confidence level within what the evidence supports",
+  "grind.sakerhet.detalj": "The stated confidence ({niva}) exceeds what the evidence supports ({tak}). Add supporting evidence, or lower the confidence — honest uncertainty is information.",
 
 
   // ---- The closing statement (ALVA-RULE-200) ------------------------------

@@ -31,7 +31,7 @@ PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning
 
 # ---- Tjänsten upp ----
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet PORT=$APPPORT node server.mjs &
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT node server.mjs &
 SERVER_PID=$!
 sleep 1
 
@@ -299,7 +299,7 @@ kontroll "utan krypteringsnyckel sparas inga uppgifter" "$KOD" "503"
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet PORT=$APPPORT \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT \
   INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
   node server.mjs &
 SERVER_PID=$!
@@ -519,7 +519,7 @@ kontroll "utan konfigurerad utfärdarnyckel utfärdas ingenting" "$KOD" "403"
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet PORT=$APPPORT \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT \
   INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
   FAKTURERING_NYCKEL=utfardarnyckel \
   node server.mjs &
@@ -811,7 +811,7 @@ kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 HUVUD=$(node -pe "require('crypto').randomBytes(32).toString('hex')")
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet PORT=$APPPORT \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT \
   INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
   PERSONNYCKEL_HUVUD=$HUVUD \
   node server.mjs &
@@ -842,7 +842,7 @@ kontroll "identifieraren gar att lasa med huvudnyckeln" "$IDENT" "KUV123"
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet PORT=$APPPORT node server.mjs >/dev/null 2>&1 &
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT node server.mjs >/dev/null 2>&1 &
 SERVER_PID=$!
 sleep 1
 # Utan huvudnyckeln MASKERAS uppgiften — anropet kraschar inte.
@@ -907,11 +907,126 @@ SVAR=$(curl -s -X POST "$BAS/api/arenden/arende-sprak/handelser" -H "Authorizati
 kontroll "okand sprakkod blir engelska" \
   "$(echo "$SVAR" | falt '.hinder.find(h=>h.id==="objekt").rubrik')" "Vehicle or object identification verified"
 
+# 18c. Hashkedjan och förseglingen (ALVA-SPEC-070)
+#
+# Panelgranskningens hotmodell provas HÄR, inte i enhetstesterna: en
+# angripare som ÄGER databasen. Triggern släpps, en rad ändras, triggern
+# återskapas — precis det en superuser gör — och verifieringen ska ändå
+# peka ut raden. Det är skillnaden mellan skydd som är behörighet och
+# skydd som är matematik.
+KEDJA=$(curl -s "$BAS/api/arenden/arende-test1/kedja" -H "Authorization: Bearer $TOKEN_A")
+kontroll "kedjan verifierar ett orört ärende" "$(echo "$KEDJA" | falt .ok)" "true"
+kontroll "alla händelser är kedjade" "$(echo "$KEDJA" | falt .okedjade)" "0"
+kontroll "kedjan har en rot" "$(echo "$KEDJA" | falt '.rot.length')" "64"
+kontroll "svaret säger vad det bevisar" "$(echo "$KEDJA" | falt '.bevisar.includes("unchanged since receipt")')" "true"
+
+# Sprakärendet avslutades aldrig — inget avslut, ingen försegling. Det
+# ska stå "saknas", inte låtsas vara giltigt.
+kontroll "oavslutat ärende är oförseglat" "$(echo "$KEDJA" | falt .forsegling)" "saknas"
+
+# Avsluta ett ärende och kontrollera förseglingen.
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-kedja","nummer":88,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
+curl -s -X POST "$BAS/api/arenden/arende-kedja/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"hk-1","tidpunkt":"2026-08-06T10:01:00Z","anvandare":"Anna","handelse":{"typ":"observation","text":"Provobservation for kedjan."}}]}' >/dev/null
+
+# Grinden spärrar avslut utan underlag — så förseglingen provas på ett
+# konstlat men giltigt sätt: vi kontrollerar att ett ärende utan avslut
+# saknar försegling och att kedjeroten ändras med varje händelse.
+ROT1=$(curl -s "$BAS/api/arenden/arende-kedja/kedja" -H "Authorization: Bearer $TOKEN_A" | falt .rot)
+curl -s -X POST "$BAS/api/arenden/arende-kedja/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"hk-2","tidpunkt":"2026-08-06T10:02:00Z","anvandare":"Anna","handelse":{"typ":"observation","text":"Andra observationen."}}]}' >/dev/null
+ROT2=$(curl -s "$BAS/api/arenden/arende-kedja/kedja" -H "Authorization: Bearer $TOKEN_A" | falt .rot)
+kontroll "roten flyttar med varje händelse" "$([ "$ROT1" != "$ROT2" ] && echo olika)" "olika"
+
+# En omsänd dubblett skriver ingenting och får inte flytta kedjan.
+curl -s -X POST "$BAS/api/arenden/arende-kedja/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"hk-2","tidpunkt":"2026-08-06T10:02:00Z","anvandare":"Anna","handelse":{"typ":"observation","text":"Andra observationen."}}]}' >/dev/null
+ROT3=$(curl -s "$BAS/api/arenden/arende-kedja/kedja" -H "Authorization: Bearer $TOKEN_A" | falt .rot)
+kontroll "en dubblett flyttar inte kedjan" "$ROT3" "$ROT2"
+
+# ---- Sabotage som databasägare ----
+# Släpp triggern, ändra en rad, återskapa triggern. Ingen behörighet i
+# världen hindrar det här — bara kedjan ser det.
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning -q <<'SQL'
+drop trigger handelser_append_only on felsokning_handelser;
+update felsokning_handelser
+  set handelse = jsonb_set(handelse, '{text}', '"Manipulerad i efterhand."')
+  where arende_id = 'arende-kedja' and id = 'hk-1';
+create trigger handelser_append_only
+  before update or delete on felsokning_handelser
+  for each row execute function forbjud_andring();
+SQL
+SABOTERAD=$(curl -s "$BAS/api/arenden/arende-kedja/kedja" -H "Authorization: Bearer $TOKEN_A")
+kontroll "en rad ändrad av databasägaren upptäcks" "$(echo "$SABOTERAD" | falt .ok)" "false"
+kontroll "brottet pekar ut den ändrade raden" "$(echo "$SABOTERAD" | falt .brott.id)" "hk-1"
+
+# Angriparens nästa drag: räkna om kedjehash för den ändrade raden så att
+# länken stämmer igen. Då bryter i stället NÄSTA rad — kedjan fortplantar
+# varje ändring framåt, och utan FORSEGLING_NYCKEL går sista länken inte
+# att försegla om. (Omräkning av hela kedjan provas i enhetstesterna via
+# ärendebindningen; här räcker fortplantningen.)
+kontroll "brottet är i kedjan, inte bara i raden" "$(echo "$SABOTERAD" | falt '.brott.index')" "0"
+
+# 18d. Försegling vid riktigt avslut (ALVA-SPEC-070)
+#
+# Ett komplett ärende byggs genom API:t — metodikens alla kontroller,
+# spårbart mätvärde, slutsats — och avslutas genom grinden. Då ska
+# förseglingen finnas och vara giltig. Batchen genereras ur metodiken i
+# stället för att skrivas för hand, så testet inte glider när metodiken
+# ändras.
+MATDON_ID=$(curl -s -X POST "$BAS/api/matdon" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"beteckning":"Balanseringsmaskin BM-3","serienummer":"BM3-001","kalibrerad_till":"2027-12-31"}' | falt .id)
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-forseglat","nummer":89,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
+
+BATCH=$(MATDON_ID="$MATDON_ID" node --input-type=module -e '
+import { ALLA_METODIKER } from "./metodiker.mjs";
+const G = ALLA_METODIKER.at(-1);
+const h = [];
+let n = 0;
+const add = (handelse) => h.push({ id: "fs-" + ++n, tidpunkt: "2026-08-06T11:00:00Z", anvandare: "Anna", handelse });
+add({ typ: "objekt_identifierat", objekt: { identifierare: "KED123" } });
+add({ typ: "historik_kontrollerad", kontrollerad: true });
+add({ typ: "matarstallning", lage: "ingaende", varde: "14 200", dataUrl: "data:image/png;base64,AA" });
+add({ typ: "reproducering", status: "ja", beskrivning: "Reproducerad vid provkorning pa plan vag." });
+for (const s of G.steg) for (const k of s.kontroller ?? []) {
+  add({ typ: "kontroll_utford", stegId: s.id, kontrollId: k.id, text: k.text, ...(k.krav === "foto" ? {} : { resultat: "Utan anmarkning." }) });
+  if (k.krav === "foto") add({ typ: "foto", beskrivning: k.text });
+}
+add({ typ: "matvarde", beskrivning: "Obalans hoger framhjul", varde: "38", enhet: "g", matdonId: process.env.MATDON_ID });
+add({ typ: "felorsak", avvikelse: "38 g obalans hoger framhjul mot toleransen 5 g.", orsaker: ["Normal wear"], underlag: ["Measurement result"], sakerhet: "hog", atgard: "Balansera om hjulet och provkor." });
+add({ typ: "atgardsforslag", beskrivning: "Balansera om hoger framhjul." });
+add({ typ: "kundbeslut", beslut: "godkant", kanal: "Telephone" });
+add({ typ: "atgard_utford", beskrivning: "Balanserade om hoger framhjul.", utford: true });
+add({ typ: "kvalitetskontroll", resultat: "symptomet_borta", beskrivning: "Ny provkorning, symptomet borta." });
+add({ typ: "matarstallning", lage: "utgaende", varde: "14 210", dataUrl: "data:image/png;base64,AA" });
+add({ typ: "slutsats",
+  motivering: "Uppmatt obalans 38 g mot toleransen 5 g, vilket forklarar den hastighetsberoende vibrationen kring 88 km/h.",
+  uteslutet: "Kast och bussningar kontrollerades utan anmarkning och uteslots darfor.",
+  kvarstaende: "Inget. Symptomet uteblev efter atgard.",
+  atgardsval: "Balansering valdes framfor dackbyte eftersom dacket ar oskadat." });
+add({ typ: "arende_avslutat", signatur: "Anna", plattformsversion: "ALVA" });
+console.log(JSON.stringify({ handelser: h }));
+')
+KOD=$(curl -s -o /tmp/forseglingssvar.json -w "%{http_code}" -X POST "$BAS/api/arenden/arende-forseglat/handelser" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d "$BATCH")
+kontroll "komplett ärende passerar grinden och avslutas" "$KOD" "200"
+
+FORSEGLAT=$(curl -s "$BAS/api/arenden/arende-forseglat/kedja" -H "Authorization: Bearer $TOKEN_A")
+kontroll "kedjan verifierar efter avslut" "$(echo "$FORSEGLAT" | falt .ok)" "true"
+kontroll "avslutet är förseglat och förseglingen giltig" "$(echo "$FORSEGLAT" | falt .forsegling)" "giltig"
+
+# Förseglingen är engångs: databastriggern vägrar ändra den.
+OMSKRIVNING=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning -t -A -c \
+  "update felsokning_arenden set forsegling = 'ffff' where id = 'arende-forseglat'" 2>&1 || true)
+kontroll "förseglingen kan inte skrivas om" "$(echo "$OMSKRIVNING" | grep -c 'kan inte ändras')" "1"
+
 # 19. Support och felanmälan (ALVA-PROC-0050)
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet PORT=$APPPORT SUPPORT_NYCKEL=supportnyckel \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT SUPPORT_NYCKEL=supportnyckel \
   FAKTURERING_NYCKEL=utfardarnyckel node server.mjs &
 SERVER_PID=$!
 sleep 1

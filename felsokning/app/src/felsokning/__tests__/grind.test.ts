@@ -39,7 +39,9 @@ function komplettLogg(extra: Record<string, unknown>[] = []) {
       kvarstaende: "Inget. Symptomet reproducerades före och uteblev efter åtgärd.",
       atgardsval: "Balansering valdes framför däckbyte eftersom däcket är oskadat och slitaget inom gräns.",
     },
-    { typ: "matvarde", beskrivning: "Lufttryck", varde: "2,4" },
+    // Spårbart mätvärde (mätdon ur registret): utan det bär underlaget
+    // inte sakerhet "hog", och grinden spärrar — se ALVA-SPEC-071.
+    { typ: "matvarde", beskrivning: "Lufttryck", varde: "2,4", matdonId: "m-1" },
     { typ: "foto", beskrivning: "Objektet" },
     { typ: "foto", beskrivning: "Typskylt" },
     ...GENERISK.steg.flatMap((s) =>
@@ -90,6 +92,16 @@ describe("M-3 · formen kontrolleras före skrivning", () => {
   it("hypotesen kan aldrig anta hög tillförlitlighet", () => {
     expect(granskaHändelse({ typ: "hypotes", text: "x", niva: "hog" })).toBeTruthy();
     expect(granskaHändelse({ typ: "hypotes", text: "x", niva: "medel" })).toBeNull();
+  });
+
+  it("signaturen vid avslut skrivs ur verifierad token — klientens värde spelar ingen roll", () => {
+    // Fältet HETTE signatur men var teknikerns egen text. Nu intygar det
+    // exakt vad det kan intyga: vem som var inloggad vid mottagandet.
+    const r = tillPost(
+      { id: "a1", handelse: { typ: "arende_avslutat", signatur: "Någon Annan", plattformsversion: "x" } },
+      ANSPRÅK,
+    );
+    expect(r.post!.handelse.signatur).toBe(ANSPRÅK.namn);
   });
 
   it("avvisar id med otillåtna tecken", () => {

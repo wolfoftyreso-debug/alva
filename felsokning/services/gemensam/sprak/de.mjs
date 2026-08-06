@@ -52,6 +52,8 @@ export const DE = {
   "grind.sparr.ej_uppfyllt": "Die Sicherheitsanforderung ist nicht erfüllt.",
   "grind.arendetyp.okant": "Unbekannte Anforderung im Regelpaket: {krav}",
   "grind.arendetyp.krav": "Anforderung für diese Vorgangsart: {krav}",
+  "grind.sakerhet": "Konfidenzniveau innerhalb dessen, was die Evidenz trägt",
+  "grind.sakerhet.detalj": "Die angegebene Konfidenz ({niva}) übersteigt, was die Evidenz trägt ({tak}). Evidenz ergänzen oder das Niveau senken — ehrliche Unsicherheit ist Information.",
 
 
   // ---- Abschlussfeststellung (ALVA-RULE-200) ------------------------------

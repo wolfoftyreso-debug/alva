@@ -186,6 +186,14 @@ begin
       old.metodik_id, old.skapad_av, old.insatt) then
     raise exception 'Ärendets historik kan inte ändras — endast härledda fält får sättas';
   end if;
+  -- Förseglingen är härledd men inte omskrivbar: satt en gång, sedan
+  -- låst. Kolumnprövningen ovan räcker inte, eftersom den släpper
+  -- igenom alla härledda fält.
+  if old.forsegling is not null and
+     (new.forsegling, new.kedjerot, new.forseglad)
+     is distinct from (old.forsegling, old.kedjerot, old.forseglad) then
+    raise exception 'Förseglingen är satt och kan inte ändras';
+  end if;
   return new;
 end $$;
 
@@ -423,6 +431,31 @@ create trigger personnycklar_skydd
 -- krypteringen ger ny chiffertext för samma klartext, så varken raden
 -- eller nyttolasten kan jämföras. Avtrycket kan.
 alter table felsokning_handelser add column if not exists klientdigest text;
+
+-- ---- Hashkedjan (ALVA-SPEC-070) -----------------------------------------
+--
+-- Triggern ovan skyddar loggen mot applikationen. Kedjan skyddar den mot
+-- den som äger databasen: varje händelse bär en hash av sitt innehåll och
+-- föregående händelses hash, beräknad av servern vid insättningen. Den
+-- som ändrar en rad i efterhand bryter varje efterföljande länk, och den
+-- som räknar om hela kedjan stoppas av förseglingen vid avslut — en HMAC
+-- med en nyckel som aldrig finns i databasen (FORSEGLING_NYCKEL).
+--
+-- `sekvens` är kedjeordningen. Tidsstämpeln duger inte: två händelser i
+-- samma batch kan få samma klockslag, och en kedja utan entydig ordning
+-- går inte att verifiera.
+alter table felsokning_handelser add column if not exists sekvens bigint;
+alter table felsokning_handelser add column if not exists kedjehash text;
+create index if not exists felsokning_handelser_sekvens_idx
+  on felsokning_handelser (arende_id, sekvens);
+
+-- Förseglingen vid avslut: kedjans rot och en HMAC över den, beräknad med
+-- FORSEGLING_NYCKEL som aldrig finns i databasen. Kolumnerna är härledda
+-- och skrivs EN gång — se skydda_arende, som vägrar ändra en satt
+-- försegling. En försegling som kan skrivas om är ingen försegling.
+alter table felsokning_arenden add column if not exists kedjerot text;
+alter table felsokning_arenden add column if not exists forsegling text;
+alter table felsokning_arenden add column if not exists forseglad timestamptz;
 
 -- ---- Support och felanmälan (ALVA-PROC-0050) ---------------------------
 --
