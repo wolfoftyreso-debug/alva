@@ -127,10 +127,40 @@ create trigger handelser_append_only
   before update or delete on felsokning_handelser
   for each row execute function forbjud_andring();
 
+-- Ärenderaden är inte en logg utan ett omslag, och två av dess kolumner
+-- är HÄRLEDDA av systemet efteråt: gallringsdatumet sätts vid avslut
+-- utifrån ärendetypen, och det blindade fordonsindexet skrivs när
+-- objektet identifieras.
+--
+-- Den tidigare triggern förbjöd all update och gjorde därmed avslut
+-- omöjligt: servern försökte sätta gallras_efter, databasen sa nej, och
+-- hela synken föll med 500. Kvalitetsgrinden hade redan godkänt ärendet
+-- — det var lagringen som vägrade, efteråt, av ett skäl som inte hade
+-- med ärendet att göra.
+--
+-- Skyddet är därför kolumnvis i stället för totalt: identitet, tillhörighet
+-- och ursprung kan inte ändras, radering är fortfarande omöjlig, men de
+-- fält systemet självt härleder får skrivas.
+create or replace function skydda_arende() returns trigger
+language plpgsql as $$
+begin
+  if TG_OP = 'DELETE' then
+    raise exception 'Ärenden kan inte raderas';
+  end if;
+  if (new.id, new.organisation_id, new.nummer, new.skapad, new.delningskod,
+      new.metodik_id, new.skapad_av, new.insatt)
+     is distinct from
+     (old.id, old.organisation_id, old.nummer, old.skapad, old.delningskod,
+      old.metodik_id, old.skapad_av, old.insatt) then
+    raise exception 'Ärendets historik kan inte ändras — endast härledda fält får sättas';
+  end if;
+  return new;
+end $$;
+
 drop trigger if exists arenden_append_only on felsokning_arenden;
 create trigger arenden_append_only
   before update or delete on felsokning_arenden
-  for each row execute function forbjud_andring();
+  for each row execute function skydda_arende();
 
 -- Live Share-delningar: återkallbara länkar med behörighetsnivå.
 -- (Åtkomststyrning, inte journal — därför ingen append-only-trigger:
@@ -248,3 +278,65 @@ create table if not exists prenumerationer (
   senaste_status text
 );
 create index if not exists prenumerationer_org on prenumerationer (organisation_id) where aktiv;
+
+-- ---- Fakturering (ALVA-PROC-0001) --------------------------------------
+--
+-- En utfärdad faktura ändras aldrig. Det är inte en ambition utan en
+-- egenskap i schemat: samma append-only-trigger som skyddar
+-- händelseloggen skyddar fakturaraden.
+--
+-- Det får en följd som är lätt att missa. "Betald" kan då inte vara en
+-- kolumn som uppdateras — en betalning är en HÄNDELSE som inträffar
+-- efter utfärdandet, och statusen är en projektion av de händelserna.
+-- Precis som ärendets tillstånd inte lagras utan härleds ur loggen.
+--
+-- Beloppet lagras som det räknades fram, i öre, tillsammans med hela
+-- underlaget. Skulle prislistan ändras nästa år står den gamla fakturan
+-- kvar oförändrad, med de rader och de priser som faktiskt gällde.
+create table if not exists fakturor (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references organisationer(id),
+  -- Löpnumret är gemensamt för hela installationen och utan luckor:
+  -- ALVA är utfärdaren, organisationerna är mottagare. Se
+  -- nästaFakturanummer() i server.mjs för hur luckor undviks.
+  nummer bigint not null unique,
+  beteckning text not null unique,
+  utfardad date not null,
+  forfaller date not null,
+  valuta text not null,
+  totalt bigint not null,
+  -- Krediterar en tidigare faktura. Null för en vanlig faktura.
+  krediterar uuid references fakturor(id),
+  -- Hela det härledda dokumentet, fruset vid utfärdandet: rader,
+  -- underlag, à-priser, moms. Den som läser den om två år ska inte
+  -- behöva systemet för att förstå den.
+  dokument jsonb not null,
+  skapad timestamptz not null default now()
+);
+create index if not exists fakturor_org_idx on fakturor (organisation_id, nummer desc);
+
+drop trigger if exists fakturor_append_only on fakturor;
+create trigger fakturor_append_only
+  before update or delete on fakturor
+  for each row execute function forbjud_andring();
+
+-- Vad som hänt med en utfärdad faktura. Append-only av samma skäl som
+-- allt annat som utgör underlag: en registrerad betalning som kan
+-- backas bort tyst är inte ett underlag, den är en anteckning.
+create table if not exists fakturahandelser (
+  id uuid primary key default gen_random_uuid(),
+  faktura_id uuid not null references fakturor(id),
+  typ text not null check (typ in ('betald', 'krediterad')),
+  intraffade date not null,
+  -- Betalningsreferens, kreditorsak. Fritext, men aldrig tom.
+  uppgift text not null,
+  registrerad_av text not null,
+  insatt timestamptz not null default now()
+);
+create index if not exists fakturahandelser_faktura_idx
+  on fakturahandelser (faktura_id, insatt);
+
+drop trigger if exists fakturahandelser_append_only on fakturahandelser;
+create trigger fakturahandelser_append_only
+  before update or delete on fakturahandelser
+  for each row execute function forbjud_andring();

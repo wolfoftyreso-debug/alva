@@ -178,6 +178,29 @@ curl -s -X POST "$BAS/api/arenden/arende-test3/handelser" -H "Authorization: Bea
     {"id":"f2","tidpunkt":"2026-08-03T10:01:00Z","anvandare":"Johan","handelse":{"typ":"objekt_identifierat","objekt":{"typ":"Personbil","identifierare":"xyz999","identifieringsmetod":"Regnr","beskrivning":"VW Golf 2023"}}},
     {"id":"f3","tidpunkt":"2026-08-03T10:02:00Z","anvandare":"Johan","handelse":{"typ":"felorsak","avvikelse":"Vattenpumpen läcker vid axeltätningen.","orsaker":["Normalt slitage","Ålder"],"underlag":["Foto"],"sakerhet":"hog","atgard":"Byt vattenpump."}}
   ]}' >/dev/null
+# Det blindade fordonsindexet är en HÄRLEDD kolumn på ärenderaden, och
+# den skrivs efter att ärendet skapats. En trigger som förbjöd all update
+# gjorde den skrivningen omöjlig och lät hela synken falla med 500 —
+# osynligt här, eftersom svaret kastades bort. Statuskoden granskas nu.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-test2/handelser" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"f1b","tidpunkt":"2026-08-03T09:03:00Z","anvandare":"Anna","handelse":{"typ":"observation","text":"Fortsatt läckage vid axeltätningen."}}]}')
+kontroll "synk av händelser lyckas" "$KOD" "200"
+
+# Skyddet är kolumnvis, inte bortplockat: identiteten är fortfarande låst.
+if PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "update felsokning_arenden set nummer = 999 where id='arende-test2'" 2>/dev/null; then
+  echo "✗ ärendets identitet går att ändra"; exit 1
+else
+  echo "✓ ärendets identitet är fortfarande oföränderlig"
+fi
+if PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "delete from felsokning_arenden where id='arende-test2'" 2>/dev/null; then
+  echo "✗ ärenden går att radera"; exit 1
+else
+  echo "✓ ärenden går fortfarande inte att radera"
+fi
+
 HIST=$(curl -s "$BAS/api/fordon/XYZ999/historik" -H "Authorization: Bearer $TOKEN_J")
 kontroll "fordonshistoriken hittar båda ärendena (case-okänsligt)" "$(echo "$HIST" | falt .arenden.length)" "2"
 kontroll "historiken bär felorsakerna" "$(echo "$HIST" | falt '.arenden.flatMap(a=>a.felorsaker).length')" "1"
@@ -475,5 +498,142 @@ case "$SPEC" in
   "openapi: 3.0.3"*) echo "✓ OpenAPI-specen serveras på /api/openapi.yaml" ;;
   *) echo "✗ OpenAPI-specen saknas"; exit 1 ;;
 esac
+
+# 12. Fakturering (ALVA-PROC-0001)
+#
+# Två egenskaper avgör om det här är ett bokföringsunderlag eller en
+# anteckning: att beloppet HÄRLEDS ur organisationens tillstånd i stället
+# för att tas emot, och att en utfärdad faktura aldrig ändras. Bägge
+# prövas nedan, tillsammans med gränsen mellan kund och utfärdare.
+
+ORG_A=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select id from organisationer where namn='Verkstad A'")
+PERIOD='{"fran":"2026-01-01","till":"2026-12-31"}'
+
+# Utan nyckel i miljön kan ingen faktura utfärdas — fallerar stängt.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: gissning' -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD}")
+kontroll "utan konfigurerad utfärdarnyckel utfärdas ingenting" "$KOD" "403"
+
+# Starta om med utfärdarnyckel konfigurerad
+kill "$SERVER_PID" 2>/dev/null || true
+wait "$SERVER_PID" 2>/dev/null || true
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  JWT_SECRET=integrationshemlighet PORT=$APPPORT \
+  INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
+  FAKTURERING_NYCKEL=utfardarnyckel \
+  node server.mjs &
+SERVER_PID=$!
+sleep 1
+
+# Kundens administratör är inte utfärdare, hur inloggad den än är.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD}")
+kontroll "kundens admin kan inte utfärda sin egen faktura" "$KOD" "403"
+
+# Fel nyckel duger inte heller.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: fel-nyckel-samma-langd' -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD}")
+kontroll "fel utfärdarnyckel avvisas" "$KOD" "403"
+
+# Beloppet tas aldrig emot. Ett anrop som försöker sätta det avvisas
+# högt i stället för att tigas ihjäl.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: utfardarnyckel' \
+  -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD,\"totalt\":1}")
+kontroll "angivet belopp avvisas" "$KOD" "400"
+
+# En bakvänd period ger annars noll månader och en faktura som SER
+# rimlig ut — värre än ett avslag.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: utfardarnyckel' \
+  -d "{\"organisation_id\":\"$ORG_A\",\"period\":{\"fran\":\"2026-12-31\",\"till\":\"2026-01-01\"}}")
+kontroll "bakvänd period avvisas" "$KOD" "400"
+
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: utfardarnyckel' \
+  -d "{\"organisation_id\":\"00000000-0000-0000-0000-000000000000\",\"period\":$PERIOD}")
+kontroll "okänd organisation avvisas" "$KOD" "404"
+
+# Utfärda på riktigt.
+FAKTURA=$(curl -s -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: utfardarnyckel' -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD,\"utfardad\":\"2026-01-15\"}")
+FAKTURA_ID=$(echo "$FAKTURA" | falt .id)
+kontroll "beteckningen följer nomenklaturen" "$(echo "$FAKTURA" | falt .beteckning)" "ALVA-INV-0001"
+kontroll "förfallodagen följer betalningsvillkoret" "$(echo "$FAKTURA" | falt .forfaller)" "2026-02-14"
+
+# Kärnan: summan ska vara densamma som modulen räknar fram ur DATABASENS
+# egna aktiva konton. Ett hårdkodat facit hade bara testat aritmetiken;
+# det här testar att beloppet verkligen härleds ur tillståndet.
+AKTIVA=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select count(*) from anvandare where organisation_id='$ORG_A' and aktiv")
+VANTAT=$(node -e "
+  import('./fakturering.mjs').then(({ fakturera }) => {
+    const f = fakturera({ nummer: 1, org: { namn: 'Verkstad A', moduler: [] }, aktiva: $AKTIVA,
+      period: { fran: '2026-01-01', till: '2026-12-31' }, utfardad: '2026-01-15' });
+    console.log(f.totalt);
+  });
+")
+kontroll "summan härleds ur organisationens aktiva konton" "$(echo "$FAKTURA" | falt .totalt)" "$VANTAT"
+
+# Kunden läser sina egna fakturor, och bara sina egna.
+LISTA=$(curl -s "$BAS/api/fakturor" -H "Authorization: Bearer $TOKEN_A")
+kontroll "kunden ser sin faktura" "$(echo "$LISTA" | falt .fakturor.length)" "1"
+kontroll "statusen är utfärdad" "$(echo "$LISTA" | falt '.fakturor[0].status')" "utfardad"
+kontroll "org B ser inga fakturor" "$(curl -s "$BAS/api/fakturor" -H "Authorization: Bearer $TOKEN_B" | falt .fakturor.length)" "0"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/fakturor" -H "Authorization: Bearer $TOKEN_J")
+kontroll "tekniker når inte kommersiella uppgifter" "$KOD" "403"
+
+# Oföränderligheten är en egenskap i databasen, inte en ambition i koden.
+if PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "update fakturor set totalt = 0 where id='$FAKTURA_ID'" 2>/dev/null; then
+  echo "✗ fakturor går att ändra i databasen"; exit 1
+else
+  echo "✓ databastriggern avvisar ändring av utfärdad faktura"
+fi
+
+# Betalning: registreras av en människa, med en referens som går att
+# spåra, och skrivs som en händelse — aldrig som en uppdatering.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor/$FAKTURA_ID/betald" \
+  -H 'X-Fakturering: utfardarnyckel' -H 'Content-Type: application/json' -d '{}')
+kontroll "betalning utan referens avvisas" "$KOD" "400"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor/$FAKTURA_ID/betald" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d '{"referens":"BG 123"}')
+kontroll "kunden kan inte bokföra sin egen betalning" "$KOD" "403"
+
+curl -s -X POST "$BAS/api/fakturor/$FAKTURA_ID/betald" -H 'X-Fakturering: utfardarnyckel' \
+  -H 'Content-Type: application/json' -d '{"referens":"BG 5402-1178","betaldatum":"2026-02-03"}' >/dev/null
+STATUS=$(curl -s "$BAS/api/fakturor" -H "Authorization: Bearer $TOKEN_A" | falt '.fakturor[0].status')
+kontroll "statusen härleds ur betalningshändelsen" "$STATUS" "betald"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor/$FAKTURA_ID/betald" \
+  -H 'X-Fakturering: utfardarnyckel' -H 'Content-Type: application/json' -d '{"referens":"BG 5402-1178"}')
+kontroll "en betald faktura betalas inte igen" "$KOD" "409"
+
+# Rättelse: originalet rörs inte, en kreditfaktura pekar tillbaka.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor/$FAKTURA_ID/kreditera" \
+  -H 'X-Fakturering: utfardarnyckel' -H 'Content-Type: application/json' -d '{"orsak":"fel"}')
+kontroll "kreditering utan granskbart skäl avvisas" "$KOD" "400"
+KREDIT=$(curl -s -X POST "$BAS/api/fakturor/$FAKTURA_ID/kreditera" -H 'X-Fakturering: utfardarnyckel' \
+  -H 'Content-Type: application/json' \
+  -d '{"orsak":"Antalet aktiva användare var felaktigt vid utfärdandet.","utfardad":"2026-02-10"}')
+kontroll "kreditfakturan får nästa nummer" "$(echo "$KREDIT" | falt .beteckning)" "ALVA-INV-0002"
+kontroll "kreditfakturan pekar tillbaka" "$(echo "$KREDIT" | falt .krediterar)" "ALVA-INV-0001"
+kontroll "kreditfakturan har omvänt tecken" "$(echo "$KREDIT" | falt .totalt)" "-$VANTAT"
+
+LISTA=$(curl -s "$BAS/api/fakturor" -H "Authorization: Bearer $TOKEN_A")
+kontroll "originalet står kvar med sitt belopp" \
+  "$(echo "$LISTA" | falt '.fakturor.find(f => f.beteckning === "ALVA-INV-0001").totalt')" "$VANTAT"
+kontroll "originalets status är nu krediterad" \
+  "$(echo "$LISTA" | falt '.fakturor.find(f => f.beteckning === "ALVA-INV-0001").status')" "krediterad"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor/$FAKTURA_ID/kreditera" \
+  -H 'X-Fakturering: utfardarnyckel' -H 'Content-Type: application/json' \
+  -d '{"orsak":"Samma skäl en gång till, vilket inte ska gå."}')
+kontroll "en krediterad faktura krediteras inte igen" "$KOD" "409"
+
+# Nummerserien är utan luckor — annars är den inte ett underlag.
+LUCKOR=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select (select max(nummer) from fakturor) - (select count(*) from fakturor)")
+kontroll "nummerserien är utan luckor" "$LUCKOR" "0"
 
 echo "Integrationstest: allt grönt"

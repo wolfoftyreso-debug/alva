@@ -62,6 +62,51 @@ export const PRISLISTA = {
 export const FAKTURASTATUS = ["utfardad", "betald", "krediterad"];
 
 /**
+ * Statusen är en projektion, inte en kolumn.
+ *
+ * Följden av att en utfärdad faktura aldrig ändras: "betald" kan inte
+ * skrivas ovanpå "utfärdad". Betalningen är en händelse som inträffar
+ * efteråt, och tillståndet härleds ur händelserna — samma förhållande
+ * som mellan ärendets tillstånd och dess logg.
+ *
+ * Kreditering väger tyngst. En krediterad faktura som också hunnit bli
+ * betald är fortfarande krediterad; det är återbetalningen som är kvar
+ * att göra, och den frågan besvaras inte av ett statusfält.
+ *
+ * @param poster  [{ typ: "betald" | "krediterad", ... }]
+ */
+export function fakturastatus(poster = []) {
+  if (poster.some((p) => p?.typ === "krediterad")) return "krediterad";
+  if (poster.some((p) => p?.typ === "betald")) return "betald";
+  return "utfardad";
+}
+
+/**
+ * Granskar en fakturaperiod innan något härleds ur den.
+ *
+ * En bakvänd period ger noll månader i manaderMellan(), vilket tyst
+ * skulle bli en faktura utan användarrad i stället för ett fel. Den
+ * sortens tystnad är värre än ett avslag: fakturan ser rimlig ut.
+ *
+ * Returnerar en felsträng, eller null när perioden duger.
+ */
+export function granskaPeriod(period) {
+  const datum = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+  if (!period || !datum(period.fran) || !datum(period.till)) {
+    return "Perioden kräver fran och till som datum (ÅÅÅÅ-MM-DD).";
+  }
+  if (new Date(period.till) < new Date(period.fran)) {
+    return "Perioden slutar före den börjar.";
+  }
+  // Ett tak finns för att ett skrivfel i årtalet inte ska bli en faktura
+  // på nittio år. Fem år rymmer varje rimlig licensperiod.
+  if (manaderMellan(period.fran, period.till) > 60) {
+    return "Perioden är längre än fem år — kontrollera datumen.";
+  }
+  return null;
+}
+
+/**
  * Beräknar fakturarader ur organisationens tillstånd.
  *
  * Varje rad bär sitt underlag — antal, à-pris och vad antalet kommer

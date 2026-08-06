@@ -9,8 +9,10 @@ import {
   PRISLISTA,
   fakturabeteckning,
   fakturarader,
+  fakturastatus,
   fakturera,
   formateraBelopp,
+  granskaPeriod,
   kreditera,
   manaderMellan,
 } from "../../../../services/gemensam/fakturering.mjs";
@@ -107,6 +109,50 @@ describe("en utfärdad faktura ändras aldrig", () => {
   it("en kreditering utan skäl avvisas", () => {
     expect(kreditera(f, { nummer: 2, utfardad: "2026-02-01", orsak: "" }).fel).toBeTruthy();
     expect(kreditera(f, { nummer: 2, utfardad: "2026-02-01", orsak: "fel" }).fel).toBeTruthy();
+  });
+});
+
+describe("statusen är en projektion, inte ett fält", () => {
+  // Följden av att fakturaraden är oföränderlig: "betald" kan inte
+  // skrivas ovanpå "utfärdad" utan måste härledas ur händelserna.
+  it("en faktura utan händelser är utfärdad", () => {
+    expect(fakturastatus([])).toBe("utfardad");
+    expect(fakturastatus()).toBe("utfardad");
+  });
+
+  it("en betalningshändelse gör den betald", () => {
+    expect(fakturastatus([{ typ: "betald" }])).toBe("betald");
+  });
+
+  it("kreditering väger tyngst, även efter betalning", () => {
+    // En krediterad faktura som hunnit bli betald är fortfarande
+    // krediterad — det är återbetalningen som är kvar, och den frågan
+    // besvaras inte av ett statusfält.
+    expect(fakturastatus([{ typ: "betald" }, { typ: "krediterad" }])).toBe("krediterad");
+    expect(fakturastatus([{ typ: "krediterad" }, { typ: "betald" }])).toBe("krediterad");
+  });
+});
+
+describe("perioden granskas innan något härleds ur den", () => {
+  it("en rimlig period passerar", () => {
+    expect(granskaPeriod({ fran: "2026-01-01", till: "2026-12-31" })).toBeNull();
+  });
+
+  it("en bakvänd period avvisas i stället för att ge noll månader", () => {
+    // Utan den här spärren blir resultatet en faktura UTAN användarrad,
+    // vilket ser rimligt ut. Tyst fel är värre än avslag.
+    expect(granskaPeriod({ fran: "2026-12-31", till: "2026-01-01" })).toMatch(/slutar före/);
+  });
+
+  it("saknade eller trasiga datum avvisas", () => {
+    expect(granskaPeriod(null)).toBeTruthy();
+    expect(granskaPeriod({ fran: "2026-01-01" })).toBeTruthy();
+    expect(granskaPeriod({ fran: "i januari", till: "2026-12-31" })).toBeTruthy();
+    expect(granskaPeriod({ fran: "2026-1-1", till: "2026-12-31" })).toBeTruthy();
+  });
+
+  it("ett skrivfel i årtalet blir inte en faktura på nittio år", () => {
+    expect(granskaPeriod({ fran: "2026-01-01", till: "2126-12-31" })).toMatch(/längre än fem år/);
   });
 });
 

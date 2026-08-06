@@ -16,6 +16,7 @@
 //   TILLATNA_URSPRUNG   kommaseparerade ursprung för CORS (utelämnad = "*")
 //   TILLAT_INTERNA_UPPSLAG  "true" tillåter leverantörsuppslag mot privata nät
 //   ECM_REGLER_FIL / INTEGRATIONER_FIL  sökvägar till utbytbar konfiguration
+//   FAKTURERING_NYCKEL  utfärdarens nyckel; utan den kan ingen faktura utfärdas
 //   PORT                default 8080
 
 import { createServer } from "node:http";
@@ -33,6 +34,7 @@ import { ALLA_METODIKER } from "./metodiker.mjs";
 import { oversikt as statistikOversikt } from "./statistik.mjs";
 import { KATEGORIER, UTGAENDE, protokollTillHandelser, signeraLeverans } from "./integration.mjs";
 import { enrading, sammanfatta } from "./sammanfattning.mjs";
+import { fakturabeteckning, fakturastatus, fakturera, granskaPeriod, kreditera } from "./fakturering.mjs";
 import {
   MASKERAT,
   gallringsdatum,
@@ -103,6 +105,29 @@ const MAX_KROPP = 4 * 1024 * 1024;
 const MAX_BILAGA = 32 * 1024 * 1024;
 const TOKEN_LIVSTID_S = 12 * 60 * 60;
 const ROLLER = ["tekniker", "arbetsledare", "admin"];
+
+// ---- Utfärdaren av fakturor -------------------------------------------
+//
+// En organisations administratör får INTE utfärda sin egen faktura, och
+// definitivt inte bokföra den som betald. Rollerna i systemet
+// (tekniker/arbetsledare/admin) beskriver arbetet i en verkstad — ingen
+// av dem är motpart i avtalet.
+//
+// Utfärdaren är den som driver installationen, och den identifieras med
+// en egen nyckel i stället för med ett konto. Saknas nyckeln kan ingen
+// faktura utfärdas alls: fakturering fallerar stängt, av samma skäl som
+// ett ärende utan evidens inte kan avslutas.
+const FAKTURERING_NYCKEL = process.env.FAKTURERING_NYCKEL ?? "";
+
+function arUtfardare(req) {
+  if (!FAKTURERING_NYCKEL) return false;
+  const given = String(req.headers["x-fakturering"] ?? "");
+  const a = Buffer.from(given);
+  const b = Buffer.from(FAKTURERING_NYCKEL);
+  // Jämförelsen är tidskonstant, och längden jämförs först eftersom
+  // timingSafeEqual kastar på olika längd.
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
 
@@ -520,6 +545,49 @@ async function kontoGiltigt(anspr) {
   return (anspr.tv ?? 0) === rad.rows[0].token_version;
 }
 
+// ---- Fakturanummer utan luckor ----------------------------------------
+//
+// En sequence hade varit billigare, men den lämnar luckor: numret dras
+// även när transaktionen rullas tillbaka. En nummerserie med hål i är
+// inte ett bokföringsunderlag, den är en lista.
+//
+// Låset serialiserar utfärdandet mot alla repliker — inte bara mot den
+// här processen, vilket är skillnaden mot att räkna i minnet. Fakturor
+// utfärdas sällan, så kostnaden är teoretisk.
+async function medFakturanummer(arbete) {
+  const klient = await pool.connect();
+  try {
+    await klient.query("begin");
+    await klient.query("lock table fakturor in exclusive mode");
+    const rad = await klient.query(`select coalesce(max(nummer), 0) + 1 as nasta from fakturor`);
+    const resultat = await arbete(klient, Number(rad.rows[0].nasta));
+    await klient.query("commit");
+    return resultat;
+  } catch (fel) {
+    await klient.query("rollback").catch(() => {});
+    throw fel;
+  } finally {
+    klient.release();
+  }
+}
+
+// Fakturan med sitt härledda tillstånd. Statusen finns inte i tabellen
+// och kan inte finnas där: raden är oföränderlig.
+async function fakturamedStatus(id) {
+  const rad = await pool.query(
+    `select f.id, f.organisation_id, f.beteckning, f.dokument,
+            coalesce(json_agg(json_build_object('typ', h.typ))
+              filter (where h.id is not null), '[]') as handelser
+     from fakturor f
+     left join fakturahandelser h on h.faktura_id = f.id
+     where f.id = $1
+     group by f.id`,
+    [id],
+  );
+  if (rad.rowCount === 0) return null;
+  return { ...rad.rows[0], status: fakturastatus(rad.rows[0].handelser) };
+}
+
 // Verifierar att ärendet tillhör användarens organisation.
 async function arendeIOrg(arendeId, organisationId) {
   const rader = await pool.query(
@@ -924,11 +992,191 @@ export function skapaServer() {
         return svara(res, 200, { ok: true });
       }
 
+      // ---- Fakturering: utfärdarens sida (ALVA-PROC-0001) -------------
+      //
+      // Ligger före inloggningsspärren därför att utfärdaren inte är en
+      // användare i någon organisation. Nyckeln är hela behörigheten, och
+      // varje väg nedan kräver den innan den läser något.
+      if (req.method === "POST" && vag === "/api/fakturor") {
+        if (!arUtfardare(req)) return svara(res, 403, { error: "Kräver utfärdarens nyckel." });
+        const kropp = await lasKropp(req);
+        const { organisation_id, period, utfardad } = kropp;
+
+        // Beloppet tas aldrig emot. Kommer det ändå är det ett tecken på
+        // att anroparen tror sig kunna sätta det, och det ska avvisas
+        // högt i stället för att tigas ihjäl — samma hållning som mot
+        // okända fält i händelseschemat.
+        const forbjudna = ["rader", "netto", "moms", "totalt", "belopp", "status"].filter((n) => n in kropp);
+        if (forbjudna.length > 0) {
+          return svara(res, 400, {
+            error: `Beloppet härleds ur organisationens tillstånd och kan inte anges (${forbjudna.join(", ")}).`,
+          });
+        }
+
+        const periodfel = granskaPeriod(period);
+        if (periodfel) return svara(res, 400, { error: periodfel });
+        const utfardadDag = utfardad ?? new Date().toISOString().slice(0, 10);
+        if (Number.isNaN(Date.parse(utfardadDag))) return svara(res, 400, { error: "Utfärdandedatum är ogiltigt." });
+
+        const org = await pool.query(`select id, namn, installningar from organisationer where id = $1`, [
+          organisation_id,
+        ]);
+        if (org.rowCount === 0) return svara(res, 404, { error: "Organisationen finns inte." });
+
+        // Underlaget hämtas ur organisationens faktiska tillstånd, inte
+        // ur anropet: de konton som verkligen kan logga in, och de
+        // moduler som verkligen är påslagna. En summa som härleds kan
+        // inte säga emot verkligheten.
+        const aktiva = await pool.query(
+          `select count(*)::int as antal from anvandare where organisation_id = $1 and aktiv`,
+          [organisation_id],
+        );
+        const installningar = org.rows[0].installningar ?? {};
+
+        const faktura = await medFakturanummer(async (klient, nummer) => {
+          const dokument = fakturera({
+            nummer,
+            org: { namn: org.rows[0].namn, moduler: installningar.moduler ?? [] },
+            aktiva: aktiva.rows[0].antal,
+            period,
+            utfardad: utfardadDag,
+          });
+          const rad = await klient.query(
+            `insert into fakturor (organisation_id, nummer, beteckning, utfardad, forfaller, valuta, totalt, dokument)
+             values ($1, $2, $3, $4, $5, $6, $7, $8) returning id`,
+            [
+              organisation_id,
+              nummer,
+              dokument.beteckning,
+              dokument.utfardad,
+              dokument.forfaller,
+              dokument.valuta,
+              dokument.totalt,
+              JSON.stringify(dokument),
+            ],
+          );
+          return { id: rad.rows[0].id, ...dokument };
+        });
+        logga("info", "faktura utfärdad", { beteckning: faktura.beteckning, organisation: organisation_id });
+        return svara(res, 201, faktura);
+      }
+
+      // Betalning registreras av en människa när pengarna kommit in.
+      // Systemet påstår aldrig av sig självt att något är betalt.
+      //
+      // Ingen update: fakturaraden är oföränderlig. Betalningen är en
+      // egen post, och statusen härleds ur posterna.
+      const betaldVag = vag.match(/^\/api\/fakturor\/([0-9a-fA-F-]{36})\/betald$/);
+      if (req.method === "POST" && betaldVag) {
+        if (!arUtfardare(req)) return svara(res, 403, { error: "Kräver utfärdarens nyckel." });
+        const { betaldatum, referens } = await lasKropp(req);
+        if (typeof referens !== "string" || referens.trim().length < 3) {
+          return svara(res, 400, { error: "En betalningsreferens krävs — annars går betalningen inte att spåra." });
+        }
+        const dag = betaldatum ?? new Date().toISOString().slice(0, 10);
+        if (Number.isNaN(Date.parse(dag))) return svara(res, 400, { error: "Betaldatum är ogiltigt." });
+
+        const nuvarande = await fakturamedStatus(betaldVag[1]);
+        if (!nuvarande) return svara(res, 404, { error: "Fakturan finns inte." });
+        // Enkelriktat: en betald faktura betalas inte igen, och en
+        // krediterad faktura betalas inte alls.
+        if (nuvarande.status !== "utfardad") {
+          return svara(res, 409, { error: `Fakturan är redan ${nuvarande.status}.` });
+        }
+        await pool.query(
+          `insert into fakturahandelser (faktura_id, typ, intraffade, uppgift, registrerad_av)
+           values ($1, 'betald', $2, $3, $4)`,
+          [betaldVag[1], dag, referens.trim(), "Utfärdaren"],
+        );
+        return svara(res, 200, { beteckning: nuvarande.beteckning, status: "betald" });
+      }
+
+      // Rättelse. En utfärdad faktura ändras aldrig — den bemöts av en
+      // kreditfaktura som pekar tillbaka, och den kräver ett skäl.
+      const krediteraVag = vag.match(/^\/api\/fakturor\/([0-9a-fA-F-]{36})\/kreditera$/);
+      if (req.method === "POST" && krediteraVag) {
+        if (!arUtfardare(req)) return svara(res, 403, { error: "Kräver utfärdarens nyckel." });
+        const { orsak, utfardad } = await lasKropp(req);
+        const dag = utfardad ?? new Date().toISOString().slice(0, 10);
+        if (Number.isNaN(Date.parse(dag))) return svara(res, 400, { error: "Utfärdandedatum är ogiltigt." });
+
+        const nuvarande = await fakturamedStatus(krediteraVag[1]);
+        if (!nuvarande) return svara(res, 404, { error: "Fakturan finns inte." });
+        if (nuvarande.status === "krediterad") return svara(res, 409, { error: "Fakturan är redan krediterad." });
+
+        // Skälet granskas av modulen, inte här: kravet på ett granskbart
+        // varför hör till faktureringen, inte till transportlagret.
+        const { kredit, fel } = kreditera(nuvarande.dokument, { nummer: 0, utfardad: dag, orsak });
+        if (fel) return svara(res, 400, { error: fel });
+
+        const skapad = await medFakturanummer(async (klient, nummer) => {
+          const dokument = { ...kredit, beteckning: fakturabeteckning(nummer) };
+          const rad = await klient.query(
+            `insert into fakturor (organisation_id, nummer, beteckning, utfardad, forfaller, valuta, totalt, krediterar, dokument)
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning id`,
+            [
+              nuvarande.organisation_id,
+              nummer,
+              dokument.beteckning,
+              dokument.utfardad,
+              dokument.forfaller,
+              dokument.valuta,
+              dokument.totalt,
+              nuvarande.id,
+              JSON.stringify(dokument),
+            ],
+          );
+          // Krediteringen noteras också på originalet, så dess status
+          // följer med utan att raden rörs.
+          await klient.query(
+            `insert into fakturahandelser (faktura_id, typ, intraffade, uppgift, registrerad_av)
+             values ($1, 'krediterad', $2, $3, $4)`,
+            [nuvarande.id, dag, orsak.trim(), "Utfärdaren"],
+          );
+          return { id: rad.rows[0].id, ...dokument };
+        });
+        logga("info", "faktura krediterad", { krediterar: nuvarande.beteckning, ny: skapad.beteckning });
+        return svara(res, 201, skapad);
+      }
+
       // -- Skyddade endpoints (organisationsknutna) --
       const anspr = kravAuth(req, hemlighet);
       if (!anspr?.org) return svara(res, 401, { error: "Inloggning krävs." });
       if (!(await kontoGiltigt(anspr))) {
         return svara(res, 401, { error: "Sessionen gäller inte längre — logga in på nytt." });
+      }
+
+      // Organisationens egna fakturor. Läsning, aldrig mer: kunden ser
+      // vad den ska betala och varför, men utfärdar inget och bokför
+      // inget. Kommersiella uppgifter — därför administratör.
+      if (req.method === "GET" && vag === "/api/fakturor") {
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
+        const rader = await pool.query(
+          `select f.id, f.beteckning, f.utfardad, f.forfaller, f.valuta, f.totalt,
+                  k.beteckning as krediterar, f.dokument,
+                  coalesce(json_agg(json_build_object('typ', h.typ, 'intraffade', h.intraffade))
+                    filter (where h.id is not null), '[]') as handelser
+           from fakturor f
+           left join fakturor k on k.id = f.krediterar
+           left join fakturahandelser h on h.faktura_id = f.id
+           where f.organisation_id = $1
+           group by f.id, k.beteckning
+           order by f.nummer desc`,
+          [anspr.org],
+        );
+        return svara(res, 200, {
+          fakturor: rader.rows.map(({ handelser, dokument, ...f }) => ({
+            ...f,
+            // Statusen lagras inte, den härleds. Se fakturastatus().
+            status: fakturastatus(handelser),
+            rader: dokument.rader,
+            netto: dokument.netto,
+            moms: dokument.moms,
+            momssats: dokument.momssats,
+            period: dokument.period,
+            betalningssatt: dokument.betalningssatt,
+          })),
+        });
       }
 
       // Användarhantering: endast systemadministratör, endast egen org.
@@ -1238,15 +1486,16 @@ export function skapaServer() {
            from felsokning_arenden a
            join felsokning_handelser h on h.arende_id = a.id
            where a.organisation_id = $1
-             and a.id in (
-               select arende_id from felsokning_handelser
-               where handelse->>'typ' = 'objekt_identifierat'
-                 and upper(handelse->'objekt'->>'identifierare') = $2
-             )
+             and a.identifierare_index = $2
            group by a.id
            order by a.skapad desc
            limit 20`,
-          [anspr.org, ident],
+          // Sökningen går mot det BLINDADE indexet, inte mot loggen.
+          // Identifieraren är krypterad i vila (krypto-shredding), så en
+          // jämförelse mot handelse->'objekt'->>'identifierare' kunde
+          // aldrig träffa — historiken svarade tomt på varje fordon, och
+          // gjorde det med 200. Indexet finns just för den här frågan.
+          [anspr.org, blindaIdentifierare(ident)],
         );
         return svara(res, 200, { arenden: rader.rows });
       }

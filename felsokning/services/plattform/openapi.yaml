@@ -28,6 +28,7 @@ tags:
   - name: AI
   - name: Integrationer
   - name: Drift
+  - name: Fakturering
 
 paths:
   /halsa:
@@ -1186,6 +1187,136 @@ paths:
         "200": { description: Sparat }
         "403": { description: Kräver arbetsledare eller administratör }
 
+  # ---- Fakturering (ALVA-PROC-0001) ------------------------------------
+  #
+  # Två parter, inte en. Organisationen LÄSER sina fakturor; utfärdaren
+  # skapar dem och registrerar betalning. Utfärdaren är inte en användare
+  # i någon organisation och identifieras med en egen nyckel
+  # (X-Fakturering) — en kund ska inte kunna bokföra sin egen betalning.
+  #
+  # Ingen betalleverantör är inblandad och inga kortuppgifter hanteras.
+  /api/fakturor:
+    get:
+      tags: [Fakturering]
+      summary: Organisationens egna fakturor
+      description: >
+        Kräver rollen `admin`. Statusen är en projektion av
+        fakturahändelserna, inte ett lagrat fält — en utfärdad faktura
+        ändras aldrig.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Fakturor, senast utfärdad först.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fakturor:
+                    type: array
+                    items: { $ref: "#/components/schemas/Faktura" }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+    post:
+      tags: [Fakturering]
+      summary: Utfärda en faktura
+      description: >
+        Kräver utfärdarens nyckel i `X-Fakturering`. Beloppet kan inte
+        anges: det härleds ur organisationens faktiska tillstånd — antalet
+        aktiva konton, licensperioden, påslagna moduler. Ett anrop som
+        ändå innehåller `rader`, `totalt` eller `belopp` avvisas med 400.
+      security: [{ utfardarNyckel: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organisation_id, period]
+              properties:
+                organisation_id: { type: string, format: uuid }
+                period:
+                  type: object
+                  required: [fran, till]
+                  properties:
+                    fran: { type: string, format: date }
+                    till: { type: string, format: date }
+                utfardad:
+                  type: string
+                  format: date
+                  description: Standard är dagens datum.
+      responses:
+        "201":
+          description: Fakturan, fullständig och oföränderlig.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Faktura" }
+        "400": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+
+  /api/fakturor/{fakturaId}/betald:
+    post:
+      tags: [Fakturering]
+      summary: Registrera betalning
+      description: >
+        Kräver utfärdarens nyckel. Ingen uppdatering sker — betalningen
+        skrivs som en egen händelse, och statusen härleds ur den.
+        Plattformen registrerar aldrig en betalning av sig själv.
+      security: [{ utfardarNyckel: [] }]
+      parameters:
+        - { name: fakturaId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [referens]
+              properties:
+                referens:
+                  type: string
+                  description: Betalningsreferens, minst 3 tecken — annars går betalningen inte att spåra.
+                betaldatum: { type: string, format: date }
+      responses:
+        "200": { description: Registrerad. }
+        "400": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+        "409": { description: Fakturan är redan betald eller krediterad. }
+
+  /api/fakturor/{fakturaId}/kreditera:
+    post:
+      tags: [Fakturering]
+      summary: Kreditera en faktura
+      description: >
+        Kräver utfärdarens nyckel. En felaktig faktura rättas inte — den
+        bemöts av en kreditfaktura som pekar tillbaka på den, med omvänt
+        tecken och ett granskbart skäl (minst 10 tecken).
+      security: [{ utfardarNyckel: [] }]
+      parameters:
+        - { name: fakturaId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orsak]
+              properties:
+                orsak: { type: string, minLength: 10 }
+                utfardad: { type: string, format: date }
+      responses:
+        "201":
+          description: Kreditfakturan.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Faktura" }
+        "400": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+        "404": { $ref: "#/components/responses/Fel" }
+        "409": { description: Fakturan är redan krediterad. }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1196,6 +1327,17 @@ components:
         HS256-JWT från /api/auth/logga-in eller /api/auth/registrera.
         Anspråk: sub (användar-id), namn, org (organisations-id),
         roll, iat, exp (12 timmar).
+    utfardarNyckel:
+      type: apiKey
+      in: header
+      name: X-Fakturering
+      description: >
+        Utfärdarens nyckel (FAKTURERING_NYCKEL). Fakturering är en
+        relation mellan installationen och kunden — ingen av rollerna i
+        en verkstad är motpart i det avtalet, så en organisations
+        administratör kan varken utfärda sin egen faktura eller bokföra
+        den som betald. Saknas nyckeln i miljön kan ingen faktura
+        utfärdas alls: faktureringen fallerar stängt.
   responses:
     Inloggad:
       description: Inloggad — token + kontouppgifter.
@@ -1221,6 +1363,47 @@ components:
       type: object
       properties:
         error: { type: string }
+    Faktura:
+      type: object
+      description: >
+        Belopp i minsta valutaenhet (öre). Varje rad bär sitt underlag —
+        var antalet kommer ifrån — så att summan går att granska utan att
+        fråga någon. `status` är härledd, inte lagrad.
+      properties:
+        id: { type: string, format: uuid }
+        beteckning: { type: string, example: ALVA-INV-0001 }
+        organisation: { type: string }
+        period:
+          type: object
+          properties:
+            fran: { type: string, format: date }
+            till: { type: string, format: date }
+        utfardad: { type: string, format: date }
+        forfaller: { type: string, format: date }
+        valuta: { type: string, example: SEK }
+        rader:
+          type: array
+          items:
+            type: object
+            properties:
+              benamning: { type: string }
+              underlag: { type: string }
+              antal: { type: integer }
+              enhet: { type: string }
+              apris: { type: integer }
+              belopp: { type: integer }
+        netto: { type: integer }
+        momssats: { type: number }
+        moms: { type: integer }
+        totalt: { type: integer }
+        krediterar:
+          type: string
+          nullable: true
+          description: Beteckningen på den faktura denna kreditfaktura rättar.
+        status:
+          type: string
+          enum: [utfardad, betald, krediterad]
+        betalningssatt: { type: string }
     Roll:
       type: string
       enum: [tekniker, arbetsledare, admin]

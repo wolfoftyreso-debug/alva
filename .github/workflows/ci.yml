@@ -67,3 +67,29 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run genomgang
+
+  # Plattformstjänsten mot en riktig Postgres.
+  #
+  # Den här sviten fanns redan och kördes aldrig, vilket lät två fel leva
+  # i backenden: en append-only-trigger som gjorde det omöjligt att skriva
+  # ärendets härledda gallringsdatum — så varje avslut föll med 500 — och
+  # en fordonshistorik som sökte i klartext efter en identifierare som
+  # krypteras i vila, och därför svarade tomt på varje fordon. Med 200.
+  #
+  # Bägge kräver en databas för att synas. Enhetstester med attrapper hade
+  # inte kunnat hitta någotdera, och gjorde det inte heller.
+  plattform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: felsokning/services/plattform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update && sudo apt-get install -y postgresql
+      - run: npm ci
+      # Skriptet startar sin egen Postgres med initdb och behöver därför
+      # köra som root; -E env PATH behåller runnerns node.
+      - run: sudo -E env "PATH=$PATH" bash integrationstest.sh

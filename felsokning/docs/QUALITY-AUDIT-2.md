@@ -506,6 +506,29 @@ walkthrough would quietly start testing a different application.
 | Rev 1 · m-6 | Manual accessibility review | Automated tooling finds malformation, not usability. |
 | Rev 2 · m-9 | The portal mock | A product decision about what the portal is for. |
 
+### Two backend defects found by running the suite that was never run
+
+Building the invoicing endpoints meant running `integrationstest.sh` — the
+platform service against a real Postgres. It had never been part of CI. It
+failed on the second assertion, on code untouched by that work:
+
+| # | Defect | Why it survived |
+| --- | --- | --- |
+| **C-7** | The `arenden_append_only` trigger forbade **all** `UPDATE` on `felsokning_arenden`. But two of its columns are derived *after* creation: the retention date, set at close from the case type, and the blinded vehicle index, written when the object is identified. So closing a case made the server attempt an update, the database refused, and the whole sync failed with `500` — *after* the quality gate had already passed the case. | No test exercised close against a real database. The unit suite uses the in-memory projection, where no trigger exists. |
+| **C-8** | Vehicle history matched `handelse->'objekt'->>'identifierare'` in cleartext. Identifiers are encrypted at rest under crypto-shredding, so the comparison could never match: history answered **empty for every vehicle, with `200`**. The blinded index exists for exactly this query and was never wired into it. | An empty result is indistinguishable from "no previous cases" unless a test writes two cases and demands two back. The integration test did — and never ran. |
+
+C-7 is repaired by making the protection column-wise instead of total: identity,
+ownership and origin are still immutable, deletion is still impossible, but the
+fields the system derives itself may be written. C-8 is repaired by querying the
+blinded index. Both now have assertions, and the suite runs in CI as the
+`plattform` job.
+
+The pattern is the same one M-7 exposed, one layer down. A guarantee nothing
+executes is not a guarantee. Both defects were in the *backend of the product's
+central promise* — that a closed case is a durable record — and both were
+invisible from a green unit suite, because neither could fail without a
+database.
+
 ### Re-audit verdict
 
 The finding that decided this revision — C-5 — is closed at the point where it
