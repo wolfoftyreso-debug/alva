@@ -416,7 +416,13 @@ describe("inloggningen heter samma sak överallt", () => {
     const namn = ram.match(/\{ till: "\/alva\/logga-in", text: "([^"]+)" \}/)?.[1];
     expect(namn).toBeTruthy();
     // Varje länk till inloggningen på startsidan bär samma text.
-    const knappar = [...start.matchAll(/to="\/alva\/logga-in">\s*<Knapp[^>]*>([^<]+)<\/Knapp>/g)];
+    //
+    // Mönstret tål attribut på länken. Första versionen gjorde inte det,
+    // och när <Link> fick en className matchade den noll knappar — testet
+    // slutade mäta i stället för att falla. Det enda som avslöjade det var
+    // kravet nedan på att den ska hitta NÅGOT, vilket är därför det står
+    // där och inte som en självklarhet.
+    const knappar = [...start.matchAll(/to="\/alva\/logga-in"[^>]*>\s*<Knapp[^>]*>([^<]+)<\/Knapp>/g)];
     expect(knappar.length).toBeGreaterThan(0);
     for (const [, text] of knappar) expect(text.trim()).toBe(namn);
   });

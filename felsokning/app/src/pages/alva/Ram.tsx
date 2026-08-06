@@ -49,11 +49,16 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
             </span>
           </Link>
 
-          {/* Portalens fem länkar fick inte plats på en telefon och sköt
-              ut dokumentet i sidled i stället för att brytas. Raden bryts
-              nu, med tätare mellanrum på smal skärm. */}
-          <nav aria-label={portal ? "Portal" : "Site"}>
-            <ul className="flex flex-wrap gap-2 sm:gap-6">
+          {/* Portalens länkar fick inte plats på en telefon och sköt ut
+              dokumentet i sidled i stället för att brytas. Raden bryts nu.
+
+              På smal skärm ligger navigationen dessutom på EGEN rad och
+              fördelas över hela måttet, i stället för att tryckas ihop mot
+              höger kant med ett tomrum efter ordmärket. Det är samma
+              fördelning som sidfoten redan använder — raden får sin balans
+              av marginalerna, inte av att posterna klumpas ihop. */}
+          <nav aria-label={portal ? "Portal" : "Site"} className="w-full sm:w-auto">
+            <ul className="flex flex-wrap justify-between gap-x-4 gap-y-2 sm:justify-end sm:gap-6">
               {lankar.map((l) => {
                 const aktiv = plats.pathname === l.till;
                 return (

@@ -303,12 +303,21 @@ export function Knapp({
   onClick,
   variant = "primar",
   disabled,
+  bred = false,
   type = "button",
 }: {
   children: ReactNode;
   onClick?: () => void;
   variant?: "primar" | "sekundar";
   disabled?: boolean;
+  /**
+   * Fyller sin behållare i stället för att vara innehållsbred.
+   *
+   * För knappar som står bredvid varandra: två olika breda knappar läser
+   * sig som en huvudåtgärd och en eftertanke, oavsett vad de heter. Med
+   * lika bredd skiljs vikten av fyllning mot kontur i stället.
+   */
+  bred?: boolean;
   type?: "button" | "submit";
 }) {
   const primär = variant === "primar";
@@ -317,7 +326,12 @@ export function Knapp({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="border px-4 py-2 text-[13px] font-semibold uppercase tracking-[0.08em] disabled:opacity-40"
+      // `h-full` och inte bara `w-full`: lika breda knappar där den ena
+      // texten bryts till två rader blir olika HÖGA, vilket är samma
+      // obalans en rad ned. Bägge fyller sin cell.
+      className={`border px-4 py-2 text-[13px] font-semibold uppercase tracking-[0.08em] disabled:opacity-40${
+        bred ? " h-full w-full" : ""
+      }`}
       style={{
         background: primär ? FARG.graphite : FARG.white,
         color: primär ? FARG.white : FARG.graphite,

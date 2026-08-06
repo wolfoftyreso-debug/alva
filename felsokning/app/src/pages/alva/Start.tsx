@@ -51,12 +51,17 @@ export default function Start() {
             {ALVA.definition}
           </p>
 
-          <div className="mt-10 flex gap-4">
-            <Link to="/alva/ansokan">
-              <Knapp>Request account</Knapp>
+          {/* Lika breda, inte innehållsbreda. Två knappar bredvid varandra
+              där den ena är dubbelt så bred som den andra läser sig som en
+              huvudåtgärd och en eftertanke — och det är inte förhållandet
+              mellan dem. Rutnätet ger dem samma bredd; vikten skiljs av
+              fyllning mot kontur, som resten av systemet gör. */}
+          <div className="mt-10 grid max-w-[420px] grid-cols-2 gap-4">
+            <Link to="/alva/ansokan" className="block h-full">
+              <Knapp bred>Request account</Knapp>
             </Link>
-            <Link to="/alva/logga-in">
-              <Knapp variant="sekundar">Login</Knapp>
+            <Link to="/alva/logga-in" className="block h-full">
+              <Knapp bred variant="sekundar">Login</Knapp>
             </Link>
           </div>
         </div>
@@ -278,12 +283,12 @@ export default function Start() {
           <div className="font-mono text-[11px]" style={{ color: FARG.steel }}>
             {PLATTFORMSVERSION}
           </div>
-          <div className="flex gap-4">
-            <Link to="/alva/ansokan">
-              <Knapp>Request account</Knapp>
+          <div className="grid max-w-[420px] grid-cols-2 gap-4">
+            <Link to="/alva/ansokan" className="block h-full">
+              <Knapp bred>Request account</Knapp>
             </Link>
-            <Link to="/alva/logga-in">
-              <Knapp variant="sekundar">Login</Knapp>
+            <Link to="/alva/logga-in" className="block h-full">
+              <Knapp bred variant="sekundar">Login</Knapp>
             </Link>
           </div>
         </div>
