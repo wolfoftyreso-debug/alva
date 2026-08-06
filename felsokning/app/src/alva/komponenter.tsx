@@ -147,6 +147,31 @@ export function Block({ children, rubrik, beteckning }: { children: ReactNode; r
   );
 }
 
+/**
+ * Demonstrationsmärkning.
+ *
+ * QUALITY-AUDIT-2 · m-9. Inloggningen ser ut som en inloggning men
+ * autentiserar ingenting, och kontoansökan skickar ingenting. Två
+ * personer i rad har försökt använda dem på riktigt — vilket är precis
+ * vad fyndet förutsade: en yta som ser färdig ut planerar man efter.
+ *
+ * Integrationssidan märker redan en profil `draft` tills den körts mot
+ * leverantören, med motiveringen att en lista där allt ser färdigt ut är
+ * den snabbaste vägen till ett misslyckat införande. Samma måttstock
+ * gäller här. Rutan säger vad som INTE sker, inte vad som kommer att ske
+ * någon gång — ett löfte vore samma fel i ny form.
+ */
+export function Demonstration({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-6 border-l-2 px-4 py-4" style={{ borderColor: FARG.graphite, background: FARG.white }}>
+      <Etikett ton="graphite">Demonstration</Etikett>
+      <p className="mt-2 max-w-[680px] text-[13px] leading-[20px]" style={{ color: FARG.graphite }}>
+        {children}
+      </p>
+    </div>
+  );
+}
+
 // ---- Fasindikator -----------------------------------------------------
 
 /**

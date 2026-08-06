@@ -238,3 +238,41 @@ describe("ALVA:s snitt följer med i bygget", () => {
     expect(typsnitt).not.toMatch(/url\(\s*["']?https?:/);
   });
 });
+
+// ---- Obackade ytor måste märkas ----------------------------------------
+//
+// QUALITY-AUDIT-2 · m-9. Inloggningen autentiserar ingenting och
+// kontoansökan skickar ingenting, men bägge ser ut som att de gör det.
+// Två personer i rad försökte använda dem på riktigt innan de frågade —
+// vilket är precis vad fyndet förutsade: en yta som ser färdig ut
+// planerar man efter.
+//
+// Integrationssidan märker redan en profil `draft` tills den körts mot
+// leverantören, med motiveringen att en lista där allt ser färdigt ut är
+// den snabbaste vägen till ett misslyckat införande. Testet håller
+// samma måttstock mot resten av ytan.
+describe("ytor utan verklig funktion är märkta som demonstration", () => {
+  const sida = (namn: string) => filer.find(([n]) => n.endsWith(`pages/alva/${namn}`))![1];
+
+  it.each(["LoggaIn.tsx", "Ansokan.tsx", "Portal.tsx"])("%s bär en demonstrationsruta", (namn) => {
+    expect(sida(namn)).toContain("<Demonstration>");
+  });
+
+  it("ansökans kvittens är märkt, inte bara formuläret", () => {
+    // Kvittenssidan med sin referens är det som mest liknar ett verkligt
+    // besked, och därför den som vilseleder mest om den står omärkt.
+    expect(sida("Ansokan.tsx").match(/<Demonstration>/g)).toHaveLength(2);
+  });
+
+  it("rutan säger vad som inte sker, inte vad som ska komma", () => {
+    // Ett löfte om framtida funktion vore samma fel i ny form.
+    const komponenter = filer.find(([n]) => n.endsWith("alva/komponenter.tsx"))![1];
+    const ruta = komponenter.match(/export function Demonstration[\s\S]*?\n}/)?.[0] ?? "";
+    expect(ruta).toContain("Demonstration");
+    for (const löfte of ["coming soon", "snart", "will be available", "in a future"]) {
+      for (const namn of ["LoggaIn.tsx", "Ansokan.tsx", "Portal.tsx"]) {
+        expect(sida(namn).toLowerCase(), `${namn}: ${löfte}`).not.toContain(löfte);
+      }
+    }
+  });
+});

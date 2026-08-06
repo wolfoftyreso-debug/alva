@@ -6,7 +6,7 @@
 // garantitvist kan inte dela ut konton automatiskt.
 
 import { type FormEvent, useState } from "react";
-import { Block, Etikett, FARG, Knapp, Rubrik, Statusmärke } from "@/alva/komponenter";
+import { Demonstration, Block, Etikett, FARG, Knapp, Rubrik, Statusmärke } from "@/alva/komponenter";
 import { Ram } from "./Ram";
 
 interface Falt {
@@ -51,6 +51,10 @@ export default function Ansokan() {
           <div className="mt-2 mb-8">
             <Rubrik niva={1}>Submitted</Rubrik>
           </div>
+          <Demonstration>
+            Nothing was submitted. The reference below was generated in the browser and exists
+            nowhere else.
+          </Demonstration>
           <Block rubrik="Registration" beteckning={referens}>
             <dl className="text-[14px] leading-[24px]">
               <div className="flex justify-between border-b py-2" style={{ borderColor: FARG.lightSteel }}>
@@ -81,6 +85,10 @@ export default function Ansokan() {
         <div className="mt-2 mb-2">
           <Rubrik niva={1}>Request account</Rubrik>
         </div>
+        <Demonstration>
+          This form does not submit anything. The reference it returns is generated in the browser
+          and is not recorded. Applications are handled outside this demonstration.
+        </Demonstration>
         <p className="mb-8 text-[14px] leading-[22px]" style={{ color: FARG.steel }}>
           Applications are reviewed manually. No payment is taken at this stage.
         </p>

@@ -6,7 +6,7 @@
 
 import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Block, Etikett, FARG, Knapp, Rubrik } from "@/alva/komponenter";
+import { Demonstration, Block, Etikett, FARG, Knapp, Rubrik } from "@/alva/komponenter";
 import { Ram } from "./Ram";
 
 const FALT = [
@@ -37,6 +37,11 @@ export default function LoggaIn() {
         <div className="mt-2 mb-8">
           <Rubrik niva={1}>Login</Rubrik>
         </div>
+        <Demonstration>
+          This login authenticates nothing. Any organization and username signs in, and the password
+          is not checked. Real authentication exists in the platform service and is not part of this
+          demonstration.
+        </Demonstration>
 
         <form onSubmit={skicka}>
           <Block>

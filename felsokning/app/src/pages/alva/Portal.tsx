@@ -7,7 +7,7 @@
 
 import { Link } from "react-router-dom";
 import { PLATTFORMSVERSION, arendebeteckning } from "@/alva/system";
-import { Block, Etikett, FARG, Falt, Knapp, Rubrik, Statusmärke, Tabell } from "@/alva/komponenter";
+import { Demonstration, Block, Etikett, FARG, Falt, Knapp, Rubrik, Statusmärke, Tabell } from "@/alva/komponenter";
 import { MEDDELANDE } from "@/alva/sprak";
 import { Ram } from "./Ram";
 
@@ -26,6 +26,11 @@ export default function Portal() {
             ALVA-ORG-0142
           </span>
         </div>
+
+        <Demonstration>
+          The figures on this page are fixed example values, and the organization is not a real one.
+          Analysis is the exception: it is computed from the cases you create under Diagnostics.
+        </Demonstration>
 
         <div className="grid gap-6 md:grid-cols-2">
           <Block rubrik="Status" beteckning="ALVA-REP-0001">
