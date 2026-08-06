@@ -200,6 +200,13 @@ async function kor(sida, fall) {
     if (await finns(pre)) {
       const ja = btn(/Ja — kontrollerad/i, pre);
       if (await finns(ja)) {
+        // Historikkontrollen är en SPÄRR, inte en påminnelse: metodiken
+        // får inte gå att nå förbi den. Det prövas här, i det ögonblick
+        // frågan står obesvarad på skärmen — senare går det inte att
+        // pröva, eftersom svaret då redan är avgivet.
+        if (await finns(panel(/Metodik|Steg \d/i))) {
+          throw new Error("metodiken var nåbar innan fordonets historik besvarats");
+        }
         await klicka(ja);
         await klicka(btn(/^Dokumentera$/i, pre));
         continue;
@@ -474,6 +481,9 @@ try {
     "/alva/portal/kunskapskallor",
     "/alva/portal/integration",
     "/alva/portal/fakturor",
+    "/alva/portal/garantier",
+    "/alva/portal/forsakring",
+    "/alva/portal/support",
   ]) {
     await sida.goto(`${BAS}/#${vag}`, { waitUntil: "networkidle" });
     await sida.waitForTimeout(400);

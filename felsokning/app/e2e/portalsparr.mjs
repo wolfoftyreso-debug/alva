@@ -35,6 +35,9 @@ const VYER = [
   "/alva/portal/kunskapskallor",
   "/alva/portal/integration",
   "/alva/portal/fakturor",
+  "/alva/portal/garantier",
+  "/alva/portal/forsakring",
+  "/alva/portal/support",
 ];
 
 // Nycklarna är plattformsklientens egna (src/felsokning/plattform.ts).

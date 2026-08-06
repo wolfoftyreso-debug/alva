@@ -233,6 +233,49 @@ export async function hamtaFakturor(): Promise<Faktura[]> {
   return ((await res.json()) as { fakturor: Faktura[] }).fakturor;
 }
 
+// Supportärenden (ALVA-PROC-0050). Anmälan sker från ärendet där felet
+// uppstod; sammanhanget härleds av servern och skickas inte in.
+export interface Supportinlagg {
+  typ: "svar" | "status";
+  text: string;
+  status: string | null;
+  fran: string;
+  skapad: string;
+}
+
+export interface Supportarende {
+  id: string;
+  beteckning: string;
+  arende_id: string | null;
+  typ: string;
+  rubrik: string;
+  beskrivning: string;
+  sammanhang: Record<string, string>;
+  status: string;
+  skapad: string;
+  anmald_av: string | null;
+  inlagg: Supportinlagg[];
+}
+
+export async function hamtaSupport(): Promise<Supportarende[]> {
+  const res = await plattformFetch("/api/support");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { arenden: Supportarende[] }).arenden;
+}
+
+export async function anmalSupport(anmalan: {
+  typ: string;
+  rubrik: string;
+  beskrivning: string;
+  arendeId?: string;
+  sammanhang?: Record<string, string>;
+}): Promise<{ beteckning: string }> {
+  const res = await plattformFetch("/api/support", { method: "POST", body: JSON.stringify(anmalan) });
+  const data = (await res.json().catch(() => ({}))) as { beteckning?: string; error?: string };
+  if (!res.ok) throw new Error(data.error ?? `Fel ${res.status}`);
+  return { beteckning: data.beteckning ?? "" };
+}
+
 // Märkesspecifika kopplingar. Uppgifterna lagras krypterat på servern
 // och returneras alltid maskerade — klienten ser aldrig hemligheterna.
 export interface LeverantorsFalt {

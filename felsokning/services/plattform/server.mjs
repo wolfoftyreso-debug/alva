@@ -17,6 +17,7 @@
 //   TILLAT_INTERNA_UPPSLAG  "true" tillåter leverantörsuppslag mot privata nät
 //   ECM_REGLER_FIL / INTEGRATIONER_FIL  sökvägar till utbytbar konfiguration
 //   FAKTURERING_NYCKEL  utfärdarens nyckel; utan den kan ingen faktura utfärdas
+//   SUPPORT_NYCKEL      vår egen supports nyckel; krävs för att svara och sätta status
 //   PERSONNYCKEL_HUVUD  32 byte (hex/base64) — kuverterar personnycklarna så att
 //                       en återställd databasdump inte innehåller läsbara nycklar
 //   PORT                default 8080
@@ -37,6 +38,7 @@ import { oversikt as statistikOversikt } from "./statistik.mjs";
 import { KATEGORIER, UTGAENDE, protokollTillHandelser, signeraLeverans } from "./integration.mjs";
 import { enrading, sammanfatta } from "./sammanfattning.mjs";
 import { fakturabeteckning, fakturastatus, fakturera, granskaPeriod, kreditera } from "./fakturering.mjs";
+import { STATUSAR, granskaAnmalan, sammanhang as byggSammanhang, supportbeteckning, supportstatus } from "./support.mjs";
 import {
   MASKERAT,
   gallringsdatum,
@@ -131,14 +133,26 @@ const ROLLER = ["tekniker", "arbetsledare", "admin"];
 // ett ärende utan evidens inte kan avslutas.
 const FAKTURERING_NYCKEL = process.env.FAKTURERING_NYCKEL ?? "";
 
-function arUtfardare(req) {
-  if (!FAKTURERING_NYCKEL) return false;
-  const given = String(req.headers["x-fakturering"] ?? "");
-  const a = Buffer.from(given);
-  const b = Buffer.from(FAKTURERING_NYCKEL);
+// Vår egen support. Verkstaden anmäler och svarar i sitt eget ärende;
+// att sätta status är vår sida av bordet, och den skiljs med en egen
+// nyckel av samma skäl som utfärdaren av fakturor gör det.
+const SUPPORT_NYCKEL = process.env.SUPPORT_NYCKEL ?? "";
+
+function nyckelStammer(given, forvantad) {
+  if (!forvantad) return false;
+  const a = Buffer.from(String(given ?? ""));
+  const b = Buffer.from(forvantad);
   // Jämförelsen är tidskonstant, och längden jämförs först eftersom
   // timingSafeEqual kastar på olika längd.
   return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function arUtfardare(req) {
+  return nyckelStammer(req.headers["x-fakturering"], FAKTURERING_NYCKEL);
+}
+
+function arSupport(req) {
+  return nyckelStammer(req.headers["x-support"], SUPPORT_NYCKEL);
 }
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
@@ -657,6 +671,27 @@ async function medFakturanummer(arbete) {
     await klient.query("begin");
     await klient.query("lock table fakturor in exclusive mode");
     const rad = await klient.query(`select coalesce(max(nummer), 0) + 1 as nasta from fakturor`);
+    const resultat = await arbete(klient, Number(rad.rows[0].nasta));
+    await klient.query("commit");
+    return resultat;
+  } catch (fel) {
+    await klient.query("rollback").catch(() => {});
+    throw fel;
+  } finally {
+    klient.release();
+  }
+}
+
+// Supportnummer, samma resonemang som fakturanumret: låset serialiserar
+// mot alla repliker, och en sequence hade lämnat luckor vid rollback.
+// Serien är dock inte ett bokföringsunderlag, så luckor vore uthärdliga —
+// det är enhetligheten som motiverar samma lösning, inte kravet.
+async function medSupportnummer(arbete) {
+  const klient = await pool.connect();
+  try {
+    await klient.query("begin");
+    await klient.query("lock table supportarenden in exclusive mode");
+    const rad = await klient.query(`select coalesce(max(nummer), 0) + 1 as nasta from supportarenden`);
     const resultat = await arbete(klient, Number(rad.rows[0].nasta));
     await klient.query("commit");
     return resultat;
@@ -1299,6 +1334,123 @@ export function skapaServer() {
       if (!anspr?.org) return svara(res, 401, { error: "Inloggning krävs." });
       if (!(await kontoGiltigt(anspr))) {
         return svara(res, 401, { error: "Sessionen gäller inte längre — logga in på nytt." });
+      }
+
+      // ---- Support och felanmälan (ALVA-PROC-0050) -------------------
+      //
+      // ALLA inloggade får anmäla, inklusive teknikern. En tröskel här
+      // ger färre anmälningar, inte färre fel — och de fel som inte
+      // anmäls är de som lever längst.
+      if (vag === "/api/support") {
+        if (req.method === "GET") {
+          const rader = await pool.query(
+            `select s.id, s.beteckning, s.arende_id, s.typ, s.rubrik, s.beskrivning,
+                    s.sammanhang, s.skapad, a.namn as anmald_av,
+                    coalesce(json_agg(json_build_object(
+                        'typ', i.typ, 'text', i.text, 'status', i.status,
+                        'fran', i.fran, 'skapad', i.skapad) order by i.skapad)
+                      filter (where i.id is not null), '[]') as inlagg
+             from supportarenden s
+             left join anvandare a on a.id = s.skapad_av
+             left join supportinlagg i on i.support_id = s.id
+             where s.organisation_id = $1
+             group by s.id, a.namn
+             order by s.nummer desc limit 200`,
+            [anspr.org],
+          );
+          return svara(res, 200, {
+            arenden: rader.rows.map(({ inlagg, ...r }) => ({
+              ...r,
+              inlagg,
+              // Statusen lagras inte, den härleds. Se supportstatus().
+              status: supportstatus(inlagg),
+            })),
+          });
+        }
+
+        if (req.method === "POST") {
+          const kropp = await lasKropp(req);
+          const fel = granskaAnmalan(kropp);
+          if (fel) return svara(res, 400, { error: fel });
+
+          // Ärendet måste vara vårt om det anges. En anmälan är inte en
+          // väg runt organisationsgränsen.
+          if (kropp.arendeId && !(await arendeIOrg(kropp.arendeId, anspr.org))) {
+            return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
+          }
+
+          // Sammanhanget HÄRLEDS. Klienten får skicka tekniska fält, men
+          // byggSammanhang() släpper bara igenom de kända — ett fordon
+          // eller en kund kan inte smugglas in i en supportanmälan.
+          const kontext = byggSammanhang({
+            ...kropp.sammanhang,
+            arendeId: kropp.arendeId,
+            sparId: res.spår.spårId,
+            plattformsversion: kropp.sammanhang?.plattformsversion,
+          });
+
+          const skapat = await medSupportnummer(async (klient, nummer) => {
+            const rad = await klient.query(
+              `insert into supportarenden
+                 (organisation_id, arende_id, nummer, beteckning, typ, rubrik, beskrivning, sammanhang, skapad_av)
+               values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+               returning id, beteckning, skapad`,
+              [
+                anspr.org,
+                kropp.arendeId ?? null,
+                nummer,
+                supportbeteckning(nummer),
+                kropp.typ,
+                kropp.rubrik.trim(),
+                kropp.beskrivning.trim(),
+                JSON.stringify(kontext),
+                anspr.sub,
+              ],
+            );
+            return rad.rows[0];
+          });
+          logga("info", "supportärende skapat", {
+            beteckning: skapat.beteckning,
+            typ: kropp.typ,
+            organisation: anspr.org,
+            spårId: res.spår.spårId,
+          });
+          return svara(res, 201, { ...skapat, status: "mottagen" });
+        }
+      }
+
+      // Svar och statusbyten. Verkstaden får svara i sitt eget ärende;
+      // status sätts bara av vår support, med egen nyckel.
+      const supportInlagg = vag.match(/^\/api\/support\/([0-9a-fA-F-]{36})\/inlagg$/);
+      if (req.method === "POST" && supportInlagg) {
+        const { text, status } = await lasKropp(req);
+        const agare = await pool.query(
+          `select organisation_id from supportarenden where id = $1`,
+          [supportInlagg[1]],
+        );
+        if (agare.rowCount === 0 || agare.rows[0].organisation_id !== anspr.org) {
+          return svara(res, 404, { error: "Supportärendet är inte tillgängligt." });
+        }
+        if (status !== undefined) {
+          if (!arSupport(req)) return svara(res, 403, { error: "Status sätts av supporten." });
+          if (!STATUSAR.includes(status)) return svara(res, 400, { error: "Okänd status." });
+        }
+        if (typeof text !== "string" || text.trim().length < 2) {
+          return svara(res, 400, { error: "Skriv något." });
+        }
+        await pool.query(
+          `insert into supportinlagg (support_id, typ, text, status, fran, skapad_av)
+           values ($1, $2, $3, $4, $5, $6)`,
+          [
+            supportInlagg[1],
+            status !== undefined ? "status" : "svar",
+            text.trim(),
+            status ?? null,
+            arSupport(req) ? "Support" : anspr.namn,
+            arSupport(req) ? null : anspr.sub,
+          ],
+        );
+        return svara(res, 200, { ok: true });
       }
 
       // Organisationens egna fakturor. Läsning, aldrig mer: kunden ser

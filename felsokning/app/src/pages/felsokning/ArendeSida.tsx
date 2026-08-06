@@ -2567,7 +2567,113 @@ function RapportFlik({
         Genererad ur ärendets händelselogg · Observationer och mätvärden redovisas utan slutsatser som saknar stöd.
       </p>
       <Ritningsstampel arende={arende} />
+      <Felanmalan arende={arende} metodik={metodik ?? null} />
     </>
+  );
+}
+
+/**
+ * Felanmälan — i ärendet, inte någon annanstans.
+ *
+ * En anmälningsknapp som bara finns i en portalvy nås aldrig av den som
+ * står med händerna i en bil. Den ligger därför i varje ärende, och tar
+ * med sitt sammanhang självt: ärende, metodik, öppet steg och
+ * plattformsversion. Teknikern minns inte plattformsversionen, och att
+ * fråga efter den är att lägga över vårt problem på verkstaden.
+ *
+ * Anmälan lagras aldrig i ärendets händelselogg. Loggen är protokollet
+ * över vad som gjordes med FORDONET; att ett fel i vårt system anmäldes
+ * hör inte dit, och skulle följa med in i en rapport som ska hålla i en
+ * tvist.
+ */
+function Felanmalan({ arende, metodik }: { arende: Arende; metodik: Metodik | null }) {
+  const [oppen, setOppen] = useState(false);
+  const [typ, setTyp] = useState("felanmalan");
+  const [rubrik, setRubrik] = useState("");
+  const [text, setText] = useState("");
+  const [utfall, setUtfall] = useState<{ ok?: string; fel?: string }>({});
+  const [skickar, setSkickar] = useState(false);
+
+  const skicka = async () => {
+    setSkickar(true);
+    setUtfall({});
+    try {
+      const { anmalSupport, plattformAktiv } = await import("@/felsokning/plattform");
+      if (!plattformAktiv()) {
+        setUtfall({ fel: "Ingen plattform är konfigurerad — anmälan kan inte skickas härifrån." });
+        return;
+      }
+      const { beteckning } = await anmalSupport({
+        typ,
+        rubrik,
+        beskrivning: text,
+        arendeId: arende.id,
+        sammanhang: {
+          metodikId: metodik?.id ?? "",
+          plattformsversion: PLATTFORMSVERSION,
+          klient: typeof navigator === "undefined" ? "" : navigator.userAgent,
+        },
+      });
+      setUtfall({ ok: beteckning });
+      setRubrik("");
+      setText("");
+    } catch (orsak) {
+      setUtfall({ fel: orsak instanceof Error ? orsak.message : String(orsak) });
+    } finally {
+      setSkickar(false);
+    }
+  };
+
+  if (!oppen) {
+    return (
+      <p className="mt-4 text-center">
+        <button
+          type="button"
+          onClick={() => setOppen(true)}
+          className="text-[12px] uppercase tracking-wide text-[#4A5560] underline"
+        >
+          Rapportera ett problem med systemet
+        </button>
+      </p>
+    );
+  }
+
+  return (
+    <Panel rubrik="Rapportera ett problem med systemet">
+      <p className="mb-2 text-[12px] text-[#707070]">
+        Ärende, metodik och plattformsversion följer med automatiskt. Inget om fordonet eller kunden
+        skickas.
+      </p>
+      <div className="mb-2 grid grid-cols-3 gap-2">
+        {[
+          ["felanmalan", "Fel"],
+          ["fraga", "Fråga"],
+          ["forbattring", "Förbättring"],
+        ].map(([id, etikett]) => (
+          <StorKnapp key={id} variant={typ === id ? "primar" : "sekundar"} onClick={() => setTyp(id)}>
+            {etikett}
+          </StorKnapp>
+        ))}
+      </div>
+      <TextFalt label="Vad gäller det?" varde={rubrik} satt={setRubrik} platshallare="Kort rubrik" />
+      <TextFalt
+        label="Vad hände, och vad väntade du dig?"
+        varde={text}
+        satt={setText}
+        platshallare="Den som svarar ser inte din skärm."
+        flerRad
+      />
+      {utfall.ok && <p className="mt-2 text-[13px] text-[#1E6B34]">Anmäld som {utfall.ok}.</p>}
+      {utfall.fel && <p className="mt-2 text-[13px] text-[#8B1A1A]">{utfall.fel}</p>}
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <StorKnapp onClick={skicka} disabled={skickar || rubrik.trim().length < 5 || text.trim().length < 20}>
+          {skickar ? "Skickar" : "Skicka anmälan"}
+        </StorKnapp>
+        <StorKnapp variant="sekundar" onClick={() => setOppen(false)}>
+          Stäng
+        </StorKnapp>
+      </div>
+    </Panel>
   );
 }
 

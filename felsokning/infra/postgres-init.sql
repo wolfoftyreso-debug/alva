@@ -423,3 +423,51 @@ create trigger personnycklar_skydd
 -- krypteringen ger ny chiffertext för samma klartext, så varken raden
 -- eller nyttolasten kan jämföras. Avtrycket kan.
 alter table felsokning_handelser add column if not exists klientdigest text;
+
+-- ---- Support och felanmälan (ALVA-PROC-0050) ---------------------------
+--
+-- Anmälan är oföränderlig, och det som händer med den är egna poster.
+-- Samma skäl som för fakturan: en anmälan vars historia kan skrivas om är
+-- inte ett underlag när någon senare frågar hur länge felet var känt.
+create table if not exists supportarenden (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references organisationer(id),
+  -- Ärendet anmälan gäller. Null för en anmälan utan ärende — plattformen
+  -- kan gå sönder även när ingen står i ett ärende.
+  arende_id text,
+  nummer bigint not null unique,
+  beteckning text not null unique,
+  typ text not null check (typ in ('felanmalan', 'fraga', 'forbattring')),
+  rubrik text not null,
+  beskrivning text not null,
+  -- Härlett sammanhang: metodik, plattformsversion, spår-id. Aldrig något
+  -- identifierande om fordon eller kund — en supportanmälan är inte ett
+  -- skäl att flytta personuppgifter till ett annat system.
+  sammanhang jsonb not null default '{}'::jsonb,
+  skapad_av uuid references anvandare(id),
+  skapad timestamptz not null default now()
+);
+create index if not exists supportarenden_org_idx on supportarenden (organisation_id, nummer desc);
+create index if not exists supportarenden_arende_idx on supportarenden (arende_id);
+
+drop trigger if exists supportarenden_append_only on supportarenden;
+create trigger supportarenden_append_only
+  before update or delete on supportarenden
+  for each row execute function forbjud_andring();
+
+create table if not exists supportinlagg (
+  id uuid primary key default gen_random_uuid(),
+  support_id uuid not null references supportarenden(id),
+  typ text not null check (typ in ('svar', 'status')),
+  text text not null,
+  status text check (status in ('mottagen', 'under_arbete', 'atgardad', 'stangd')),
+  fran text not null,
+  skapad_av uuid references anvandare(id),
+  skapad timestamptz not null default now()
+);
+create index if not exists supportinlagg_idx on supportinlagg (support_id, skapad);
+
+drop trigger if exists supportinlagg_append_only on supportinlagg;
+create trigger supportinlagg_append_only
+  before update or delete on supportinlagg
+  for each row execute function forbjud_andring();

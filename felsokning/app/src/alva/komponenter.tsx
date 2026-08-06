@@ -361,6 +361,53 @@ export function Knapp({
  * håller markeringen fri från tillstånd och fungerar innan skriptet
  * kört.
  */
+/**
+ * Textfält.
+ *
+ * Fanns inte förrän nu: inloggningen kodade sitt eget, och nästa vy som
+ * behövde ett hade blivit det tredje stället där samma ruta ritas för
+ * hand. Tre gånger är där ett designsystem tappas — inte i det stora
+ * beslutet utan i den lilla upprepningen.
+ */
+export function Textfalt({
+  label,
+  varde,
+  andra,
+  platshallare,
+  typ = "text",
+  komplettering,
+}: {
+  label: string;
+  varde: string;
+  andra: (v: string) => void;
+  platshallare?: string;
+  typ?: "text" | "email" | "password";
+  komplettering?: string;
+}) {
+  const id = `f-${label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="block text-[11px] font-semibold uppercase tracking-[0.08em]"
+        style={{ color: FARG.steel }}
+      >
+        {label}
+      </label>
+      <input
+        id={id}
+        type={typ}
+        value={varde}
+        autoComplete={komplettering}
+        placeholder={platshallare}
+        onChange={(e) => andra(e.target.value)}
+        className="mt-2 w-full border px-4 py-2 text-[14px]"
+        style={{ borderColor: FARG.lightSteel, background: FARG.white, color: FARG.graphite }}
+      />
+    </div>
+  );
+}
+
 export function Tabell({ kolumner, rader }: { kolumner: string[]; rader: ReactNode[][] }) {
   return (
     <>

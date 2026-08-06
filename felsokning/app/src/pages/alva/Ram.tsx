@@ -21,6 +21,9 @@ const PORTAL = [
   { till: "/alva/portal/analys", text: "Analysis" },
   { till: "/alva/portal/kunskapskallor", text: "Knowledge sources" },
   { till: "/alva/portal/integration", text: "Integration" },
+  { till: "/alva/portal/garantier", text: "Warranty" },
+  { till: "/alva/portal/forsakring", text: "Insurance" },
+  { till: "/alva/portal/support", text: "Support" },
   { till: "/alva/portal/fakturor", text: "Invoices" },
   { till: "/felsokning", text: "Diagnostics" },
 ];

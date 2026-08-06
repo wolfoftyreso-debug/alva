@@ -848,4 +848,62 @@ sleep 1
 KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden/arende-kuvert/handelser" -H "Authorization: Bearer $TOKEN_A")
 kontroll "utan huvudnyckel lamnas inget ut" "$KOD" "500"
 
+# 19. Support och felanmälan (ALVA-PROC-0050)
+kill "$SERVER_PID" 2>/dev/null || true
+wait "$SERVER_PID" 2>/dev/null || true
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  JWT_SECRET=integrationshemlighet PORT=$APPPORT SUPPORT_NYCKEL=supportnyckel node server.mjs &
+SERVER_PID=$!
+sleep 1
+
+# Teknikern far anmala. En troskel har ger farre anmalningar, inte farre fel.
+ANMALAN=$(curl -s -X POST "$BAS/api/support" -H "Authorization: Bearer $TOKEN_J" -H 'Content-Type: application/json' \
+  -d '{"typ":"felanmalan","rubrik":"Matsteget vagrar komma","arendeId":"arende-test1",
+       "beskrivning":"Kontrollen tar inte emot 2,4 men accepterar 2.4. Verkstaden skriver komma.",
+       "sammanhang":{"metodikId":"vibration","regnr":"ABC123","plattformsversion":"ALVA 1.0"}}')
+SUP_ID=$(echo "$ANMALAN" | falt .id)
+kontroll "teknikern kan anmala" "$(echo "$ANMALAN" | falt .beteckning)" "ALVA-SUP-0001"
+kontroll "nya anmalningar ar mottagna" "$(echo "$ANMALAN" | falt .status)" "mottagen"
+
+LISTA=$(curl -s "$BAS/api/support" -H "Authorization: Bearer $TOKEN_A")
+kontroll "anmalan syns i organisationen" "$(echo "$LISTA" | falt .arenden.length)" "1"
+kontroll "sammanhanget bar metodiken" "$(echo "$LISTA" | falt '.arenden[0].sammanhang.metodik')" "vibration"
+kontroll "sammanhanget bar sparId" "$(echo "$LISTA" | falt '.arenden[0].sammanhang.spar ? "ja" : "nej"')" "ja"
+# Det viktigaste: ett regnr kan inte smugglas in i en supportanmalan.
+kontroll "identifierande falt slapps inte igenom" \
+  "$(echo "$LISTA" | falt '.arenden[0].sammanhang.regnr ?? "borta"')" "borta"
+
+kontroll "org B ser inga anmalningar" "$(curl -s "$BAS/api/support" -H "Authorization: Bearer $TOKEN_B" | falt .arenden.length)" "0"
+
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/support" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"typ":"felanmalan","rubrik":"fel","beskrivning":"gar ej"}')
+kontroll "for tunn anmalan avvisas" "$KOD" "400"
+
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/support" -H "Authorization: Bearer $TOKEN_B" \
+  -H 'Content-Type: application/json' \
+  -d '{"typ":"felanmalan","rubrik":"Nagot om org A","arendeId":"arende-test1","beskrivning":"En anmalan ar inte en vag runt organisationsgransen."}')
+kontroll "anmalan kan inte peka pa annan orgs arende" "$KOD" "404"
+
+# Verkstaden svarar i sitt eget arende; status ar var sida av bordet.
+curl -s -X POST "$BAS/api/support/$SUP_ID/inlagg" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"text":"Hander aven i Chrome."}' >/dev/null
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/support/$SUP_ID/inlagg" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"text":"Vi tittar.","status":"under_arbete"}')
+kontroll "verkstaden kan inte satta status" "$KOD" "403"
+
+curl -s -X POST "$BAS/api/support/$SUP_ID/inlagg" -H 'X-Support: supportnyckel' \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"text":"Ratta i nasta utgava.","status":"atgardad"}' >/dev/null
+LISTA=$(curl -s "$BAS/api/support" -H "Authorization: Bearer $TOKEN_A")
+kontroll "statusen harleds ur inlaggen" "$(echo "$LISTA" | falt '.arenden[0].status')" "atgardad"
+kontroll "svaret finns kvar bredvid statusbytet" "$(echo "$LISTA" | falt '.arenden[0].inlagg.length')" "2"
+
+if PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "update supportarenden set rubrik = 'omskrivet'" 2>/dev/null; then
+  echo "✗ supportarenden gar att skriva om"; exit 1
+else
+  echo "✓ supportarenden gar inte att skriva om"
+fi
+
 echo "Integrationstest: allt grönt"

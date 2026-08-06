@@ -29,6 +29,9 @@ import AlvaKunskapskallor from "./pages/alva/Kunskapskallor";
 import AlvaAnalys from "./pages/alva/Analys";
 import AlvaFakturor from "./pages/alva/Fakturor";
 import AlvaIntegration from "./pages/alva/Integration";
+import AlvaGarantier from "./pages/alva/Garantier";
+import AlvaForsakring from "./pages/alva/Forsakring";
+import AlvaSupport from "./pages/alva/Support";
 import { Portalvakt } from "./pages/alva/Portalvakt";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
@@ -74,6 +77,9 @@ function AppContent() {
         <Route path="/alva/portal/analys" element={<Portalvakt><AlvaAnalys /></Portalvakt>} />
         <Route path="/alva/portal/integration" element={<Portalvakt><AlvaIntegration /></Portalvakt>} />
         <Route path="/alva/portal/fakturor" element={<Portalvakt><AlvaFakturor /></Portalvakt>} />
+        <Route path="/alva/portal/garantier" element={<Portalvakt><AlvaGarantier /></Portalvakt>} />
+        <Route path="/alva/portal/forsakring" element={<Portalvakt><AlvaForsakring /></Portalvakt>} />
+        <Route path="/alva/portal/support" element={<Portalvakt><AlvaSupport /></Portalvakt>} />
         <Route path="/felsokning" element={<Arendelista />} />
         <Route path="/felsokning/nytt" element={<NyttArende />} />
         <Route path="/felsokning/arende/:id" element={<ArendeSida />} />
