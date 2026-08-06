@@ -1117,6 +1117,40 @@ PROTH2=$(curl -s "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bear
 kontroll "leverantörens mätvärde bär registrets stämpel" \
   "$(echo "$PROTH2" | falt '.handelser.filter(h=>h.handelse.beskrivning==="Kastmatning")[0].handelse.kalibreradVidMatning')" "true"
 
+# 18j. Kedjesvepet hittar det som redan är saboterat (TÜV-2-härdning)
+#
+# Verifieringen fanns men anropades bara vid tvist. Svepet är driftens
+# nattliga fråga "är allt fortfarande sant?" — och testerna 18c/18f har
+# redan lämnat två saboterade ärenden efter sig, så svepet provas mot
+# riktiga brott i stället för arrangerade.
+SVEP=$(curl -s -X POST "$BAS/api/kedjesvep" -H "Authorization: Bearer $TOKEN_A")
+kontroll "svepet hittar båda de saboterade ärendena" "$(echo "$SVEP" | falt '.brutna.length')" "2"
+kontroll "svepet pekar ut arende-kedja" \
+  "$(echo "$SVEP" | falt '.brutna.some(b=>b.arende==="arende-kedja")')" "true"
+kontroll "svepet pekar ut den ogiltiga förseglingen" \
+  "$(echo "$SVEP" | falt '.ogiltigaForseglingar.includes("arende-forseglat")')" "true"
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/kedjesvep" -H "Authorization: Bearer $TOKEN_J")
+kontroll "tekniker nekas svepet" "$KOD" "403"
+
+# Cron-läget: samma svep utan server, felkod vid brott — larmet är gratis.
+# Felkoden är själva poängen — men under `set -e` dödar den skriptet om
+# den inte fångas i samma andetag.
+CLI_KOD=0
+CLI_UT=$(DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel node server.mjs --kedjesvep 2>/dev/null) || CLI_KOD=$?
+kontroll "cron-svepet avslutar med felkod vid brott" "$CLI_KOD" "1"
+kontroll "cron-svepet rapporterar brottet i loggformat" \
+  "$(echo "$CLI_UT" | grep -c 'arende-kedja')" "1"
+
+# 18k. Säkerhetshuvuden och ärlig 413
+HUVUDEN=$(curl -s -D - -o /dev/null "$BAS/api/arenden/arende-test1/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "nosniff sätts" "$(echo "$HUVUDEN" | grep -ci 'x-content-type-options: nosniff')" "1"
+kontroll "API-svar cachas aldrig" "$(echo "$HUVUDEN" | grep -ci 'cache-control: no-store')" "1"
+kontroll "inbäddning är stängd" "$(echo "$HUVUDEN" | grep -ci "frame-ancestors 'none'")" "1"
+KOD=$(head -c 5242880 /dev/zero | curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-test1/handelser" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' --data-binary @-)
+kontroll "för stor kropp svarar 413, inte 500" "$KOD" "413"
+
 # 19. Support och felanmälan (ALVA-PROC-0050)
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true

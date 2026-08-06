@@ -730,6 +730,45 @@ paths:
         "400": { $ref: "#/components/responses/Fel" }
         "401": { $ref: "#/components/responses/Fel" }
 
+  /api/kedjesvep:
+    post:
+      tags: [Ärenden]
+      summary: Verifiera varje kedja i organisationen (ALVA-SPEC-070)
+      description: >
+        Driftens fråga "är allt fortfarande sant?". Går igenom samtliga
+        ärenden och pekar ut varje kedjebrott och varje ogiltig
+        försegling. Kräver arbetsledare eller administratör. Samma svep
+        körs nattligen av driften via `node server.mjs --kedjesvep`, som
+        avslutar med felkod vid brott.
+      responses:
+        "200":
+          description: Svepets utfall.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  arenden: { type: integer }
+                  brutna:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        arende: { type: string }
+                        brott:
+                          type: object
+                          properties:
+                            index: { type: integer }
+                            id: { type: string }
+                  ogiltigaForseglingar:
+                    type: array
+                    items: { type: string }
+                  oforseglade:
+                    type: integer
+                    description: Ärenden med kedjade händelser men ingen försegling (t.ex. ännu inte avslutade).
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
+
   /api/arenden/{arendeId}/kedja:
     parameters:
       - name: arendeId

@@ -22,6 +22,19 @@
 
 export const UTGAVOR = [
   {
+    version: "3.4",
+    datum: "2026-08-06",
+    commit: "c1c56e6",
+    rubrik: "Kedjesvep, registret gäller alla vägar, och ett fynd svepet gjorde själv",
+    andringar: [
+      "Kedjesvepet: driftens nattliga fråga \"är allt fortfarande sant?\". Varje kedja och försegling i varje organisation verifieras — på begäran av arbetsledaren, nattligen av driften, med felkod vid brott så larmet är gratis.",
+      "Svepet hittade en riktig bugg första gången det kördes: leverantörshändelser bröt sina egna kedjelänkar därför att den kanoniska formen behandlade undefined som null medan databasen släpper nyckeln. Kanonisk form är nu exakt den form som överlever rundresan.",
+      "Kalibreringsfaktumet fryses vid mottagandet: taket \"hög\" kräver ett mätdon vars kalibrering gällde när mätningen togs — inte bara ett mätdon.",
+      "Mätdonsregistret gäller även leverantörsprotokoll. Okänt instrument nedgraderas öppet i stället för att tros på.",
+      "Säkerhetshuvuden på varje API-svar, ärlig 413 för för stora kroppar, och startvarning vid oförseglad drift.",
+    ],
+  },
+  {
     version: "3.3",
     datum: "2026-08-06",
     commit: "9378089",

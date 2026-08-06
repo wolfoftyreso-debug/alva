@@ -193,3 +193,17 @@ retention, and must continue to be stated as such.
 ---
 
 *ALVA-DOC-0007 · Internal engineering review · Not endorsed by any inspection body*
+
+---
+
+## Appendix A · Post-audit hardening (same day)
+
+Implemented after the examination closed, in response to §4 and the
+verdict's root-cause note:
+
+| Measure | Detail |
+| --- | --- |
+| Chain sweep | `POST /api/kedjesvep` (supervisor/admin) verifies every chain and seal in the organisation; `node server.mjs --kedjesvep` does the same across all organisations nightly, exiting non-zero on any break. Verification existed but was only ever invoked at dispute time — a break could stand undetected for years. |
+| The sweep's first catch | On its first run against the integration environment, the sweep reported **three** breaks where the tests had sabotaged two. The third was real: supplier-protocol events carried `enhet: undefined`, which the canonical form serialised as `null` while the database round-trip drops the key — write-digest and read-digest differed, and every supplier event broke its own chain link. Client events escaped by accident (`JSON.parse` cannot produce `undefined`). Fixed at the root: canonical form now matches exactly what survives the round-trip. The examiner notes the mechanism worked precisely as intended — on day one, against its own authors. |
+| One implementation of verification | Endpoint and sweep share `kedjestatus()`. Two implementations of "is the chain intact?" will disagree the day it matters — the T-13/T-14 root cause, applied prophylactically. |
+| Transport hardening | `nosniff`, `no-store`, `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, HSTS on every API response; oversized bodies answer 413 instead of a generic 500. Body cap (4 MiB) and batch cap (500) verified as already present. |

@@ -414,6 +414,19 @@ function svara(res, status, kropp) {
     // Ursprunget sätts en gång per anrop i hanteraren nedan.
     ...korsHuvuden(res),
     "Access-Control-Allow-Headers": "authorization, content-type",
+    // ---- Säkerhetshuvuden (TÜV-2-härdning) ------------------------------
+    // API:t svarar JSON och bara JSON. `nosniff` gör att en webbläsare
+    // aldrig gissar om det; `no-store` håller loggar och fakturor borta
+    // från mellanliggande cachar — ett API vars svar är personuppgifter
+    // får inte bli en cacheträff; `frame-ancestors` stänger inbäddning.
+    // HSTS sätts även om TLS termineras framför oss: huvudet är
+    // verkningslöst över http och rätt över https, så det kostar inget
+    // att alltid tala sanning.
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": "frame-ancestors 'none'",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   });
   res.end(JSON.stringify(kropp));
 }
@@ -575,6 +588,71 @@ async function skrivKedjat(arendeId, poster) {
   } finally {
     db.release();
   }
+}
+
+/**
+ * Kedje- och förseglingsstatus för ETT ärende (ALVA-SPEC-070).
+ *
+ * En enda implementation, delad av verifierings-endpointen och
+ * kedjesvepet. TÜV-2 T-14 handlade om en kontroll som fanns vid en grind
+ * men inte vid resursen — samma läxa gäller verifiering: två
+ * implementationer av "är kedjan hel?" kommer att svara olika den dag
+ * det betyder något.
+ */
+async function kedjestatus(arendeId) {
+  const rader = await pool.query(
+    `select id, tidpunkt, anvandare, handelse, sekvens, kedjehash
+     from felsokning_handelser where arende_id = $1
+     order by sekvens nulls first, tidpunkt, id`,
+    [arendeId],
+  );
+  const kedjade = rader.rows.filter((r) => r.sekvens != null);
+  const tillLank = (r) => ({
+    id: r.id,
+    tidpunkt: new Date(r.tidpunkt).toISOString(),
+    anvandare: r.anvandare,
+    digest: innehallsHash(kanoniskt(r.handelse)),
+    kedjehash: r.kedjehash,
+  });
+  const kedja = verifieraKedja(arendeId, kedjade.map(tillLank));
+  const okedjade = rader.rows.length - kedjade.length;
+
+  const arende = await pool.query(
+    `select kedjerot, forsegling, forseglad from felsokning_arenden where id = $1`,
+    [arendeId],
+  );
+  const a = arende.rows[0] ?? {};
+  let forsegling = "saknas";
+  let efterForsegling = null;
+  if (a.forsegling) {
+    if (!FORSEGLING_NYCKEL) {
+      forsegling = "kan inte prövas — FORSEGLING_NYCKEL saknas";
+    } else {
+      const idx = kedjade.findIndex((r) => r.kedjehash === a.kedjerot);
+      // Prefixet prövas för sig: ett brott EFTER förseglingspunkten gör
+      // inte prefixet mindre bevisat — brottet pekas ut för sig.
+      const prefixOk = idx >= 0 && verifieraKedja(arendeId, kedjade.slice(0, idx + 1).map(tillLank)).ok;
+      if (
+        prefixOk &&
+        provaForsegling(FORSEGLING_NYCKEL, arendeId, a.kedjerot, new Date(a.forseglad).toISOString(), a.forsegling)
+      ) {
+        forsegling = "giltig";
+        efterForsegling = kedjade.length - (idx + 1);
+      } else {
+        forsegling = "OGILTIG";
+      }
+    }
+  }
+
+  return {
+    ok: kedja.ok,
+    rot: kedja.rot,
+    brott: kedja.brott ?? null,
+    kedjade: kedjade.length,
+    okedjade,
+    forsegling,
+    efterForsegling,
+  };
 }
 
 async function grindHinder(pool, arendeId, nya, sprak = STANDARD) {
@@ -937,7 +1015,18 @@ async function fakturamedStatus(id) {
 function kanoniskt(värde) {
   if (Array.isArray(värde)) return `[${värde.map(kanoniskt).join(",")}]`;
   if (värde && typeof värde === "object") {
+    // Nycklar med undefined SLÄPPS, precis som JSON.stringify gör.
+    //
+    // Kedjesvepet hittade felet första natten det fanns: protokollvägen
+    // bygger händelser med `enhet: plocka(...) ?? undefined`, och den
+    // här funktionen serialiserade nyckeln som null medan jsonb — som
+    // får objektet via JSON.stringify — släppte den. Skriv-digest och
+    // läs-digest skilde sig, och varje leverantörshändelse bröt sin
+    // egen kedjelänk. Klienthändelser gick fria av en slump: JSON.parse
+    // kan inte producera undefined. Kanonisk form måste vara EXAKT den
+    // form som överlever databasens rundresa, inte en nästan likadan.
     return `{${Object.keys(värde)
+      .filter((n) => värde[n] !== undefined)
       .sort()
       .map((n) => `${JSON.stringify(n)}:${kanoniskt(värde[n])}`)
       .join(",")}}`;
@@ -2575,104 +2664,56 @@ export function skapaServer() {
         if (!(await arendeIOrg(kedjeVag[1], anspr.org))) {
           return svara(res, 404, { error: "Ärendet är inte tillgängligt." });
         }
-        const rader = await pool.query(
-          `select id, tidpunkt, anvandare, handelse, sekvens, kedjehash
-           from felsokning_handelser where arende_id = $1
-           order by sekvens nulls first, tidpunkt, id`,
-          [kedjeVag[1]],
-        );
-        const kedja = verifieraKedja(
-          kedjeVag[1],
-          rader.rows
-            .filter((r) => r.sekvens != null)
-            .map((r) => ({
-              id: r.id,
-              tidpunkt: new Date(r.tidpunkt).toISOString(),
-              anvandare: r.anvandare,
-              digest: innehallsHash(kanoniskt(r.handelse)),
-              kedjehash: r.kedjehash,
-            })),
-        );
-        const okedjade = rader.rows.filter((r) => r.sekvens == null).length;
-
-        // Förseglingen täcker sitt PREFIX, inte kedjans nuvarande rot.
-        //
-        // Skillnaden är inte akademisk. Offline-synk är en kärnfunktion:
-        // en annan enhet kan lämna in händelser EFTER att ärendet
-        // stängts, och då flyttar kedjans rot förbi den förseglade.
-        // Revision 3 (K-1) fann att verifieringen då svarade OGILTIG —
-        // ett falsklarm i normal drift, och en verifiering som larmar
-        // falskt avfärdas snart som trasig. Det är så ett skydd dör.
-        //
-        // Rätt semantik: den förseglade roten ska vara EN LÄNK I den
-        // omräknade kedjan. Är den det bevisar förseglingen loggen fram
-        // till den punkten, och det som kom efter redovisas som
-        // oförseglat i stället för att smittas eller smitta. En
-        // angripare som räknat om kedjan stoppas fortfarande: den
-        // omräknade kedjan innehåller inte den gamla roten, och en ny
-        // försegling kan inte skapas utan nyckeln.
-        const arende = await pool.query(
-          `select kedjerot, forsegling, forseglad from felsokning_arenden where id = $1`,
-          [kedjeVag[1]],
-        );
-        const a = arende.rows[0] ?? {};
-        let forsegling = "saknas";
-        let efterForsegling = null;
-        if (a.forsegling) {
-          if (!FORSEGLING_NYCKEL) {
-            forsegling = "kan inte prövas — FORSEGLING_NYCKEL saknas";
-          } else {
-            const kedjade = rader.rows.filter((r) => r.sekvens != null);
-            const idx = kedjade.findIndex((r) => r.kedjehash === a.kedjerot);
-            // Prefixet prövas för sig: ett brott EFTER förseglingspunkten
-            // gör inte prefixet mindre bevisat — brottet pekas ut ovan.
-            const prefixOk =
-              idx >= 0 &&
-              verifieraKedja(
-                kedjeVag[1],
-                kedjade.slice(0, idx + 1).map((r) => ({
-                  id: r.id,
-                  tidpunkt: new Date(r.tidpunkt).toISOString(),
-                  anvandare: r.anvandare,
-                  digest: innehallsHash(kanoniskt(r.handelse)),
-                  kedjehash: r.kedjehash,
-                })),
-              ).ok;
-            if (
-              prefixOk &&
-              provaForsegling(
-                FORSEGLING_NYCKEL,
-                kedjeVag[1],
-                a.kedjerot,
-                new Date(a.forseglad).toISOString(),
-                a.forsegling,
-              )
-            ) {
-              forsegling = "giltig";
-              efterForsegling = kedjade.length - (idx + 1);
-            } else {
-              forsegling = "OGILTIG";
-            }
-          }
-        }
-
+        const status = await kedjestatus(kedjeVag[1]);
         // Vad svaret bevisar och inte: innehållet är oförändrat sedan
         // mottagandet. Ingenting om tiden före serverns klocka, ingenting
         // om sanningshalten. Texten står i svaret så att den följer med
         // in i varje rapport som citerar det.
         return svara(res, 200, {
-          ok: kedja.ok,
-          rot: kedja.rot,
-          brott: kedja.brott ?? null,
-          kedjade: rader.rows.length - okedjade,
-          okedjade,
-          forsegling,
-          // Hur många kedjade händelser som ligger EFTER förseglingen.
-          // Noll är det normala; ett tal här är inte ett fel utan ett
-          // faktum som läsaren ska se: sen synk, sena kundbesked.
-          efterForsegling,
+          ...status,
           bevisar:
             "Content unchanged since receipt, in the recorded order. Nothing about the time before receipt, nothing about accuracy.",
+        });
+      }
+
+      // ---- Kedjesvepet (TÜV-2-härdning) -------------------------------
+      //
+      // Verifieringen fanns men anropades bara vid tvist — ett brott
+      // kunde alltså stå oupptäckt i åratal och upptäckas i det sämsta
+      // tänkbara ögonblicket. Svepet går igenom organisationens samtliga
+      // ärenden och pekar ut varje brott och varje ogiltig försegling.
+      // Körs av arbetsledare/admin på begäran, och av driften nattligen
+      // via `node server.mjs --kedjesvep` (alla organisationer, avslutar
+      // med felkod vid brott så cron-larmet är gratis).
+      if (req.method === "POST" && vag === "/api/kedjesvep") {
+        if (anspr.roll === "tekniker") {
+          return svara(res, 403, { error: "Kräver arbetsledare eller administratör." });
+        }
+        const alla = await pool.query(
+          `select id from felsokning_arenden where organisation_id = $1 order by nummer`,
+          [anspr.org],
+        );
+        const brutna = [];
+        const ogiltigaForseglingar = [];
+        let oforseglade = 0;
+        for (const rad of alla.rows) {
+          const status = await kedjestatus(rad.id);
+          if (!status.ok) brutna.push({ arende: rad.id, brott: status.brott });
+          if (status.forsegling === "OGILTIG") ogiltigaForseglingar.push(rad.id);
+          if (status.forsegling === "saknas" && status.kedjade > 0) oforseglade += 1;
+        }
+        if (brutna.length > 0 || ogiltigaForseglingar.length > 0) {
+          logga("varning", "kedjesvep fann brott", {
+            organisation: anspr.org,
+            brutna: brutna.length,
+            ogiltigaForseglingar: ogiltigaForseglingar.length,
+          });
+        }
+        return svara(res, 200, {
+          arenden: alla.rows.length,
+          brutna,
+          ogiltigaForseglingar,
+          oforseglade,
         });
       }
 
@@ -2840,6 +2881,9 @@ export function skapaServer() {
     } catch (fel) {
       // Spår-id:t i raden gör att hela kedjan går att hitta i Logs
       // Insights utifrån larmet.
+      if (fel?.message === "för stor kropp") {
+        return svara(res, 413, { error: "Kroppen är för stor." });
+      }
       logga("fel", "förfrågan misslyckades", {
         spårId: res.spår.spårId,
         väg: vag,
@@ -2849,6 +2893,35 @@ export function skapaServer() {
       return svara(res, 500, { error: "Förfrågan misslyckades." });
     }
   });
+}
+
+// Driftläget: `node server.mjs --kedjesvep` verifierar varje kedja i
+// varje organisation och avslutar med felkod vid brott. Ingen server
+// startas — det här är cron-jobbet, och ett cron-jobb som råkar öppna
+// en lyssnare är en drifthändelse ingen bett om. Utskriften är en enda
+// JSON-rad per organisation: det format en loggpipeline redan äter.
+if (process.argv.includes("--kedjesvep")) {
+  const orgar = await pool.query(`select id, namn from organisationer order by namn`);
+  let brott = 0;
+  for (const org of orgar.rows) {
+    const alla = await pool.query(
+      `select id from felsokning_arenden where organisation_id = $1`,
+      [org.id],
+    );
+    const brutna = [];
+    const ogiltiga = [];
+    for (const rad of alla.rows) {
+      const status = await kedjestatus(rad.id);
+      if (!status.ok) brutna.push({ arende: rad.id, brott: status.brott });
+      if (status.forsegling === "OGILTIG") ogiltiga.push(rad.id);
+    }
+    brott += brutna.length + ogiltiga.length;
+    console.log(
+      JSON.stringify({ svep: "kedja", organisation: org.id, arenden: alla.rows.length, brutna, ogiltigaForseglingar: ogiltiga }),
+    );
+  }
+  await pool.end();
+  process.exit(brott > 0 ? 1 : 0);
 }
 
 if (process.env.NODE_ENV !== "test") {
