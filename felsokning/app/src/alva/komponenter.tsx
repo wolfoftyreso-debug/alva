@@ -393,8 +393,14 @@ export function Tabell({ kolumner, rader }: { kolumner: string[]; rader: ReactNo
           >
             {rad.map((cell, j) => (
               <div key={j} className="mt-2 flex flex-wrap items-baseline gap-2 first:mt-0">
+                {/* `min-w` och inte `w`: en etikett som AUTHENTICATION är
+                    bredare än 96 px och kan inte brytas, så en fast bredd
+                    fick den att spilla ut ur sin ruta och lägga sig ovanpå
+                    värdet. Med en minimibredd håller korta etiketter
+                    kolumnen, och långa knuffar i stället värdet till nästa
+                    rad — behållaren bryter redan. */}
                 <dt
-                  className="w-[96px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]"
+                  className="min-w-[96px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.08em]"
                   style={{ color: FARG.steel }}
                 >
                   {kolumner[j]}

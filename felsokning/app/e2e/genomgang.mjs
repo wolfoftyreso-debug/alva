@@ -31,6 +31,12 @@
 //               schemat stängdes utifrån vad koden borde skicka, och det
 //               enda som räknas är vad den skickar.
 //
+//   Layout      Text som rinner ur sin ruta. En etikett med fast bredd
+//               lade sig ovanpå sitt värde i portalen, och breddmätningen
+//               såg det inte: överspill gör inte dokumentet bredare. Den
+//               här mätningen jämför elementets textbredd med dess egen
+//               ruta, vilket är det enda som fångar just det felet.
+//
 //   Budget      Interaktioner per ärende. Ett verktyg som tyst växer från
 //               65 klick till 90 överges i verkstaden långt innan någon
 //               skriver en felrapport. Taket är därför ett testvillkor,
@@ -369,6 +375,26 @@ async function kor(sida, fall) {
   };
 }
 
+/**
+ * Letar text som rinner ur sin ruta.
+ *
+ * Bara element med egen text och synlig overflow: ett spill där räknas
+ * alltid som ett fel, eftersom bokstäverna hamnar ovanpå grannen.
+ */
+async function overspill(sida) {
+  return sida.evaluate(() =>
+    [...document.querySelectorAll("body *")]
+      .filter((el) => {
+        if (el.children.length > 0) return false;
+        if (!(el.textContent ?? "").trim()) return false;
+        if (getComputedStyle(el).overflowX !== "visible") return false;
+        return el.clientWidth > 0 && el.scrollWidth - el.clientWidth > 1;
+      })
+      .slice(0, 5)
+      .map((el) => `"${(el.textContent ?? "").trim().slice(0, 30)}" (+${el.scrollWidth - el.clientWidth} px)`),
+  );
+}
+
 // ---- Körning -------------------------------------------------------------
 //
 // Bygget görs härifrån, med den miljö genomgången kräver, i stället för
@@ -433,6 +459,32 @@ try {
     if (r.interaktioner > BUDGET) fel.push(`${fall.id}: ${r.interaktioner} interaktioner överskrider budgeten ${BUDGET}`);
     if (r.handelser === 0) fel.push(`${fall.id}: ingen händelse hamnade i loggen`);
   }
+  // ---- Layoutkontroll i telefonbredd ------------------------------------
+  //
+  // Portalens vyer har inga ärenden att köra igenom, men de är det som
+  // faktiskt gick sönder. Mätningen görs där felet uppstod.
+  const ctx = await webblasare.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const sida = await ctx.newPage();
+  for (const vag of [
+    "/alva",
+    "/alva/ansokan",
+    "/alva/logga-in",
+    "/alva/portal",
+    "/alva/portal/analys",
+    "/alva/portal/kunskapskallor",
+    "/alva/portal/integration",
+    "/alva/portal/fakturor",
+  ]) {
+    await sida.goto(`${BAS}/#${vag}`, { waitUntil: "networkidle" });
+    await sida.waitForTimeout(400);
+
+    const bred = await sida.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth));
+    if (bred > 391) fel.push(`${vag}: dokumentet är ${bred} px brett på en 390 px-skärm`);
+
+    const spill = await overspill(sida);
+    if (spill.length > 0) fel.push(`${vag}: text rinner ur sin ruta — ${spill.join(" · ")}`);
+  }
+  await ctx.close();
 } finally {
   await webblasare.close();
   server.close();
