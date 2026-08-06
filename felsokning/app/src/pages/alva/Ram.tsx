@@ -127,6 +127,7 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
                 ["/alva/dataskydd", "Privacy"],
                 ["/alva/villkor", "Terms"],
                 ["/alva/tillganglighet", "Accessibility"],
+                ["/alva/sprak", "Languages"],
                 ["/alva/utgavor", "Release notes"],
               ].map(([till, text]) => (
                 <li key={till}>

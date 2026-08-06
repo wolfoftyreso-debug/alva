@@ -22,6 +22,19 @@
 
 export const UTGAVOR = [
   {
+    version: "3.2",
+    datum: "2026-08-06",
+    commit: "af27275",
+    rubrik: "Engelska som standard, tio EU-språk, och en regel som gällde på ett",
+    andringar: [
+      "Engelska är standard- och källspråk. Nio översättningar: tyska, franska, spanska, italienska, polska, nederländska, portugisiska, rumänska och svenska.",
+      "Gränssnittstext faller tillbaka på engelska tyst. Metodikinnehåll gör det aldrig tyst — en ogranskad översättning av en säkerhetsinstruktion är sämre än en engelsk, därför att engelska SYNS som ett annat språk.",
+      "Metodens struktur översätts inte. Fasnamn och statusord står likadant i varje land, så att en revisor kan läsa en rumänsk och en tysk rapport utan att veta vilket språk verkstaden arbetar på.",
+      "Kvalitetsgrindens hinder följer organisationens språk. En spärr på fel språk är en spärr utan väg förbi.",
+      "ALVA-RULE-200 gällde bara på svenska: en tekniker som skrev \"erledigt\" eller \"done\" i motiveringsfältet passerade filtret för icke-svar. Rättat på tio språk — det var ett hål i regeln, inte en översättningsbrist.",
+    ],
+  },
+  {
     version: "3.1",
     datum: "2026-08-06",
     commit: "a94c228",
