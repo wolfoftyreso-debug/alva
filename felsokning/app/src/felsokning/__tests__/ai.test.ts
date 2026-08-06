@@ -44,11 +44,20 @@ describe("AI-orkestern", () => {
       "/api/auth/registrera",
       "/api/arenden",
       String.raw`\/api\/delad\/`,
-      "gen_salt('bf')",
       "JWT_SECRET",
     ]) {
       expect(plattform).toContain(bit);
     }
+
+    // Lösenordshashens KOSTNAD, inte bara att bcrypt används (TÜV T-6).
+    // pgcryptos gen_salt('bf') utan argument ger kostnad 6 — 2^6 = 64
+    // varv, mot dagens golv på 2^10. Testet var tidigare skrivet på
+    // anropet och hade därför godkänt den svaga varianten för alltid.
+    const kostnader = [...plattform.matchAll(/gen_salt\('bf'(?:,\s*(\d+))?\)/g)].map((m) =>
+      Number(m[1] ?? 6),
+    );
+    expect(kostnader.length).toBeGreaterThan(0);
+    for (const k of kostnader) expect(k).toBeGreaterThanOrEqual(12);
     // API:t exponerar medvetet inga update/delete-operationer.
     expect(plattform).not.toMatch(/\b(update|delete)\s+felsokning_handelser/i);
     // Multi-tenant: all ärendedata är organisationsknuten.

@@ -199,3 +199,88 @@ resource "kubernetes_pod_disruption_budget_v1" "plattform" {
     }
   }
 }
+
+# ---- Gallringen (ALVA-PROC-0040 · TÜV T-4) -----------------------------
+#
+# Gallringsdatumet räknades fram vid avslut och lästes sedan aldrig av
+# någon. Lagringsbegränsningen var en nedskriven avsikt, inte en
+# verkställd kontroll — och eftersom ingenting konsumerade värdet märkte
+# heller ingen att det under en period inte ens gick att skriva.
+#
+# Egen körning och inte en timer inne i webbtjänsten: en gallring som
+# avbryts av en omstart mitt i ska kunna köras om, och den ska synas som
+# en egen körning i driften i stället för att gömma sig i en podd som
+# samtidigt betjänar trafik.
+resource "kubernetes_cron_job_v1" "gallring" {
+  metadata {
+    name      = "gallring"
+    namespace = kubernetes_namespace_v1.denna.metadata[0].name
+    labels    = merge(local.etiketter, { app = "gallring" })
+  }
+
+  spec {
+    # Nattetid, en gång per dygn. Gallring är aldrig brådskande — ett
+    # dygns fördröjning är oproblematiskt, en för tidig gallring är
+    # oåterkallelig.
+    schedule                      = "17 2 * * *"
+    concurrency_policy            = "Forbid"
+    successful_jobs_history_limit = 3
+    failed_jobs_history_limit     = 3
+    starting_deadline_seconds     = 3600
+
+    job_template {
+      metadata {
+        labels = merge(local.etiketter, { app = "gallring" })
+      }
+
+      spec {
+        # Misslyckas den lämnas nycklarna kvar. Det försiktiga utfallet:
+        # för tidig gallring går inte att ångra, en försenad gör det.
+        backoff_limit = 2
+
+        template {
+          metadata {
+            labels = merge(local.etiketter, { app = "gallring" })
+          }
+
+          spec {
+            restart_policy       = "Never"
+            service_account_name = kubernetes_service_account_v1.plattform.metadata[0].name
+
+            security_context {
+              run_as_non_root = true
+
+              seccomp_profile {
+                type = "RuntimeDefault"
+              }
+            }
+
+            container {
+              name    = "gallring"
+              image   = local.tjanster.plattform.bild
+              command = ["node", "gallring.mjs"]
+
+              # Samma hemligheter som tjänsten: DATABASE_URL och
+              # PERSONNYCKEL_HUVUD behövs, inget annat.
+              env_from {
+                secret_ref {
+                  name = "felsokning-hemligheter"
+                }
+              }
+
+              resources {
+                requests = {
+                  cpu    = "50m"
+                  memory = "128Mi"
+                }
+                limits = {
+                  memory = "256Mi"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

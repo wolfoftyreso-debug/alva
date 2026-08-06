@@ -107,6 +107,12 @@ resource "kubernetes_manifest" "hemligheter" {
           secretKey = "INTEGRATION_NYCKEL"
           remoteRef = { key = local.aws.hemlighet_app, property = "integration_nyckel" }
         },
+        # Kuverterar personnycklarna. Utan den går en återställd databas
+        # inte att läsa — vilket är avsikten (TÜV T-3).
+        {
+          secretKey = "PERSONNYCKEL_HUVUD"
+          remoteRef = { key = local.aws.hemlighet_app, property = "personnyckel_huvud" }
+        },
       ]
     }
   }

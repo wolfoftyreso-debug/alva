@@ -105,16 +105,48 @@ create table if not exists bilage_innehall (
   skapad timestamptz not null default now()
 );
 
+-- ---- Händelseloggen -----------------------------------------------------
+--
+-- Nyckeln är (arende_id, id) och INTE id ensamt. Skillnaden är hela
+-- TÜV-revisionens T-1.
+--
+-- Klienten sätter id, och gjorde det som Date.now() + en räknare — alltså
+-- förutsägbart. Med en global primärnyckel och `on conflict do nothing`
+-- kunde en organisation skriva de id:n en ANNAN organisation snart skulle
+-- använda, till sitt eget ärende, och den andras händelse föll tyst bort.
+-- Servern svarade 200. Teknikern såg händelsen på skärmen, ärendet
+-- stängdes, och felorsaken fanns inte i loggen.
+--
+-- Append-only skyddade det som skrevs. Ingenting skyddade det som
+-- hindrades från att skrivas. Med nyckeln skopad till ärendet finns det
+-- inget delat namnrum kvar att ockupera.
 create table if not exists felsokning_handelser (
-  id text primary key,
+  id text not null,
   arende_id text not null references felsokning_arenden(id),
   tidpunkt timestamptz not null,
   anvandare text not null,
   handelse jsonb not null,
-  insatt timestamptz not null default now()
+  insatt timestamptz not null default now(),
+  primary key (arende_id, id)
 );
 create index if not exists felsokning_handelser_arende_idx
   on felsokning_handelser (arende_id, tidpunkt);
+
+-- Migrering av en befintlig installation: den gamla nyckeln på enbart id
+-- byts mot den skopade. Kollisioner mellan ärenden kan inte uppstå vid
+-- bytet — den gamla nyckeln var strängare — så bytet är alltid möjligt.
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    where t.relname = 'felsokning_handelser' and c.contype = 'p'
+      and (select count(*) from unnest(c.conkey)) = 1
+  ) then
+    alter table felsokning_handelser drop constraint felsokning_handelser_pkey;
+    alter table felsokning_handelser add primary key (arende_id, id);
+  end if;
+end $$;
 
 create or replace function forbjud_andring() returns trigger
 language plpgsql as $$
@@ -340,3 +372,54 @@ drop trigger if exists fakturahandelser_append_only on fakturahandelser;
 create trigger fakturahandelser_append_only
   before update or delete on fakturahandelser
   for each row execute function forbjud_andring();
+
+-- ---- Underlagen om åtkomst och radering (TÜV T-7) ----------------------
+--
+-- Fyra tabeller bar append-only-skydd: loggen, ärendet, fakturorna och
+-- fakturahändelserna. Utelämnandena var påfallande — det var just de
+-- tabeller som UTGÖR bevisningen om dataskydd som gick att skriva om.
+--
+-- Åtkomstloggen är beviset för att åtkomststyrningen fungerade. Den är
+-- det första en granskare ber om efter en incident, och den enda handling
+-- som kunde ändras av den som hade motiv att göra det.
+drop trigger if exists atkomstlogg_append_only on atkomstlogg;
+create trigger atkomstlogg_append_only
+  before update or delete on atkomstlogg
+  for each row execute function forbjud_andring();
+
+-- Beviset för att en radering verkställdes fick inte självt kunna raderas.
+drop trigger if exists raderingar_append_only on raderingar;
+create trigger raderingar_append_only
+  before update or delete on raderingar
+  for each row execute function forbjud_andring();
+
+-- Personnycklarna behöver radering — det är vad radering ÄR — så här går
+-- det inte att förbjuda. Regeln är i stället smalare: nyckeln och
+-- raderingsbegäran får ändras, identiteten och tillhörigheten inte.
+-- Annars kunde en nyckel flyttas till ett annat subjekt och en radering
+-- träffa fel person.
+create or replace function skydda_personnyckel() returns trigger
+language plpgsql as $$
+begin
+  if TG_OP = 'DELETE' then
+    return old;
+  end if;
+  if (new.id, new.organisation_id, new.subjekt, new.skapad)
+     is distinct from
+     (old.id, old.organisation_id, old.subjekt, old.skapad) then
+    raise exception 'En personnyckels identitet och tillhörighet kan inte ändras';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists personnycklar_skydd on personnycklar;
+create trigger personnycklar_skydd
+  before update or delete on personnycklar
+  for each row execute function skydda_personnyckel();
+
+-- Avtryck av det klienten faktiskt skickade, före serverns egna fält och
+-- före krypteringen (TÜV T-1). Utan det går en kollision inte att bedöma:
+-- serverns tidsstämpel skiljer sig alltid vid en omsändning, och
+-- krypteringen ger ny chiffertext för samma klartext, så varken raden
+-- eller nyttolasten kan jämföras. Avtrycket kan.
+alter table felsokning_handelser add column if not exists klientdigest text;

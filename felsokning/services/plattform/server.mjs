@@ -17,6 +17,8 @@
 //   TILLAT_INTERNA_UPPSLAG  "true" tillåter leverantörsuppslag mot privata nät
 //   ECM_REGLER_FIL / INTEGRATIONER_FIL  sökvägar till utbytbar konfiguration
 //   FAKTURERING_NYCKEL  utfärdarens nyckel; utan den kan ingen faktura utfärdas
+//   PERSONNYCKEL_HUVUD  32 byte (hex/base64) — kuverterar personnycklarna så att
+//                       en återställd databasdump inte innehåller läsbara nycklar
 //   PORT                default 8080
 
 import { createServer } from "node:http";
@@ -49,6 +51,7 @@ const OPENAPI = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "open
 // appkod. Uppdateras genom att byta filen (ECM_REGLER_FIL kan peka på en
 // ConfigMap-mount i klustret) och starta om tjänsten; klienterna hämtar
 // det nya paketet vid nästa inloggning/sidladdning.
+const ECM_REGLER_EGEN_FIL = !!process.env.ECM_REGLER_FIL;
 const ECM_REGLER = readFileSync(
   process.env.ECM_REGLER_FIL ?? join(dirname(fileURLToPath(import.meta.url)), "ecm-regler.json"),
   "utf8",
@@ -68,6 +71,13 @@ const ECM_REGLER_NYCKEL = process.env.ECM_REGLER_NYCKEL ?? "";
 const ECM_REGLER_SIGNATUR = process.env.ECM_REGLER_SIGNATUR ?? "";
 
 function regelpaketetsStatus() {
+  // Ett EXTERNT paket måste vara signerat (TÜV T-9). Det inbyggda
+  // standardpaketet följer med bilden och behöver ingen signatur — det
+  // som behöver en är det någon har monterat in, för det är precis vad
+  // angreppet innebär. Tidigare gällde samma milda utfall för bägge, så
+  // en installation som aldrig konfigurerade signering fick ingen
+  // integritetskontroll alls och ingen felsignal heller.
+  if (ECM_REGLER_EGEN_FIL && (!ECM_REGLER_NYCKEL || !ECM_REGLER_SIGNATUR)) return "osignerat externt";
   if (!ECM_REGLER_NYCKEL || !ECM_REGLER_SIGNATUR) return "osignerat";
   const väntad = createHmac("sha256", ECM_REGLER_NYCKEL).update(ECM_REGLER).digest("hex");
   const a = Buffer.from(ECM_REGLER_SIGNATUR);
@@ -84,7 +94,9 @@ if (REGELPAKET_STATUS !== "signerat") {
     konsekvens:
       REGELPAKET_STATUS === "ogiltig signatur"
         ? "Paketet används INTE — inbyggt standardpaket gäller."
-        : "Paketet används men märks som osignerat i spårbarheten.",
+        : REGELPAKET_STATUS === "osignerat externt"
+          ? "Ett externt paket saknar signatur — avslut är spärrat tills det signeras."
+          : "Paketet används men märks som osignerat i spårbarheten.",
   });
 }
 
@@ -155,7 +167,12 @@ const TILLATNA_URSPRUNG = (process.env.TILLATNA_URSPRUNG ?? "")
 
 function ursprungFor(req) {
   const ursprung = req.headers.origin;
-  if (TILLATNA_URSPRUNG.length === 0) return "*";
+  // Tom lista betydde tidigare "*" — alltså öppet som standard (TÜV T-10).
+  // Nu betyder den samma ursprung: inget CORS-huvud alls, vilket är vad
+  // klusterdriften behöver, eftersom klienten serveras från samma domän.
+  // Vill någon öppna får den skriva "*" och mena det.
+  if (TILLATNA_URSPRUNG.length === 0) return null;
+  if (TILLATNA_URSPRUNG.includes("*")) return "*";
   return ursprung && TILLATNA_URSPRUNG.includes(ursprung) ? ursprung : TILLATNA_URSPRUNG[0];
 }
 
@@ -239,7 +256,12 @@ export function verifieraJwt(token, hemlighet) {
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {
     const anspr = JSON.parse(Buffer.from(delar[1], "base64url").toString("utf8"));
-    if (typeof anspr.exp === "number" && anspr.exp * 1000 < Date.now()) return null;
+    // Utgångstid KRÄVS (TÜV T-11). Tidigare kontrollerades exp bara när
+    // det fanns, vilket gjorde en token utan exp evig. Alla tokens som
+    // utfärdas idag bär en — men den som en gång slipper igenom utan
+    // skulle aldrig sluta gälla, och det är inte ett fel man upptäcker.
+    if (typeof anspr.exp !== "number") return null;
+    if (anspr.exp * 1000 < Date.now()) return null;
     return anspr;
   } catch {
     return null;
@@ -345,12 +367,24 @@ export function synligaTyper(niva) {
 
 // ---- Hjälpare ---------------------------------------------------------
 
+/**
+ * CORS-huvuden, eller inga alls.
+ *
+ * `res.ursprung` är null när ingen ursprungslista är konfigurerad, och då
+ * ska huvudet UTELÄMNAS — inte sättas till "*" och inte till strängen
+ * "null". Utan den här hjälparen fanns beslutet på sex ställen, och det
+ * räckte att ett av dem föll tillbaka på "*" för att TÜV T-10 skulle vara
+ * öppen igen.
+ */
+function korsHuvuden(res) {
+  return res.ursprung ? { "Access-Control-Allow-Origin": res.ursprung, Vary: "Origin" } : {};
+}
+
 function svara(res, status, kropp) {
   res.writeHead(status, {
     "Content-Type": "application/json",
     // Ursprunget sätts en gång per anrop i hanteraren nedan.
-    "Access-Control-Allow-Origin": res.ursprung ?? "*",
-    Vary: "Origin",
+    ...korsHuvuden(res),
     "Access-Control-Allow-Headers": "authorization, content-type",
   });
   res.end(JSON.stringify(kropp));
@@ -414,6 +448,15 @@ async function grindHinder(pool, arendeId, nya) {
   if (REGELPAKET_STATUS === "ogiltig signatur") {
     return [{ id: "regelpaket", rubrik: "Regelpaketets signatur stämmer inte — avslut spärrat." }];
   }
+  if (REGELPAKET_STATUS === "osignerat externt") {
+    return [
+      {
+        id: "regelpaket",
+        rubrik: "Ett externt regelpaket används utan signatur — avslut spärrat.",
+        detalj: "Sätt ECM_REGLER_NYCKEL och ECM_REGLER_SIGNATUR, eller ta bort ECM_REGLER_FIL.",
+      },
+    ];
+  }
   try {
     regelpaket = JSON.parse(ECM_REGLER);
   } catch {
@@ -445,15 +488,69 @@ function blindaIdentifierare(ident) {
     .digest("hex");
 }
 
+// ---- Kuvertkryptering av personnycklarna (TÜV T-3) --------------------
+//
+// Nycklarna låg i klartext i samma databas, samma kluster och samma
+// backuper som den chiffertext de skyddade. Krypto-shredding blev då att
+// radera en rad bredvid de data den skulle göra oåtkomliga — och
+// återställningstestet slog uttryckligen fast att nycklarna följer med en
+// återställning. Testet har rätt för katastrofåterställning; det är samma
+// faktum läst åt andra hållet som bröt raderingslöftet.
+//
+// Nycklarna lagras nu KUVERTERADE under en huvudnyckel som inte finns i
+// databasen. En återställd dump ger nycklar som inte går att öppna utan
+// den, vilket flyttar raderingsgarantin från "en rad är borta" till "en
+// nyckel utanför databasen krävs".
+//
+// VAD SOM ÅTERSTÅR, uttryckligen: en backup tagen FÖRE en radering, plus
+// huvudnyckeln, återställer fortfarande uppgifterna. Att stänga det helt
+// kräver en nyckel per subjekt i en KMS där förstörelsen är
+// oåterkallelig. Kuverteringen är förberedelsen för det — därför ligger
+// in- och uppackningen i egna funktioner och inte inline.
+const PERSONNYCKEL_HUVUD = (() => {
+  const rå = process.env.PERSONNYCKEL_HUVUD ?? "";
+  if (!rå) return null;
+  const b = /^[0-9a-fA-F]{64}$/.test(rå) ? Buffer.from(rå, "hex") : Buffer.from(rå, "base64");
+  if (b.length !== 32) throw new Error("PERSONNYCKEL_HUVUD måste vara 32 byte (hex eller base64).");
+  return b;
+})();
+
+/** Kuvertformat: v1.<iv>.<tagg>.<chiffertext>, allt base64url. */
+function kuvertera(nyckel) {
+  if (!PERSONNYCKEL_HUVUD) return nyckel;
+  const iv = randomBytes(12);
+  const c = createCipheriv("aes-256-gcm", PERSONNYCKEL_HUVUD, iv);
+  const ut = Buffer.concat([c.update(nyckel), c.final()]);
+  return Buffer.from(
+    `v1.${iv.toString("base64url")}.${c.getAuthTag().toString("base64url")}.${ut.toString("base64url")}`,
+    "utf8",
+  );
+}
+
+function oppnaKuvert(lagrad) {
+  const text = Buffer.from(lagrad).toString("utf8");
+  // En nyckel som lagrades före kuverteringen är råa byte. Den läses som
+  // förut — annars hade uppgraderingen gjort all befintlig historik
+  // oläsbar, vilket är samma skada som en felaktig radering.
+  if (!text.startsWith("v1.")) return Buffer.from(lagrad);
+  if (!PERSONNYCKEL_HUVUD) {
+    throw new Error("Personnycklarna är kuverterade men PERSONNYCKEL_HUVUD saknas.");
+  }
+  const [, iv, tagg, data] = text.split(".");
+  const d = createDecipheriv("aes-256-gcm", PERSONNYCKEL_HUVUD, Buffer.from(iv, "base64url"));
+  d.setAuthTag(Buffer.from(tagg, "base64url"));
+  return Buffer.concat([d.update(Buffer.from(data, "base64url")), d.final()]);
+}
+
 async function personnyckel(orgId, subjekt) {
   const rad = await pool.query(
     `insert into personnycklar (organisation_id, subjekt, nyckel)
      values ($1, $2, $3)
      on conflict (organisation_id, subjekt) do update set subjekt = excluded.subjekt
      returning id, nyckel, radering_begard`,
-    [orgId, subjekt, randomBytes(32)],
+    [orgId, subjekt, kuvertera(randomBytes(32))],
   );
-  return rad.rows[0];
+  return { ...rad.rows[0], nyckel: oppnaKuvert(rad.rows[0].nyckel) };
 }
 
 /** Nycklar som fortfarande finns, för att öppna en logg vid läsning. */
@@ -462,7 +559,7 @@ async function nycklarFor(orgId) {
     `select id, nyckel from personnycklar where organisation_id = $1`,
     [orgId],
   );
-  return new Map(rader.rows.map((r) => [r.id, r.nyckel]));
+  return new Map(rader.rows.map((r) => [r.id, oppnaKuvert(r.nyckel)]));
 }
 
 /**
@@ -586,6 +683,66 @@ async function fakturamedStatus(id) {
   );
   if (rad.rowCount === 0) return null;
   return { ...rad.rows[0], status: fakturastatus(rad.rows[0].handelser) };
+}
+
+/**
+ * Kanonisk JSON: nycklar i bokstavsordning, hela vägen ned.
+ *
+ * Två anrop med samma innehåll men olika fältordning är samma händelse,
+ * och ska ge samma avtryck. JSON.stringify ensam bevarar
+ * insättningsordningen och hade gjort ordningen till en skillnad.
+ */
+function kanoniskt(värde) {
+  if (Array.isArray(värde)) return `[${värde.map(kanoniskt).join(",")}]`;
+  if (värde && typeof värde === "object") {
+    return `{${Object.keys(värde)
+      .sort()
+      .map((n) => `${JSON.stringify(n)}:${kanoniskt(värde[n])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(värde ?? null);
+}
+
+/**
+ * Mätdonets fakta hämtas ur registret, inte ur anropet (TÜV T-2).
+ *
+ * Evidensgraden E4 kräver att det går att visa VAD som mätte och att
+ * instrumentet var kalibrerat. Bägge fälten kom tidigare från klienten
+ * och lagrades oprövade — en organisation utan ett enda registrerat
+ * mätdon kunde skicka kalibrering 2099-12-31 och få E4.
+ *
+ * Ett okänt mätdon avvisas. Ett UTGÅNGET avvisas inte: mätningen gjordes,
+ * och att vägra spara den vore att radera evidens. I stället följer
+ * registrets datum med, och graderingen faller till E1 på registrets
+ * uppgift i stället för på klientens.
+ */
+async function mätdonsFakta(organisationId, handelse) {
+  if (handelse?.typ !== "matvarde") return { handelse };
+
+  // Utan angivet mätdon är det teknikerns avläsning av en siffra. Det är
+  // ett giltigt mätvärde — bara inte ett spårbart. Påstådd beteckning
+  // eller kalibrering utan mätdon tas bort: den kan inte styrkas.
+  if (!handelse.matdonId) {
+    const { matdonBeteckning, matdonKalibreradTill, ...rest } = handelse;
+    return { handelse: rest };
+  }
+
+  const rad = await pool.query(
+    `select beteckning, kalibrerad_till from matdon
+     where organisation_id = $1 and id::text = $2 and aktiv`,
+    [organisationId, String(handelse.matdonId)],
+  );
+  if (rad.rowCount === 0) {
+    return { fel: `Okänt mätdon: ${handelse.matdonId}. Registrera instrumentet innan mätvärdet sparas.` };
+  }
+  const härledd = { ...handelse, matdonBeteckning: rad.rows[0].beteckning };
+  // Ett mätdon utan kalibreringsdatum i registret får inget datum alls —
+  // inte klientens. Fältet utelämnas, och graderingen faller till E1.
+  delete härledd.matdonKalibreradTill;
+  if (rad.rows[0].kalibrerad_till) {
+    härledd.matdonKalibreradTill = new Date(rad.rows[0].kalibrerad_till).toISOString().slice(0, 10);
+  }
+  return { handelse: härledd };
 }
 
 // Verifierar att ärendet tillhör användarens organisation.
@@ -714,8 +871,7 @@ async function skickaBilaga(res, rad) {
     "Content-Length": data.length,
     // Innehållsadresserat — samma id ger alltid samma bytes.
     "Cache-Control": "private, max-age=31536000, immutable",
-    "Access-Control-Allow-Origin": res.ursprung ?? "*",
-    Vary: "Origin",
+    ...korsHuvuden(res),
   });
   return res.end(data);
 }
@@ -763,8 +919,7 @@ export function skapaServer() {
     });
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
-        "Access-Control-Allow-Origin": res.ursprung,
-        Vary: "Origin",
+        ...korsHuvuden(res),
         "Access-Control-Allow-Headers": "authorization, content-type",
         "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
       });
@@ -780,7 +935,7 @@ export function skapaServer() {
       if (req.method === "GET" && vag === "/api/openapi.yaml") {
         res.writeHead(200, {
           "Content-Type": "application/yaml; charset=utf-8",
-          "Access-Control-Allow-Origin": res.ursprung,
+          ...korsHuvuden(res),
         });
         return res.end(OPENAPI);
       }
@@ -808,7 +963,7 @@ export function skapaServer() {
           );
           const rad = await klientDb.query(
             `insert into anvandare (organisation_id, epost, losen_hash, namn, roll)
-             values ($1, lower($2), crypt($3, gen_salt('bf')), $4, 'admin')
+             values ($1, lower($2), crypt($3, gen_salt('bf', 12)), $4, 'admin')
              on conflict (epost) do nothing
              returning id, namn, organisation_id, roll, token_version`,
             [org.rows[0].id, epost.trim(), losenord, namn.trim()],
@@ -1199,7 +1354,7 @@ export function skapaServer() {
           }
           const rad = await pool.query(
             `insert into anvandare (organisation_id, epost, losen_hash, namn, roll)
-             values ($1, lower($2), crypt($3, gen_salt('bf')), $4, $5)
+             values ($1, lower($2), crypt($3, gen_salt('bf', 12)), $4, $5)
              on conflict (epost) do nothing
              returning id, epost, namn, roll, aktiv`,
             [anspr.org, epost.trim(), losenord, namn.trim(), roll],
@@ -1291,7 +1446,7 @@ export function skapaServer() {
         res.setHeader("X-Regelpaket-Status", REGELPAKET_STATUS);
         res.writeHead(200, {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": res.ursprung,
+          ...korsHuvuden(res),
         });
         return res.end(ECM_REGLER);
       }
@@ -1567,11 +1722,31 @@ export function skapaServer() {
         if (typeof id !== "string" || typeof nummer !== "number" || !skapad) {
           return svara(res, 400, { error: "Ogiltigt ärende." });
         }
-        await pool.query(
+        // Ärende-id sätts av klienten och är lika förutsägbart som
+        // händelse-id var (TÜV T-1, samma attack en nivå upp). Ärenderaden
+        // kan inte skopas per organisation utan att främmande nycklar från
+        // händelser och bilagor blir sammansatta, så gränsen dras här i
+        // stället: ett id som redan tillhör en ANNAN organisation är ett
+        // fel, inte en tyst icke-händelse. Utan det här blev org A:s
+        // ärende aldrig skapat och varje efterföljande synk svarade 404.
+        const skapat = await pool.query(
           `insert into felsokning_arenden (id, organisation_id, nummer, skapad, delningskod, metodik_id, skapad_av)
-           values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing`,
+           values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing returning id`,
           [id, anspr.org, nummer, skapad, delningskod ?? null, metodikId ?? null, anspr.sub],
         );
+        if (skapat.rowCount === 0) {
+          const agare = await pool.query(`select organisation_id from felsokning_arenden where id = $1`, [id]);
+          if (agare.rows[0]?.organisation_id !== anspr.org) {
+            logga("varning", "ärende-id upptaget av annan organisation", {
+              arende: id,
+              organisation: anspr.org,
+              anvandare: anspr.sub,
+            });
+            return svara(res, 409, {
+              error: "Ärendets identitet är upptagen. Ärendet skapades inte — välj ett nytt id.",
+            });
+          }
+        }
         return svara(res, 200, { ok: true });
       }
 
@@ -1779,7 +1954,7 @@ export function skapaServer() {
           for (const post of poster) {
             const r = await klientDb.query(
               `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
-               values ($1, $2, $3, $4, $5) on conflict (id) do nothing`,
+               values ($1, $2, $3, $4, $5) on conflict (arende_id, id) do nothing`,
               [post.id, protokollVag[1], post.tidpunkt, post.anvandare, post.handelse],
             );
             if (r.rowCount === 0) dubbletter += 1;
@@ -1960,6 +2135,17 @@ export function skapaServer() {
           for (const post of handelser) {
             const { post: giltig, fel } = tillPost(post, anspr);
             if (fel) return svara(res, 400, { error: `Ogiltig händelse: ${fel}` });
+
+            // Mätdonet slås upp i registret i stället för att tros på
+            // (TÜV T-2). Beteckning och kalibrering HÄRLEDS därifrån —
+            // annars var E4 ett påstående klienten gjorde om sig själv.
+            const uppslag = await mätdonsFakta(anspr.org, giltig.handelse);
+            if (uppslag.fel) return svara(res, 400, { error: uppslag.fel });
+            giltig.handelse = uppslag.handelse;
+
+            // Avtrycket tas av det klienten skickade, före serverns fält
+            // och före krypteringen — se kollisionsprövningen nedan.
+            giltig.klientdigest = innehallsHash(kanoniskt(post.handelse));
             giltig.handelse = skyddaHändelse(giltig.handelse, nyckel.id, nyckel.nyckel);
             attSkriva.push(giltig);
           }
@@ -2011,18 +2197,56 @@ export function skapaServer() {
             }
           }
 
+          // ---- Kollisioner: tyst bara när de är ofarliga (TÜV T-1) ----
+          //
+          // Nyckeln är numera skopad till ärendet, så en annan organisation
+          // kan inte längre ockupera id. Kvar finns den ofarliga
+          // omsändningen — och den inte fullt så ofarliga: samma id, annat
+          // innehåll. Skillnaden avgörs på klientens avtryck, eftersom
+          // varken raden eller nyttolasten går att jämföra (serverns
+          // tidsstämpel skiljer sig, chiffertexten är ny varje gång).
+          //
+          // Hela satsen prövas före första skrivningen. En delvis skriven
+          // batch som sedan avvisas vore värre än båda utfallen.
+          const befintliga = await pool.query(
+            `select id, klientdigest from felsokning_handelser where arende_id = $1 and id = any($2)`,
+            [handelserVag[1], attSkriva.map((p) => p.id)],
+          );
+          const krockar = [];
+          for (const rad of befintliga.rows) {
+            res.spann.spår.kollisioner = (res.spann.spår.kollisioner ?? 0) + 1;
+            const ny = attSkriva.find((p) => p.id === rad.id);
+            // Saknat avtryck = raden skrevs före den här kolumnen fanns.
+            // Då kan innehållet inte bedömas, och tystnad är det försiktiga
+            // utfallet: append-only skyddar raden som redan står där.
+            if (rad.klientdigest && rad.klientdigest !== ny.klientdigest) {
+              krockar.push({ id: rad.id, typ: ny.handelse.typ });
+            }
+          }
+          if (krockar.length > 0) {
+            logga("varning", "händelse-id återanvänt med annat innehåll", {
+              arende: handelserVag[1],
+              organisation: anspr.org,
+              anvandare: anspr.sub,
+              antal: krockar.length,
+            });
+            return svara(res, 409, {
+              error:
+                "Ett eller flera händelse-id finns redan i ärendet med annat innehåll. " +
+                "Ingenting skrevs — loggen kan inte skrivas över.",
+              krockar,
+            });
+          }
+
           for (const p of attSkriva) {
             // Append-only: on conflict do nothing — en befintlig händelse
             // skrivs aldrig över, och databastriggern stoppar allt annat.
-            // Kollisionen räknas: ett id som redan finns är antingen en
-            // ofarlig omsändning eller ett försök att blockera en framtida
-            // post, och skillnaden syns bara om den mäts (QUALITET m-2).
-            const skrivet = await pool.query(
-              `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse)
-               values ($1, $2, $3, $4, $5) on conflict (id) do nothing`,
-              [p.id, handelserVag[1], p.tidpunkt, p.anvandare, p.handelse],
+            // Här är kollisionen redan bedömd ofarlig ovan.
+            await pool.query(
+              `insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse, klientdigest)
+               values ($1, $2, $3, $4, $5, $6) on conflict (arende_id, id) do nothing`,
+              [p.id, handelserVag[1], p.tidpunkt, p.anvandare, p.handelse, p.klientdigest],
             );
-            if (skrivet.rowCount === 0) res.spann.spår.kollisioner = (res.spann.spår.kollisioner ?? 0) + 1;
           }
           // Utgående integrationer underrättas efter att loggen skrivits,
           // aldrig före: en mottagare ska aldrig kunna se en händelse som

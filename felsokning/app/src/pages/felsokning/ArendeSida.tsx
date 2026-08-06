@@ -1734,7 +1734,19 @@ function SnabbDokumentation({
     // strukturerad data ersätter aldrig originalevidensen.
     skicka({ typ: "foto", beskrivning: `Instrumentavläsning (${avlasning.tolkning.instrumenttyp})`, dataUrl: avlasning.foto });
     for (const v of avlasning.tolkning.varden) {
-      skicka({ typ: "matvarde", beskrivning: v.beskrivning, varde: v.varde, enhet: v.enhet });
+      // `kalla` sätts därför att värdet AVLÄSTES av en modell ur fotot
+      // (TÜV T-5). Teknikern bekräftar innan något skrivs, vilket täcker
+      // riktigheten — men bekräftelsen ger inte spårbarheten: utan
+      // härkomst går ett maskinläst värde inte att skilja från ett
+      // teknikern läste av instrumentet, och "hur kom siffran hit" är
+      // just vad en granskare frågar om en avskriven avläsning.
+      skicka({
+        typ: "matvarde",
+        beskrivning: v.beskrivning,
+        varde: v.varde,
+        enhet: v.enhet,
+        kalla: "Instrumentavläsning (modelltolkad, bekräftad av tekniker)",
+      });
     }
     paSparad?.(
       `Instrumentavläsning (${avlasning.tolkning.instrumenttyp}): ${avlasning.tolkning.varden

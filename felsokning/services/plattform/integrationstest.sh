@@ -636,4 +636,216 @@ LUCKOR=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d f
   -tAc "select (select max(nummer) from fakturor) - (select count(*) from fakturor)")
 kontroll "nummerserien är utan luckor" "$LUCKOR" "0"
 
+# 13. Motspelande hyresgäst (TÜV T-1)
+#
+# Revisionens huvudfynd: händelse-id sattes av klienten och var
+# förutsägbart, primärnyckeln var global, och insert skedde med
+# `on conflict do nothing`. Org B kunde ockupera id på SITT EGET ärende
+# som org A snart skulle använda — och org A:s händelse föll tyst bort
+# med statuskod 200.
+#
+# Ingen befintlig svit kunde se det: varje test kör en organisation, eller
+# två isolerade. Ingen modellerar den enas skrivningar som indata till den
+# andras misslyckande. Det gör den här.
+
+IDN="mshhkoq9-0 mshhkoq9-1 mshhkoq9-2"
+FORSTA=$(echo "$IDN" | cut -d' ' -f1)
+
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_B" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-motspel-b","nummer":90,"skapad":"2026-08-06T08:00:00Z"}' >/dev/null
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-motspel-a","nummer":91,"skapad":"2026-08-06T08:00:00Z"}' >/dev/null
+
+# Org B ockuperar id:na på sitt eget ärende.
+POSTER=$(node -pe "
+  JSON.stringify({ handelser: '$IDN'.split(' ').map((id) => ({
+    id, tidpunkt: '2026-08-06T08:01:00Z', anvandare: 'Bo',
+    handelse: { typ: 'observation', text: 'Ockuperad.' } })) })
+")
+curl -s -X POST "$BAS/api/arenden/arende-motspel-b/handelser" -H "Authorization: Bearer $TOKEN_B" \
+  -H 'Content-Type: application/json' -d "$POSTER" >/dev/null
+
+# Org A dokumenterar en felorsak med exakt samma id.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-motspel-a/handelser" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d "{\"handelser\":[{\"id\":\"$FORSTA\",\"tidpunkt\":\"2026-08-06T08:02:00Z\",\"anvandare\":\"Anna\",
+       \"handelse\":{\"typ\":\"felorsak\",\"avvikelse\":\"Bromsledning skavd mot chassi.\",
+       \"orsaker\":[\"Montagefel\"],\"underlag\":[\"Foto\"],\"sakerhet\":\"hog\",
+       \"atgard\":\"Byt ledning och satt ny klammer.\"}}]}")
+kontroll "org A:s skrivning lyckas trots ockuperat id" "$KOD" "200"
+ANTAL=$(curl -s "$BAS/api/arenden/arende-motspel-a/handelser" -H "Authorization: Bearer $TOKEN_A" | falt .handelser.length)
+kontroll "org A:s felorsak finns i loggen" "$ANTAL" "1"
+ANTAL_B=$(curl -s "$BAS/api/arenden/arende-motspel-b/handelser" -H "Authorization: Bearer $TOKEN_B" | falt .handelser.length)
+kontroll "org B:s egna poster är orörda" "$ANTAL_B" "3"
+
+# Samma id, samma innehåll, en gång till: en ofarlig omsändning ska förbli tyst.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-motspel-b/handelser" \
+  -H "Authorization: Bearer $TOKEN_B" -H 'Content-Type: application/json' -d "$POSTER")
+kontroll "identisk omsandning ar fortfarande idempotent" "$KOD" "200"
+
+# Samma id, ANNAT innehåll: ska falla högt i stället för att tigas ihjäl.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-motspel-b/handelser" \
+  -H "Authorization: Bearer $TOKEN_B" -H 'Content-Type: application/json' \
+  -d "{\"handelser\":[{\"id\":\"$FORSTA\",\"tidpunkt\":\"2026-08-06T08:03:00Z\",\"anvandare\":\"Bo\",
+       \"handelse\":{\"typ\":\"observation\",\"text\":\"NAGOT HELT ANNAT\"}}]}")
+kontroll "samma id med annat innehall ger 409" "$KOD" "409"
+ANTAL_B=$(curl -s "$BAS/api/arenden/arende-motspel-b/handelser" -H "Authorization: Bearer $TOKEN_B" | falt .handelser.length)
+kontroll "ingenting skrevs vid 409" "$ANTAL_B" "3"
+
+# Samma attack en niva upp: arende-id ar lika forutsagbart.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"id":"arende-motspel-b","nummer":92,"skapad":"2026-08-06T09:00:00Z"}')
+kontroll "arende-id upptaget av annan org ger 409" "$KOD" "409"
+
+# 14. Matkedjan slas upp i registret (TÜV T-2)
+#
+# Evidensgraden E4 kraver att det gar att visa VAD som matte och att
+# instrumentet var kalibrerat. Bagge falten kom fran klienten och lagrades
+# oprovade — en organisation utan ett enda registrerat matdon kunde skicka
+# kalibrering 2099-12-31 och fa E4.
+
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-motspel-a/handelser" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"m-falsk","tidpunkt":"2026-08-06T08:10:00Z","anvandare":"Anna",
+       "handelse":{"typ":"matvarde","beskrivning":"Kokpunkt","varde":"238","enhet":"C",
+       "matdonId":"finns-inte-i-registret","matdonBeteckning":"Kalibrerad testare 9000",
+       "matdonKalibreradTill":"2099-12-31"}}]}')
+kontroll "okant matdon avvisas" "$KOD" "400"
+
+# Ett riktigt matdon, med ett kalibreringsdatum registret ager.
+MATDON=$(curl -s -X POST "$BAS/api/matdon" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"beteckning":"Bromsvatsketestare BT-2","serienummer":"SN-4471","kalibrerad_till":"2027-06-30"}' | falt .id)
+curl -s -X POST "$BAS/api/arenden/arende-motspel-a/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d "{\"handelser\":[{\"id\":\"m-akta\",\"tidpunkt\":\"2026-08-06T08:11:00Z\",\"anvandare\":\"Anna\",
+       \"handelse\":{\"typ\":\"matvarde\",\"beskrivning\":\"Kokpunkt\",\"varde\":\"238\",\"enhet\":\"C\",
+       \"matdonId\":\"$MATDON\",\"matdonBeteckning\":\"PAHITTAD BETECKNING\",
+       \"matdonKalibreradTill\":\"2099-12-31\"}}]}" >/dev/null
+
+HAMTAT=$(curl -s "$BAS/api/arenden/arende-motspel-a/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "beteckningen kommer fran registret" \
+  "$(echo "$HAMTAT" | falt '.handelser.find(h=>h.id==="m-akta").handelse.matdonBeteckning')" "Bromsvatsketestare BT-2"
+kontroll "kalibreringen kommer fran registret" \
+  "$(echo "$HAMTAT" | falt '.handelser.find(h=>h.id==="m-akta").handelse.matdonKalibreradTill')" "2027-06-30"
+
+# Ett matvarde utan matdon far inte bara pasta en beteckning heller.
+curl -s -X POST "$BAS/api/arenden/arende-motspel-a/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"m-utan","tidpunkt":"2026-08-06T08:12:00Z","anvandare":"Anna",
+       "handelse":{"typ":"matvarde","beskrivning":"Tryck","varde":"2.4","enhet":"bar",
+       "matdonBeteckning":"PASTADD","matdonKalibreradTill":"2099-12-31"}}]}' >/dev/null
+HAMTAT=$(curl -s "$BAS/api/arenden/arende-motspel-a/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "pastadd kalibrering utan matdon tas bort" \
+  "$(echo "$HAMTAT" | falt '.handelser.find(h=>h.id==="m-utan").handelse.matdonKalibreradTill ?? "borta"')" "borta"
+
+# 15. Underlagen om atkomst och radering ar append-only (TÜV T-7)
+#
+# Radniva-triggern fyrar per RAD. En tom tabell later darfor `delete`
+# lyckas utan att skyddet ens provats — forsta versionen av det har testet
+# var gron pa raderingar just darfor, och bevisade ingenting. Bagge
+# tabellerna maste ha innehall innan de provas.
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning -qc \
+  "insert into raderingar (organisation_id, subjekt_hash, begard, begard_av, antal_arenden)
+   select id, 'prov', now(), 'Integrationstest', 0 from organisationer limit 1"
+for TABELL in atkomstlogg raderingar; do
+  RADER=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+    -tAc "select count(*) from $TABELL")
+  if [ "$RADER" = "0" ]; then echo "✗ $TABELL ar tom — provet sager ingenting"; exit 1; fi
+  if PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+    -qc "delete from $TABELL" 2>/dev/null; then
+    echo "✗ $TABELL gar att radera"; exit 1
+  else
+    echo "✓ $TABELL gar inte att radera"
+  fi
+done
+if PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "update personnycklar set subjekt = 'annat'" 2>/dev/null; then
+  echo "✗ personnyckelns subjekt gar att flytta"; exit 1
+else
+  echo "✓ personnyckelns tillhorighet kan inte andras"
+fi
+# Men raderingen sjalv maste fungera — det ar vad radering ÄR.
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "delete from personnycklar where subjekt = 'arende-motspel-b'" >/dev/null
+echo "✓ personnycklar gar fortfarande att forstora"
+
+# 16. Utgangstid kravs i token (TÜV T-11)
+EVIG=$(node -e "
+  const c = require('crypto');
+  const b = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const h = b({ alg: 'HS256', typ: 'JWT' });
+  const p = b({ sub: '00000000-0000-0000-0000-000000000000', org: '0', roll: 'admin', tv: 0 });
+  const s = c.createHmac('sha256', 'integrationshemlighet').update(h + '.' + p).digest('base64url');
+  console.log(h + '.' + p + '.' + s);
+")
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden" -H "Authorization: Bearer $EVIG")
+kontroll "token utan utgangstid avvisas" "$KOD" "401"
+
+# 17. Gallringen verkstalls (TÜV T-4)
+NYCKLAR_FORE=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select count(*) from personnycklar")
+PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -qc "update felsokning_arenden set gallras_efter = now() - interval '1 day' where id = 'arende-motspel-a'"
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  node gallring.mjs > /tmp/gallring.json
+FORSTORDA=$(cat /tmp/gallring.json | falt .forstorda)
+kontroll "gallringen forstorde nyckeln for det passerade arendet" "$FORSTORDA" "1"
+NYCKLAR_EFTER=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select count(*) from personnycklar")
+kontroll "en nyckel farre finns kvar" "$NYCKLAR_EFTER" "$((NYCKLAR_FORE - 1))"
+SPAR=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select count(*) from raderingar where begard_av like 'Gallring%'")
+kontroll "gallringen lamnade spar i raderingsregistret" "$SPAR" "1"
+# Ett arende som INTE passerat far inte roras.
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  node gallring.mjs > /tmp/gallring2.json
+kontroll "andra korningen gallrar ingenting" "$(cat /tmp/gallring2.json | falt .forstorda)" "0"
+
+# 18. Kuvertkryptering av personnycklarna (TÜV T-3)
+#
+# Nycklarna lag i klartext i samma databas som chiffertexten de skyddade,
+# och aterstallningstestet slog fast att de foljer med en aterstallning.
+# Kuverterade under en huvudnyckel utanfor databasen ger en aterstalld
+# dump nycklar som inte gar att oppna utan den.
+kill "$SERVER_PID" 2>/dev/null || true
+wait "$SERVER_PID" 2>/dev/null || true
+HUVUD=$(node -pe "require('crypto').randomBytes(32).toString('hex')")
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  JWT_SECRET=integrationshemlighet PORT=$APPPORT \
+  INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
+  PERSONNYCKEL_HUVUD=$HUVUD \
+  node server.mjs &
+SERVER_PID=$!
+sleep 1
+
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-kuvert","nummer":93,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
+curl -s -X POST "$BAS/api/arenden/arende-kuvert/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"k1","tidpunkt":"2026-08-06T10:01:00Z","anvandare":"Anna",
+       "handelse":{"typ":"objekt_identifierat","objekt":{"typ":"Personbil","identifierare":"KUV123",
+       "identifieringsmetod":"Regnr","beskrivning":"VW Golf"}}}]}' >/dev/null
+
+LAGRAD=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select encode(nyckel, 'escape') from personnycklar where subjekt = 'arende-kuvert'")
+case "$LAGRAD" in
+  v1.*) echo "✓ nyckeln ligger kuverterad i databasen" ;;
+  *) echo "✗ nyckeln ligger i klartext: ${LAGRAD:0:12}"; exit 1 ;;
+esac
+
+# Med huvudnyckeln gar identifieraren fortfarande att lasa.
+IDENT=$(curl -s "$BAS/api/arenden/arende-kuvert/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  | falt '.handelser[0].handelse.objekt.identifierare')
+kontroll "identifieraren gar att lasa med huvudnyckeln" "$IDENT" "KUV123"
+
+# Utan huvudnyckeln — en aterstalld dump pa en annan maskin — gar den inte.
+kill "$SERVER_PID" 2>/dev/null || true
+wait "$SERVER_PID" 2>/dev/null || true
+DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+  JWT_SECRET=integrationshemlighet PORT=$APPPORT node server.mjs >/dev/null 2>&1 &
+SERVER_PID=$!
+sleep 1
+KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/arenden/arende-kuvert/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "utan huvudnyckel lamnas inget ut" "$KOD" "500"
+
 echo "Integrationstest: allt grönt"

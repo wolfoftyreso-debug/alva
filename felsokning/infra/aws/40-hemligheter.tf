@@ -45,14 +45,25 @@ resource "random_id" "integration" {
   byte_length = 32
 }
 
+# Huvudnyckeln som personnycklarna kuverteras under (TÜV T-3).
+#
+# Den ligger i Secrets Manager och INTE i databasen — det är hela poängen.
+# Låg nyckeln kvar bredvid chiffertexten var krypto-shredding bara "radera
+# en rad i samma databas", och en återställd dump gav uppgifterna i
+# läsbart skick igen.
+resource "random_id" "personnyckel_huvud" {
+  byte_length = 32
+}
+
 resource "aws_secretsmanager_secret_version" "app" {
   secret_id = aws_secretsmanager_secret.app.id
 
   secret_string = jsonencode({
     # Fylls i efter första apply — Terraform ska inte känna Claude-nyckeln.
     anthropic_api_key  = "ERSATT-MIG"
-    jwt_secret         = random_password.jwt.result
-    integration_nyckel = random_id.integration.hex
+    jwt_secret          = random_password.jwt.result
+    integration_nyckel  = random_id.integration.hex
+    personnyckel_huvud  = random_id.personnyckel_huvud.hex
   })
 
   lifecycle {

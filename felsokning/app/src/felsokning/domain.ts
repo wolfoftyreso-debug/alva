@@ -111,6 +111,14 @@ export type Handelse =
       matdonId?: string;
       matdonBeteckning?: string;
       matdonKalibreradTill?: string;
+      /**
+       * Härkomst när värdet inte skrevs in av teknikern själv — en
+       * modelltolkad instrumentavläsning, eller en importerad protokollrad
+       * (TÜV T-5). Ett bekräftat maskinläst värde är riktigt men inte
+       * spårbart utan det här: rapporten ska kunna svara på hur siffran
+       * kom dit, inte bara vilken den blev.
+       */
+      kalla?: string;
     }
   | { typ: "hypotes"; text: string; niva: Exclude<Tillforlitlighet, "hog"> }
   | ({ typ: "foto"; beskrivning: string } & Bilaga)

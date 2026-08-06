@@ -102,9 +102,16 @@ export function evidensposter(arende: Arende): Evidenspost[] {
       // att en okalibrerad mätning väger som en kalibrerad är precis den
       // sortens obefogade säkerhet produkten finns för att undvika.
       const spårbar = Boolean(h.matdonId) && kalibreradVid(h.matdonKalibreradTill, post.tidpunkt);
-      const märkning = h.matdonBeteckning
-        ? `${h.matdonBeteckning}${spårbar ? "" : " — kalibrering saknas eller utgången"}`
-        : "instrument ej angivet";
+      const märkning = [
+        h.matdonBeteckning
+          ? `${h.matdonBeteckning}${spårbar ? "" : " — kalibrering saknas eller utgången"}`
+          : "instrument ej angivet",
+        // Härkomsten står i rapporten, inte bara i loggen: den som läser
+        // ska se att siffran är maskinläst utan att gräva (TÜV T-5).
+        h.kalla,
+      ]
+        .filter(Boolean)
+        .join("; ");
       lagg(
         post,
         "mätvärde",

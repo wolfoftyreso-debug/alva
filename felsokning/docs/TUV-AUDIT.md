@@ -454,4 +454,67 @@ be recorded as `claimed` until T-2 is closed.
 
 ---
 
+---
+
+## Remediation status
+
+Recorded after the fixes were implemented. Each entry states what was actually
+changed, and what was **not**, so a re-audit can verify rather than take it on
+trust. Every closure below is exercised by the platform integration suite
+against a real Postgres — 144 checks, up from 100.
+
+| # | Status | What changed |
+| --- | --- | --- |
+| **T-1** | ✅ Closed | The event primary key is now `(arende_id, id)`. There is no shared namespace left to occupy, so the cross-tenant attack has no surface rather than a mitigation. Within a case, a collision is judged on a **client digest** — a SHA-256 of the canonicalised body the client sent, taken before the server's own fields and before encryption, because neither the row nor the payload can be compared (the server timestamp always differs on a resend, and the ciphertext is new every time). Identical content stays idempotent and answers `200`; the same id with different content answers `409` and writes **nothing**, not even the rest of the batch. The same attack one level up — case ids are equally predictable — is closed separately: a case id already owned by another organisation answers `409` instead of silently doing nothing, which previously left the victim's case uncreated and every later sync answering `404`. The **adversarial-tenant harness** the audit recommended now exists and runs in CI. |
+| **T-2** | ✅ Closed | `matdonId` is resolved against the `matdon` register for the caller's organisation, and the designation and calibration date are **derived from the register**, overwriting whatever the client sent. An unknown instrument is rejected with `400`. An expired one is not — the measurement was still taken, and refusing it would destroy evidence — but the register's date is what travels, so the grade falls to E1 on the register's word rather than the client's. A measurement with no instrument at all has any claimed designation or calibration **stripped**: it cannot be substantiated. |
+| **T-3** | ◐ Reduced, not closed | Subject keys are now stored **enveloped** under `PERSONNYCKEL_HUVUD`, a 32-byte master key held in Secrets Manager and injected via External Secrets — never in the database. A restored dump yields keys that do not open, verified by restarting the service without the master key and confirming the identifier cannot be read. **What remains, stated plainly:** a backup taken *before* an erasure, combined with the master key, still restores the data. Closing that needs a key per subject in a KMS where destruction is irreversible. The envelope is the preparation for it — wrap and unwrap are two functions, not inline code — but the erasure promise is still bounded by backup retention, and must be stated as such to data subjects. |
+| **T-4** | ✅ Closed | `services/plattform/gallring.mjs` destroys the keys of subjects whose cases have **all** passed `gallras_efter`, and records each destruction in `raderingar`. The grouping is on the blinded vehicle index, not the case id: a vehicle seen five times has five cases and one key, and gallringen on the oldest would have made the four newer ones unreadable early. A case with no retention date counts as not yet passed — early erasure cannot be undone. Scheduled as a Kubernetes CronJob, nightly, `concurrency_policy = Forbid`. |
+| **T-5** | ✅ Closed | Model-read instrument values carry `kalla`, declared on the domain type and rendered in the evidence report, so a machine-read number is distinguishable from one the technician read off the instrument. |
+| **T-6** | ✅ Closed | `gen_salt('bf', 12)`. The test that was supposed to lock this asserted the literal string `gen_salt('bf')` — it would have passed the weak variant forever. It now parses the cost out of every call site and requires ≥12. |
+| **T-7** | ✅ Closed | `atkomstlogg` and `raderingar` are append-only by the same trigger as the event log. `personnycklar` gets the narrower rule it needs: the key and the erasure-requested timestamp may change, identity and ownership may not — a key must not be movable to another subject. **The first version of this test was worthless**: a row-level trigger fires per row, so `delete` on an empty table succeeds without the protection ever being exercised. The test now requires the table to be non-empty before it proves anything. |
+| **T-8** | ✅ Closed | `/api/atkomstlogg` is documented. The spec's own description of idempotent sync was rewritten — it still claimed a known id is ignored silently, which is no longer true and was the behaviour T-1 depended on. |
+| **T-9** | ✅ Closed | An **external** rule package (`ECM_REGLER_FIL` set) without a signature now blocks case closure, exactly as an invalid signature does. The built-in default ships with the image and needs no signature — what needs one is a package somebody mounted in, because that is precisely the attack. |
+| **T-10** | ✅ Closed | An unset origin list now means same-origin, not `*`. Opening up requires writing `*` and meaning it. The decision lived at six call sites, any one of which could fall back to `*`; it is now one helper that either emits the headers or emits nothing. |
+| **T-11** | ✅ Closed | `exp` is required, not merely checked when present. |
+| **T-12** | ◐ Traded, with reasons | Upgraded to `react-router-dom` 7.18.2, which closes the applicable advisory (open redirect via backslash in `Link`/`useNavigate`). This introduces one **high** advisory that does not apply to this build: it concerns RSC mode, and the application uses `BrowserRouter`/`HashRouter` with no RSC imports, no server actions and no SSR — verified by search. No published version is clean of both; `npm audit fix --force` would downgrade to 7.11.0 and reinstate the applicable one. Real exposure is reduced; the audit line looks worse. Verified across the full suite, the case walkthrough and the portal-guard run. |
+
+### What the hardening itself exposed
+
+Two of the fixes were briefly wrong in the same way the findings were, and both
+were caught only by trying to prove them:
+
+- The **T-7 test passed against an empty table.** A row-level trigger has no
+  rows to fire on, so `delete` succeeded and the check reported green. It was
+  measuring nothing.
+- The **T-6 test asserted the call, not the cost.** `expect(plattform).toContain("gen_salt('bf')")`
+  would have accepted cost 6 indefinitely — and did, for as long as it existed.
+
+Both are the pattern the audit named: a control that is correct in its own terms
+and unexamined at its boundary. It applies to tests as readily as to code.
+
+### Residual
+
+| Item | Why it is still open |
+| --- | --- |
+| **T-3** (partial) | A pre-erasure backup plus the master key still restores the data. Needs per-subject keys in a KMS with irreversible destruction. Until then, the backup retention window is part of the erasure promise and must be stated to data subjects. |
+| **T-12** (partial) | No `react-router` version is free of both advisories. The one carried does not apply to this build. |
+| Terraform | The CronJob and the secret wiring are written but **not applied** — no Terraform binary was available in this environment, so they are unvalidated beyond review. |
+| Rev 1 · C-4 | Processor agreement and transfer impact assessment. Documents to be written and signed, not code. |
+| Rev 1 · m-4 | Retiring the Supabase orchestrator. A deployment decision. |
+| Rev 1 · m-6 | Manual accessibility review. |
+
+### Re-audit verdict
+
+Two of three Critical findings are closed at the structural level rather than
+mitigated: T-1 has no attack surface left, and T-2 derives from the register
+instead of trusting the caller. The third is materially reduced and honestly
+bounded.
+
+Applying the product's own standard: measurement traceability moves from
+`claimed` to `validated`. Erasure stays at `tested` — the envelope closes the
+"key beside the ciphertext" defect but not the backup window, and it should not
+be recorded as `validated` until it does.
+
+---
+
 *ALVA-DOC-0003 · Internal engineering review · Not endorsed by any inspection body*

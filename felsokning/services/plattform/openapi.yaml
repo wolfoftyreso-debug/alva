@@ -9,8 +9,13 @@ info:
 
     **Händelseloggen är append-only.** Det finns inga update- eller
     delete-operationer — historik kan aldrig ändras eller raderas, vilket
-    även garanteras av databastriggers. En händelse med redan känt `id`
-    ignoreras tyst (idempotent synk).
+    även garanteras av databastriggers.
+
+    **Händelse-id är skopade till ärendet.** Nyckeln är `(arende_id, id)`,
+    inte `id` ensamt. En omsändning av samma händelse med samma innehåll är
+    idempotent och svarar `200`. Samma id med ANNAT innehåll svarar `409`
+    och skriver ingenting — varken det som redan står i loggen eller resten
+    av satsen.
 
     **Multi-tenant.** All ärendedata är organisationsknuten. Ett ärende i
     en annan organisation ger `404`, som om det inte fanns.
@@ -1186,6 +1191,38 @@ paths:
       responses:
         "200": { description: Sparat }
         "403": { description: Kräver arbetsledare eller administratör }
+
+  /api/atkomstlogg:
+    get:
+      tags: [Drift]
+      summary: Åtkomstlogg — vem som läst vilket ärende
+      description: >
+        Kräver `arbetsledare` eller `admin`, och visar endast den egna
+        organisationen. Loggen omfattar även läsningar via publika
+        delningslänkar, med koden angiven. Tabellen är append-only: posterna
+        kan varken ändras eller raderas, eftersom de utgör bevisningen för
+        att åtkomststyrningen fungerade.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: De 500 senaste åtkomsterna.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  atkomster:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tidpunkt: { type: string, format: date-time }
+                        arende_id: { type: string, nullable: true }
+                        vag: { type: string }
+                        anvandare: { type: string, nullable: true }
+                        delningskod: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Fel" }
+        "403": { $ref: "#/components/responses/Fel" }
 
   # ---- Fakturering (ALVA-PROC-0001) ------------------------------------
   #
