@@ -3,17 +3,29 @@
 //
 // Navigationen är en rad text, inte en meny med ikoner. Den som söker
 // något i ett industrisystem vet vad det heter.
+//
+// ---- Språket -----------------------------------------------------------
+//
+// Den publika navigationen och sidfoten talar besökarens språk (val i
+// sidfoten → webbläsare → engelska). Portalens länkar står MEDVETET kvar
+// på engelska: portalen är produkten, och dess språk styrs av konto och
+// organisation (ALVA-SPEC-060) — inte av ett besöksval i en sidfot.
 
 import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loggaUtPlattform, plattformKonto } from "@/felsokning/plattform";
 import { ALVA, PLATTFORMSVERSION } from "@/alva/system";
 import { FARG } from "@/alva/komponenter";
+import { useWebbSprak, sattWebbSprak } from "@/alva/webbsprak";
+import { SPRAK, oversattare } from "../../../../services/gemensam/sprak/index.mjs";
+
+type Sprakpost = { kod: string; namn: string; egetNamn: string; granskat: boolean };
+const SPRAKEN = SPRAK as Sprakpost[];
 
 const PUBLIKT = [
-  { till: "/alva", text: "Overview" },
-  { till: "/alva/ansokan", text: "Request account" },
-  { till: "/alva/logga-in", text: "Login" },
+  { till: "/alva", nyckel: "webb.nav.oversikt" },
+  { till: "/alva/ansokan", nyckel: "webb.ansok" },
+  { till: "/alva/logga-in", nyckel: "webb.loggain" },
 ];
 
 const PORTAL = [
@@ -29,10 +41,20 @@ const PORTAL = [
   { till: "/felsokning", text: "Diagnostics" },
 ];
 
+const FOT = [
+  ["/alva/impressum", "webb.fot.impressum"],
+  ["/alva/dataskydd", "webb.fot.dataskydd"],
+  ["/alva/villkor", "webb.fot.villkor"],
+  ["/alva/tillganglighet", "webb.fot.tillganglighet"],
+  ["/alva/sprak", "webb.fot.sprak"],
+  ["/alva/utgavor", "webb.fot.utgavor"],
+] as const;
+
 export function Ram({ children, portal = false }: { children: ReactNode; portal?: boolean }) {
   const plats = useLocation();
   const navigera = useNavigate();
-  const lankar = portal ? PORTAL : PUBLIKT;
+  const sprak = useWebbSprak();
+  const t = oversattare(sprak) as (nyckel: string) => string;
   // Finns en riktig session ska den gå att avsluta. Utan konfigurerad
   // plattform finns ingen, och då visas ingen utloggning heller — en
   // knapp som inte loggar ut något är samma sorts sken som m-9 gällde.
@@ -41,7 +63,7 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
   return (
     // `alva-yta` bär typografin ur ALVA-SPEC-001 och håller den skild
     // från värdapplikationens antikva. Se src/index.css.
-    <div className="alva-yta min-h-screen" style={{ background: FARG.background, color: FARG.graphite }}>
+    <div lang={sprak} className="alva-yta min-h-screen" style={{ background: FARG.background, color: FARG.graphite }}>
       <header className="border-b" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>
         <div className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-between gap-4 px-6 py-4">
           <Link to={portal ? "/alva/portal" : "/alva"} className="flex items-baseline gap-4">
@@ -63,8 +85,9 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
               av marginalerna, inte av att posterna klumpas ihop. */}
           <nav aria-label={portal ? "Portal" : "Site"} className="w-full sm:w-auto">
             <ul className="flex flex-wrap justify-between gap-x-4 gap-y-2 sm:justify-end sm:gap-6">
-              {lankar.map((l) => {
+              {(portal ? PORTAL : PUBLIKT).map((l) => {
                 const aktiv = plats.pathname === l.till;
+                const text = "nyckel" in l ? t(l.nyckel) : l.text;
                 return (
                   <li key={l.till}>
                     <Link
@@ -73,7 +96,7 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
                       className="text-[12px] font-semibold uppercase tracking-[0.08em]"
                       style={{ color: aktiv ? FARG.blue : FARG.steel }}
                     >
-                      {l.text}
+                      {text}
                     </Link>
                   </li>
                 );
@@ -122,30 +145,50 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
         <div className="mx-auto max-w-[1040px] px-6 py-6">
           <nav aria-label="Legal">
             <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[12px]">
-              {[
-                ["/alva/impressum", "Impressum"],
-                ["/alva/dataskydd", "Privacy"],
-                ["/alva/villkor", "Terms"],
-                ["/alva/tillganglighet", "Accessibility"],
-                ["/alva/sprak", "Languages"],
-                ["/alva/utgavor", "Release notes"],
-              ].map(([till, text]) => (
+              {FOT.map(([till, nyckel]) => (
                 <li key={till}>
                   <Link to={till} style={{ color: FARG.steel }}>
-                    {text}
+                    {t(nyckel)}
                   </Link>
                 </li>
               ))}
             </ul>
           </nav>
           <div
-            className="mt-6 flex flex-wrap justify-between gap-4 border-t pt-6 font-mono text-[11px]"
+            className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t pt-6"
             style={{ borderColor: FARG.lightSteel, color: FARG.steel }}
           >
-            <Link to="/alva/utgavor" style={{ color: FARG.steel }}>
-              {PLATTFORMSVERSION}
-            </Link>
-            <span>{ALVA.position}</span>
+            {/* Väljaren sätter besökarens val, som väger tyngre än
+                webbläsarens språk men aldrig rör plattformens eget
+                språkval — se filhuvudet. */}
+            <div className="flex items-center gap-4">
+              <label
+                htmlFor="webbsprak"
+                className="text-[11px] font-semibold uppercase tracking-[0.08em]"
+                style={{ color: FARG.steel }}
+              >
+                {t("sprak.valj")}
+              </label>
+              <select
+                id="webbsprak"
+                value={sprak}
+                onChange={(h) => sattWebbSprak(h.target.value)}
+                className="border px-4 py-2 text-[12px]"
+                style={{ borderColor: FARG.lightSteel, background: FARG.white, color: FARG.graphite }}
+              >
+                {SPRAKEN.map((s) => (
+                  <option key={s.kod} value={s.kod}>
+                    {s.egetNamn}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 font-mono text-[11px]">
+              <Link to="/alva/utgavor" style={{ color: FARG.steel }}>
+                {PLATTFORMSVERSION}
+              </Link>
+              <span>{t("webb.hero.position")}</span>
+            </div>
           </div>
         </div>
       </footer>

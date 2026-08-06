@@ -19,10 +19,15 @@
 // inte är fackgranskad på rumänska kan planera för det. Samma chef som
 // får veta det av en tekniker som missförstått en säkerhetsinstruktion
 // kan inte.
+//
+// Sidans egen text står på besökarens språk (webb.sprak.-nycklarna).
+// Förhandsvisningen har en EGEN väljare: den visar hur grindens hinder
+// ser ut på ett språk man granskar, inte det språk man läser sidan på.
 
 import { useState } from "react";
 import { SPRAK, metodikvarning, oversattare, tackning } from "../../../../services/gemensam/sprak/index.mjs";
 import { Block, Etikett, FARG, Rubrik, Tabell } from "@/alva/komponenter";
+import { useWebbSprak } from "@/alva/webbsprak";
 import { Ram } from "./Ram";
 
 type Sprakpost = { kod: string; namn: string; egetNamn: string; granskat: boolean };
@@ -54,8 +59,14 @@ function Sektion({ etikett, rubrik, children }: { etikett: string; rubrik: strin
 }
 
 export default function Sprak() {
-  const [valt, setValt] = useState("de");
-  const t = oversattare(valt) as (nyckel: string) => string;
+  const sprak = useWebbSprak();
+  const t = oversattare(sprak) as (nyckel: string, variabler?: Record<string, string>) => string;
+
+  // Förhandsvisningens språk är inte sidans. Den som läser på engelska
+  // ska kunna granska den polska översättningen — utgångsvalet är därför
+  // besökarens eget språk när det inte är källspråket, annars tyska.
+  const [valt, setValt] = useState(sprak !== "en" ? sprak : "de");
+  const prov = oversattare(valt) as (nyckel: string) => string;
   const post = SPRAKEN.find((s) => s.kod === valt)!;
   const varning = metodikvarning(valt) as string | null;
 
@@ -63,56 +74,49 @@ export default function Sprak() {
     <Ram>
       <section className="border-b" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>
         <div className="mx-auto max-w-[1040px] px-6 py-16">
-          <Etikett>Localization</Etikett>
+          <Etikett>{t("webb.sprak.etikett")}</Etikett>
           <div className="mt-2">
-            <Rubrik niva={1}>Languages</Rubrik>
+            <Rubrik niva={1}>{t("webb.sprak.rubrik")}</Rubrik>
           </div>
           <p className="mt-6 max-w-[680px] text-[16px] leading-[26px]" style={{ color: FARG.graphite }}>
-            English is the default and the source language. Nine translations follow. What the platform does
-            not do is claim that a translated interface means a translated method.
+            {t("webb.sprak.ingress")}
           </p>
         </div>
       </section>
 
       {/* ---- Den avgränsning som styr allt annat ---- */}
-      <Sektion etikett="Principle" rubrik="Two kinds of text">
+      <Sektion etikett={t("webb.sprak.princip.etikett")} rubrik={t("webb.sprak.princip.rubrik")}>
         <div className="grid gap-8 md:grid-cols-2">
-          <Block rubrik="Interface text" beteckning="Falls back silently">
+          <Block rubrik={t("webb.sprak.granssnitt.rubrik")} beteckning={t("webb.sprak.granssnitt.beteckning")}>
             <p className="text-[14px] leading-[22px]" style={{ color: FARG.graphite }}>
-              Labels, buttons, statuses. Finite, rarely changed. An English string reaching a German user is
-              an irritation, not a hazard — so a missing translation falls back to English without comment.
+              {t("webb.sprak.granssnitt.text")}
             </p>
           </Block>
-          <Block rubrik="Procedure text" beteckning="Never falls back silently">
+          <Block rubrik={t("webb.sprak.metodik.rubrik")} beteckning={t("webb.sprak.metodik.beteckning")}>
             <p className="text-[14px] leading-[22px]" style={{ color: FARG.graphite }}>
-              Instructions for work on a vehicle. Here an unreviewed translation is worse than a foreign
-              language one — because English <em>looks</em> foreign, while a bad translation looks like an
-              instruction. It is shown in English and marked, with the language named.
+              {t("webb.sprak.metodik.text")}
             </p>
           </Block>
         </div>
 
         <p className="mt-8 max-w-[760px] border-l-2 pl-6 text-[15px] leading-[24px]"
            style={{ borderColor: FARG.lightSteel, color: FARG.steel }}>
-          The method itself is never translated. Phase names and status words are ALVA&rsquo;s structure and
-          read identically in every country, so an auditor can read a Romanian and a German case record
-          without knowing which language the workshop works in.
+          {t("webb.sprak.invariant")}
         </p>
       </Sektion>
 
       {/* ---- Redovisningen ---- */}
-      <Sektion etikett="Coverage" rubrik="What is translated, and what is reviewed">
+      <Sektion etikett={t("webb.sprak.tackning.etikett")} rubrik={t("webb.sprak.tackning.rubrik")}>
         <Tabell
-          kolumner={["Language", "Interface", "Method reviewed by a specialist"]}
+          kolumner={[t("webb.sprak.kolumn.sprak"), t("webb.sprak.kolumn.granssnitt"), t("webb.sprak.kolumn.granskat")]}
           rader={SPRAKEN.map((s) => [
             `${s.namn} — ${s.egetNamn}`,
             `${Math.round((tackning(s.kod) as number) * 100)} %`,
-            s.granskat ? "Yes" : "No — procedure text shown in English",
+            s.granskat ? t("webb.sprak.granskat.ja") : t("webb.sprak.granskat.nej"),
           ])}
         />
         <p className="mt-6 max-w-[680px] text-[13px] leading-[20px]" style={{ color: FARG.steel }}>
-          Interface coverage is measured, not estimated: a test fails the build if any key is missing from
-          any language. Review status is a statement about people, not about files, and is set by hand.
+          {t("webb.sprak.matt")}
         </p>
         {/* Att engelska är källspråket betyder inte att den engelska
             metodiktexten är fackgranskad. Den är översatt från svenska,
@@ -120,22 +124,19 @@ export default function Sprak() {
             varnar för på de andra nio språken. */}
         <p className="mt-4 max-w-[680px] border-l-2 pl-6 text-[13px] leading-[20px]"
            style={{ borderColor: FARG.varning, color: FARG.graphite }}>
-          The English procedure text is a translation of the Swedish source and has not yet been read by a
-          specialist working in the trade. It is held to the same standard as the other nine languages, and
-          the same statement is made about it here rather than quietly excepted because it is the source.
+          {t("webb.sprak.kallsprak")}
         </p>
       </Sektion>
 
       {/* ---- Beviset ---- */}
-      <Sektion etikett="Verification" rubrik="The strings that stop a case">
+      <Sektion etikett={t("webb.sprak.bevis.etikett")} rubrik={t("webb.sprak.bevis.rubrik")}>
         <p className="mb-8 max-w-[680px] text-[15px] leading-[24px]" style={{ color: FARG.steel }}>
-          These are the sentences that refuse to let a technician close a case. A refusal nobody understands
-          is a refusal with no way through — so they are the right strings to judge a translation by.
+          {t("webb.sprak.bevis.ingress")}
         </p>
 
         {/* Rutnät, inte flexradbrytning. Tio språk bryts av flex till nio
             plus ett ensamt, och den ensamma knappen läser sig som en
-            eftertanke i stället för som ett språk bland tio. Fem kolumner
+            eftertanke i stället för som ett språk bland tio. Fem kolonner
             och två gör tio jämnt i båda riktningarna. */}
         <div className="mb-8 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {SPRAKEN.map((s) => (
@@ -162,8 +163,8 @@ export default function Sprak() {
               <div className="font-mono text-[11px]" style={{ color: FARG.steel }}>
                 {nyckel}
               </div>
-              <div className="mt-2 text-[15px] leading-[24px]" style={{ color: FARG.graphite }}>
-                {t(nyckel)}
+              <div className="mt-2 text-[15px] leading-[24px]" lang={valt} style={{ color: FARG.graphite }}>
+                {prov(nyckel)}
               </div>
             </li>
           ))}
@@ -172,54 +173,48 @@ export default function Sprak() {
         {/* Varningen står under provet, inte över det. Den som just läst
             fem meningar på sitt eget språk ska mötas av vad de INTE
             garanterar — inte varnas i förväg och sedan lugnas av att
-            texten ser bra ut. */}
+            texten ser bra ut. Varningen själv står på PROVSPRÅKET,
+            precis som i drift: den riktar sig till den som skulle
+            arbeta på det språket. */}
         {varning && (
           <div className="mt-8 border-l-2 p-6" style={{ borderColor: FARG.varning, background: FARG.white }}>
-            <Etikett>Not reviewed — {post.egetNamn}</Etikett>
-            <p className="mt-2 max-w-[760px] text-[14px] leading-[22px]" style={{ color: FARG.graphite }}>
+            <Etikett>{t("webb.sprak.ej_granskad")} — {post.egetNamn}</Etikett>
+            <p className="mt-2 max-w-[760px] text-[14px] leading-[22px]" lang={valt} style={{ color: FARG.graphite }}>
               {varning}
             </p>
           </div>
         )}
         {!varning && (
           <div className="mt-8 border-l-2 p-6" style={{ borderColor: FARG.blue, background: FARG.white }}>
-            <Etikett>Reviewed — {post.egetNamn}</Etikett>
+            <Etikett>{t("webb.sprak.granskad")} — {post.egetNamn}</Etikett>
             <p className="mt-2 max-w-[760px] text-[14px] leading-[22px]" style={{ color: FARG.graphite }}>
-              Procedure text in {post.egetNamn} has been read by a specialist working in the trade. Steps and
-              checks are shown in {post.egetNamn} throughout.
+              {t("webb.sprak.granskad.text", { sprak: post.egetNamn })}
             </p>
           </div>
         )}
       </Sektion>
 
       {/* ---- Hur språket väljs ---- */}
-      <Sektion etikett="Operation" rubrik="How the language is chosen">
+      <Sektion etikett={t("webb.sprak.val.etikett")} rubrik={t("webb.sprak.val.rubrik")}>
         <ol className="max-w-[680px]">
-          {[
-            ["User preference", "What the individual has selected."],
-            ["Organization setting", "The workshop's documentation language."],
-            ["Browser language", "The first language the platform recognises."],
-            ["English", "The default, and the source."],
-          ].map(([rubrik, text], i) => (
-            <li key={rubrik} className="flex gap-6 border-t py-6" style={{ borderColor: FARG.lightSteel }}>
+          {[1, 2, 3, 4].map((steg, i) => (
+            <li key={steg} className="flex gap-6 border-t py-6" style={{ borderColor: FARG.lightSteel }}>
               <span className="font-mono text-[13px] leading-[20px]" style={{ color: FARG.steel }}>
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>
                 <div className="text-[15px] font-semibold" style={{ color: FARG.graphite }}>
-                  {rubrik}
+                  {t(`webb.sprak.val.s${steg}.rubrik`)}
                 </div>
                 <div className="mt-2 text-[14px] leading-[20px]" style={{ color: FARG.steel }}>
-                  {text}
+                  {t(`webb.sprak.val.s${steg}.text`)}
                 </div>
               </div>
             </li>
           ))}
         </ol>
         <p className="mt-8 max-w-[680px] text-[14px] leading-[22px]" style={{ color: FARG.steel }}>
-          The organization ranks above the browser deliberately. A workshop in Germany with a Polish
-          technician needs one documentation language — the case record must not change language depending on
-          who happened to write the line.
+          {t("webb.sprak.val.notering")}
         </p>
       </Sektion>
     </Ram>

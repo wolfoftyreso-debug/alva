@@ -194,6 +194,31 @@ describe("metodikvarningen", () => {
   });
 });
 
+describe("webbplatsens källtext", () => {
+  // Hjälteraden och metodkorten på startsidan hämtas ur katalogen, men
+  // systemdefinitionen i @/alva/system är normen. Två källor för samma
+  // mening driver isär tyst — testet gör skillnaden till ett byggfel.
+  it("hjälteraden och faskorten säger samma sak som systemdefinitionen", async () => {
+    const { ALVA, FASER } = await import("../../alva/system");
+    expect(EN["webb.hero.position"]).toBe(ALVA.position);
+    expect(EN["webb.hero.definition"]).toBe(ALVA.definition);
+    for (const f of FASER) {
+      expect(EN[`webb.fas.${f.id}.syfte`], f.id).toBe(f.syfte);
+      expect(EN[`webb.fas.${f.id}.avgransning`], f.id).toBe(f.avgransning);
+    }
+  });
+
+  it("webbnycklarna finns i varje språk — sajten är inte engelska med undantag", () => {
+    const webb = NYCKLAR.filter((n) => n.startsWith("webb."));
+    expect(webb.length).toBeGreaterThan(140);
+    for (const kod of OVRIGA) {
+      for (const n of webb) {
+        expect(KATALOGER[kod][n], `${kod}: ${n}`).toBeTruthy();
+      }
+    }
+  });
+});
+
 function egetNamn(kod: string): string {
   return SPRAK.find((s) => s.kod === kod)!.egetNamn;
 }

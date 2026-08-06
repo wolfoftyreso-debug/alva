@@ -166,4 +166,195 @@ export const EN = {
   "metodik.ogranskad":
     "Procedure text has not been reviewed by a technical specialist in {sprak}. Steps and checks are shown in English where no reviewed translation exists — an unreviewed translation of a safety instruction is worse than a foreign-language one, because it does not look foreign.",
   "metodik.pa_engelska": "Shown in English — no reviewed translation in {sprak}",
+
+  // ---- Public website (webb.) ---------------------------------------------
+  //
+  // The marketing site and the platform are the same system, so the site
+  // speaks through the same catalogue. Keys follow the page order. The
+  // portal chrome is deliberately absent: the portal is the product, and
+  // its language is governed by account and organization, not by the
+  // visitor's footer choice.
+  "webb.nav.oversikt": "Overview",
+  "webb.ansok": "Request account",
+  "webb.loggain": "Login",
+  "webb.fot.impressum": "Impressum",
+  "webb.fot.dataskydd": "Privacy",
+  "webb.fot.villkor": "Terms",
+  "webb.fot.tillganglighet": "Accessibility",
+  "webb.fot.sprak": "Languages",
+  "webb.fot.utgavor": "Release notes",
+
+  "webb.hero.position": "Guided Diagnostic Platform",
+  "webb.hero.definition": "Standardized diagnostic procedures for repeatable and verifiable troubleshooting.",
+
+  "webb.metod.etikett": "Methodology",
+  "webb.metod.rubrik": "The ALVA model",
+  "webb.metod.ingress":
+    "ALVA is a standardized method for systematic analysis, localization, verification and action. Every decision is traceable, every conclusion verifiable, every action reproducible.",
+  "webb.fas.analysis.syfte": "Collect evidence.",
+  "webb.fas.analysis.avgransning": "Facts only. Hypotheses are not collected in this phase.",
+  "webb.fas.localization.syfte": "Isolate the fault.",
+  "webb.fas.localization.avgransning": "Narrow the area. The cause is not yet established.",
+  "webb.fas.verification.syfte": "Confirm root cause.",
+  "webb.fas.verification.avgransning": "The cause is verified — not the symptom.",
+  "webb.fas.action.syfte": "Execute corrective action.",
+  "webb.fas.action.avgransning": "Result verified and documented. Otherwise the phase is incomplete.",
+
+  "webb.drift.etikett": "Operation",
+  "webb.drift.rubrik": "How it works",
+  "webb.drift.s1.rubrik": "Create organization",
+  "webb.drift.s1.text": "Registration is submitted and reviewed.",
+  "webb.drift.s2.rubrik": "Users receive accounts",
+  "webb.drift.s2.text": "Roles are assigned by the organization administrator.",
+  "webb.drift.s3.rubrik": "Guided diagnostic procedures",
+  "webb.drift.s3.text": "Each case follows a defined procedure.",
+  "webb.drift.s4.rubrik": "Verification",
+  "webb.drift.s4.text": "Root cause is confirmed before corrective action.",
+  "webb.drift.s5.rubrik": "Documentation",
+  "webb.drift.s5.text": "The record is generated from the case log.",
+  "webb.drift.s6.rubrik": "Continuous improvement",
+  "webb.drift.s6.text": "Verified outcomes refine subsequent procedures.",
+
+  "webb.larande.etikett": "Capability",
+  "webb.larande.rubrik": "Enterprise learning",
+  "webb.larande.p1":
+    "The platform continuously refines diagnostic procedures using verified operational experience from your own organization.",
+  "webb.larande.p2":
+    "Every completed diagnostic contributes to subsequent guidance. Only verified outcomes are used — a case closed without confirmed root cause contributes nothing, by design.",
+  "webb.larande.p3":
+    "The knowledge base belongs to the organization. It is derived from your cases, your procedures and your documentation, and it is not aggregated across customers.",
+  "webb.larande.block": "Derived from",
+  "webb.larande.k1": "Verified root causes",
+  "webb.larande.k2": "Confirmed corrective actions",
+  "webb.larande.k3": "Recurring fault categories",
+  "webb.larande.k4": "Procedure completion records",
+  "webb.larande.k5": "Organization documentation",
+
+  "webb.rapport.etikett": "Reporting",
+  "webb.rapport.rubrik": "Quarterly improvement report",
+  "webb.rapport.ingress":
+    "Once a quarter, the platform answers six questions about the workshop’s own work. Every answer is derived from the case log — nothing is estimated, and nothing is asked of anyone.",
+  "webb.rapport.f1": "Which faults are we now diagnosing correctly the first time?",
+  "webb.rapport.f2": "How often does a suspected cause turn out to be the actual one?",
+  "webb.rapport.f3": "Which faults keep coming back across the fleet?",
+  "webb.rapport.f4": "Which procedure steps are being skipped, and why?",
+  "webb.rapport.f5": "What does the workshop know now that it did not know last quarter?",
+  "webb.rapport.f6": "Are cases being completed, verified and documented — or only completed?",
+
+  "webb.pris.etikett": "Commercial",
+  "webb.pris.rubrik": "Licensing",
+  "webb.pris.komponent": "Component",
+  "webb.pris.grund": "Basis",
+  "webb.pris.plattform": "Platform license",
+  "webb.pris.plattform.grund": "Per organization, annually",
+  "webb.pris.anvandare": "User licenses",
+  "webb.pris.anvandare.grund": "Per active user, monthly",
+  "webb.pris.moduler": "Enterprise modules",
+  "webb.pris.moduler.grund": "Optional, per module",
+  "webb.pris.betalning": "No online payment. No subscription sign-up. Invoicing follows review of the application.",
+  "webb.pris.aktivering": "Activation sequence",
+  "webb.pris.a1": "Organization submits registration.",
+  "webb.pris.a2": "Application is reviewed.",
+  "webb.pris.a3": "Invoice is issued.",
+  "webb.pris.a4": "Payment is registered.",
+  "webb.pris.a5": "Organization is activated.",
+  "webb.pris.a6": "Additional users are billed monthly.",
+
+  "webb.kallor.etikett": "Infrastructure",
+  "webb.kallor.rubrik": "Operational Knowledge Infrastructure",
+  "webb.kallor.p1":
+    "ALVA uses the organization’s own authorized knowledge sources. The architecture is provider-agnostic: every source implements the same interface, and no provider is assumed.",
+  "webb.kallor.p2":
+    "A beta installation operates on internal documentation alone. External providers are enabled later through separate connectors, without change to the platform core.",
+  "webb.kallor.block": "Source resolution order",
+  "webb.kallor.k1": "Internal company procedures",
+  "webb.kallor.k2": "OEM documentation",
+  "webb.kallor.k3": "Technical bulletins",
+  "webb.kallor.k4": "Warranty information",
+  "webb.kallor.k5": "Service manuals",
+  "webb.kallor.k6": "Historical verified diagnostics",
+  "webb.kallor.k7": "Organization best practices",
+
+  "webb.login.etikett": "Access",
+  "webb.login.demo":
+    "This login authenticates nothing. Type anything into Email and Password and press Sign in — no account is needed, and the portal behind it presents fixed example data. Connected to a platform instance this page authenticates against it, and the portal is closed without a valid session.",
+  "webb.login.losenord": "Password",
+  "webb.login.ofullstandigt": "Authentication incomplete. Email and password required.",
+  "webb.login.misslyckades": "Authentication failed.",
+  "webb.login.logga_in": "Sign in",
+  "webb.login.loggar_in": "Signing in",
+  "webb.login.glomt": "Forgot password",
+
+  "webb.ansokan.etikett": "Registration",
+  "webb.ansokan.demo":
+    "Nothing is sent. Submitting this form stores nothing, notifies no one, and creates no application — there is no intake behind it yet. The description below states how registration is intended to work, not what happens today.",
+  "webb.ansokan.avsikt": "Intended operation: applications are reviewed manually and no payment is taken at this stage.",
+  "webb.falt.foretag": "Company",
+  "webb.falt.orgnummer": "Organization number",
+  "webb.falt.kontakt": "Contact person",
+  "webb.falt.epost": "Email",
+  "webb.falt.telefon": "Phone",
+  "webb.falt.tekniker": "Number of technicians",
+  "webb.falt.bransch": "Industry",
+  "webb.falt.land": "Country",
+  "webb.falt.anvandare": "Expected number of users",
+  "webb.falt.noteringar": "Notes",
+  "webb.falt.kravs": "(required)",
+  "webb.ansokan.skicka": "Submit application",
+  "webb.ansokan.mottagen.etikett": "Application",
+  "webb.ansokan.mottagen": "Submitted",
+  "webb.ansokan.mottagen.demo":
+    "Nothing was submitted and no one was notified. The reference below was computed in your browser from what you typed, and exists nowhere else — it will be gone when you close this page.",
+  "webb.ansokan.status": "Status",
+  "webb.ansokan.referens": "Reference",
+  "webb.ansokan.granskning":
+    "Applications are reviewed manually. An invoice is issued on approval. The organization is activated once payment is registered.",
+
+  "webb.sprak.etikett": "Localization",
+  "webb.sprak.rubrik": "Languages",
+  "webb.sprak.ingress":
+    "English is the default and the source language. Nine translations follow. What the platform does not do is claim that a translated interface means a translated method.",
+  "webb.sprak.princip.etikett": "Principle",
+  "webb.sprak.princip.rubrik": "Two kinds of text",
+  "webb.sprak.granssnitt.rubrik": "Interface text",
+  "webb.sprak.granssnitt.beteckning": "Falls back silently",
+  "webb.sprak.granssnitt.text":
+    "Labels, buttons, statuses. Finite, rarely changed. An English string reaching a German user is an irritation, not a hazard — so a missing translation falls back to English without comment.",
+  "webb.sprak.metodik.rubrik": "Procedure text",
+  "webb.sprak.metodik.beteckning": "Never falls back silently",
+  "webb.sprak.metodik.text":
+    "Instructions for work on a vehicle. Here an unreviewed translation is worse than a foreign language one — because English looks foreign, while a bad translation looks like an instruction. It is shown in English and marked, with the language named.",
+  "webb.sprak.invariant":
+    "The method itself is never translated. Phase names and status words are ALVA’s structure and read identically in every country, so an auditor can read a Romanian and a German case record without knowing which language the workshop works in.",
+  "webb.sprak.tackning.etikett": "Coverage",
+  "webb.sprak.tackning.rubrik": "What is translated, and what is reviewed",
+  "webb.sprak.kolumn.sprak": "Language",
+  "webb.sprak.kolumn.granssnitt": "Interface",
+  "webb.sprak.kolumn.granskat": "Method reviewed by a specialist",
+  "webb.sprak.granskat.ja": "Yes",
+  "webb.sprak.granskat.nej": "No — procedure text shown in English",
+  "webb.sprak.matt":
+    "Interface coverage is measured, not estimated: a test fails the build if any key is missing from any language. Review status is a statement about people, not about files, and is set by hand.",
+  "webb.sprak.kallsprak":
+    "The English procedure text is a translation of the Swedish source and has not yet been read by a specialist working in the trade. It is held to the same standard as the other nine languages, and the same statement is made about it here rather than quietly excepted because it is the source.",
+  "webb.sprak.bevis.etikett": "Verification",
+  "webb.sprak.bevis.rubrik": "The strings that stop a case",
+  "webb.sprak.bevis.ingress":
+    "These are the sentences that refuse to let a technician close a case. A refusal nobody understands is a refusal with no way through — so they are the right strings to judge a translation by.",
+  "webb.sprak.ej_granskad": "Not reviewed",
+  "webb.sprak.granskad": "Reviewed",
+  "webb.sprak.granskad.text":
+    "Procedure text in {sprak} has been read by a specialist working in the trade. Steps and checks are shown in {sprak} throughout.",
+  "webb.sprak.val.etikett": "Operation",
+  "webb.sprak.val.rubrik": "How the language is chosen",
+  "webb.sprak.val.s1.rubrik": "User preference",
+  "webb.sprak.val.s1.text": "What the individual has selected.",
+  "webb.sprak.val.s2.rubrik": "Organization setting",
+  "webb.sprak.val.s2.text": "The workshop’s documentation language.",
+  "webb.sprak.val.s3.rubrik": "Browser language",
+  "webb.sprak.val.s3.text": "The first language the platform recognises.",
+  "webb.sprak.val.s4.rubrik": "English",
+  "webb.sprak.val.s4.text": "The default, and the source.",
+  "webb.sprak.val.notering":
+    "The organization ranks above the browser deliberately. A workshop in Germany with a Polish technician needs one documentation language — the case record must not change language depending on who happened to write the line.",
 };

@@ -9,10 +9,16 @@
 // uppmaning att boka demo. En sida som försöker övertyga läser som
 // marknadsföring; en sida som redovisar läser som dokumentation. Den
 // senare är vad en teknisk chef fattar beslut utifrån.
+//
+// Texten hämtas ur språkkatalogen (webb.-nycklarna) på besökarens språk.
+// Ordmärket och utläsningen är ALVA:s struktur och står kvar på engelska
+// i varje språk — precis som fasnamnen i metodkorten nedan.
 
 import { Link } from "react-router-dom";
 import { ALVA, FASER, PLATTFORMSVERSION } from "@/alva/system";
 import { Block, Etikett, FARG, Knapp, Rubrik, Symbol, Tabell } from "@/alva/komponenter";
+import { useWebbSprak } from "@/alva/webbsprak";
+import { oversattare } from "../../../../services/gemensam/sprak/index.mjs";
 import { Ram } from "./Ram";
 
 function Sektion({ etikett, rubrik, children }: { etikett: string; rubrik?: string; children: React.ReactNode }) {
@@ -32,6 +38,9 @@ function Sektion({ etikett, rubrik, children }: { etikett: string; rubrik?: stri
 }
 
 export default function Start() {
+  const sprak = useWebbSprak();
+  const t = oversattare(sprak) as (nyckel: string) => string;
+
   return (
     <Ram>
       {/* ---- Hero. En mening. Ingen slogan. ---- */}
@@ -44,11 +53,11 @@ export default function Start() {
             {ALVA.utlast}
           </p>
           <p className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
-            {ALVA.position}
+            {t("webb.hero.position")}
           </p>
 
           <p className="mt-10 max-w-[620px] text-[18px] leading-[28px]" style={{ color: FARG.graphite }}>
-            {ALVA.definition}
+            {t("webb.hero.definition")}
           </p>
 
           {/* Lika breda, inte innehållsbreda. Två knappar bredvid varandra
@@ -58,20 +67,20 @@ export default function Start() {
               fyllning mot kontur, som resten av systemet gör. */}
           <div className="mt-10 grid max-w-[420px] grid-cols-2 gap-4">
             <Link to="/alva/ansokan" className="block h-full">
-              <Knapp bred>Request account</Knapp>
+              <Knapp bred>{t("webb.ansok")}</Knapp>
             </Link>
             <Link to="/alva/logga-in" className="block h-full">
-              <Knapp bred variant="sekundar">Login</Knapp>
+              <Knapp bred variant="sekundar">{t("webb.loggain")}</Knapp>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ---- Metoden ---- */}
-      <Sektion etikett="Methodology" rubrik="The ALVA model">
+      {/* ---- Metoden. Fasnamnen är invarianta; syfte och avgränsning
+              är webbtext och följer besökarens språk. ---- */}
+      <Sektion etikett={t("webb.metod.etikett")} rubrik={t("webb.metod.rubrik")}>
         <p className="mb-8 max-w-[680px] text-[15px] leading-[24px]" style={{ color: FARG.steel }}>
-          ALVA is a standardized method for systematic analysis, localization, verification and action. Every
-          decision is traceable, every conclusion verifiable, every action reproducible.
+          {t("webb.metod.ingress")}
         </p>
 
         <div className="grid gap-px md:grid-cols-4" style={{ background: FARG.lightSteel }}>
@@ -89,10 +98,10 @@ export default function Start() {
                 {f.namn}
               </div>
               <p className="mt-2 text-[14px] leading-[20px]" style={{ color: FARG.graphite }}>
-                {f.syfte}
+                {t(`webb.fas.${f.id}.syfte`)}
               </p>
               <p className="mt-4 border-t pt-4 text-[12px] leading-[18px]" style={{ borderColor: FARG.lightSteel, color: FARG.steel }}>
-                {f.avgransning}
+                {t(`webb.fas.${f.id}.avgransning`)}
               </p>
             </div>
           ))}
@@ -100,26 +109,19 @@ export default function Start() {
       </Sektion>
 
       {/* ---- Arbetsgång. Numrerad, inte illustrerad. ---- */}
-      <Sektion etikett="Operation" rubrik="How it works">
+      <Sektion etikett={t("webb.drift.etikett")} rubrik={t("webb.drift.rubrik")}>
         <ol className="max-w-[680px]">
-          {[
-            ["Create organization", "Registration is submitted and reviewed."],
-            ["Users receive accounts", "Roles are assigned by the organization administrator."],
-            ["Guided diagnostic procedures", "Each case follows a defined procedure."],
-            ["Verification", "Root cause is confirmed before corrective action."],
-            ["Documentation", "The record is generated from the case log."],
-            ["Continuous improvement", "Verified outcomes refine subsequent procedures."],
-          ].map(([rubrik, text], i) => (
-            <li key={rubrik} className="flex gap-6 border-t py-6" style={{ borderColor: FARG.lightSteel }}>
+          {[1, 2, 3, 4, 5, 6].map((steg, i) => (
+            <li key={steg} className="flex gap-6 border-t py-6" style={{ borderColor: FARG.lightSteel }}>
               <span className="font-mono text-[13px] leading-[20px]" style={{ color: FARG.steel }}>
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>
                 <div className="text-[15px] font-semibold" style={{ color: FARG.graphite }}>
-                  {rubrik}
+                  {t(`webb.drift.s${steg}.rubrik`)}
                 </div>
                 <div className="mt-2 text-[14px] leading-[20px]" style={{ color: FARG.steel }}>
-                  {text}
+                  {t(`webb.drift.s${steg}.text`)}
                 </div>
               </div>
             </li>
@@ -128,34 +130,25 @@ export default function Start() {
       </Sektion>
 
       {/* ---- Organisationens eget lärande ---- */}
-      <Sektion etikett="Capability" rubrik="Enterprise learning">
+      <Sektion etikett={t("webb.larande.etikett")} rubrik={t("webb.larande.rubrik")}>
         <div className="grid gap-8 md:grid-cols-2">
           <div>
             <p className="text-[15px] leading-[24px]" style={{ color: FARG.graphite }}>
-              The platform continuously refines diagnostic procedures using verified operational experience from
-              your own organization.
+              {t("webb.larande.p1")}
             </p>
             <p className="mt-4 text-[14px] leading-[22px]" style={{ color: FARG.steel }}>
-              Every completed diagnostic contributes to subsequent guidance. Only verified outcomes are used —
-              a case closed without confirmed root cause contributes nothing, by design.
+              {t("webb.larande.p2")}
             </p>
             <p className="mt-4 text-[14px] leading-[22px]" style={{ color: FARG.steel }}>
-              The knowledge base belongs to the organization. It is derived from your cases, your procedures and
-              your documentation, and it is not aggregated across customers.
+              {t("webb.larande.p3")}
             </p>
           </div>
-          <Block rubrik="Derived from" beteckning="ALVA-SPEC-004">
+          <Block rubrik={t("webb.larande.block")} beteckning="ALVA-SPEC-004">
             <ul className="text-[14px] leading-[24px]" style={{ color: FARG.graphite }}>
-              {[
-                "Verified root causes",
-                "Confirmed corrective actions",
-                "Recurring fault categories",
-                "Procedure completion records",
-                "Organization documentation",
-              ].map((rad) => (
+              {[1, 2, 3, 4, 5].map((rad) => (
                 <li key={rad} className="flex gap-4">
                   <Symbol ikon="klar" />
-                  {rad}
+                  {t(`webb.larande.k${rad}`)}
                 </li>
               ))}
             </ul>
@@ -171,62 +164,47 @@ export default function Start() {
 
           Nu står frågorna i stället. En verkstadschef känner igen sina
           egna frågor; ingen känner igen en innehållsförteckning. */}
-      <Sektion etikett="Reporting" rubrik="Quarterly improvement report">
+      <Sektion etikett={t("webb.rapport.etikett")} rubrik={t("webb.rapport.rubrik")}>
         <p className="mb-8 max-w-[680px] text-[15px] leading-[24px]" style={{ color: FARG.steel }}>
-          Once a quarter, the platform answers six questions about the workshop&rsquo;s own work. Every
-          answer is derived from the case log — nothing is estimated, and nothing is asked of anyone.
+          {t("webb.rapport.ingress")}
         </p>
         <ul className="grid max-w-[760px] gap-4">
-          {[
-            "Which faults are we now diagnosing correctly the first time?",
-            "How often does a suspected cause turn out to be the actual one?",
-            "Which faults keep coming back across the fleet?",
-            "Which procedure steps are being skipped, and why?",
-            "What does the workshop know now that it did not know last quarter?",
-            "Are cases being completed, verified and documented — or only completed?",
-          ].map((fraga) => (
+          {[1, 2, 3, 4, 5, 6].map((fraga) => (
             <li
               key={fraga}
               className="border-l-2 pl-6 text-[15px] leading-[24px]"
               style={{ borderColor: FARG.lightSteel, color: FARG.graphite }}
             >
-              {fraga}
+              {t(`webb.rapport.f${fraga}`)}
             </li>
           ))}
         </ul>
       </Sektion>
 
       {/* ---- Pris. Ingen onlinebetalning. ---- */}
-      <Sektion etikett="Commercial" rubrik="Licensing">
+      <Sektion etikett={t("webb.pris.etikett")} rubrik={t("webb.pris.rubrik")}>
         <div className="grid gap-8 md:grid-cols-2">
           <div>
             <Tabell
-              kolumner={["Component", "Basis"]}
+              kolumner={[t("webb.pris.komponent"), t("webb.pris.grund")]}
               rader={[
-                ["Platform license", "Per organization, annually"],
-                ["User licenses", "Per active user, monthly"],
-                ["Enterprise modules", "Optional, per module"],
+                [t("webb.pris.plattform"), t("webb.pris.plattform.grund")],
+                [t("webb.pris.anvandare"), t("webb.pris.anvandare.grund")],
+                [t("webb.pris.moduler"), t("webb.pris.moduler.grund")],
               ]}
             />
             <p className="mt-6 text-[13px] leading-[20px]" style={{ color: FARG.steel }}>
-              No online payment. No subscription sign-up. Invoicing follows review of the application.
+              {t("webb.pris.betalning")}
             </p>
           </div>
-          <Block rubrik="Activation sequence" beteckning="ALVA-PROC-0001">
+          <Block rubrik={t("webb.pris.aktivering")} beteckning="ALVA-PROC-0001">
             <ol className="text-[14px] leading-[26px]" style={{ color: FARG.graphite }}>
-              {[
-                "Organization submits registration.",
-                "Application is reviewed.",
-                "Invoice is issued.",
-                "Payment is registered.",
-                "Organization is activated.",
-                "Additional users are billed monthly.",
-              ].map((rad, i) => (
-                <li key={rad} className="flex gap-4">
+              {[1, 2, 3, 4, 5, 6].map((steg, i) => (
+                <li key={steg} className="flex gap-4">
                   <span className="font-mono text-[12px]" style={{ color: FARG.steel }}>
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  {rad}
+                  {t(`webb.pris.a${steg}`)}
                 </li>
               ))}
             </ol>
@@ -235,34 +213,24 @@ export default function Start() {
       </Sektion>
 
       {/* ---- Kunskapskällor ---- */}
-      <Sektion etikett="Infrastructure" rubrik="Operational Knowledge Infrastructure">
+      <Sektion etikett={t("webb.kallor.etikett")} rubrik={t("webb.kallor.rubrik")}>
         <div className="grid gap-8 md:grid-cols-2">
           <div>
             <p className="text-[15px] leading-[24px]" style={{ color: FARG.graphite }}>
-              ALVA uses the organization&rsquo;s own authorized knowledge sources. The architecture is
-              provider-agnostic: every source implements the same interface, and no provider is assumed.
+              {t("webb.kallor.p1")}
             </p>
             <p className="mt-4 text-[14px] leading-[22px]" style={{ color: FARG.steel }}>
-              A beta installation operates on internal documentation alone. External providers are enabled later
-              through separate connectors, without change to the platform core.
+              {t("webb.kallor.p2")}
             </p>
           </div>
-          <Block rubrik="Source resolution order" beteckning="ALVA-SPEC-011">
+          <Block rubrik={t("webb.kallor.block")} beteckning="ALVA-SPEC-011">
             <ol className="text-[14px] leading-[24px]" style={{ color: FARG.graphite }}>
-              {[
-                "Internal company procedures",
-                "OEM documentation",
-                "Technical bulletins",
-                "Warranty information",
-                "Service manuals",
-                "Historical verified diagnostics",
-                "Organization best practices",
-              ].map((rad, i) => (
+              {[1, 2, 3, 4, 5, 6, 7].map((rad, i) => (
                 <li key={rad} className="flex gap-4">
                   <span className="font-mono text-[12px]" style={{ color: FARG.steel }}>
                     {i + 1}
                   </span>
-                  {rad}
+                  {t(`webb.kallor.k${rad}`)}
                 </li>
               ))}
             </ol>
@@ -277,10 +245,10 @@ export default function Start() {
           </div>
           <div className="grid max-w-[420px] grid-cols-2 gap-4">
             <Link to="/alva/ansokan" className="block h-full">
-              <Knapp bred>Request account</Knapp>
+              <Knapp bred>{t("webb.ansok")}</Knapp>
             </Link>
             <Link to="/alva/logga-in" className="block h-full">
-              <Knapp bred variant="sekundar">Login</Knapp>
+              <Knapp bred variant="sekundar">{t("webb.loggain")}</Knapp>
             </Link>
           </div>
         </div>

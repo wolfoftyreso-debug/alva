@@ -20,15 +20,19 @@ import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loggaInPlattform, plattformAktiv } from "@/felsokning/plattform";
 import { Demonstration, Block, Etikett, FARG, Knapp, Rubrik } from "@/alva/komponenter";
+import { useWebbSprak } from "@/alva/webbsprak";
+import { oversattare } from "../../../../services/gemensam/sprak/index.mjs";
 import { Ram } from "./Ram";
 
 const FALT = [
-  { namn: "epost", etikett: "Email", typ: "email", komplettering: "username" },
-  { namn: "losenord", etikett: "Password", typ: "password", komplettering: "current-password" },
+  { namn: "epost", nyckel: "webb.falt.epost", typ: "email", komplettering: "username" },
+  { namn: "losenord", nyckel: "webb.login.losenord", typ: "password", komplettering: "current-password" },
 ];
 
 export default function LoggaIn() {
   const navigera = useNavigate();
+  const sprak = useWebbSprak();
+  const t = oversattare(sprak) as (nyckel: string) => string;
   const [fel, setFel] = useState("");
   const [arbetar, setArbetar] = useState(false);
   const skarpt = plattformAktiv();
@@ -47,7 +51,7 @@ export default function LoggaIn() {
 
     if (!epost || !losenord) {
       // Statusspråket gäller även fel: ett konstaterande, inte en ursäkt.
-      setFel("Authentication incomplete. Email and password required.");
+      setFel(t("webb.login.ofullstandigt"));
       return;
     }
 
@@ -60,7 +64,7 @@ export default function LoggaIn() {
       // Serverns egen text visas oförändrad. Den vet vad som hände —
       // avstängt konto, spärrat efter för många försök, fel uppgifter —
       // och en omskrivning här skulle bara göra beskedet vagare.
-      setFel(orsak instanceof Error ? orsak.message : "Authentication failed.");
+      setFel(orsak instanceof Error ? orsak.message : t("webb.login.misslyckades"));
     } finally {
       setArbetar(false);
     }
@@ -69,18 +73,11 @@ export default function LoggaIn() {
   return (
     <Ram>
       <div className="mx-auto max-w-[440px] px-6 py-24">
-        <Etikett>Access</Etikett>
+        <Etikett>{t("webb.login.etikett")}</Etikett>
         <div className="mt-2 mb-8">
-          <Rubrik niva={1}>Login</Rubrik>
+          <Rubrik niva={1}>{t("webb.loggain")}</Rubrik>
         </div>
-        {!skarpt && (
-          <Demonstration>
-            This login authenticates nothing. Type anything into Email and Password and press Sign in
-            — no account is needed, and the portal behind it presents fixed example data. Connected to
-            a platform instance this page authenticates against it, and the portal is closed without a
-            valid session.
-          </Demonstration>
-        )}
+        {!skarpt && <Demonstration>{t("webb.login.demo")}</Demonstration>}
 
         <form onSubmit={skicka}>
           <Block>
@@ -91,7 +88,7 @@ export default function LoggaIn() {
                   className="block text-[11px] font-semibold uppercase tracking-[0.08em]"
                   style={{ color: FARG.steel }}
                 >
-                  {f.etikett}
+                  {t(f.nyckel)}
                 </label>
                 <input
                   id={f.namn}
@@ -113,10 +110,10 @@ export default function LoggaIn() {
 
           <div className="flex items-center justify-between">
             <Knapp type="submit" disabled={arbetar}>
-              {arbetar ? "Signing in" : "Sign in"}
+              {arbetar ? t("webb.login.loggar_in") : t("webb.login.logga_in")}
             </Knapp>
             <a href="/alva/ansokan" className="text-[12px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
-              Forgot password
+              {t("webb.login.glomt")}
             </a>
           </div>
         </form>

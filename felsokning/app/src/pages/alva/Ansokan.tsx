@@ -7,29 +7,32 @@
 
 import { type FormEvent, useState } from "react";
 import { Demonstration, Block, Etikett, FARG, Knapp, Rubrik, Statusmärke } from "@/alva/komponenter";
+import { useWebbSprak } from "@/alva/webbsprak";
+import { oversattare } from "../../../../services/gemensam/sprak/index.mjs";
 import { Ram } from "./Ram";
 
 interface Falt {
   namn: string;
-  etikett: string;
+  nyckel: string;
   typ?: string;
   kravs?: boolean;
-  hjalp?: string;
 }
 
 const FALT: Falt[] = [
-  { namn: "foretag", etikett: "Company", kravs: true },
-  { namn: "orgnummer", etikett: "Organization number", kravs: true },
-  { namn: "kontakt", etikett: "Contact person", kravs: true },
-  { namn: "epost", etikett: "Email", typ: "email", kravs: true },
-  { namn: "telefon", etikett: "Phone", typ: "tel", kravs: true },
-  { namn: "tekniker", etikett: "Number of technicians", typ: "number", kravs: true },
-  { namn: "bransch", etikett: "Industry", kravs: true },
-  { namn: "land", etikett: "Country", kravs: true },
-  { namn: "anvandare", etikett: "Expected number of users", typ: "number" },
+  { namn: "foretag", nyckel: "webb.falt.foretag", kravs: true },
+  { namn: "orgnummer", nyckel: "webb.falt.orgnummer", kravs: true },
+  { namn: "kontakt", nyckel: "webb.falt.kontakt", kravs: true },
+  { namn: "epost", nyckel: "webb.falt.epost", typ: "email", kravs: true },
+  { namn: "telefon", nyckel: "webb.falt.telefon", typ: "tel", kravs: true },
+  { namn: "tekniker", nyckel: "webb.falt.tekniker", typ: "number", kravs: true },
+  { namn: "bransch", nyckel: "webb.falt.bransch", kravs: true },
+  { namn: "land", nyckel: "webb.falt.land", kravs: true },
+  { namn: "anvandare", nyckel: "webb.falt.anvandare", typ: "number" },
 ];
 
 export default function Ansokan() {
+  const sprak = useWebbSprak();
+  const t = oversattare(sprak) as (nyckel: string) => string;
   const [skickad, setSkickad] = useState(false);
   const [referens, setReferens] = useState("");
 
@@ -47,31 +50,26 @@ export default function Ansokan() {
     return (
       <Ram>
         <div className="mx-auto max-w-[680px] px-6 py-16">
-          <Etikett>Application</Etikett>
+          <Etikett>{t("webb.ansokan.mottagen.etikett")}</Etikett>
           <div className="mt-2 mb-8">
-            <Rubrik niva={1}>Submitted</Rubrik>
+            <Rubrik niva={1}>{t("webb.ansokan.mottagen")}</Rubrik>
           </div>
-          <Demonstration>
-            Nothing was submitted and no one was notified. The reference below was computed in your
-            browser from what you typed, and exists nowhere else — it will be gone when you close
-            this page.
-          </Demonstration>
-          <Block rubrik="Registration" beteckning={referens}>
+          <Demonstration>{t("webb.ansokan.mottagen.demo")}</Demonstration>
+          <Block rubrik={t("webb.ansokan.etikett")} beteckning={referens}>
             <dl className="text-[14px] leading-[24px]">
               <div className="flex justify-between border-b py-2" style={{ borderColor: FARG.lightSteel }}>
-                <dt style={{ color: FARG.steel }}>Status</dt>
+                <dt style={{ color: FARG.steel }}>{t("webb.ansokan.status")}</dt>
                 <dd>
                   <Statusmärke status="pending" />
                 </dd>
               </div>
               <div className="flex justify-between py-2">
-                <dt style={{ color: FARG.steel }}>Reference</dt>
+                <dt style={{ color: FARG.steel }}>{t("webb.ansokan.referens")}</dt>
                 <dd className="font-mono">{referens}</dd>
               </div>
             </dl>
             <p className="mt-4 border-t pt-4 text-[13px] leading-[20px]" style={{ borderColor: FARG.lightSteel, color: FARG.steel }}>
-              Applications are reviewed manually. An invoice is issued on approval. The organization is activated
-              once payment is registered.
+              {t("webb.ansokan.granskning")}
             </p>
           </Block>
         </div>
@@ -82,18 +80,13 @@ export default function Ansokan() {
   return (
     <Ram>
       <div className="mx-auto max-w-[680px] px-6 py-16">
-        <Etikett>Registration</Etikett>
+        <Etikett>{t("webb.ansokan.etikett")}</Etikett>
         <div className="mt-2 mb-2">
-          <Rubrik niva={1}>Request account</Rubrik>
+          <Rubrik niva={1}>{t("webb.ansok")}</Rubrik>
         </div>
-        <Demonstration>
-          Nothing is sent. Submitting this form stores nothing, notifies no one, and creates no
-          application — there is no intake behind it yet. The description below states how
-          registration is intended to work, not what happens today.
-        </Demonstration>
+        <Demonstration>{t("webb.ansokan.demo")}</Demonstration>
         <p className="mb-8 text-[14px] leading-[22px]" style={{ color: FARG.steel }}>
-          Intended operation: applications are reviewed manually and no payment is taken at this
-          stage.
+          {t("webb.ansokan.avsikt")}
         </p>
 
         <form onSubmit={skicka} noValidate={false}>
@@ -101,9 +94,9 @@ export default function Ansokan() {
             {FALT.map((f) => (
               <div key={f.namn} className="border-t py-2 first:border-t-0" style={{ borderColor: FARG.lightSteel }}>
                 <label htmlFor={f.namn} className="block text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
-                  {f.etikett}
+                  {t(f.nyckel)}
                   {f.kravs && <span aria-hidden="true"> ·</span>}
-                  {f.kravs && <span className="sr-only"> (required)</span>}
+                  {f.kravs && <span className="sr-only"> {t("webb.falt.kravs")}</span>}
                 </label>
                 <input
                   id={f.namn}
@@ -117,7 +110,7 @@ export default function Ansokan() {
             ))}
             <div className="border-t py-2" style={{ borderColor: FARG.lightSteel }}>
               <label htmlFor="noteringar" className="block text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
-                Notes
+                {t("webb.falt.noteringar")}
               </label>
               <textarea
                 id="noteringar"
@@ -129,7 +122,7 @@ export default function Ansokan() {
             </div>
           </Block>
 
-          <Knapp type="submit">Submit application</Knapp>
+          <Knapp type="submit">{t("webb.ansokan.skicka")}</Knapp>
         </form>
       </div>
     </Ram>

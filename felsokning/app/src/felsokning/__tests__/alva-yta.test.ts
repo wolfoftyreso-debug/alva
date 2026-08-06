@@ -339,22 +339,30 @@ describe("ytor utan verklig funktion är märkta som demonstration", () => {
 // En märkning som inte går att missförstå säger två saker: att ingenting
 // sker, och vad läsaren ska göra i stället.
 describe("demonstrationsmärkningen är entydig", () => {
+  // Texterna bor sedan flerspråkigheten i katalogen. Garantin är därför
+  // tvådelad: källtexten säger det som ska sägas, OCH sidan hämtar just
+  // den nyckeln — annars kan en riktig text stå oanvänd i katalogen.
   const sida = (namn: string) => filer.find(([n]) => n.endsWith(`pages/alva/${namn}`))![1];
 
-  it("inloggningen säger vad besökaren ska göra", () => {
-    const kod = sida("LoggaIn.tsx");
-    expect(kod).toContain("Type anything");
-    expect(kod).toContain("no account is needed");
+  it("inloggningen säger vad besökaren ska göra", async () => {
+    const { EN } = await import("../../../../services/gemensam/sprak/en.mjs");
+    expect(EN["webb.login.demo"]).toContain("Type anything");
+    expect(EN["webb.login.demo"]).toContain("no account is needed");
+    expect(sida("LoggaIn.tsx")).toContain('t("webb.login.demo")');
   });
 
-  it("ansökan säger att det inte finns någon mottagning", () => {
-    expect(sida("Ansokan.tsx")).toContain("there is no intake behind it yet");
+  it("ansökan säger att det inte finns någon mottagning", async () => {
+    const { EN } = await import("../../../../services/gemensam/sprak/en.mjs");
+    expect(EN["webb.ansokan.demo"]).toContain("there is no intake behind it yet");
+    expect(sida("Ansokan.tsx")).toContain('t("webb.ansokan.demo")');
   });
 
-  it("beskrivningen av avsedd drift är märkt som avsedd, inte som gällande", () => {
+  it("beskrivningen av avsedd drift är märkt som avsedd, inte som gällande", async () => {
     // Två meningar bredvid varandra, där den ena säger att inget händer
     // och den andra beskriver en handläggningsprocess, upphäver varandra.
-    expect(sida("Ansokan.tsx")).toContain("Intended operation:");
+    const { EN } = await import("../../../../services/gemensam/sprak/en.mjs");
+    expect(EN["webb.ansokan.avsikt"]).toContain("Intended operation:");
+    expect(sida("Ansokan.tsx")).toContain('t("webb.ansokan.avsikt")');
   });
 
   it("ingen märkning hänvisar till något som läsaren inte kan nå", () => {
@@ -432,7 +440,7 @@ describe("portalen är stängd, eller uttryckligen en demonstration", () => {
     expect(loggaIn).toContain("loggaInPlattform");
     // Och skylten står kvar exakt när den ska: bara i det läge där
     // inloggningen inte prövar något.
-    expect(loggaIn).toMatch(/!skarpt && \(\s*<Demonstration>/);
+    expect(loggaIn).toMatch(/!skarpt && (\(\s*)?<Demonstration>/);
   });
 
   it("fakturavyn visar organisationens egna fakturor mot en plattform", () => {
@@ -465,18 +473,22 @@ describe("inloggningen heter samma sak överallt", () => {
   const start = readFileSync("src/pages/alva/Start.tsx", "utf8");
 
   it("navigationens namn på inloggningen är det som används", () => {
-    const namn = ram.match(/\{ till: "\/alva\/logga-in", text: "([^"]+)" \}/)?.[1];
-    expect(namn).toBeTruthy();
-    // Varje länk till inloggningen på startsidan bär samma text.
+    // Sedan flerspråkigheten jämförs KATALOGNYCKLAR, inte strängar — det
+    // är starkare: samma nyckel är samma ord på vartenda språk, medan två
+    // nycklar med samma engelska text hade kunnat glida isär i en enda
+    // översättning.
+    const nyckel = ram.match(/\{ till: "\/alva\/logga-in", nyckel: "([^"]+)" \}/)?.[1];
+    expect(nyckel).toBeTruthy();
+    // Varje länk till inloggningen på startsidan bär samma nyckel.
     //
     // Mönstret tål attribut på länken. Första versionen gjorde inte det,
     // och när <Link> fick en className matchade den noll knappar — testet
     // slutade mäta i stället för att falla. Det enda som avslöjade det var
     // kravet nedan på att den ska hitta NÅGOT, vilket är därför det står
     // där och inte som en självklarhet.
-    const knappar = [...start.matchAll(/to="\/alva\/logga-in"[^>]*>\s*<Knapp[^>]*>([^<]+)<\/Knapp>/g)];
+    const knappar = [...start.matchAll(/to="\/alva\/logga-in"[^>]*>\s*<Knapp[^>]*>\{t\("([^"]+)"\)\}<\/Knapp>/g)];
     expect(knappar.length).toBeGreaterThan(0);
-    for (const [, text] of knappar) expect(text.trim()).toBe(namn);
+    for (const [, n] of knappar) expect(n).toBe(nyckel);
   });
 
   it("ingen ingång kallar verkstaden för kund", () => {
