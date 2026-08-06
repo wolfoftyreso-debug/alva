@@ -177,8 +177,7 @@ export default function NyttArende() {
       <FelsokningSkal rubrik="Start case" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel rubrik="Scan work order">
           <p className="mb-3 text-[#333333]">
-            Fota arbetsorderns framsida. Systemet läser kund-, fordons- och ärendeuppgifter automatiskt —
-            du granskar bara osäkra fält och trycker Starta diagnos.
+            Photograph the front of the work order. The system reads customer, vehicle and case details automatically — you review only the uncertain fields and press Start diagnosis.
           </p>
           <input
             ref={skanRef}
@@ -201,7 +200,7 @@ export default function NyttArende() {
         </Panel>
         <Panel>
           <StorKnapp variant="sekundar" onClick={() => setSteg("identifiera")}>
-            Fyll i manuellt
+            Fill in manually
           </StorKnapp>
         </Panel>
       </FelsokningSkal>
@@ -217,7 +216,7 @@ export default function NyttArende() {
       >
         {tolkning.demo && (
           <p className="mb-3 border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
-            Demo-tolkning — plattformens dokumenttolkning kräver inloggning. Värdena nedan är exempeldata.
+            Demo interpretation — the platform's document interpretation requires sign-in. The values below are sample data.
           </p>
         )}
         <GranskaTolkning
@@ -255,7 +254,7 @@ export default function NyttArende() {
             ))}
           </div>
           <p className="mt-3 text-[12px] text-[#707070]">
-            QR-kod, streckkod och typskylt kan läsas av i nästa steg — eller ange identiteten manuellt.
+            QR code, barcode and type plate can be read in the next step — or enter the identity manually.
           </p>
         </Panel>
         <Panel rubrik="Read the identity">
@@ -275,17 +274,17 @@ export default function NyttArende() {
             <div>
               <video ref={videoRef} playsInline muted className="mb-2 w-full border border-[#C6C6C6]" />
               <p className="mb-2 text-[12px] text-[#707070]">
-                Rikta kameran mot QR-koden, streckkoden eller VIN-etiketten.
+                Point the camera at the QR code, barcode or VIN label.
               </p>
               <StorKnapp variant="sekundar" onClick={stangSkanning}>
-                Avbryt skanning
+                Cancel scanning
               </StorKnapp>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               {stodStreckkod() && (
                 <StorKnapp variant="sekundar" onClick={oppnaSkanning}>
-                  Skanna QR/streckkod
+                  Scan QR or barcode
                 </StorKnapp>
               )}
               <StorKnapp variant="sekundar" disabled={laserTypskylt} onClick={() => typskyltRef.current?.click()}>
@@ -295,8 +294,8 @@ export default function NyttArende() {
           )}
           {avlastKod && (
             <p className="mt-2 text-[12px] font-semibold text-[#1E6B34]">
-              Avläst {avlastKod.typ}: {avlastKod.varde}
-              {avlastKod.format ? ` (${avlastKod.format})` : ""} — kontrollera värdet nedan.
+              Read {avlastKod.typ}: {avlastKod.varde}
+              {avlastKod.format ? ` (${avlastKod.format})` : ""} — check the value below.
             </p>
           )}
           {kodFel && <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">{kodFel}</p>}
@@ -306,7 +305,7 @@ export default function NyttArende() {
           <TextFalt label="Description (make, model, year)" varde={beskrivning} satt={setBeskrivning} platshallare="T.ex. Volvo XC60 D4 2019" />
           <TextFalt label="Customer (optional)" varde={kund} satt={setKund} platshallare="e.g. Alex Meyer" />
           <StorKnapp disabled={!identifierare.trim()} onClick={() => setSteg("bekrafta")}>
-            Fortsätt
+            Continue
           </StorKnapp>
         </Panel>
       </FelsokningSkal>
@@ -325,7 +324,7 @@ export default function NyttArende() {
         </Panel>
         <div className="grid grid-cols-2 gap-2">
           <StorKnapp variant="sekundar" onClick={() => setSteg("identifiera")}>
-            Ändra
+            Edit
           </StorKnapp>
           <StorKnapp onClick={() => setSteg("felbeskrivning")}>Correct object — continue</StorKnapp>
         </div>
@@ -420,7 +419,7 @@ function GranskaTolkning({
         </div>
         <p className="mt-1 text-[11px] text-[#707070]">
           {vald?.omrade
-            ? `Markerat: ${vald.etikett} (ungefärlig position)`
+            ? `Markerat: ${vald.etikett} (approximate position)`
             : "Select a field to see where in the document the value was found."}
         </p>
       </Panel>
@@ -467,7 +466,7 @@ function GranskaTolkning({
                           }}
                           className="whitespace-nowrap border border-[#6E1414] bg-[#8B1A1A] px-3 py-1 text-[12px] font-semibold text-white"
                         >
-                          Bekräfta
+                          Confirm
                         </button>
                       )}
                     </div>
@@ -480,12 +479,12 @@ function GranskaTolkning({
 
         {obekraftade.length > 0 && (
           <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">
-            {obekraftade.length} osäkra fält kräver bekräftelse eller korrigering innan diagnosen startar.
+            {obekraftade.length} uncertain fields require confirmation or correction before the diagnosis starts.
           </p>
         )}
         <div className="grid grid-cols-2 gap-2">
           <StorKnapp variant="sekundar" onClick={avbryt}>
-            Skanna om
+            Scan again
           </StorKnapp>
           <StorKnapp disabled={obekraftade.length > 0 || startar} onClick={() => vidStart(rader)}>
             {startar ? "Starting …" : "Start diagnosis"}

@@ -8,6 +8,7 @@
 
 import type { Arende } from "./domain";
 import { ALLA_METODIKER, ELSYSTEM, GENERISK, VIBRATION } from "./metodiker";
+import { arJakande } from "../../../services/gemensam/sprak/index.mjs";
 
 export interface Fraga {
   id: string;
@@ -197,7 +198,7 @@ export function nastaSteg(arende: Arende, metodik: Metodik): NastaSteg {
       // Säkerhetsspärr: ett nekande svar stoppar metodiken här i stället
       // för att räknas som besvarat och släppa fram nästa steg.
       const sparr = SPARRFRAGOR[`${metodik.id}/${steg.id}/${fraga.id}`];
-      if (sparr && svar.get(`${steg.id}/${fraga.id}`) !== "Yes") {
+      if (sparr && !arJakande(svar.get(`${steg.id}/${fraga.id}`))) {
         return { steg, fraga, klart: false, sparr };
       }
     }

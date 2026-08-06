@@ -40,7 +40,7 @@ function Omfordela({ rad, vidKlar }: { rad: OversiktsRad; vidKlar: () => void })
           hamtaAnvandare().then(setPersoner).catch(() => setPersoner([]));
         }}
       >
-        Omfördela
+        Reassign
       </StorKnapp>
     );
   }
@@ -72,7 +72,7 @@ function Omfordela({ rad, vidKlar }: { rad: OversiktsRad; vidKlar: () => void })
           className="min-h-9 border border-[#ADADAD] font-semibold text-[#4A5560]"
           onClick={() => setOppen(false)}
         >
-          Avbryt
+          Cancel
         </button>
       </div>
     </div>
@@ -102,7 +102,7 @@ export default function Oversikt() {
       <FelsokningSkal rubrik="Organization overview" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel>
           <p className="text-[14px] text-[#333333]">
-            Översikten kräver arbetsledar- eller administratörsbehörighet på plattformen.
+            The overview requires supervisor or administrator rights on the platform.
           </p>
         </Panel>
       </FelsokningSkal>
@@ -177,7 +177,7 @@ export default function Oversikt() {
             </div>
             {avslutade.length > 0 && (
               <p className="mt-3 text-center text-[#333333]">
-                Genomsnittlig ledtid för avslutade: <span className="font-semibold">{formateraTid(medelLedtidMs)}</span>
+                Average lead time for closed cases: <span className="font-semibold">{formateraTid(medelLedtidMs)}</span>
               </p>
             )}
           </Panel>
@@ -195,7 +195,7 @@ export default function Oversikt() {
                 </div>
               ))}
               <p className="mt-2 text-[11px] text-[#707070]">
-                Ur dokumenterade felorsaksanalyser — visar mönster som slitage, tidigare reparationer eller möjliga konstruktionsproblem.
+                From documented root cause analyses — shows patterns such as wear, previous repairs or possible design problems.
               </p>
             </Panel>
           )}
@@ -206,7 +206,7 @@ export default function Oversikt() {
             <div key={rad.id} className="mb-3 border border-[#C6C6C6] bg-[#F7F7F7] p-4">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">
-                  Ärende #{rad.nummer}
+                  Case #{rad.nummer}
                 </span>
                 <span
                   className={`px-2 py-0.5 text-[11px] font-semibold uppercase ${
@@ -220,12 +220,12 @@ export default function Oversikt() {
               {rad.felbeskrivning && <p className="text-[14px] text-[#333333]">”{rad.felbeskrivning}”</p>}
               <p className="mt-1 text-[12px] text-[#707070]">
                 Ansvarig: <span className="font-semibold text-[#333333]">{rad.ansvarig ?? rad.skapare ?? "—"}</span>
-                {` · ${rad.antal_handelser} händelser`}
+                {` · ${rad.antal_handelser} events`}
                 {rad.senaste ? ` · senast ${tidDatum(rad.senaste)} ${tidKlockslag(rad.senaste)}` : ""}
               </p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <StorKnapp variant="sekundar" onClick={() => oppna(rad)}>
-                  Öppna ärendet
+                  Open the case
                 </StorKnapp>
                 {!rad.avslutat && <Omfordela rad={rad} vidKlar={() => hamtaOversikt().then(setRader)} />}
               </div>

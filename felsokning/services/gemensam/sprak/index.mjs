@@ -187,3 +187,51 @@ export function metodikvarning(sprak) {
   if (!s || s.granskat) return null;
   return t(sprak, "metodik.ogranskad", { sprak: s.egetNamn });
 }
+
+/**
+ * Ärendetyper som skrevs på svenska innan engelska blev källspråket.
+ *
+ * Ärendetypen är DATA: den ligger i händelseloggen och slår upp
+ * regelpaketets extra krav. Ett byte av språk får därför inte göras tyst
+ * — ett gammalt garantiärende vars typ heter "Garanti" hade annars inte
+ * matchat "Warranty", fått noll extra krav, och släppts igenom grinden
+ * med FÄRRE krav än när det öppnades. Ingenting i gränssnittet hade
+ * visat det.
+ *
+ * Tabellen är därför en del av regeln, inte en bekvämlighet, och den tas
+ * bort först när ingen logg innehåller de gamla värdena.
+ */
+export const ARENDETYP_ARV = {
+  "Privat kund": "Private customer",
+  Företagskund: "Business customer",
+  Garanti: "Warranty",
+  Försäkring: "Insurance",
+  Reklamation: "Complaint",
+  Begagnatgaranti: "Used-vehicle warranty",
+  "Intern kvalitetskontroll": "Internal quality check",
+  "Teknisk utredning": "Technical investigation",
+};
+
+/** Ärendetypen i sin nuvarande form, oavsett vilket språk den skrevs i. */
+export const arendetypNu = (typ) => ARENDETYP_ARV[typ] ?? typ;
+
+/**
+ * Jakande svar på en säkerhetsspärr.
+ *
+ * Svaret på en ja/nej-fråga ligger i loggen som text, och spärrfrågorna
+ * släpper bara igenom ett jakande svar. När knappen bytte från "Ja" till
+ * "Yes" gick de två isär: klienten skrev "Yes", servern jämförde mot
+ * "Ja". Utfallet blev fail-closed — högvoltsärenden gick inte att
+ * avsluta alls — vilket är rätt riktning för ett fel att falla åt, men
+ * det var en slump och inte en konstruktion.
+ *
+ * Det verkliga felet är att en säkerhetsspärr avgörs av en textsträng.
+ * Rätt lösning är ett booleskt fält i händelsen; tills det finns står
+ * båda formerna här, och de gäller alla språk samtidigt av samma skäl
+ * som ordlistorna i ord.mjs gör det: den som svarar ska inte kunna
+ * missas för att organisationens språkinställning var en annan.
+ */
+export const JAKANDE = new Set(["Yes", "Ja", "Oui", "Sí", "Si", "Sì", "Tak", "Da", "Sim", "Ja."]);
+
+/** Är svaret jakande, oavsett vilket språk knappen stod på? */
+export const arJakande = (svar) => JAKANDE.has(String(svar ?? "").trim());

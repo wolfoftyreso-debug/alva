@@ -47,7 +47,7 @@ function PlattformInloggning() {
           <div className="flex items-center justify-between gap-3">
             <p className="text-[14px]">
               <span className="font-semibold">{konto.namn}</span> · {ROLL_LABEL[konto.roll]} ·{" "}
-              {konto.organisation} — synk och beslutsstöd aktiva.
+              {konto.organisation} — synchronization and decision support active.
             </p>
             <button
               className="whitespace-nowrap border border-[#ADADAD] px-4 py-2 font-semibold text-[#333333] hover:border-[#8FA8C0]"
@@ -56,7 +56,7 @@ function PlattformInloggning() {
                 setKonto(null);
               }}
             >
-              Logga ut
+              Sign out
             </button>
           </div>
           {(konto.roll === "arbetsledare" || konto.roll === "admin") && (
@@ -80,8 +80,7 @@ function PlattformInloggning() {
       {lage === "stangd" ? (
         <>
           <p className="mb-2 text-[#333333]">
-            Logga in för synk mellan enheter, samarbete i ärenden och beslutsstöd. Utan inloggning
-            arbetar appen i lokalt läge. Ny organisation? Skapa konto — du blir systemadministratör.
+            Sign in for synchronization across devices, collaboration on cases and decision support. Without sign-in the app works in local mode. New organization? Create an account — you become the system administrator.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setLage("registrera")}>
@@ -117,7 +116,7 @@ function PlattformInloggning() {
           {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setLage("stangd")}>
-              Avbryt
+              Cancel
             </StorKnapp>
             <StorKnapp
               type="submit"
@@ -165,7 +164,7 @@ function AnvandarAdmin() {
             uppdatera();
           }}
         >
-          Hantera användare i organisationen
+          Manage users in the organization
         </StorKnapp>
       </Panel>
     );
@@ -209,7 +208,7 @@ function AnvandarAdmin() {
         </div>
       ))}
       <p className="mt-1 text-[12px] text-[#707070]">
-        En avstängning gäller omedelbart — pågående sessioner på personens enheter upphör direkt.
+        Disabling takes effect immediately — active sessions on that person's devices end at once.
       </p>
       <form
         className="mt-3"
@@ -248,7 +247,7 @@ function AnvandarAdmin() {
         </div>
         {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
         <StorKnapp type="submit" disabled={!epost.trim() || !namn.trim() || losenord.length < 8}>
-          Skapa användare
+          Create user
         </StorKnapp>
       </form>
     </Panel>
@@ -273,7 +272,7 @@ export default function Arendelista() {
       <FelsokningSkal rubrik="Guided Diagnostics">
         <Panel rubrik="Who is working?">
           <p className="mb-3 text-[14px] text-[#333333]">
-            Allt arbete loggas med användare och tidpunkt. Ange ditt namn för att börja.
+            All work is logged with user and timestamp. Enter your name to begin.
           </p>
           <form
             onSubmit={(e) => {
@@ -283,7 +282,7 @@ export default function Arendelista() {
           >
             <TextFalt label="Name" varde={namn} satt={setNamn} platshallare="e.g. Anna" />
             <StorKnapp type="submit" disabled={!namn.trim()}>
-              Fortsätt
+              Continue
             </StorKnapp>
           </form>
         </Panel>
@@ -330,11 +329,10 @@ export default function Arendelista() {
       {alla.length === 0 && (
         <Panel rubrik="Get started">
           <p className="mb-3 text-[14px] text-[#333333]">
-            Inga ärenden ännu. Starta med att identifiera ett objekt — eller utforska ett färdigt demoärende
-            med komplett arbetslogg, brief och kundrapport.
+            No cases yet. Start by identifying an object — or explore a finished demo case with a complete work log, brief and customer report.
           </p>
           <StorKnapp variant="sekundar" onClick={() => laggInArende(byggDemoArende(nastaNummer, anvandare))}>
-            Skapa demoärende (Volvo XC60, vibration)
+            Create demo case (Volvo XC60, vibration)
           </StorKnapp>
         </Panel>
       )}
@@ -353,11 +351,7 @@ export default function Arendelista() {
 
       <Panel rubrik="Decision support">
         <p className="text-[#333333]">
-          När du är inloggad hjälper systemet dig medan du arbetar: föreslår nästa steg utifrån det du
-          dokumenterar, granskar hela ärendet på begäran och skriver utkast till överlämningen. Den
-          skiljer alltid på verifierat och hypotes — och slår aldrig fast en felorsak som inte är
-          bekräftad. Inget att installera eller ställa in; allt ingår i tjänsten. Utan inloggning
-          guidar checklistan dig steg för steg.
+          When you are signed in the system helps while you work: it proposes the next step from what you document, reviews the whole case on request and drafts the handover. It always separates verified from hypothesis — and never states a root cause that is not confirmed. Nothing to install or configure; it is part of the service. Without sign-in the checklist guides you step by step.
         </p>
       </Panel>
 
@@ -372,7 +366,7 @@ export default function Arendelista() {
             <div className="mb-3 border border-[#C6C6C6] bg-[#F7F7F7] p-4 transition-colors hover:border-[#00437A]">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">
-                  Ärende #{arende.nummer}
+                  Case #{arende.nummer}
                 </span>
                 <span
                   className={`px-2 py-0.5 text-[11px] font-semibold uppercase ${

@@ -249,8 +249,8 @@ describe("klientens avslutsvillkor täcker hela grindens åtgärdskedja", () => 
     {
       typ: "felorsak",
       avvikelse: "Höger framhjul har 38 g obalans mot gränsen 10 g.",
-      orsaker: ["Normalt slitage"],
-      underlag: ["Mätresultat"],
+      orsaker: ["Normal wear"],
+      underlag: ["Measurement result"],
       sakerhet: "hog",
       atgard: "Balansera om höger framhjul.",
     },

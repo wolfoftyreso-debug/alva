@@ -86,13 +86,11 @@ function Integrationer() {
   return (
     <Panel rubrik="Brand-specific connectors">
       <p className="mb-2 text-[12px] text-[#707070]">
-        Organisationens egna avtal hos tillverkare och dataleverantörer. Uppgifterna lagras krypterat på
-        plattformen och används bara av servern — de skickas aldrig till teknikernas enheter.
+        The organization's own agreements with manufacturers and data providers. The details are stored encrypted on the platform and used only by the server — they are never sent to technicians' devices.
       </p>
       {!krypteringKlar && (
         <p className="mb-2 border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
-          Kryptering är inte konfigurerad i driften (INTEGRATION_NYCKEL) — uppgifter kan inte sparas förrän
-          nyckeln finns.
+          Encryption is not configured in this deployment (INTEGRATION_NYCKEL) — details cannot be saved until the key exists.
         </p>
       )}
 
@@ -132,7 +130,7 @@ function Integrationer() {
                 {fel && <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">{fel}</p>}
                 <div className="grid grid-cols-2 gap-2">
                   <StorKnapp variant="sekundar" onClick={() => { setOppen(null); setFel(""); }}>
-                    Avbryt
+                    Cancel
                   </StorKnapp>
                   <StorKnapp
                     disabled={!krypteringKlar}
@@ -149,11 +147,11 @@ function Integrationer() {
                       }
                     }}
                   >
-                    Spara uppgifter
+                    Save details
                   </StorKnapp>
                 </div>
                 <p className="mt-1 text-[11px] text-[#707070]">
-                  Hemliga fält visas aldrig igen efter sparande — fyll i på nytt för att byta värde.
+                  Secret fields are never shown again after saving — enter a new value to replace one.
                 </p>
               </div>
             ) : (
@@ -182,7 +180,7 @@ function Integrationer() {
                       ladda();
                     }}
                   >
-                    Ta bort
+                    Delete
                   </StorKnapp>
                 )}
               </div>
@@ -190,7 +188,7 @@ function Integrationer() {
           </div>
         );
       })}
-      {sparat && <p className="mt-2 text-[12px] font-semibold text-[#1E6B34]">Uppgifter sparade för {sparat}.</p>}
+      {sparat && <p className="mt-2 text-[12px] font-semibold text-[#1E6B34]">Details saved for {sparat}.</p>}
     </Panel>
   );
 }
@@ -213,7 +211,7 @@ export default function Installningar() {
       <FelsokningSkal rubrik="Settings" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel>
           <p className="text-[14px] text-[#333333]">
-            Organisationens inställningar hanteras av er systemadministratör.
+            Organization settings are managed by your system administrator.
           </p>
         </Panel>
       </FelsokningSkal>
@@ -246,7 +244,7 @@ export default function Installningar() {
     <FelsokningSkal rubrik="Settings" tillbaka={{ till: "/felsokning", text: "Cases" }}>
       <Panel>
         <p className="text-[#333333]">
-          Välj vad som visas när ett nytt ärende startas.{" "}
+          Choose what is shown when a new case is started.{" "}
           {inloggad
             ? "The setting applies to everyone in the organization."
             : "In local mode the setting applies to this device; a signed-in system administrator governs the whole organization."}

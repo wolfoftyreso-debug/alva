@@ -16,7 +16,7 @@
 // samma utfall, vilket är vad som gör en spärr granskbar.
 
 import { granskaSlutsats } from "./motivering.mjs";
-import { STANDARD, t } from "./sprak/index.mjs";
+import { STANDARD, arJakande, arendetypNu, t } from "./sprak/index.mjs";
 
 const UNDANTAG_MOTIVERAT = (h) => typeof h.undantag === "string" && h.undantag.trim().length > 0;
 
@@ -190,7 +190,7 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
     const svaret = av(handelser, "fraga_besvarad").findLast(
       (h) => h.stegId === stegId && h.frageId === frageId,
     );
-    krav(`sparr_${frageId}`, nyckel, svaret?.svar === "Ja", "grind.sparr.ej_uppfyllt");
+    krav(`sparr_${frageId}`, nyckel, arJakande(svaret?.svar), "grind.sparr.ej_uppfyllt");
   }
 
   // Evidensnivån måste överstiga E0 — annars avslutas ett ärende utan
@@ -210,7 +210,10 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
  * (ECM Knowledge Library) och är alltså data, inte kod.
  */
 export function grindaArendetyp(handelser, regelpaket, sprak = STANDARD) {
-  const typ = av(handelser, "arendetyp_satt").at(-1)?.arendetyp;
+  // Ärendetypen slås upp i sin nuvarande form. Ett ärende som öppnades
+  // när typerna hette "Garanti" ska få garantins extra krav även efter
+  // att de bytt språk — se ARENDETYP_ARV.
+  const typ = arendetypNu(av(handelser, "arendetyp_satt").at(-1)?.arendetyp);
   const regler = regelpaket?.arendetyper?.[typ]?.krav ?? [];
   const hinder = [];
 

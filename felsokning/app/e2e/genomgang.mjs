@@ -172,16 +172,16 @@ async function kor(sida, fall) {
   // ---- Starta ärendet ---------------------------------------------------
   await sida.goto(`${BAS}/#/felsokning/nytt`, { waitUntil: "networkidle" });
   await vanta(300);
-  await klicka(btn(/Fyll i manuellt/i));
+  await klicka(btn(/Fill in manually/i));
   const start = sida.locator('input:not([type="file"])');
   await fyll(start.nth(0), fall.regnr);
   await fyll(start.nth(1), fall.objekt);
-  await klicka(btn(/^Fortsätt$/));
+  await klicka(btn(/^Continue$/));
   await vanta(250);
-  await klicka(btn(/Rätt objekt/i));
+  await klicka(btn(/Correct object/i));
   await vanta(250);
   await fyll(sida.locator("textarea").first(), fall.fel);
-  await klicka(btn(/Starta arbetslogg/i));
+  await klicka(btn(/Start work log/i));
   await vanta(700);
 
   if (!sida.url().includes("/arende/")) throw new Error(`${fall.id}: kom aldrig in i ärendet`);
@@ -193,50 +193,50 @@ async function kor(sida, fall) {
 
   for (let varv = 0; varv < 200; varv++) {
     const text = await sida.locator("body").innerText();
-    if (!metodik) metodik = text.match(/METODIK:\s*([^\n·]+)/i)?.[1]?.trim() ?? "";
-    if (text.includes("FELSÖKNINGEN ÄR AVSLUTAD")) break;
+    if (!metodik) metodik = text.match(/METHODOLOGY:\s*([^\n·]+)/i)?.[1]?.trim() ?? "";
+    if (text.includes("THE DIAGNOSIS IS CLOSED")) break;
 
-    const pre = panel(/Pre-diagnostik/i);
+    const pre = panel(/Pre-diagnostics/i);
     if (await finns(pre)) {
-      const ja = btn(/Ja — kontrollerad/i, pre);
+      const ja = btn(/Yes — checked/i, pre);
       if (await finns(ja)) {
         // Historikkontrollen är en SPÄRR, inte en påminnelse: metodiken
         // får inte gå att nå förbi den. Det prövas här, i det ögonblick
         // frågan står obesvarad på skärmen — senare går det inte att
         // pröva, eftersom svaret då redan är avgivet.
-        if (await finns(panel(/Metodik|Steg \d/i))) {
+        if (await finns(panel(/Methodology|Step \d/i))) {
           throw new Error("metodiken var nåbar innan fordonets historik besvarats");
         }
         await klicka(ja);
-        await klicka(btn(/^Dokumentera$/i, pre));
+        await klicka(btn(/^Document$/i, pre));
         continue;
       }
-      if (await finns(btn(/Fotografera instrumentpanelen/i, pre))) {
+      if (await finns(btn(/Photograph the instrument panel/i, pre))) {
         await foto(pre.locator('input[type="file"]'));
         const falt = pre.locator('input:not([type="file"])');
         if (await finns(falt)) {
           await fyll(falt, "84 320 km");
-          await klicka(btn(/Registrera|Spara/i, pre));
+          await klicka(btn(/Record|Save/i, pre));
         }
         continue;
       }
-      if (await finns(btn(/Stämmer — verifierad/i, pre))) {
-        await klicka(btn(/Stämmer — verifierad/i, pre));
+      if (await finns(btn(/Correct — verified/i, pre))) {
+        await klicka(btn(/Correct — verified/i, pre));
         continue;
       }
-      if (await finns(btn(/Inga ytterligare observationer/i, pre))) {
-        await klicka(btn(/Inga ytterligare observationer/i, pre));
+      if (await finns(btn(/No further observations/i, pre))) {
+        await klicka(btn(/No further observations/i, pre));
         continue;
       }
     }
 
-    const guide = panel(/^Metodik:/i);
+    const guide = panel(/^Methodology:/i);
     if (await finns(guide)) {
-      if (await finns(btn(/Ta foto/i, guide))) {
+      if (await finns(btn(/Take a photograph/i, guide))) {
         await foto(guide.locator('input[type="file"]'));
         continue;
       }
-      const verifiera = btn(/Markera verifierad/i, guide);
+      const verifiera = btn(/Mark as verified/i, guide);
       if (await finns(verifiera)) {
         const falt = guide.locator('input[type="text"], textarea').first();
         if (await finns(falt)) await fyll(falt, fall.matvarde);
@@ -245,86 +245,86 @@ async function kor(sida, fall) {
           continue;
         }
       }
-      if (await finns(btn(/Spara svar/i, guide))) {
+      if (await finns(btn(/Save answer/i, guide))) {
         const falt = guide.locator('input[type="text"], textarea').first();
         if (await finns(falt)) await fyll(falt, `Enligt kundens uppgift: ${fall.fel}`);
-        await klicka(btn(/Spara svar/i, guide));
+        await klicka(btn(/Save answer/i, guide));
         continue;
       }
       // Säkerhetsfrågor besvaras jakande; spärren vid Nej provas i
       // enhetstesterna, inte här.
-      if (await finns(btn(/^Ja$/, guide))) {
-        await klicka(btn(/^Ja$/, guide));
+      if (await finns(btn(/^Yes$/, guide))) {
+        await klicka(btn(/^Yes$/, guide));
         continue;
       }
       const val = guide.locator("button").filter({ hasNot: sida.locator("svg") });
-      if ((await val.count()) > 0 && !text.includes("Samtliga steg i metodiken")) {
+      if ((await val.count()) > 0 && !text.includes("Every step in the methodology")) {
         await klicka(val.first());
         continue;
       }
     }
 
-    const repro = panel(/reproducering/i);
+    const repro = panel(/reproduction/i);
     if (await finns(repro)) {
-      await klicka(btn(/^Ja$/, repro));
+      await klicka(btn(/^Yes$/, repro));
       await fyll(repro.locator("textarea"), `${fall.fel} Återskapat vid provkörning under samma förhållanden.`);
-      await klicka(btn(/Dokumentera reproducering/i, repro));
+      await klicka(btn(/Document reproduction/i, repro));
       continue;
     }
 
-    const fo = panel(/Felorsaksanalys/i);
-    if (!felorsakGjord && (await finns(fo)) && (await finns(btn(/Dokumentera felorsak/i, fo)))) {
-      await klicka(btn(/Dokumentera felorsak/i, fo));
+    const fo = panel(/Root cause analysis/i);
+    if (!felorsakGjord && (await finns(fo)) && (await finns(btn(/Document root cause/i, fo)))) {
+      await klicka(btn(/Document root cause/i, fo));
       await fyll(fo.locator("textarea").first(), fall.avvikelse);
-      await klicka(btn(/^Normalt slitage$/, fo));
-      await klicka(btn(/^Mätresultat$/, fo));
+      await klicka(btn(/^Normal wear$/, fo));
+      await klicka(btn(/^Measurement result$/, fo));
       await fyll(fo.locator('input[type="text"], textarea').last(), fall.atgard);
-      await klicka(btn(/Spara felorsak/i, fo));
+      await klicka(btn(/Save root cause/i, fo));
       // En metodik utan mätkontroller har inga mätresultat att luta sig
       // mot; systemet nekar då källan och teknikern byter.
-      if (await finns(btn(/Spara felorsak/i, fo))) {
-        await klicka(btn(/^Mätresultat$/, fo));
-        await klicka(btn(/^Direkt observation$/, fo));
-        await klicka(btn(/Spara felorsak/i, fo));
+      if (await finns(btn(/Save root cause/i, fo))) {
+        await klicka(btn(/^Measurement result$/, fo));
+        await klicka(btn(/^Direct observation$/, fo));
+        await klicka(btn(/Save root cause/i, fo));
       }
       felorsakGjord = true;
       continue;
     }
 
-    const at = panel(/Åtgärd och kvalitetskontroll/i);
+    const at = panel(/Action and quality check/i);
     if (await finns(at)) {
-      if (await finns(btn(/Lämna åtgärdsförslag till kund/i, at))) {
-        await klicka(btn(/Lämna åtgärdsförslag till kund/i, at));
-        await klicka(btn(/^Lämna förslag$/i, at));
+      if (await finns(btn(/Give the customer a proposed action/i, at))) {
+        await klicka(btn(/Give the customer a proposed action/i, at));
+        await klicka(btn(/^Give the proposal$/i, at));
         continue;
       }
-      if (await finns(btn(/^Godkänt$/i, at))) {
-        await klicka(btn(/^Godkänt$/i, at));
-        await klicka(btn(/^Telefon$/i, at));
-        await klicka(btn(/Registrera besked/i, at));
+      if (await finns(btn(/^Approved$/i, at))) {
+        await klicka(btn(/^Approved$/i, at));
+        await klicka(btn(/^Telephone$/i, at));
+        await klicka(btn(/Record the decision/i, at));
         continue;
       }
-      if (await finns(btn(/Dokumentera utförd åtgärd/i, at))) {
-        await klicka(btn(/Dokumentera utförd åtgärd/i, at));
+      if (await finns(btn(/Document the action performed/i, at))) {
+        await klicka(btn(/Document the action performed/i, at));
         await fyll(at.locator("textarea").first(), `${fall.atgard} Utfört enligt den dokumenterade felorsaken.`);
-        await klicka(btn(/Spara åtgärd/i, at));
+        await klicka(btn(/Save action/i, at));
         continue;
       }
-      if (await finns(btn(/Symptomet är borta/i, at))) {
-        await klicka(btn(/Symptomet är borta/i, at));
+      if (await finns(btn(/Symptom is gone/i, at))) {
+        await klicka(btn(/Symptom is gone/i, at));
         await fyll(at.locator("textarea").first(), "Ny provkörning på samma vägsträcka — symptomet uppträder inte längre.");
-        await klicka(btn(/Spara kvalitetskontroll/i, at));
+        await klicka(btn(/Save quality check/i, at));
         continue;
       }
     }
 
-    const mat = panel(/Utgående mätarställning/i);
+    const mat = panel(/Outgoing odometer reading/i);
     if (await finns(mat)) {
       await foto(mat.locator('input[type="file"]'));
       const falt = mat.locator('input:not([type="file"])');
       if (await finns(falt)) {
         await fyll(falt, "84 520 km");
-        await klicka(btn(/Registrera|Spara/i, mat));
+        await klicka(btn(/Record|Save/i, mat));
       }
       continue;
     }
@@ -336,7 +336,7 @@ async function kor(sida, fall) {
           const f = sida.locator(`#slutsats-${id}`);
           if (await finns(f)) await fyll(f, txt);
         }
-        const reg = btn(/Registrera slutsats|Uppdatera slutsats/i);
+        const reg = btn(/Record closing statement|Update closing statement/i);
         if ((await finns(reg)) && !(await reg.first().isDisabled())) {
           await klicka(reg);
           slutsatsfalt = synliga;
@@ -345,7 +345,7 @@ async function kor(sida, fall) {
       }
     }
 
-    const avsluta = btn(/^Avsluta felsökning$/i);
+    const avsluta = btn(/^Close diagnosis$/i);
     if ((await finns(avsluta)) && !(await avsluta.last().isDisabled())) {
       await klicka(avsluta.last());
       continue;
@@ -374,7 +374,7 @@ async function kor(sida, fall) {
 
   return {
     metodik,
-    avslutat: slut.includes("FELSÖKNINGEN ÄR AVSLUTAD"),
+    avslutat: slut.includes("THE DIAGNOSIS IS CLOSED"),
     interaktioner,
     handelser: handelser.length,
     avvisade: handelser.map((h) => [h?.typ, granskaHändelse(h)]).filter(([, fel]) => fel !== null),

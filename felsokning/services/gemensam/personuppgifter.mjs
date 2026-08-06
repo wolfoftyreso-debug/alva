@@ -24,6 +24,7 @@
 // sämre i praktiken — då raderas beviset tillsammans med personuppgiften.
 
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { arendetypNu } from "./sprak/index.mjs";
 
 /**
  * Fält som räknas som identifierande och därför krypteras.
@@ -134,16 +135,27 @@ export function öppnaHändelse(handelse, nycklar) {
  * den som inte gör ett aktivt val får det försiktigaste.
  */
 export const GALLRING_MANADER = {
-  Garanti: 120, // Följer den längsta rimliga garantitiden på en drivlina.
+  Warranty: 120, // Följer den längsta rimliga garantitiden på en drivlina.
   Goodwill: 120,
-  Försäkring: 120, // Preskription för försäkringskrav.
-  Reklamation: 36, // Konsumentköplagens reklamationsrätt.
-  Begagnatgaranti: 60,
+  Insurance: 120, // Preskription för försäkringskrav.
+  Complaint: 36, // Konsumentköplagens reklamationsrätt.
+  "Used-vehicle warranty": 60,
   standard: 36,
 };
 
+/**
+ * Gallringsdatum för ett avslutat ärende.
+ *
+ * Ärendetypen normaliseras genom ARENDETYP_ARV innan den slås upp. Det
+ * är inte en artighet mot gamla data utan en spärr: när typerna bytte
+ * språk hade ett garantiärende vars logg säger "Garanti" fallit ur
+ * tabellen och tagit standardvärdet 36 månader i stället för 120 —
+ * alltså raderat garantiunderlaget sju år för tidigt, tyst, och
+ * oåterkalleligt. Ett uppslag som missar ska ge det FÖRSIKTIGASTE
+ * utfallet; här gav det det farligaste.
+ */
 export function gallringsdatum(arendetyp, avslutat, manader = GALLRING_MANADER) {
-  const antal = manader[arendetyp] ?? manader.standard;
+  const antal = manader[arendetypNu(arendetyp)] ?? manader.standard;
   const d = new Date(avslutat);
   d.setMonth(d.getMonth() + antal);
   return d;

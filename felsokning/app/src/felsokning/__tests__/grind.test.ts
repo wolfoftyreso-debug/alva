@@ -26,7 +26,7 @@ function komplettLogg(extra: Record<string, unknown>[] = []) {
     { typ: "matarstallning", lage: "ingaende", varde: "14 200", bilagaId: "bil-in" },
     { typ: "matarstallning", lage: "utgaende", varde: "14 205", bilagaId: "bil-ut" },
     { typ: "reproducering", status: "ja", beskrivning: "Reproducerat vid 88 km/h." },
-    { typ: "felorsak", avvikelse: "Obalans", orsaker: ["Normalt slitage"], underlag: ["Mätvärde"], sakerhet: "hog" },
+    { typ: "felorsak", avvikelse: "Obalans", orsaker: ["Normal wear"], underlag: ["Mätvärde"], sakerhet: "hog" },
     { typ: "atgard_utford", beskrivning: "Balanserade hjulen.", utford: true },
     { typ: "kundbeslut", beslut: "godkant", kanal: "Telefon" },
     { typ: "kvalitetskontroll", resultat: "symptomet_borta", beskrivning: "Provkört, symptomet borta." },
@@ -190,20 +190,61 @@ describe("M-2 · högvoltsspärren är ett hinder, inte en varning", () => {
   });
 });
 
+// Säkerhetsspärren avgörs av en TEXTSTRÄNG i loggen. När knappen bytte
+// från "Ja" till "Yes" gick klient och server isär: klienten skrev "Yes",
+// servern jämförde mot "Ja". Utfallet blev fail-closed — högvoltsärenden
+// gick inte att avsluta alls — vilket är rätt riktning för ett fel att
+// falla åt, men det var en slump och inte en konstruktion.
+describe("säkerhetsspärren känner igen ett ja oavsett språk", () => {
+  const HOGVOLT = ALLA_METODIKER.find((m) => m.id === "hogvolt")!;
+  const svar = (s: string) => [
+    { typ: "fraga_besvarad", stegId: "sakerhet", frageId: "behorighet", fraga: "?", svar: s },
+    { typ: "fraga_besvarad", stegId: "sakerhet", frageId: "avstangt", fraga: "?", svar: s },
+  ];
+  const sparrar = (s: string) =>
+    grinda(svar(s), HOGVOLT).map((h) => h.id).filter((id) => id.startsWith("sparr_"));
+
+  it("engelskt ja passerar", () => expect(sparrar("Yes")).toEqual([]));
+  it("svenskt ja passerar — gamla ärenden", () => expect(sparrar("Ja")).toEqual([]));
+  it("tyskt ja passerar", () => expect(sparrar("Ja")).toEqual([]));
+
+  it("ett nej spärrar fortfarande", () => {
+    expect(sparrar("No")).toEqual(["sparr_behorighet", "sparr_avstangt"]);
+    expect(sparrar("Nej")).toEqual(["sparr_behorighet", "sparr_avstangt"]);
+  });
+
+  it("ett obesvarat eller tomt svar spärrar", () => {
+    expect(sparrar("")).toEqual(["sparr_behorighet", "sparr_avstangt"]);
+    expect(grinda([], HOGVOLT).map((h) => h.id)).toContain("sparr_behorighet");
+  });
+});
+
 describe("ärendetypens regelpaket", () => {
-  const paket = { arendetyper: { Garanti: { krav: [{ typ: "miltal" }, { typ: "historik" }] } } };
+  const paket = { arendetyper: { Warranty: { krav: [{ typ: "miltal" }, { typ: "historik" }] } } };
 
   it("garantiärende kräver miltal och historik", () => {
-    const utan = [{ typ: "arendetyp_satt", arendetyp: "Garanti" }];
+    const utan = [{ typ: "arendetyp_satt", arendetyp: "Warranty" }];
     expect(grindaArendetyp(utan, paket).map((h) => h.id)).toEqual([
       "arendetyp_miltal",
       "arendetyp_historik",
     ]);
   });
 
+  it("ett ärende som öppnades på svenska behåller sina extra krav", () => {
+    // Ärendetypen ligger i loggen och slår upp regelpaketet. När typerna
+    // bytte språk hade ett gammalt garantiärende annars fått noll extra
+    // krav och släppts igenom grinden med FÄRRE krav än när det öppnades
+    // — utan att någonting i gränssnittet visade det.
+    const gammalt = [{ typ: "arendetyp_satt", arendetyp: "Garanti" }];
+    expect(grindaArendetyp(gammalt, paket).map((h) => h.id)).toEqual([
+      "arendetyp_miltal",
+      "arendetyp_historik",
+    ]);
+  });
+
   it("en okänd kravtyp spärrar i stället för att tolkas som uppfylld", () => {
-    const trasigt = { arendetyper: { Garanti: { krav: [{ typ: "hittepa" }] } } };
-    const logg = [{ typ: "arendetyp_satt", arendetyp: "Garanti" }];
+    const trasigt = { arendetyper: { Warranty: { krav: [{ typ: "hittepa" }] } } };
+    const logg = [{ typ: "arendetyp_satt", arendetyp: "Warranty" }];
     expect(grindaArendetyp(logg, trasigt)[0].nyckel).toBe("grind.arendetyp.okant");
     expect(grindaArendetyp(logg, trasigt)[0].rubrik).toContain("hittepa");
   });
@@ -255,7 +296,7 @@ describe("schemat följer domänmodellen", () => {
 // Bakgrund: en kontroll vars krav är "matvarde" loggade bara
 // kontroll_utford. Följden var att 56 av metodikernas 153 kontroller —
 // drygt en tredjedel — mätte utan att det syntes någonstans:
-// felorsaksanalysen nekade "Mätresultat" som underlag trots att
+// felorsaksanalysen nekade "Measurement result" som underlag trots att
 // teknikern just hade mätt, och evidensprofilen i analysvyn underskattade
 // systematiskt hur mycket som faktiskt mäts i verkstaden.
 //
@@ -280,12 +321,12 @@ describe("metodikernas mätkontroller producerar mätevidens", () => {
     expect(kod).toMatch(/skicka\(\{ typ: "matvarde", beskrivning: kontroll\.text/);
   });
 
-  it('underlagskällan "Mätresultat" godtar just den händelsetypen', async () => {
+  it('underlagskällan "Measurement result" godtar just den händelsetypen', async () => {
     const { underlagFinns } = await import("../ecm");
     const arende = {
       handelser: [{ id: "1", tidpunkt: "", anvandare: "A", handelse: { typ: "matvarde", beskrivning: "Lufttryck", varde: "2,4 bar" } }],
     } as never;
-    expect(underlagFinns(arende, "Mätresultat")).toBe(true);
+    expect(underlagFinns(arende, "Measurement result")).toBe(true);
   });
 });
 

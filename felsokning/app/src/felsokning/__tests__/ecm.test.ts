@@ -138,7 +138,7 @@ describe("Completion Engine (kvalitetsgrind)", () => {
           stegId: steg.id,
           kontrollId: kontroll.id,
           text: kontroll.text,
-          undantag: "Kunden avböjde demontering",
+          undantag: "The customer declined disassembly",
         });
       }
     }
@@ -160,17 +160,17 @@ describe("Completion Engine (kvalitetsgrind)", () => {
 describe("Compliance Engine", () => {
   it("ärendetypen styr dokumentationskraven", () => {
     const privat = byggArende([OBJEKT]);
-    expect(arendetyp(privat)).toBe("Privat kund");
+    expect(arendetyp(privat)).toBe("Private customer");
     expect(kvalitetsgrind(privat, VIBRATION_METODIK).some((r) => r.id.startsWith("garanti_"))).toBe(false);
 
-    const garanti = byggArende([OBJEKT, { typ: "arendetyp_satt", arendetyp: "Garanti" }]);
+    const garanti = byggArende([OBJEKT, { typ: "arendetyp_satt", arendetyp: "Warranty" }]);
     const rader = kvalitetsgrind(garanti, VIBRATION_METODIK);
     expect(rader.find((r) => r.id === "garanti_claim")?.ok).toBe(true); // claim finns i objektet
     expect(rader.find((r) => r.id === "garanti_historik")?.ok).toBe(false); // historik ej kontrollerad
   });
 
   it("försäkringsärenden kräver skadenummer och bildbevis", () => {
-    const utanBild = byggArende([OBJEKT, { typ: "arendetyp_satt", arendetyp: "Försäkring" }]);
+    const utanBild = byggArende([OBJEKT, { typ: "arendetyp_satt", arendetyp: "Insurance" }]);
     const rader = kvalitetsgrind(utanBild, VIBRATION_METODIK);
     expect(rader.find((r) => r.id === "forsakring_skadenummer")?.ok).toBe(true);
     expect(rader.find((r) => r.id === "forsakring_bildbevis")?.ok).toBe(false);
@@ -182,7 +182,7 @@ describe("Traceability Engine + ärendeidentitet", () => {
     const arende = byggArende([OBJEKT, { typ: "foto", beskrivning: "x", dataUrl: "data:" }]);
     const paket = sparbarhetspaket(arende, VIBRATION_METODIK);
     expect(paket.ecmVersion).toBe("2.0");
-    expect(paket.arendetyp).toBe("Privat kund");
+    expect(paket.arendetyp).toBe("Private customer");
     expect(paket.evidensposter).toHaveLength(1);
     expect(paket.kvalitetsgrind.some((r) => r.id === "objekt" && r.ok)).toBe(true);
   });
@@ -221,10 +221,10 @@ describe("Felorsaksanalys (Root Cause Analysis)", () => {
     const { underlagFinns } = await import("../ecm");
     const utanFoto = byggArende([OBJEKT, { typ: "matvarde", beskrivning: "U", varde: "12" }]);
     expect(underlagFinns(utanFoto, "Foto")).toBe(false);
-    expect(underlagFinns(utanFoto, "Mätresultat")).toBe(true);
-    expect(underlagFinns(utanFoto, "Servicehistorik")).toBe(false);
+    expect(underlagFinns(utanFoto, "Measurement result")).toBe(true);
+    expect(underlagFinns(utanFoto, "Service history")).toBe(false);
     const medHistorik = byggArende([{ typ: "historik_kontrollerad", kontrollerad: true }]);
-    expect(underlagFinns(medHistorik, "Servicehistorik")).toBe(true);
+    expect(underlagFinns(medHistorik, "Service history")).toBe(true);
   });
 
   it("avslut kräver reproducering och felorsak — grinden blir obligatorisk vid stängning", () => {
@@ -241,8 +241,8 @@ describe("Felorsaksanalys (Root Cause Analysis)", () => {
       {
         typ: "felorsak",
         avvikelse: "Ingen avvikelse kunde konstateras vid undersökningen trots systematisk genomgång.",
-        orsaker: ["Okänd orsak"],
-        underlag: ["Direkt observation"],
+        orsaker: ["Unknown cause"],
+        underlag: ["Direct observation"],
         sakerhet: "lag",
         atgard: "Återkom vid kall motor så att symptomet kan reproduceras.",
         motivering: "Symptomet kunde inte reproduceras under rådande förhållanden.",
@@ -252,14 +252,14 @@ describe("Felorsaksanalys (Root Cause Analysis)", () => {
     ]);
     const rader2 = kvalitetsgrind(stangdMed, VIBRATION_METODIK);
     expect(rader2.find((r) => r.id === "svp")?.ok).toBe(true);
-    expect(rader2.find((r) => r.id === "svp")?.detalj).toContain("kunde inte reproduceras");
+    expect(rader2.find((r) => r.id === "svp")?.detalj).toContain("could not be reproduced");
     expect(rader2.find((r) => r.id === "felorsak")?.ok).toBe(true);
   });
 
   it("rapportformuleringen skiljer reproducerat från ej reproducerat", async () => {
     const { reproduceringsText } = await import("../ecm");
-    expect(reproduceringsText("ja")).toContain("reproducerades");
-    expect(reproduceringsText("nej")).toContain("kunde inte reproduceras under de förhållanden");
+    expect(reproduceringsText("ja")).toContain("was reproduced");
+    expect(reproduceringsText("nej")).toContain("could not be reproduced under the conditions");
   });
 
   it("demoärendet bär hela beviskedjan: reproducering + felorsak med underlag", () => {
@@ -306,7 +306,7 @@ describe("ECM Knowledge Library (regelpaket)", () => {
         normaliseraRegelpaket({
           version: "2.1-test",
           arendetypRegler: {
-            "Privat kund": [
+            "Private customer": [
               { id: "test_foto", rubrik: "Foto krävs för alla privatkunder", krav: "foto", detaljVidBrist: "Testregel." },
             ],
           },
@@ -317,7 +317,7 @@ describe("ECM Knowledge Library (regelpaket)", () => {
       const utanFoto = byggArende([OBJEKT]);
       const rad = kvalitetsgrind(utanFoto, VIBRATION_METODIK).find((r) => r.id === "test_foto");
       expect(rad?.ok).toBe(false);
-      expect(rad?.rubrik).toContain("Privat kund");
+      expect(rad?.rubrik).toContain("Private customer");
       // Spårbarheten bär paketversionen.
       expect(sparbarhetspaket(utanFoto, VIBRATION_METODIK).regelpaketVersion).toBe("2.1-test");
     } finally {
@@ -334,7 +334,7 @@ describe("Fordonshistorik (lokal projektion)", () => {
       {
         typ: "felorsak",
         avvikelse: "Vattenpumpen läcker vid axeltätningen.",
-        orsaker: ["Normalt slitage"],
+        orsaker: ["Normal wear"],
         underlag: ["Foto"],
         sakerhet: "hog",
         atgard: "Byt vattenpump.",
@@ -346,7 +346,7 @@ describe("Fordonshistorik (lokal projektion)", () => {
     const historik = lokalFordonshistorik({ [tidigare.id]: tidigare, [aktuellt.id]: aktuellt }, "abc123", aktuellt.id);
     expect(historik).toHaveLength(1);
     expect(historik[0].avslutat).toBe(true);
-    expect(historik[0].felorsaker[0].orsaker).toContain("Normalt slitage");
+    expect(historik[0].felorsaker[0].orsaker).toContain("Normal wear");
     // Annat fordon → ingen träff.
     expect(lokalFordonshistorik({ [tidigare.id]: tidigare }, "ZZZ111")).toHaveLength(0);
   });
@@ -398,8 +398,8 @@ describe("Åtgärdsfasen och kvalitetskontroll", () => {
       {
         typ: "felorsak",
         avvikelse: "Framhjulen uppvisar obalans om 38 g på höger sida.",
-        orsaker: ["Yttre påverkan"],
-        underlag: ["Direkt observation"],
+        orsaker: ["External influence"],
+        underlag: ["Direct observation"],
         sakerhet: "hog",
         atgard: "Balansera om hjulet.",
       },
@@ -433,19 +433,19 @@ describe("Åtgärdsfasen och kvalitetskontroll", () => {
     expect(kvalitetskontroll(komplett)?.resultat).toBe("symptomet_borta");
     const rader = kvalitetsgrind(komplett, VIBRATION_METODIK);
     expect(rader.find((r) => r.id === "atgard")?.ok).toBe(true);
-    expect(rader.find((r) => r.id === "kvalitetskontroll")?.detalj).toContain("verifierat borta");
+    expect(rader.find((r) => r.id === "kvalitetskontroll")?.detalj).toContain("verified gone");
   });
 
   it("motiverat uteblivande godtas utan kvalitetskontroll", () => {
     const ingenAtgard = byggArende([
       OBJEKT,
       ...PREDIAG,
-      { typ: "atgard_utford", beskrivning: "Ingen åtgärd utförd", utford: false, motivering: "Kunden avböjde åtgärd" },
+      { typ: "atgard_utford", beskrivning: "Ingen åtgärd utförd", utford: false, motivering: "The customer declined the action" },
       { typ: "arende_avslutat", signatur: "Erik" },
     ]);
     const rader = kvalitetsgrind(ingenAtgard, VIBRATION_METODIK);
     expect(rader.find((r) => r.id === "atgard")?.ok).toBe(true);
-    expect(rader.find((r) => r.id === "atgard")?.detalj).toContain("orsaken är dokumenterad");
+    expect(rader.find((r) => r.id === "atgard")?.detalj).toContain("the reason is documented");
     // Inget att verifiera → kvalitetskontrollen är inte obligatorisk.
     expect(rader.find((r) => r.id === "kvalitetskontroll")?.kravs).toBe(false);
   });
@@ -458,7 +458,7 @@ describe("Åtgärdsfasen och kvalitetskontroll", () => {
       { typ: "kvalitetskontroll", resultat: "kvarstar", beskrivning: "Missljudet finns kvar vid 60 km/h." },
     ]);
     const rad = kvalitetsgrind(kvarstar, VIBRATION_METODIK).find((r) => r.id === "kvalitetskontroll");
-    expect(rad?.detalj).toContain("bör inte avslutas som åtgärdat");
+    expect(rad?.detalj).toContain("should not be closed as resolved");
   });
 
   it("demoärendet bär hela kedjan symptom → orsak → åtgärd → verifiering", () => {
@@ -486,7 +486,7 @@ describe("Kundgodkännande före arbete", () => {
     const rad = kvalitetsgrind(utanBesked, VIBRATION_METODIK).find((r) => r.id === "kundgodkannande");
     expect(rad?.kravs).toBe(true);
     expect(rad?.ok).toBe(false);
-    expect(rad?.detalj).toContain("registrera kundens besked");
+    expect(rad?.detalj).toContain("record the customer's decision");
 
     const medBesked = byggArende([
       OBJEKT,

@@ -90,12 +90,24 @@ describe("C-3 · krypto-shredding gör append-only och radering förenliga", () 
 
   it("gallringstiden följer ärendetypen, och okänd typ får standardtiden", () => {
     const avslut = "2026-01-15T10:00:00.000Z";
-    const garanti = gallringsdatum("Garanti", avslut);
-    const okand = gallringsdatum("Hittepå", avslut);
-    expect(garanti.getFullYear()).toBe(2036);
-    expect(okand.getFullYear()).toBe(2029);
-    // Reklamation följer konsumentköplagens reklamationsrätt.
-    expect(GALLRING_MANADER.Reklamation).toBe(36);
+    expect(gallringsdatum("Warranty", avslut).getFullYear()).toBe(2036);
+    expect(gallringsdatum("Hittepå", avslut).getFullYear()).toBe(2029);
+    // Complaint följer konsumentköplagens reklamationsrätt.
+    expect(GALLRING_MANADER.Complaint).toBe(36);
+  });
+
+  it("ett ärende som öppnades på svenska gallras inte sju år för tidigt", () => {
+    // Den farligaste följden av att ärendetyperna bytte språk. Ett
+    // garantiärende vars logg säger "Garanti" hade fallit ur tabellen och
+    // tagit standardtiden 36 månader i stället för 120 — alltså raderat
+    // garantiunderlaget sju år i förtid, tyst och oåterkalleligt.
+    //
+    // Ett uppslag som missar ska ge det FÖRSIKTIGASTE utfallet. Här gav
+    // det det farligaste, och det syns inte förrän underlaget behövs.
+    const avslut = "2026-01-15T10:00:00.000Z";
+    expect(gallringsdatum("Garanti", avslut).getTime()).toBe(gallringsdatum("Warranty", avslut).getTime());
+    expect(gallringsdatum("Försäkring", avslut).getFullYear()).toBe(2036);
+    expect(gallringsdatum("Begagnatgaranti", avslut).getFullYear()).toBe(2031);
   });
 });
 

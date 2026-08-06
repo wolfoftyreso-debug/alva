@@ -58,7 +58,7 @@ export function MikrofonKnapp({ paText }: { paText: (text: string) => void }) {
       </button>
       {lyssnar && (
         <span className="text-[12px] font-semibold text-[#8B1A1A]">
-          ● Inspelning pågår{interim ? ` — ”${interim}”` : "…"}
+          ● Recording{interim ? ` — ”${interim}”` : "…"}
         </span>
       )}
     </span>

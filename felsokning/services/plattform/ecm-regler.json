@@ -2,58 +2,103 @@
   "version": "2.0",
   "beskrivning": "ECM Knowledge Library — serverdistribuerat regelpaket. Uppdateras utan appändring: redigera filen (eller montera en ConfigMap över den i klustret) och starta om tjänsten. Klienten hämtar paketet vid inloggning och faller tillbaka till sitt inbyggda standardpaket offline.",
   "arendetypRegler": {
-    "Garanti": [
-      { "id": "garanti_miltal", "rubrik": "Miltal dokumenterat", "krav": "miltal", "detaljVidBrist": "Garantiärenden kräver dokumenterad mätarställning." },
-      { "id": "garanti_historik", "rubrik": "Servicehistorik kontrollerad", "krav": "historik", "detaljVidBrist": "Garantiärenden kräver kontrollerad servicehistorik." },
-      { "id": "garanti_claim", "rubrik": "Claim-/garantinummer registrerat", "krav": "claim", "detaljVidBrist": "Ange claim-/garantinummer (läses ur arbetsordern)." }
+    "Warranty": [
+      {
+        "id": "garanti_miltal",
+        "rubrik": "Mileage documented",
+        "krav": "miltal",
+        "detaljVidBrist": "Warranty cases require a documented odometer reading."
+      },
+      {
+        "id": "garanti_historik",
+        "rubrik": "Service history checked",
+        "krav": "historik",
+        "detaljVidBrist": "Warranty cases require a checked service history."
+      },
+      {
+        "id": "garanti_claim",
+        "rubrik": "Claim or warranty number recorded",
+        "krav": "claim",
+        "detaljVidBrist": "State the claim or warranty number (read from the work order)."
+      }
     ],
     "Goodwill": [
-      { "id": "goodwill_miltal", "rubrik": "Miltal dokumenterat", "krav": "miltal", "detaljVidBrist": "Goodwillärenden kräver dokumenterad mätarställning." },
-      { "id": "goodwill_historik", "rubrik": "Servicehistorik kontrollerad", "krav": "historik", "detaljVidBrist": "Goodwillärenden kräver kontrollerad servicehistorik." }
+      {
+        "id": "goodwill_miltal",
+        "rubrik": "Mileage documented",
+        "krav": "miltal",
+        "detaljVidBrist": "Goodwill cases require a documented odometer reading."
+      },
+      {
+        "id": "goodwill_historik",
+        "rubrik": "Service history checked",
+        "krav": "historik",
+        "detaljVidBrist": "Goodwill cases require a checked service history."
+      }
     ],
-    "Försäkring": [
-      { "id": "forsakring_skadenummer", "rubrik": "Skadenummer registrerat", "krav": "skadenummer", "detaljVidBrist": "Försäkringsärenden kräver skadenummer (läses ur arbetsordern)." },
-      { "id": "forsakring_bildbevis", "rubrik": "Bildbevis finns", "krav": "foto", "detaljVidBrist": "Försäkringsärenden kräver bilddokumentation." }
+    "Insurance": [
+      {
+        "id": "forsakring_skadenummer",
+        "rubrik": "Claim number recorded",
+        "krav": "skadenummer",
+        "detaljVidBrist": "Insurance cases require a claim number (read from the work order)."
+      },
+      {
+        "id": "forsakring_bildbevis",
+        "rubrik": "Photographic evidence present",
+        "krav": "foto",
+        "detaljVidBrist": "Insurance cases require photographic documentation."
+      }
     ],
-    "Reklamation": [
-      { "id": "reklamation_historik", "rubrik": "Historik och tidigare försök kontrollerade", "krav": "historik", "detaljVidBrist": "Reklamationer kräver kontrollerad historik (tidigare reparationer/försök)." }
+    "Complaint": [
+      {
+        "id": "reklamation_historik",
+        "rubrik": "History and previous attempts checked",
+        "krav": "historik",
+        "detaljVidBrist": "Complaint cases require a checked history (previous repairs and attempts)."
+      }
     ],
-    "Begagnatgaranti": [
-      { "id": "begagnat_miltal", "rubrik": "Miltal dokumenterat", "krav": "miltal", "detaljVidBrist": "Begagnatgaranti kräver dokumenterad mätarställning." }
+    "Used-vehicle warranty": [
+      {
+        "id": "begagnat_miltal",
+        "rubrik": "Mileage documented",
+        "krav": "miltal",
+        "detaljVidBrist": "Used-vehicle warranty cases require a documented odometer reading."
+      }
     ]
   },
   "undantagsorsaker": [
-    "Komponenten är oåtkomlig",
-    "Fordonet kan inte lyftas säkert",
-    "Kunden avböjde demontering",
-    "Dålig sikt/åtkomst",
-    "Utrustning saknas"
+    "The component is inaccessible",
+    "The vehicle cannot be lifted safely",
+    "The customer declined disassembly",
+    "Poor visibility or access",
+    "Equipment not available"
   ],
   "orsakskategorier": [
-    "Normalt slitage",
-    "Ålder",
-    "Körsträcka",
-    "Materialutmattning",
-    "Tillverkningsfel",
-    "Bristande underhåll",
-    "Felaktig tidigare reparation",
-    "Yttre påverkan",
-    "Korrosion",
-    "Överhettning",
-    "Förorening",
-    "Felaktig användning",
-    "Modifiering",
-    "Olycka eller skada",
-    "Okänd orsak"
+    "Normal wear",
+    "Age",
+    "Distance travelled",
+    "Material fatigue",
+    "Manufacturing defect",
+    "Inadequate maintenance",
+    "Faulty previous repair",
+    "External influence",
+    "Corrosion",
+    "Overheating",
+    "Contamination",
+    "Improper use",
+    "Modification",
+    "Accident or damage",
+    "Unknown cause"
   ],
   "underlagskallor": [
     "Foto",
     "Video",
-    "Mätresultat",
-    "Diagnosutläsning",
-    "Tidigare historik",
-    "Servicehistorik",
-    "Teknisk dokumentation",
-    "Direkt observation"
+    "Measurement result",
+    "Diagnostic readout",
+    "Previous history",
+    "Service history",
+    "Technical documentation",
+    "Direct observation"
   ]
 }

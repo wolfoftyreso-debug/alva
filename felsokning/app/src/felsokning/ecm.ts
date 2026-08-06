@@ -20,6 +20,7 @@
 
 import type { Arende, LoggPost } from "./domain";
 import type { Metodik } from "./metodik";
+import { arendetypNu } from "../../../services/gemensam/sprak/index.mjs";
 
 export const ECM_VERSION = "2.0";
 
@@ -29,13 +30,13 @@ export const ECM_VERSION = "2.0";
 export type EvidensNiva = "E0" | "E1" | "E2" | "E3" | "E4" | "E5" | "E6";
 
 export const EVIDENS_LABEL: Record<EvidensNiva, string> = {
-  E0: "E0 · Inget underlag",
-  E1: "E1 · Teknikerns observation",
-  E2: "E2 · Foto",
+  E0: "E0 · No evidence",
+  E1: "E1 · Technician's observation",
+  E2: "E2 · Photograph",
   E3: "E3 · Video",
-  E4: "E4 · Mätvärde",
-  E5: "E5 · Diagnosdata/dokument",
-  E6: "E6 · Flera oberoende källor",
+  E4: "E4 · Measurement",
+  E5: "E5 · Diagnostic data or document",
+  E6: "E6 · Several independent sources",
 };
 
 export interface Evidenspost {
@@ -165,17 +166,38 @@ export function evidensNiva(arende: Arende): EvidensNiva {
 // Godkända orsaker när underlag inte kan tas fram (fri text tillåts
 // också — men en orsak är alltid obligatorisk).
 export const UNDANTAGSORSAKER = [
-  "Komponenten är oåtkomlig",
-  "Fordonet kan inte lyftas säkert",
-  "Kunden avböjde demontering",
-  "Dålig sikt/åtkomst",
-  "Utrustning saknas",
+  "The component is inaccessible",
+  "The vehicle cannot be lifted safely",
+  "The customer declined disassembly",
+  "Poor visibility or access",
+  "Equipment not available",
 ];
 
 // Markörtexter för pre-diagnostikens kvitteringar (loggas som kommentar).
-export const MARKOR_FELBESKRIVNING_VERIFIERAD = "Kundens felbeskrivning verifierad vid mottagandet";
-export const MARKOR_INGA_TIDIGA_OBSERVATIONER = "Inga ytterligare observationer vid mottagandet";
-export const MARKOR_TIDIGA_OBSERVATIONER_KLARA = "Tidiga observationer vid mottagandet dokumenterade";
+export const MARKOR_FELBESKRIVNING_VERIFIERAD = "Customer's fault description verified on receipt";
+export const MARKOR_INGA_TIDIGA_OBSERVATIONER = "No further observations on receipt";
+export const MARKOR_TIDIGA_OBSERVATIONER_KLARA = "Early observations on receipt documented";
+
+// Markörernas svenska lydelse, från tiden före engelska som källspråk.
+//
+// Kvitteringen ligger i loggen som en kommentar och känns igen på sin
+// TEXT. När texten byter språk slutar gamla ärenden att räknas som
+// kvitterade — pre-diagnostiken hade då visat en ogjord kontroll för
+// arbete som faktiskt utförts, och teknikern hade kvitterat en gång till
+// för att komma vidare. Loggen hade då fått två kvitteringar för samma
+// sak, vilket är precis vad en append-only logg inte ska innehålla.
+//
+// Att känna igen en kvittering på fritext är i sig svagt. Rätt lösning är
+// en egen händelsetyp med ett fält; tills den finns står arvet här, synligt.
+const ARV_MARKORER: Record<string, string[]> = {
+  [MARKOR_FELBESKRIVNING_VERIFIERAD]: ["Kundens felbeskrivning verifierad vid mottagandet"],
+  [MARKOR_INGA_TIDIGA_OBSERVATIONER]: ["Inga ytterligare observationer vid mottagandet"],
+  [MARKOR_TIDIGA_OBSERVATIONER_KLARA]: ["Tidiga observationer vid mottagandet dokumenterade"],
+};
+
+/** Bär texten den här markören, på något av de språk den har haft? */
+const markerad = (text: string, markor: string) =>
+  [markor, ...(ARV_MARKORER[markor] ?? [])].some((m) => text.startsWith(m));
 
 // -- Felorsaksanalys (Root Cause Analysis) --
 // Ett ärende avslutas aldrig med enbart "komponent trasig, byt komponent":
@@ -183,32 +205,32 @@ export const MARKOR_TIDIGA_OBSERVATIONER_KLARA = "Tidiga observationer vid motta
 // säkerhetsnivå — eller en motivering till varför orsaken inte fastställts.
 
 export const ORSAKSKATEGORIER = [
-  "Normalt slitage",
-  "Ålder",
-  "Körsträcka",
-  "Materialutmattning",
-  "Tillverkningsfel",
-  "Bristande underhåll",
-  "Felaktig tidigare reparation",
-  "Yttre påverkan",
-  "Korrosion",
-  "Överhettning",
-  "Förorening",
-  "Felaktig användning",
-  "Modifiering",
-  "Olycka eller skada",
-  "Okänd orsak",
+  "Normal wear",
+  "Age",
+  "Distance travelled",
+  "Material fatigue",
+  "Manufacturing defect",
+  "Inadequate maintenance",
+  "Faulty previous repair",
+  "External influence",
+  "Corrosion",
+  "Overheating",
+  "Contamination",
+  "Improper use",
+  "Modification",
+  "Accident or damage",
+  "Unknown cause",
 ];
 
 export const UNDERLAGSKALLOR = [
   "Foto",
   "Video",
-  "Mätresultat",
-  "Diagnosutläsning",
-  "Tidigare historik",
-  "Servicehistorik",
-  "Teknisk dokumentation",
-  "Direkt observation",
+  "Measurement result",
+  "Diagnostic readout",
+  "Previous history",
+  "Service history",
+  "Technical documentation",
+  "Direct observation",
 ];
 
 // Kvalitetsregeln: generella formuleringar utan förklaring avvisas.
@@ -231,14 +253,14 @@ export function underlagFinns(arende: Arende, kalla: string): boolean {
       return h.some((x) => x.typ === "foto");
     case "Video":
       return h.some((x) => x.typ === "video");
-    case "Mätresultat":
+    case "Measurement result":
       return h.some((x) => x.typ === "matvarde");
-    case "Diagnosutläsning":
+    case "Diagnostic readout":
       return h.some((x) => x.typ === "foto" && /instrument|diagnos/i.test(x.beskrivning));
-    case "Tidigare historik":
-    case "Servicehistorik":
+    case "Previous history":
+    case "Service history":
       return h.some((x) => x.typ === "historik_kontrollerad" && x.kontrollerad);
-    case "Direkt observation":
+    case "Direct observation":
       return h.some((x) => x.typ === "observation" || x.typ === "kontroll_utford");
     default:
       // Teknisk dokumentation: kan ännu inte verifieras maskinellt.
@@ -256,16 +278,16 @@ export function felorsaker(arende: Arende) {
 // kontrollen visar om symptomet faktiskt är borta.
 
 export const INGEN_ATGARD_ORSAKER = [
-  "Kunden avböjde åtgärd",
-  "Väntar på reservdel",
-  "Åtgärd utförs av annan verkstad",
-  "Endast utredning beställd",
-  "Kostnadsförslag lämnat, inväntar besked",
+  "The customer declined the action",
+  "Awaiting a spare part",
+  "The action is performed by another workshop",
+  "Investigation only was ordered",
+  "Estimate given, awaiting a decision",
 ];
 
 // Kanaler för kundens besked — beskedet ska alltid gå att härleda till
 // ett faktiskt samtal, besök eller meddelande.
-export const KUNDKANALER = ["Telefon", "På plats", "E-post", "SMS", "Delningslänk"];
+export const KUNDKANALER = ["Telephone", "In person", "E-mail", "SMS", "Share link"];
 
 export function atgardsforslag(arende: Arende) {
   return arende.handelser.filter((p) => p.handelse.typ === "atgardsforslag");
@@ -307,35 +329,37 @@ export function reproducering(arende: Arende) {
 // Rapportformuleringen styrs av verifieringsläget — aldrig "felet
 // konstaterat" utan reproducering eller annan dokumenterad verifiering.
 export function reproduceringsText(status: "ja" | "delvis" | "nej"): string {
-  if (status === "ja") return "Symptomet reproducerades vid undersökningen.";
-  if (status === "delvis") return "Symptomet kunde delvis reproduceras vid undersökningen.";
-  return "Kundens beskrivning kunde inte reproduceras under de förhållanden som rådde vid undersökningen.";
+  if (status === "ja") return "The symptom was reproduced during the examination.";
+  if (status === "delvis") return "The symptom could be partly reproduced during the examination.";
+  return "The customer's description could not be reproduced under the conditions present during the examination.";
 }
 
 // ---- 3. Compliance Engine ---------------------------------------------
 
 // Ärendetypen styr vilka dokumentationskrav som gäller utöver metodiken.
 export const ARENDETYPER = [
-  "Privat kund",
-  "Företagskund",
-  "Garanti",
+  "Private customer",
+  "Business customer",
+  "Warranty",
   "Goodwill",
-  "Försäkring",
-  "Reklamation",
-  "Begagnatgaranti",
-  "Intern kvalitetskontroll",
-  "Teknisk utredning",
+  "Insurance",
+  "Complaint",
+  "Used-vehicle warranty",
+  "Internal quality check",
+  "Technical investigation",
 ] as const;
 
 export type Arendetyp = (typeof ARENDETYPER)[number];
 
 export function arendetyp(arende: Arende): Arendetyp {
-  let typ: Arendetyp = "Privat kund";
+  let typ: Arendetyp = "Private customer";
   for (const post of arende.handelser) {
     const h = post.handelse;
-    if (h.typ === "arendetyp_satt" && (ARENDETYPER as readonly string[]).includes(h.arendetyp)) {
-      typ = h.arendetyp as Arendetyp;
-    }
+    if (h.typ !== "arendetyp_satt") continue;
+    // Gamla ärenden bär den svenska typen. Den översätts vid uppslaget,
+    // aldrig i loggen — se ARENDETYP_ARV i sprak/index.mjs.
+    const satt = arendetypNu(h.arendetyp) as string;
+    if ((ARENDETYPER as readonly string[]).includes(satt)) typ = satt as Arendetyp;
   }
   return typ;
 }
@@ -388,24 +412,24 @@ const KRAV_KONTROLLER: Record<ComplianceKravTyp, (arende: Arende) => boolean> = 
 export const STANDARD_REGELPAKET: RegelPaket = {
   version: ECM_VERSION,
   arendetypRegler: {
-    Garanti: [
-      { id: "garanti_miltal", rubrik: "Miltal dokumenterat", krav: "miltal", detaljVidBrist: "Garantiärenden kräver dokumenterad mätarställning." },
-      { id: "garanti_historik", rubrik: "Servicehistorik kontrollerad", krav: "historik", detaljVidBrist: "Garantiärenden kräver kontrollerad servicehistorik." },
-      { id: "garanti_claim", rubrik: "Claim-/garantinummer registrerat", krav: "claim", detaljVidBrist: "Ange claim-/garantinummer (läses ur arbetsordern)." },
+    "Warranty": [
+      { id: "garanti_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Warranty cases require a documented odometer reading." },
+      { id: "garanti_historik", rubrik: "Service history checked", krav: "historik", detaljVidBrist: "Warranty cases require a checked service history." },
+      { id: "garanti_claim", rubrik: "Claim or warranty number recorded", krav: "claim", detaljVidBrist: "State the claim or warranty number (read from the work order)." },
     ],
     Goodwill: [
-      { id: "goodwill_miltal", rubrik: "Miltal dokumenterat", krav: "miltal", detaljVidBrist: "Goodwillärenden kräver dokumenterad mätarställning." },
-      { id: "goodwill_historik", rubrik: "Servicehistorik kontrollerad", krav: "historik", detaljVidBrist: "Goodwillärenden kräver kontrollerad servicehistorik." },
+      { id: "goodwill_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Goodwill cases require a documented odometer reading." },
+      { id: "goodwill_historik", rubrik: "Service history checked", krav: "historik", detaljVidBrist: "Goodwill cases require a checked service history." },
     ],
-    Försäkring: [
-      { id: "forsakring_skadenummer", rubrik: "Skadenummer registrerat", krav: "skadenummer", detaljVidBrist: "Försäkringsärenden kräver skadenummer (läses ur arbetsordern)." },
-      { id: "forsakring_bildbevis", rubrik: "Bildbevis finns", krav: "foto", detaljVidBrist: "Försäkringsärenden kräver bilddokumentation." },
+    "Insurance": [
+      { id: "forsakring_skadenummer", rubrik: "Claim number recorded", krav: "skadenummer", detaljVidBrist: "Insurance cases require a claim number (read from the work order)." },
+      { id: "forsakring_bildbevis", rubrik: "Photographic evidence present", krav: "foto", detaljVidBrist: "Insurance cases require photographic documentation." },
     ],
-    Reklamation: [
-      { id: "reklamation_historik", rubrik: "Historik och tidigare försök kontrollerade", krav: "historik", detaljVidBrist: "Reklamationer kräver kontrollerad historik (tidigare reparationer/försök)." },
+    "Complaint": [
+      { id: "reklamation_historik", rubrik: "History and previous attempts checked", krav: "historik", detaljVidBrist: "Complaint cases require a checked history (previous repairs and attempts)." },
     ],
-    Begagnatgaranti: [
-      { id: "begagnat_miltal", rubrik: "Miltal dokumenterat", krav: "miltal", detaljVidBrist: "Begagnatgaranti kräver dokumenterad mätarställning." },
+    "Used-vehicle warranty": [
+      { id: "begagnat_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Used-vehicle warranty cases require a documented odometer reading." },
     ],
   },
   undantagsorsaker: UNDANTAGSORSAKER,
@@ -494,7 +518,7 @@ export interface PreDiagRad {
 // Ingen felsökning påbörjas förrän grundkontrollerna är genomförda —
 // eller dokumenterat motiverade. Allt härleds ur loggen.
 export function preDiagnostik(arende: Arende): PreDiagRad[] {
-  let historik: PreDiagRad = { id: "historik", rubrik: "Fordonshistorik kontrollerad", klar: false };
+  let historik: PreDiagRad = { id: "historik", rubrik: "Vehicle history checked", klar: false };
   let matarstallning = false;
   let felbeskrivningVerifierad = false;
   let tidiga = false;
@@ -503,25 +527,25 @@ export function preDiagnostik(arende: Arende): PreDiagRad[] {
     if (h.typ === "historik_kontrollerad") {
       historik = {
         id: "historik",
-        rubrik: "Fordonshistorik kontrollerad",
+        rubrik: "Vehicle history checked",
         klar: true,
         varning: h.kontrollerad ? undefined : `Ej kontrollerad — orsak: ${h.kommentar ?? "saknas"}`,
       };
     }
     if (h.typ === "matarstallning" && h.lage === "ingaende") matarstallning = true;
-    if (h.typ === "kommentar" && h.text.startsWith(MARKOR_FELBESKRIVNING_VERIFIERAD)) felbeskrivningVerifierad = true;
+    if (h.typ === "kommentar" && markerad(h.text, MARKOR_FELBESKRIVNING_VERIFIERAD)) felbeskrivningVerifierad = true;
     if (
       h.typ === "kommentar" &&
-      (h.text.startsWith(MARKOR_INGA_TIDIGA_OBSERVATIONER) || h.text.startsWith(MARKOR_TIDIGA_OBSERVATIONER_KLARA))
+      (markerad(h.text, MARKOR_INGA_TIDIGA_OBSERVATIONER) || markerad(h.text, MARKOR_TIDIGA_OBSERVATIONER_KLARA))
     ) {
       tidiga = true;
     }
   }
   return [
     historik,
-    { id: "matarstallning_in", rubrik: "Ingående mätarställning dokumenterad", klar: matarstallning },
-    { id: "felbeskrivning", rubrik: "Kundens felbeskrivning verifierad", klar: felbeskrivningVerifierad },
-    { id: "tidiga_observationer", rubrik: "Tidiga observationer hanterade", klar: tidiga },
+    { id: "matarstallning_in", rubrik: "Incoming odometer reading documented", klar: matarstallning },
+    { id: "felbeskrivning", rubrik: "Customer's fault description verified", klar: felbeskrivningVerifierad },
+    { id: "tidiga_observationer", rubrik: "Early observations handled", klar: tidiga },
   ];
 }
 
@@ -551,19 +575,19 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const objektFinns = handelser.some((h) => h.typ === "objekt_identifierat");
   rader.push({
     id: "objekt",
-    rubrik: "Fordons-/objektidentifiering verifierad",
+    rubrik: "Vehicle or object identification verified",
     ok: objektFinns,
     kravs: true,
-    detalj: objektFinns ? undefined : "Evidens saknas — identifiera objektet.",
+    detalj: objektFinns ? undefined : "Evidence missing — identify the object.",
   });
 
   const arbetsorder = handelser.some((h) => h.typ === "arbetsorder_skannad") || !!objektFalt(arende, "arbetsorder");
   rader.push({
     id: "arbetsorder",
-    rubrik: "Arbetsorder inläst",
+    rubrik: "Work order read",
     ok: arbetsorder,
     kravs: false,
-    detalj: arbetsorder ? undefined : "Ärendet startades utan skannad arbetsorder.",
+    detalj: arbetsorder ? undefined : "The case was started without a scanned work order.",
   });
 
   // Pre-diagnostiken ingår i grinden: historik + ingående mätarställning
@@ -572,26 +596,26 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const historik = pre.find((r) => r.id === "historik")!;
   rader.push({
     id: "historik",
-    rubrik: "Fordonshistorik kontrollerad eller motiverad",
+    rubrik: "Vehicle history checked or justified",
     ok: historik.klar,
     kravs: true,
-    detalj: historik.klar ? historik.varning : "Kontrollera historiken eller dokumentera varför det inte gått.",
+    detalj: historik.klar ? historik.varning : "Check the history, or document why that was not possible.",
   });
   const matIn = pre.find((r) => r.id === "matarstallning_in")!;
   rader.push({
     id: "matarstallning_in",
-    rubrik: "Ingående mätarställning dokumenterad",
+    rubrik: "Incoming odometer reading documented",
     ok: matIn.klar,
     kravs: true,
-    detalj: matIn.klar ? undefined : "Fotografera instrumentpanelen (eller dokumentera undantag).",
+    detalj: matIn.klar ? undefined : "Photograph the instrument panel (or document an exemption).",
   });
   const felb = pre.find((r) => r.id === "felbeskrivning")!;
   rader.push({
     id: "felbeskrivning_verifierad",
-    rubrik: "Kundens felbeskrivning verifierad",
+    rubrik: "Customer's fault description verified",
     ok: felb.klar,
     kravs: false,
-    detalj: felb.klar ? undefined : "Bekräfta att kundens beskrivning är korrekt återgiven.",
+    detalj: felb.klar ? undefined : "Confirm that the customer's description is correctly recorded.",
   });
 
   // SVP: symptomet reproducerat eller dokumenterat ej reproducerbart —
@@ -599,12 +623,12 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const repro = reproducering(arende);
   rader.push({
     id: "svp",
-    rubrik: "Symptomverifiering: reproducerat eller dokumenterat ej reproducerbart",
+    rubrik: "Symptom verification: reproduced, or documented as not reproducible",
     ok: !!repro,
     kravs: avslutat,
     detalj: repro
       ? reproduceringsText(repro.status)
-      : "Dokumentera reproduceringen (Ja/Delvis/Nej med motivering) innan ärendet avslutas.",
+      : "Document the reproduction (Yes / Partly / No with a reason) before closing the case.",
   });
 
   // Felorsaksanalys: minst en dokumenterad felorsak (eller motiverad
@@ -612,13 +636,13 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const orsaker = felorsaker(arende);
   rader.push({
     id: "felorsak",
-    rubrik: "Felorsaksanalys dokumenterad",
+    rubrik: "Root cause analysis documented",
     ok: orsaker.length > 0,
     kravs: avslutat,
     detalj:
       orsaker.length > 0
         ? undefined
-        : "Beskriv varför felet uppstått — eller ange varför orsaken inte kunnat fastställas.",
+        : "Describe why the fault occurred — or state why the cause could not be established.",
   });
 
   // Åtgärdsfasen: reparationen dokumenterad — eller motiverat varför
@@ -627,15 +651,15 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const utfordAtgard = atgardsposter.some((p) => p.handelse.typ === "atgard_utford" && p.handelse.utford);
   rader.push({
     id: "atgard",
-    rubrik: "Åtgärd dokumenterad eller motiverad",
+    rubrik: "Corrective action documented or justified",
     ok: atgardsposter.length > 0,
     kravs: avslutat,
     detalj:
       atgardsposter.length === 0
-        ? "Dokumentera vad som gjordes — eller varför ingen åtgärd utfördes."
+        ? "Document what was done — or why no action was performed."
         : utfordAtgard
           ? undefined
-          : "Ingen åtgärd utförd; orsaken är dokumenterad.",
+          : "No action performed; the reason is documented.",
   });
 
   // Kundgodkännande: har ett åtgärdsförslag lämnats ska kundens besked
@@ -645,20 +669,20 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   if (forslag.length > 0 || beslut) {
     rader.push({
       id: "kundgodkannande",
-      rubrik: "Kundens besked på åtgärdsförslaget registrerat",
+      rubrik: "Customer decision on the proposed action recorded",
       ok: !!beslut,
       kravs: utfordAtgard,
       detalj: beslut
         ? `${beslut.beslut === "godkant" ? "Godkänt" : beslut.beslut === "avbojt" ? "Avböjt" : "Delvis godkänt"} via ${beslut.kanal}.`
-        : "Åtgärdsförslag lämnat — registrera kundens besked innan arbetet utförs.",
+        : "A proposal has been given — record the customer's decision before the work is performed.",
     });
     if (beslut?.beslut === "avbojt" && utfordAtgard) {
       rader.push({
         id: "godkannande_konflikt",
-        rubrik: "Utfört arbete trots avböjt åtgärdsförslag",
+        rubrik: "Work performed despite a declined proposal",
         ok: false,
         kravs: true,
-        detalj: "Kunden avböjde åtgärden men arbete är dokumenterat som utfört — kontrollera underlaget.",
+        detalj: "The customer declined the action, but work is documented as performed — check the evidence.",
       });
     }
   }
@@ -668,28 +692,28 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const kk = kvalitetskontroll(arende);
   rader.push({
     id: "kvalitetskontroll",
-    rubrik: "Kvalitetskontroll genomförd — symptomet verifierat",
+    rubrik: "Quality check performed — symptom verified",
     ok: !!kk,
     kravs: avslutat && utfordAtgard,
     detalj: kk
       ? kk.resultat === "symptomet_borta"
-        ? "Symptomet är verifierat borta efter åtgärd."
+        ? "The symptom is verified gone after the action."
         : kk.resultat === "ej_verifierbar"
           ? `Kunde inte verifieras: ${kk.beskrivning}`
-          : `Symptomet kvarstår helt eller delvis — ärendet bör inte avslutas som åtgärdat.`
+          : `The symptom remains wholly or partly — the case should not be closed as resolved.`
       : utfordAtgard
-        ? "Verifiera att symptomet är borta efter åtgärden (provkörning/återtest)."
-        : "Ingen åtgärd utförd — inget att verifiera.",
+        ? "Verify that the symptom is gone after the action (road test or retest)."
+        : "No action performed — nothing to verify.",
   });
 
   // Utgående mätarställning: obligatorisk först när ärendet avslutas.
   const matUt = handelser.some((h) => h.typ === "matarstallning" && h.lage === "utgaende");
   rader.push({
     id: "matarstallning_ut",
-    rubrik: "Utgående mätarställning dokumenterad",
+    rubrik: "Outgoing odometer reading documented",
     ok: matUt,
     kravs: avslutat,
-    detalj: matUt ? undefined : "Fotografera instrumentpanelen när arbetet är klart.",
+    detalj: matUt ? undefined : "Photograph the instrument panel when the work is complete.",
   });
 
   // Metodikens kontroller: evidens eller dokumenterat undantag per kontroll.
@@ -711,7 +735,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   }
   rader.push({
     id: "kontroller",
-    rubrik: "Metodikens kontroller: evidens eller dokumenterat undantag",
+    rubrik: "Methodology checks: evidence, or a documented exemption",
     ok: saknade.length === 0,
     kravs: true,
     detalj:
@@ -724,7 +748,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
 
   rader.push({
     id: "fotokrav",
-    rubrik: "Foton finns för fotokrävande kontroller",
+    rubrik: "Photographs present for checks that require them",
     ok: fotoKravUtanFoto === 0,
     kravs: true,
     detalj: fotoKravUtanFoto > 0 ? `${fotoKravUtanFoto} fotokrävande kontroll(er) utan bild i loggen.` : undefined,
@@ -748,21 +772,21 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const avslutEvent = handelser.find((h) => h.typ === "arende_avslutat");
   rader.push({
     id: "signering",
-    rubrik: "Teknikerns slutsats signerad",
+    rubrik: "The technician's closing statement is signed",
     ok: !avslutat || (avslutEvent?.typ === "arende_avslutat" && !!avslutEvent.signatur),
     kravs: false,
     detalj:
       avslutat && avslutEvent?.typ === "arende_avslutat" && avslutEvent.signatur
         ? `Signerad av ${avslutEvent.signatur}.`
         : avslutat
-          ? "Avslutet saknar signatur (äldre ärende)."
-          : "Signeras automatiskt när ärendet avslutas.",
+          ? "The closing has no signature (older case)."
+          : "Signed automatically when the case is closed.",
   });
 
   const hypoteser = handelser.filter((h) => h.typ === "hypotes").length;
   rader.push({
     id: "hypoteser",
-    rubrik: "Hypoteser redovisas som ej verifierade",
+    rubrik: "Hypotheses are reported as unverified",
     ok: true,
     kravs: false,
     detalj: hypoteser > 0 ? `${hypoteser} hypotes(er) markeras som ej verifierade i rapporten — aldrig som konstaterade fel.` : undefined,
@@ -773,7 +797,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     rubrik: `Evidensnivå: ${EVIDENS_LABEL[evidensNiva(arende)]}`,
     ok: evidensNiva(arende) !== "E0",
     kravs: true,
-    detalj: evidensNiva(arende) === "E0" ? "Ingen evidens i loggen ännu." : undefined,
+    detalj: evidensNiva(arende) === "E0" ? "No evidence in the log yet." : undefined,
   });
 
   return rader;

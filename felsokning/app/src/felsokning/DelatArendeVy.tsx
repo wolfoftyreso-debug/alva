@@ -30,14 +30,14 @@ function BeslutsKnappar({
   return (
     <div className="mt-2 border-t border-[#DDDDDD] pt-2 print:hidden">
       <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
-        Ditt besked till verkstaden
+        Your decision to the workshop
       </p>
       <div className="mb-2 grid grid-cols-2 gap-2">
         <StorKnapp variant={val === "godkant" ? "primar" : "sekundar"} onClick={() => setVal("godkant")}>
-          Godkänn åtgärden
+          Approve the action
         </StorKnapp>
         <StorKnapp variant={val === "avbojt" ? "fara" : "sekundar"} onClick={() => setVal("avbojt")}>
-          Avböj
+          Decline
         </StorKnapp>
       </div>
       {val && (
@@ -67,7 +67,7 @@ function BeslutsKnappar({
             {skickar ? "Sending …" : "Send decision"}
           </StorKnapp>
           <p className="mt-1 text-[11px] text-[#707070]">
-            Beskedet registreras i ärendet och kan inte ändras här — kontakta verkstaden om du ändrar dig.
+            The decision is recorded in the case and cannot be changed here — contact the workshop if you change your mind.
           </p>
         </>
       )}
@@ -226,7 +226,7 @@ export function DelatArendeVy({
             <BeslutsKnappar vidBeslut={vidBeslut} />
           ) : (
             <p className="mt-2 border-t border-[#DDDDDD] pt-2 text-[12px] text-[#707070]">
-              Inväntar ditt besked — kontakta verkstaden för att godkänna eller avböja.
+              Awaiting your decision — contact the workshop to approve or decline.
             </p>
           )}
         </Panel>
@@ -312,7 +312,7 @@ export function DelatArendeVy({
       </Panel>
 
       <p className="text-center text-[11px] text-[#8A8A8A]">
-        Ärende #{arende.nummer} · startat {tidDatum(arende.skapad)} · genererad ur ärendets händelselogg
+        Case #{arende.nummer} · started {tidDatum(arende.skapad)} · generated from the case log
       </p>
     </FelsokningSkal>
   );

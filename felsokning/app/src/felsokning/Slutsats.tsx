@@ -56,7 +56,7 @@ const FALT = [
     id: "kvarstaende" as const,
     etikett: "Remaining uncertainty",
     fraga: "What remains uncertain?",
-    hjalp: 'Får vara "inget" — men det måste sägas aktivt.',
+    hjalp: 'May be "nothing" — but it has to be said actively.',
     rader: 2,
   },
 ];
@@ -114,8 +114,7 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
 
       <div className="px-4 py-2">
         <p className="mb-4 max-w-[62ch] text-[13px] leading-[20px]" style={{ color: FARG.steel }}>
-          Underlaget visar vad som mättes. Slutsatsen visar vad som är fel. Det här är raden som säger varför det
-          ena följer av det andra — och den enda en garantihandläggare eller försäkringsbedömare behöver granska.
+          The evidence shows what was measured. The conclusion shows what is wrong. This is the line that says why the one follows from the other — and the only one a warranty or insurance assessor needs to review.
         </p>
 
         {/* Den ärliga vägen. Att orsaken inte kunnat fastställas är ett
@@ -155,7 +154,7 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
               ))}
             </ul>
             <p className="mt-2 text-[12px] leading-[16px]" style={{ color: FARG.steel }}>
-              Ange under Uteslutna alternativ varför de föll bort — eller varför de kvarstår.
+              State under Dismissed alternatives why they were ruled out — or why they remain open.
             </p>
           </div>
         )}
