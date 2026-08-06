@@ -161,7 +161,11 @@ export const DOKUMENTKLASSER = [
 // inte Pro Max. En version är ett tillstånd av systemet, inte en
 // marknadsföringshändelse.
 
-export const PLATTFORMSVERSION = "ALVA 1.0";
+// Versionen bor i services/gemensam/version.mjs tillsammans med
+// historiken. Den stod tidigare som en sträng här och räknades aldrig
+// upp: systemet påstod "ALVA 1.0" efter tre revisioner, en fakturamodul
+// och en stängd portal, och versionen sa alltså ingenting om vad man fick.
+export { PLATTFORMSVERSION, UTGAVOR, NUVARANDE } from "../../../services/gemensam/version.mjs";
 
 // ---- Rutnät -----------------------------------------------------------
 //

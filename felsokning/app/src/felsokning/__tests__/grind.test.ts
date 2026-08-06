@@ -20,8 +20,10 @@ function komplettLogg(extra: Record<string, unknown>[] = []) {
   return [
     { typ: "objekt_identifierat", objekt: { identifierare: "ABC123" } },
     { typ: "historik_kontrollerad", kontrollerad: true },
-    { typ: "matarstallning", lage: "ingaende", varde: "14 200" },
-    { typ: "matarstallning", lage: "utgaende", varde: "14 205" },
+    // Fotot är en del av kravet, inte en utsmyckning: en inskriven siffra
+    // är teknikerns påstående om vad som stod på mätaren.
+    { typ: "matarstallning", lage: "ingaende", varde: "14 200", bilagaId: "bil-in" },
+    { typ: "matarstallning", lage: "utgaende", varde: "14 205", bilagaId: "bil-ut" },
     { typ: "reproducering", status: "ja", beskrivning: "Reproducerat vid 88 km/h." },
     { typ: "felorsak", avvikelse: "Obalans", orsaker: ["Normalt slitage"], underlag: ["Mätvärde"], sakerhet: "hog" },
     { typ: "atgard_utford", beskrivning: "Balanserade hjulen.", utford: true },
@@ -448,5 +450,51 @@ describe("grinden räknar rätt sorts evidens per kontrolltyp", () => {
     const { VIBRATION } = await import("../../../../services/gemensam/metodiker.mjs");
     const hinder = grinda(kontrollHandelser(VIBRATION, false), VIBRATION).map((h: { id: string }) => h.id);
     expect(hinder).toContain("metodik_kontroller");
+  });
+});
+
+// ---- Mätarställningen ska vara fotograferad ----------------------------
+//
+// Klienten krävde redan fotot. Grinden gjorde det inte, och en regel som
+// bara finns i gränssnittet är en vana — inte en spärr. Det är samma
+// förhållande som C-2 gällde, fast åt andra hållet: här var det servern
+// som var svagare, vilket är värre, eftersom servern är den auktoritativa.
+describe("mätarställningen ska vara fotograferad, inte bara inskriven", () => {
+  const utanFoto = () =>
+    komplettLogg().map((h) => (h.typ === "matarstallning" ? { ...h, bilagaId: undefined } : h));
+
+  it("en inskriven siffra utan foto spärrar avslutet", () => {
+    const hinder = grinda(utanFoto(), GENERISK).map((h) => h.id);
+    expect(hinder).toContain("matarstallning_ingaende");
+    expect(hinder).toContain("matarstallning_utgaende");
+  });
+
+  it("hindret säger vad som saknas och vad man gör åt det", () => {
+    const h = grinda(utanFoto(), GENERISK).find((x) => x.id === "matarstallning_ingaende");
+    expect(h.detalj).toMatch(/fotografera/i);
+  });
+
+  it("ett dataUrl-foto duger lika bra som en bilaga", () => {
+    // Offline-läget lagrar bilden inline tills den synkats.
+    const inline = komplettLogg().map((h) =>
+      h.typ === "matarstallning" ? { ...h, bilagaId: undefined, dataUrl: "data:image/png;base64,AA" } : h,
+    );
+    expect(grinda(inline, GENERISK)).toEqual([]);
+  });
+
+  it("ett motiverat undantag ersätter fotot — trasig display, oåtkomlig timräknare", () => {
+    const undantag = komplettLogg().map((h) =>
+      h.typ === "matarstallning"
+        ? { ...h, bilagaId: undefined, undantag: "Displayen är slocknad, avläst via diagnosverktyg." }
+        : h,
+    );
+    expect(grinda(undantag, GENERISK)).toEqual([]);
+  });
+
+  it("ett tomt undantag räcker inte — då vore det en väg runt kravet", () => {
+    const tomt = komplettLogg().map((h) =>
+      h.typ === "matarstallning" ? { ...h, bilagaId: undefined, undantag: "   " } : h,
+    );
+    expect(grinda(tomt, GENERISK).map((h) => h.id)).toContain("matarstallning_ingaende");
   });
 });

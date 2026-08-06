@@ -30,6 +30,8 @@ import AlvaAnalys from "./pages/alva/Analys";
 import AlvaFakturor from "./pages/alva/Fakturor";
 import AlvaIntegration from "./pages/alva/Integration";
 import AlvaGarantier from "./pages/alva/Garantier";
+import AlvaImpressum from "./pages/alva/Impressum";
+import AlvaUtgavor from "./pages/alva/Utgavor";
 import AlvaForsakring from "./pages/alva/Forsakring";
 import AlvaSupport from "./pages/alva/Support";
 import { Portalvakt } from "./pages/alva/Portalvakt";
@@ -69,6 +71,10 @@ function AppContent() {
         <Route path="/alva" element={<AlvaStart />} />
         <Route path="/alva/ansokan" element={<AlvaAnsokan />} />
         <Route path="/alva/logga-in" element={<AlvaLoggaIn />} />
+        {/* Lagstadgad information. Nås från foten på varje sida — det är
+            en del av kravet, inte en placering. */}
+        <Route path="/alva/impressum" element={<AlvaImpressum />} />
+        <Route path="/alva/utgavor" element={<AlvaUtgavor />} />
         {/* Portalen är stängd utan giltig plattformssession — se
             Portalvakt. Utan konfigurerad plattform finns ingen session
             att kräva, och vyerna är då märkta som demonstration. */}

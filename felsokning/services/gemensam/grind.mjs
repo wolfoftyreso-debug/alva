@@ -53,11 +53,40 @@ export function grinda(handelser, metodik) {
     historik ? "Nekad historikkontroll kräver en motivering." : "Ingen historikkontroll dokumenterad.",
   );
 
+  // Mätarställningen ska vara FOTOGRAFERAD, inte bara inskriven.
+  //
+  // Skillnaden är hela dess bevisvärde. En inskriven siffra är teknikerns
+  // påstående om vad som stod på mätaren; ett foto visar vad som stod
+  // där. Mätarställningen är samtidigt det som avgör garanti- och
+  // försäkringsfrågor i efterhand, och den enda uppgift i ärendet som
+  // någon kan ha ett intresse av att skriva fel.
+  //
+  // Klienten krävde redan fotot — men bara klienten, och en regel som
+  // bara finns i gränssnittet är en vana, inte en spärr. Det är samma
+  // förhållande som QUALITET C-2 gällde, fast åt andra hållet: här var
+  // det servern som var svagare, vilket är värre, eftersom servern är
+  // den som är auktoritativ.
+  //
+  // Undantag finns och måste finnas — en trasig display, en timräknare
+  // som sitter oåtkomligt, en spegling som inte går att fota bort. Men
+  // undantaget kräver en motivering, av samma skäl som ett nekat
+  // historiksvar gör det.
   for (const [lage, rubrik] of [
-    ["ingaende", "Ingående mätarställning dokumenterad"],
-    ["utgaende", "Utgående mätarställning dokumenterad"],
+    ["ingaende", "Ingående mätarställning fotograferad"],
+    ["utgaende", "Utgående mätarställning fotograferad"],
   ]) {
-    krav(`matarstallning_${lage}`, rubrik, av(handelser, "matarstallning").some((h) => h.lage === lage));
+    const poster = av(handelser, "matarstallning").filter((h) => h.lage === lage);
+    const dokumenterad = poster.length > 0;
+    const fotograferad = poster.some((h) => h.bilagaId || h.dataUrl);
+    const motiverat = poster.some((h) => (h.undantag ?? "").trim().length > 0);
+    krav(
+      `matarstallning_${lage}`,
+      rubrik,
+      dokumenterad && (fotograferad || motiverat),
+      !dokumenterad
+        ? "Ingen mätarställning dokumenterad."
+        : "Mätarställningen är inskriven men inte fotograferad. Fotografera mätaren eller ange varför det inte går.",
+    );
   }
 
   krav(

@@ -229,7 +229,17 @@ export type Handelse =
        */
       orsakFastställd?: boolean;
     }
-  | { typ: "arende_avslutat"; signatur?: string };
+  | {
+      typ: "arende_avslutat";
+      signatur?: string;
+      /**
+       * Versionen som gällde vid avslutet. Ritningsstämpeln läste den ur
+       * den aktuella konstanten, så ett ärende stängt under 1.0 visade
+       * 3.1 — precis det stämpelns egen beskrivning säger att den inte
+       * ska göra.
+       */
+      plattformsversion?: string;
+    };
 
 export interface LoggPost {
   id: string;

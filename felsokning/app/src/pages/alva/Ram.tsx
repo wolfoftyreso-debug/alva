@@ -108,13 +108,43 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
 
       <main>{children}</main>
 
+      {/* Foten bär det som en näringsidkare måste hålla synligt. Listan
+          är byggd mot tyskt krav — § 5 DDG är den strängaste och mest
+          utkrävbara i EU, och den som klarar den klarar de andra på
+          köpet. Se services/gemensam/foretagsuppgifter.mjs.
+
+          Här ligger MEDVETET ingen länk till EU:s ODR-plattform. Den
+          upphävdes genom förordning (EU) 2024/3228 och stängdes den
+          20 juli 2025; en kvarliggande länk är en död hänvisning som ser
+          ut som en lagstadgad upplysning. */}
       <footer className="border-t" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>
-        <div
-          className="mx-auto flex max-w-[1040px] flex-wrap justify-between gap-4 px-6 py-6 font-mono text-[11px]"
-          style={{ color: FARG.steel }}
-        >
-          <span>{PLATTFORMSVERSION}</span>
-          <span>{ALVA.position}</span>
+        <div className="mx-auto max-w-[1040px] px-6 py-6">
+          <nav aria-label="Legal">
+            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[12px]">
+              {[
+                ["/alva/impressum", "Impressum"],
+                ["/alva/dataskydd", "Privacy"],
+                ["/alva/villkor", "Terms"],
+                ["/alva/tillganglighet", "Accessibility"],
+                ["/alva/utgavor", "Release notes"],
+              ].map(([till, text]) => (
+                <li key={till}>
+                  <Link to={till} style={{ color: FARG.steel }}>
+                    {text}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div
+            className="mt-6 flex flex-wrap justify-between gap-4 border-t pt-6 font-mono text-[11px]"
+            style={{ borderColor: FARG.lightSteel, color: FARG.steel }}
+          >
+            <Link to="/alva/utgavor" style={{ color: FARG.steel }}>
+              {PLATTFORMSVERSION}
+            </Link>
+            <span>{ALVA.position}</span>
+          </div>
         </div>
       </footer>
     </div>

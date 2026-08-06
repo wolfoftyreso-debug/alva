@@ -10,6 +10,7 @@ import { Slutsatspanel } from "@/felsokning/Slutsats";
 import { sammanfatta } from "../../../../services/gemensam/sammanfattning.mjs";
 import { grinda } from "../../../../services/gemensam/grind.mjs";
 import { PLATTFORMSVERSION, arendebeteckning, fasDefinition } from "@/alva/system";
+import { versionVidAvslut } from "../../../../services/gemensam/version.mjs";
 import {
   arAvslutat,
   arendeidentitet,
@@ -1342,7 +1343,7 @@ function GuideFlik({
               Om felorsaken inte är verifierad: dokumentera en hypotes och utöka felsökningen, eller avsluta ärendet
               med rekommenderade nästa steg.
             </p>
-            <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare })}>
+            <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare, plattformsversion: PLATTFORMSVERSION })}>
               Avsluta felsökning
             </StorKnapp>
             {!kanAvslutas && <Avslutshinder hinder={hinder} />}
@@ -1423,7 +1424,7 @@ function GuideFlik({
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
           Lämna över arbete
         </StorKnapp>
-        <StorKnapp variant="sekundar" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare })}>
+        <StorKnapp variant="sekundar" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare, plattformsversion: PLATTFORMSVERSION })}>
           Avsluta felsökning
         </StorKnapp>
       </div>
@@ -2697,7 +2698,11 @@ function Ritningsstampel({ arende }: { arende: Arende }) {
     ["Beteckning", arendebeteckning(arende.nummer)],
     ["Regelpaket", paket.version],
     ["Evidensmodell", `ECM ${ECM_VERSION}`],
-    ["Plattform", PLATTFORMSVERSION],
+    // Versionen VID AVSLUTET, inte dagens. Stämpeln läste tidigare den
+    // aktuella konstanten, så ett ärende stängt under 1.0 visade 3.1 —
+    // vilket är exakt det stämpelns beskrivning ovan säger att den inte
+    // ska göra. Ett öppet ärende visar dagens, eftersom det är sant då.
+    ["Plattform", avslutad ? versionVidAvslut(avslutad.handelse) : PLATTFORMSVERSION],
     ["Status", avslutad ? "Closed" : "In progress"],
     ["Utgåva", avslutad ? new Date(avslutad.tidpunkt).toISOString().slice(0, 10) : "—"],
   ];

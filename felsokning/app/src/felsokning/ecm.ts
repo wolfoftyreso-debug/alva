@@ -119,7 +119,21 @@ export function evidensposter(arende: Arende): Evidenspost[] {
         `${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""} (${märkning})`,
       );
     }
-    if (h.typ === "matarstallning" && !h.undantag) lagg(post, "mätarställning", "E2", `${h.lage === "ingaende" ? "In" : "Ut"}: ${h.varde}`);
+    if (h.typ === "matarstallning" && !h.undantag) {
+      // Ett foto på mätaren är E2 — något som visar vad som stod där.
+      // En inskriven siffra utan foto är teknikerns påstående om vad som
+      // stod där, alltså E1. Skillnaden syns i rapporten, eftersom
+      // mätarställningen är det som avgör garanti- och försäkringsfrågor
+      // i efterhand och den enda uppgift någon kan ha ett intresse av att
+      // skriva fel.
+      const fotograferad = Boolean(h.bilagaId || h.dataUrl);
+      lagg(
+        post,
+        "mätarställning",
+        fotograferad ? "E2" : "E1",
+        `${h.lage === "ingaende" ? "In" : "Ut"}: ${h.varde}${fotograferad ? "" : " (inskriven, ej fotograferad)"}`,
+      );
+    }
     if (h.typ === "arbetsorder_skannad") lagg(post, "dokument", "E5", `Arbetsorder, ${h.falt.length} fält`);
     if (h.typ === "observation") lagg(post, "observation", "E1", h.text);
     if (h.typ === "kontroll_utford" && !h.undantag) lagg(post, "kontroll", "E1", h.text);

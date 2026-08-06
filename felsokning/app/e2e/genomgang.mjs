@@ -484,6 +484,8 @@ try {
     "/alva/portal/garantier",
     "/alva/portal/forsakring",
     "/alva/portal/support",
+    "/alva/impressum",
+    "/alva/utgavor",
   ]) {
     await sida.goto(`${BAS}/#${vag}`, { waitUntil: "networkidle" });
     await sida.waitForTimeout(400);

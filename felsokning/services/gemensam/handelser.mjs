@@ -103,7 +103,10 @@ export const VALFRIA_FÄLT = {
   kundbeslut: ["kommentar", "kontaktperson"],
   atgard_utford: ["delar", "motivering"],
   slutsats: ["atgardsval", "orsakFastställd"],
-  arende_avslutat: ["signatur"],
+  // Versionen som gällde VID AVSLUTET. Ritningsstämpeln läste den ur
+  // den aktuella konstanten, så ett ärende stängt under 1.0 visade 3.1 —
+  // precis det stämpelns egen beskrivning säger att den inte ska göra.
+  arende_avslutat: ["signatur", "plattformsversion"],
 };
 
 /**
