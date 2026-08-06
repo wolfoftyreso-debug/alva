@@ -114,6 +114,16 @@ export default function Sprak() {
           Interface coverage is measured, not estimated: a test fails the build if any key is missing from
           any language. Review status is a statement about people, not about files, and is set by hand.
         </p>
+        {/* Att engelska är källspråket betyder inte att den engelska
+            metodiktexten är fackgranskad. Den är översatt från svenska,
+            och att inte säga det hade varit att göra precis det sidan
+            varnar för på de andra nio språken. */}
+        <p className="mt-4 max-w-[680px] border-l-2 pl-6 text-[13px] leading-[20px]"
+           style={{ borderColor: FARG.varning, color: FARG.graphite }}>
+          The English procedure text is a translation of the Swedish source and has not yet been read by a
+          specialist working in the trade. It is held to the same standard as the other nine languages, and
+          the same statement is made about it here rather than quietly excepted because it is the source.
+        </p>
       </Sektion>
 
       {/* ---- Beviset ---- */}

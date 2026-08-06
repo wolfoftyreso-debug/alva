@@ -18,8 +18,8 @@ describe("demoärendet", () => {
 
   it("lämnar kontroller kvar så att guiden kan fortsätta i demon", () => {
     const b = brief(arende, VIBRATION_METODIK);
-    expect(b.ejKontrollerat).toContain("Kontrollera radial- och sidokast");
-    expect(b.ejKontrollerat).toContain("Förändring vid kurvtagning");
+    expect(b.ejKontrollerat).toContain("Check radial and lateral runout");
+    expect(b.ejKontrollerat).toContain("Change when cornering");
     expect(b.rekommenderatNastaSteg.length).toBeGreaterThan(0);
   });
 

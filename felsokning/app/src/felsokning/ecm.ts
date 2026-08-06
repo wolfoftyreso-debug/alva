@@ -92,7 +92,7 @@ export function evidensposter(arende: Arende): Evidenspost[] {
     });
   for (const post of arende.handelser) {
     const h = post.handelse;
-    if (h.typ === "foto") lagg(post, "foto", "E2", h.beskrivning);
+    if (h.typ === "foto") lagg(post, "photo", "E2", h.beskrivning);
     if (h.typ === "video") lagg(post, "video", "E3", h.beskrivning);
     if (h.typ === "matvarde") {
       // Ett mätvärde är E4 bara när det går att visa vad som mätte och
@@ -105,8 +105,8 @@ export function evidensposter(arende: Arende): Evidenspost[] {
       const spårbar = Boolean(h.matdonId) && kalibreradVid(h.matdonKalibreradTill, post.tidpunkt);
       const märkning = [
         h.matdonBeteckning
-          ? `${h.matdonBeteckning}${spårbar ? "" : " — kalibrering saknas eller utgången"}`
-          : "instrument ej angivet",
+          ? `${h.matdonBeteckning}${spårbar ? "" : " — calibration missing or expired"}`
+          : "instrument not stated",
         // Härkomsten står i rapporten, inte bara i loggen: den som läser
         // ska se att siffran är maskinläst utan att gräva (TÜV T-5).
         h.kalla,
@@ -115,7 +115,7 @@ export function evidensposter(arende: Arende): Evidenspost[] {
         .join("; ");
       lagg(
         post,
-        "mätvärde",
+        "measurement",
         spårbar ? "E4" : "E1",
         `${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""} (${märkning})`,
       );
@@ -130,14 +130,14 @@ export function evidensposter(arende: Arende): Evidenspost[] {
       const fotograferad = Boolean(h.bilagaId || h.dataUrl);
       lagg(
         post,
-        "mätarställning",
+        "odometer",
         fotograferad ? "E2" : "E1",
-        `${h.lage === "ingaende" ? "In" : "Ut"}: ${h.varde}${fotograferad ? "" : " (inskriven, ej fotograferad)"}`,
+        `${h.lage === "ingaende" ? "In" : "Out"}: ${h.varde}${fotograferad ? "" : " (entered, not photographed)"}`,
       );
     }
-    if (h.typ === "arbetsorder_skannad") lagg(post, "dokument", "E5", `Arbetsorder, ${h.falt.length} fält`);
+    if (h.typ === "arbetsorder_skannad") lagg(post, "document", "E5", `Work order, ${h.falt.length} fields`);
     if (h.typ === "observation") lagg(post, "observation", "E1", h.text);
-    if (h.typ === "kontroll_utford" && !h.undantag) lagg(post, "kontroll", "E1", h.text);
+    if (h.typ === "kontroll_utford" && !h.undantag) lagg(post, "check", "E1", h.text);
   }
   return poster;
 }
@@ -239,7 +239,7 @@ const GENERISKA_FRASER = /^(trasig|defekt|sliten|utsliten|kass|död|behöver byt
 export function granskaAvvikelse(text: string): string | null {
   const ren = text.trim();
   if (ren.length < 20 || GENERISKA_FRASER.test(ren)) {
-    return "Felorsak saknas. Beskriv den konstaterade avvikelsen — inte bara komponenten. Exempel: ”Startmotorn aktiverar inte trots korrekt matningsspänning och god jordförbindelse.”";
+    return "Root cause missing. Describe the established deviation — not only the component. Example: “The starter motor does not engage despite correct supply voltage and a good earth connection.”";
   }
   return null;
 }
@@ -673,7 +673,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
       ok: !!beslut,
       kravs: utfordAtgard,
       detalj: beslut
-        ? `${beslut.beslut === "godkant" ? "Godkänt" : beslut.beslut === "avbojt" ? "Avböjt" : "Delvis godkänt"} via ${beslut.kanal}.`
+        ? `${beslut.beslut === "godkant" ? "Approved" : beslut.beslut === "avbojt" ? "Declined" : "Partly approved"} via ${beslut.kanal}.`
         : "A proposal has been given — record the customer's decision before the work is performed.",
     });
     if (beslut?.beslut === "avbojt" && utfordAtgard) {

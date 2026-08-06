@@ -69,7 +69,7 @@ describe("metodikbiblioteket", () => {
     const krav = HOGVOLT.steg[0].kontroller ?? [];
     expect(krav.some((k) => k.id === "spanningsfrihet" && k.krav === "matvarde")).toBe(true);
     expect(krav.some((k) => k.id === "service_disconnect")).toBe(true);
-    expect(HOGVOLT.steg[0].beskrivning).toMatch(/livsfarlig/i);
+    expect(HOGVOLT.steg[0].beskrivning).toMatch(/lethal/i);
   });
 });
 

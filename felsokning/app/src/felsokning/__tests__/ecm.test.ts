@@ -87,7 +87,7 @@ describe("Evidence Engine", () => {
     const poster = evidensposter(arende);
     expect(poster).toHaveLength(2);
     expect(poster[0].niva).toBe("E2");
-    expect(poster[1].sammanfattning).toBe("Obalans = 38 g (instrument ej angivet)");
+    expect(poster[1].sammanfattning).toBe("Obalans = 38 g (instrument not stated)");
     expect(poster[0].tekniker).toBe("Anna");
     expect(poster[0].hash).toMatch(/^[0-9a-f]{8}$/);
     // Samma innehåll → samma hash (deterministisk spårbarhet).

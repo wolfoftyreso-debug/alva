@@ -101,17 +101,17 @@ describe("ejKontrollerat", () => {
   it("krymper när kontroller utförs och härleds helt ur loggen", () => {
     const utan = byggArende([["2026-08-02T08:00:00Z", OBJEKT]]);
     const alla = ejKontrollerat(utan, VIBRATION_METODIK);
-    expect(alla).toContain("Kontrollera lufttryck");
+    expect(alla).toContain("Check tyre pressure");
 
     const med = byggArende([
       ["2026-08-02T08:00:00Z", OBJEKT],
       [
         "2026-08-02T08:15:00Z",
-        { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "lufttryck", text: "Kontrollera lufttryck" },
+        { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "lufttryck", text: "Check tyre pressure" },
       ],
     ]);
     const kvar = ejKontrollerat(med, VIBRATION_METODIK);
-    expect(kvar).not.toContain("Kontrollera lufttryck");
+    expect(kvar).not.toContain("Check tyre pressure");
     expect(kvar.length).toBe(alla.length - 1);
   });
 });
@@ -168,7 +168,7 @@ describe("brief", () => {
     ["2026-08-02T08:05:00Z", { typ: "felbeskrivning", text: "Bilen vibrerar runt 88 km/h" }],
     [
       "2026-08-02T08:11:00Z",
-      { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "lufttryck", text: "Kontrollera lufttryck", resultat: "2,4 bar" },
+      { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "lufttryck", text: "Check tyre pressure", resultat: "2,4 bar" },
     ],
     ["2026-08-02T08:18:00Z", { typ: "matvarde", beskrivning: "Matningsspänning", varde: "13,9", enhet: "V" }],
     ["2026-08-02T08:20:00Z", { typ: "observation", text: "Höger framdäck visar ojämnt slitage" }],
@@ -179,12 +179,12 @@ describe("brief", () => {
     const b = brief(arende, VIBRATION_METODIK, "2026-08-02T08:30:00Z");
     expect(b.objekt?.identifierare).toBe("ABC123");
     expect(b.felbeskrivning).toBe("Bilen vibrerar runt 88 km/h");
-    expect(b.utfordaKontroller.map((k) => k.text)).toContain("Kontrollera lufttryck");
+    expect(b.utfordaKontroller.map((k) => k.text)).toContain("Check tyre pressure");
     expect(b.observationer).toContain("Höger framdäck visar ojämnt slitage");
     expect(b.observationer).toContain("Matningsspänning: 13,9 V");
-    expect(b.ejKontrollerat).toContain("Kontrollera hjulbalansering");
-    expect(b.ejKontrollerat).not.toContain("Kontrollera lufttryck");
-    expect(b.rekommenderatNastaSteg[0]).toContain("hastighetsberoende");
+    expect(b.ejKontrollerat).toContain("Check wheel balance");
+    expect(b.ejKontrollerat).not.toContain("Check tyre pressure");
+    expect(b.rekommenderatNastaSteg[0]).toContain("speed-dependent");
     expect(b.totalArbetstid).toBe("27 min");
   });
 
