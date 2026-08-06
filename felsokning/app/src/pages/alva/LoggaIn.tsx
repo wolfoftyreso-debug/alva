@@ -38,9 +38,9 @@ export default function LoggaIn() {
           <Rubrik niva={1}>Login</Rubrik>
         </div>
         <Demonstration>
-          This login authenticates nothing. Any organization and username signs in, and the password
-          is not checked. Real authentication exists in the platform service and is not part of this
-          demonstration.
+          This login authenticates nothing. Type anything into Organization and Username and press
+          Sign in — the password is not checked, and no account is needed. The platform's real
+          authentication is not reachable from this demonstration.
         </Demonstration>
 
         <form onSubmit={skicka}>

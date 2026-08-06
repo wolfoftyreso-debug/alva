@@ -52,8 +52,9 @@ export default function Ansokan() {
             <Rubrik niva={1}>Submitted</Rubrik>
           </div>
           <Demonstration>
-            Nothing was submitted. The reference below was generated in the browser and exists
-            nowhere else.
+            Nothing was submitted and no one was notified. The reference below was computed in your
+            browser from what you typed, and exists nowhere else — it will be gone when you close
+            this page.
           </Demonstration>
           <Block rubrik="Registration" beteckning={referens}>
             <dl className="text-[14px] leading-[24px]">
@@ -86,11 +87,13 @@ export default function Ansokan() {
           <Rubrik niva={1}>Request account</Rubrik>
         </div>
         <Demonstration>
-          This form does not submit anything. The reference it returns is generated in the browser
-          and is not recorded. Applications are handled outside this demonstration.
+          Nothing is sent. Submitting this form stores nothing, notifies no one, and creates no
+          application — there is no intake behind it yet. The description below states how
+          registration is intended to work, not what happens today.
         </Demonstration>
         <p className="mb-8 text-[14px] leading-[22px]" style={{ color: FARG.steel }}>
-          Applications are reviewed manually. No payment is taken at this stage.
+          Intended operation: applications are reviewed manually and no payment is taken at this
+          stage.
         </p>
 
         <form onSubmit={skicka} noValidate={false}>

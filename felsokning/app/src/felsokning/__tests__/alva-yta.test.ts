@@ -276,3 +276,37 @@ describe("ytor utan verklig funktion är märkta som demonstration", () => {
     }
   });
 });
+
+// ---- Märkningen måste säga vad som gäller, inte var något annat finns --
+//
+// Första formuleringen sa "Applications are handled outside this
+// demonstration" — vilket lika gärna läses som att ansökningar tas emot
+// någon annanstans, av ett riktigt system. Det gör de inte. En läsare
+// frågade vad meningen betydde, vilket är svaret på om den var tydlig.
+//
+// En märkning som inte går att missförstå säger två saker: att ingenting
+// sker, och vad läsaren ska göra i stället.
+describe("demonstrationsmärkningen är entydig", () => {
+  const sida = (namn: string) => filer.find(([n]) => n.endsWith(`pages/alva/${namn}`))![1];
+
+  it("inloggningen säger vad besökaren ska göra", () => {
+    const kod = sida("LoggaIn.tsx");
+    expect(kod).toContain("Type anything");
+    expect(kod).toContain("no account is needed");
+  });
+
+  it("ansökan säger att det inte finns någon mottagning", () => {
+    expect(sida("Ansokan.tsx")).toContain("there is no intake behind it yet");
+  });
+
+  it("beskrivningen av avsedd drift är märkt som avsedd, inte som gällande", () => {
+    // Två meningar bredvid varandra, där den ena säger att inget händer
+    // och den andra beskriver en handläggningsprocess, upphäver varandra.
+    expect(sida("Ansokan.tsx")).toContain("Intended operation:");
+  });
+
+  it("ingen märkning hänvisar till något som läsaren inte kan nå", () => {
+    // "finns i plattformstjänsten" hjälper ingen som står på sidan.
+    expect(sida("LoggaIn.tsx")).not.toContain("Real authentication exists in the platform service");
+  });
+});
