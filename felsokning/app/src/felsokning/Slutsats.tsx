@@ -25,35 +25,37 @@ import { FARG, Etikett, Knapp, Statusmärke } from "@/alva/komponenter";
 
 interface Brist {
   falt: string;
+  /** Katalognyckeln. Saknas för brister som bara har en färdig text. */
+  nyckel?: string;
   text: string;
 }
 
 const FALT = [
   {
     id: "motivering" as const,
-    etikett: "Motivering",
-    fraga: "Varför följer slutsatsen av underlaget?",
-    hjalp: "Knyt mätvärden, foton och kontroller till slutsatsen. Vad i evidensen gör att just detta följer?",
+    etikett: "Rationale",
+    fraga: "Why does the conclusion follow from the evidence?",
+    hjalp: "Tie measurements, photographs and checks to the conclusion. What in the evidence makes this follow?",
     rader: 4,
   },
   {
     id: "uteslutet" as const,
-    etikett: "Uteslutna alternativ",
-    fraga: "Vad övervägdes, och varför föll det bort?",
-    hjalp: "En felsökning utan uteslutna alternativ är en gissning som råkade stämma.",
+    etikett: "Dismissed alternatives",
+    fraga: "What was considered, and why was it dismissed?",
+    hjalp: "A diagnosis without dismissed alternatives is a guess that happened to be right.",
     rader: 3,
   },
   {
     id: "atgardsval" as const,
-    etikett: "Val av åtgärd",
-    fraga: "Varför denna åtgärd och inte en annan?",
-    hjalp: "Byte eller justering? Hela enheten eller en del? Skälet läses av den som granskar kostnaden.",
+    etikett: "Choice of action",
+    fraga: "Why this action and not another?",
+    hjalp: "Replacement or adjustment? The whole unit or a part? The reason is read by whoever reviews the cost.",
     rader: 2,
   },
   {
     id: "kvarstaende" as const,
-    etikett: "Kvarstående osäkerhet",
-    fraga: "Vad är fortfarande osäkert?",
+    etikett: "Remaining uncertainty",
+    fraga: "What remains uncertain?",
     hjalp: 'Får vara "inget" — men det måste sägas aktivt.',
     rader: 2,
   },
@@ -82,7 +84,13 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
   );
   const obemötta: string[] = useMemo(() => obemottaHypoteser(handelser, förslag), [handelser, förslag]);
 
-  const brist = (falt: string) => brister.find((b) => b.falt === falt && !b.text.includes("bemöts inte"));
+  // Hypotesbristerna hör till fältet "uteslutet" men är inte en brist i
+  // fältet — de listas för sig nedan. De sållas därför bort här, på
+  // NYCKELN och inte på texten: texten är översatt och byter språk med
+  // organisationen, och en jämförelse mot en svensk fras slutade tyst
+  // att matcha när standardspråket blev engelska.
+  const brist = (falt: string) =>
+    brister.find((b) => b.falt === falt && b.nyckel !== "slutsats.hypotes_obemott");
   const klar = brister.length === 0;
 
   const arbeteUtfört = handelser.some((h) => h.typ === "atgard_utford" && h.utford);
@@ -115,8 +123,8 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
             Men varför den inte kunde det är fortfarande ett varför. */}
         <div className="mb-4 flex flex-wrap gap-2">
           {[
-            { värde: true, text: "Orsak fastställd" },
-            { värde: false, text: "Orsak kunde inte fastställas" },
+            { värde: true, text: "Cause established" },
+            { värde: false, text: "Cause could not be established" },
           ].map((val) => (
             <button
               key={String(val.värde)}
@@ -137,7 +145,7 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
 
         {obemötta.length > 0 && (
           <div className="mb-4 border-2 px-4 py-2" style={{ borderColor: FARG.graphite }}>
-            <Etikett ton="graphite">Hypoteser i loggen som behöver bemötas</Etikett>
+            <Etikett ton="graphite">Hypotheses in the log that need addressing</Etikett>
             <ul className="mt-2 text-[13px] leading-[20px]" style={{ color: FARG.graphite }}>
               {obemötta.map((text) => (
                 <li key={text} className="flex gap-2">
@@ -154,7 +162,7 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
 
         {FALT.filter((f) => f.id !== "atgardsval" || arbeteUtfört).map((f) => {
           const fel = brist(f.id);
-          const etikett = f.id === "motivering" && !fastställd ? "Skäl till att orsaken inte fastställts" : f.etikett;
+          const etikett = f.id === "motivering" && !fastställd ? "Reason the cause could not be established" : f.etikett;
           return (
             <div key={f.id} className="border-t py-2" style={{ borderColor: FARG.lightSteel }}>
               <label
@@ -191,7 +199,7 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
 
         <div className="mt-4 flex flex-wrap items-center gap-4">
           <Knapp disabled={!klar} onClick={() => skicka(förslag)}>
-            {befintlig ? "Uppdatera slutsats" : "Registrera slutsats"}
+            {befintlig ? "Update closing statement" : "Record closing statement"}
           </Knapp>
           {!klar && (
             <span className="text-[12px]" style={{ color: FARG.steel }}>

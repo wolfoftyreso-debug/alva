@@ -11,7 +11,7 @@
 // Den avlästa koden klassificeras alltid innan den används, så att rätt
 // identifieringsmetod sätts på fordonsobjektet.
 
-export type KodTyp = "VIN" | "Regnr" | "Serienummer";
+export type KodTyp = "VIN" | "Reg. no." | "Serial number";
 
 export interface AvlastKod {
   varde: string;
@@ -37,16 +37,16 @@ export function tolkaKod(ratext: string): AvlastKod | null {
   const vinFalt = text.match(/(?:vin|chassi)[=:/\s]+([A-HJ-NPR-Z0-9]{17})/i);
   if (vinFalt) return { varde: vinFalt[1].toUpperCase(), typ: "VIN" };
   const regnrFalt = text.match(/(?:reg(?:nr)?|plate)[=:/\s]+([A-Za-z]{3}\s?[0-9]{2}[0-9A-Za-z])/i);
-  if (regnrFalt) return { varde: regnrFalt[1].replace(/\s/g, "").toUpperCase(), typ: "Regnr" };
+  if (regnrFalt) return { varde: regnrFalt[1].replace(/\s/g, "").toUpperCase(), typ: "Reg. no." };
 
   const rent = text.replace(/[\s-]/g, "").toUpperCase();
   if (VIN_MONSTER.test(rent)) return { varde: rent, typ: "VIN" };
-  if (REGNR_MONSTER.test(rent)) return { varde: rent, typ: "Regnr" };
+  if (REGNR_MONSTER.test(rent)) return { varde: rent, typ: "Reg. no." };
 
   // Allt annat (maskin-/serienummer) tas som det är, men bara om det ser
   // ut som en identifierare — inte som fritext eller en hel URL.
   if (/^[A-Z0-9._/-]{4,40}$/.test(rent) && !/^HTTPS?:/.test(rent)) {
-    return { varde: rent, typ: "Serienummer" };
+    return { varde: rent, typ: "Serial number" };
   }
   return null;
 }
@@ -78,7 +78,7 @@ export async function startaSkanning(
 ): Promise<Skanning> {
   const Detektor = detektorKlass();
   if (!Detektor) {
-    vidFel?.("Webbläsaren saknar streckkodsläsning — fotografera typskylten i stället.");
+    vidFel?.("The browser has no barcode reader — photograph the type plate instead.");
     return { stoppa: () => {} };
   }
 
@@ -104,7 +104,7 @@ export async function startaSkanning(
     // starta. Detektorn får helt enkelt tomma rutor tills strömmen är i gång.
     void video.play().catch(() => {});
   } catch {
-    vidFel?.("Kameran kunde inte startas — kontrollera behörigheten eller fotografera typskylten.");
+    vidFel?.("The camera could not be started — check the permission or photograph the type plate.");
     return { stoppa };
   }
 

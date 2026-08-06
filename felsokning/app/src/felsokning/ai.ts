@@ -33,9 +33,9 @@ export type AiRadTyp = "observation" | "verifierat" | "hypotes" | "rekommendatio
 
 export const AI_RADTYP_LABEL: Record<AiRadTyp, string> = {
   observation: "Observation",
-  verifierat: "Verifierat",
-  hypotes: "Hypotes (ej verifierad)",
-  rekommendation: "Rekommendation",
+  verifierat: "Verified",
+  hypotes: "Hypothesis (unverified)",
+  rekommendation: "Recommendation",
 };
 
 export interface AiRad {
@@ -58,11 +58,11 @@ export function byggAnvandarPrompt(brief: Brief, metodikNamn: string, inmatning?
   if (brief.objekt) rader.push(`Objekt: ${brief.objekt.beskrivning} (${brief.objekt.identifierare})`);
   if (brief.felbeskrivning) rader.push(`Felbeskrivning: ${brief.felbeskrivning}`);
   if (brief.utfordaKontroller.length > 0) {
-    rader.push("Utförda kontroller:");
+    rader.push("Checks performed:");
     for (const k of brief.utfordaKontroller) rader.push(`- ${k.text}${k.resultat ? `: ${k.resultat}` : ""}`);
   }
   if (brief.observationer.length > 0) {
-    rader.push("Observationer och mätvärden:");
+    rader.push("Observations and measurements:");
     for (const o of brief.observationer) rader.push(`- ${o}`);
   }
   if (brief.ejKontrollerat.length > 0) {
@@ -87,7 +87,7 @@ export function byggGranskningsPrompt(arende: Arende, metodik: Metodik): string 
 export function tolkaAiSvar(data: unknown): AiSvar {
   const svar = data as AiSvar;
   if (!svar || !Array.isArray(svar.rader) || typeof svar.nastaSteg !== "string") {
-    throw new Error("Oväntat AI-svarsformat");
+    throw new Error("Unexpected AI response format");
   }
   const giltiga: AiRadTyp[] = ["observation", "verifierat", "hypotes", "rekommendation"];
   const rader = svar.rader.filter(
@@ -101,7 +101,7 @@ export function tolkaAiSvar(data: unknown): AiSvar {
 // (OCR + layoutförståelse) och returnerar strukturerade fält med
 // konfidens per värde. Bara osäkra fält behöver granskas.
 
-export type ArbetsorderGrupp = "Kund" | "Personbil" | "Verkstad" | "Ärende";
+export type ArbetsorderGrupp = "Customer" | "Vehicle" | "Workshop" | "Case";
 
 export interface TolkatFalt {
   id: string;
@@ -114,36 +114,36 @@ export interface TolkatFalt {
 }
 
 export const ARBETSORDER_FALT: { id: string; grupp: ArbetsorderGrupp; etikett: string }[] = [
-  { id: "kund_namn", grupp: "Kund", etikett: "Namn" },
-  { id: "kund_foretag", grupp: "Kund", etikett: "Företag" },
-  { id: "kund_telefon", grupp: "Kund", etikett: "Telefon" },
-  { id: "kund_epost", grupp: "Kund", etikett: "E-post" },
-  { id: "fordon_regnr", grupp: "Personbil", etikett: "Regnr" },
-  { id: "fordon_vin", grupp: "Personbil", etikett: "VIN" },
-  { id: "fordon_marke", grupp: "Personbil", etikett: "Märke" },
-  { id: "fordon_modell", grupp: "Personbil", etikett: "Modell" },
-  { id: "fordon_motor", grupp: "Personbil", etikett: "Motor" },
-  { id: "fordon_arsmodell", grupp: "Personbil", etikett: "Årsmodell" },
-  { id: "fordon_matarstallning", grupp: "Personbil", etikett: "Mätarställning" },
-  { id: "fordon_motorkod", grupp: "Personbil", etikett: "Motorkod" },
-  { id: "fordon_vaxellada", grupp: "Personbil", etikett: "Växellåda" },
-  { id: "ao_nummer", grupp: "Verkstad", etikett: "Arbetsordernr" },
-  { id: "ao_claim", grupp: "Verkstad", etikett: "Claim-/garantinr" },
-  { id: "ao_skadenummer", grupp: "Verkstad", etikett: "Skadenummer" },
-  { id: "ao_referens", grupp: "Verkstad", etikett: "Intern referens" },
-  { id: "ao_serviceradgivare", grupp: "Verkstad", etikett: "Servicerådgivare" },
-  { id: "ao_bokningsdatum", grupp: "Verkstad", etikett: "Bokningsdatum" },
-  { id: "felbeskrivning", grupp: "Ärende", etikett: "Felbeskrivning" },
+  { id: "kund_namn", grupp: "Customer", etikett: "Name" },
+  { id: "kund_foretag", grupp: "Customer", etikett: "Company" },
+  { id: "kund_telefon", grupp: "Customer", etikett: "Telephone" },
+  { id: "kund_epost", grupp: "Customer", etikett: "E-mail" },
+  { id: "fordon_regnr", grupp: "Vehicle", etikett: "Reg. no." },
+  { id: "fordon_vin", grupp: "Vehicle", etikett: "VIN" },
+  { id: "fordon_marke", grupp: "Vehicle", etikett: "Make" },
+  { id: "fordon_modell", grupp: "Vehicle", etikett: "Model" },
+  { id: "fordon_motor", grupp: "Vehicle", etikett: "Motor" },
+  { id: "fordon_arsmodell", grupp: "Vehicle", etikett: "Model year" },
+  { id: "fordon_matarstallning", grupp: "Vehicle", etikett: "Odometer" },
+  { id: "fordon_motorkod", grupp: "Vehicle", etikett: "Engine code" },
+  { id: "fordon_vaxellada", grupp: "Vehicle", etikett: "Transmission" },
+  { id: "ao_nummer", grupp: "Workshop", etikett: "Work order no." },
+  { id: "ao_claim", grupp: "Workshop", etikett: "Claim / warranty no." },
+  { id: "ao_skadenummer", grupp: "Workshop", etikett: "Claim number" },
+  { id: "ao_referens", grupp: "Workshop", etikett: "Internal reference" },
+  { id: "ao_serviceradgivare", grupp: "Workshop", etikett: "Service advisor" },
+  { id: "ao_bokningsdatum", grupp: "Workshop", etikett: "Booking date" },
+  { id: "felbeskrivning", grupp: "Case", etikett: "Fault description" },
 ];
 
 const ARBETSORDER_PROMPT =
-  "Tolka den bifogade arbetsordern från en fordonsverkstad och extrahera fälten.";
+  "Interpret the attached work order from a vehicle workshop and extract the fields.";
 
 // Rensar AI-svaret: okända fält-id filtreras, konfidens klipps till 0–1,
 // tomma värden tas bort och etikett/grupp slås upp ur katalogen.
 export function normaliseraArbetsorder(data: unknown): TolkatFalt[] {
   const rader = (data as { falt?: unknown }).falt;
-  if (!Array.isArray(rader)) throw new Error("Oväntat tolkningsformat");
+  if (!Array.isArray(rader)) throw new Error("Unexpected interpretation format");
   const resultat: TolkatFalt[] = [];
   for (const rad of rader as Partial<TolkatFalt>[]) {
     const def = ARBETSORDER_FALT.find((f) => f.id === rad?.id);
@@ -188,7 +188,7 @@ export interface InstrumentTolkning {
 export function normaliseraInstrument(data: unknown): InstrumentTolkning {
   const d = data as Partial<InstrumentTolkning>;
   if (!d || typeof d.instrumenttyp !== "string" || !Array.isArray(d.varden)) {
-    throw new Error("Oväntat avläsningsformat");
+    throw new Error("Unexpected reading format");
   }
   const varden: InstrumentVarde[] = [];
   for (const rad of d.varden as Partial<InstrumentVarde>[]) {
@@ -208,7 +208,7 @@ export async function lasAvInstrument(
 ): Promise<{ tolkning: InstrumentTolkning; modell: string } | null> {
   const resultat = await anropa(
     "instrumentavlasning",
-    "Läs av instrumentet/skärmen i den bifogade bilden.",
+    "Read the instrument or display in the attached image.",
     { bild: dataUrl },
   );
   return resultat ? { tolkning: normaliseraInstrument(resultat.svar), modell: resultat.modell } : null;
@@ -265,7 +265,7 @@ async function anropa(
     resultat = svar;
   }
   const { modell, svar } = resultat as { modell?: string; svar?: unknown };
-  if (typeof modell !== "string") throw new Error("Oväntat svar från AI-endpointen");
+  if (typeof modell !== "string") throw new Error("Unexpected response from the AI endpoint");
   return { modell, svar };
 }
 

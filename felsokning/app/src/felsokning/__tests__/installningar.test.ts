@@ -17,10 +17,10 @@ describe("organisationsinställningar", () => {
 
   it("okända värden filtreras bort och ordningen följer standardlistan", () => {
     const inst = normalisera({
-      objekttyper: ["Hydraulik", "Påhittad typ", "Personbil"],
+      objekttyper: ["Hydraulics", "Påhittad typ", "Passenger car"],
       identifieringsmetoder: ["VIN"],
     });
-    expect(inst.objekttyper).toEqual(["Personbil", "Hydraulik"]);
+    expect(inst.objekttyper).toEqual(["Passenger car", "Hydraulics"]);
     expect(inst.identifieringsmetoder).toEqual(["VIN"]);
   });
 
@@ -33,10 +33,10 @@ describe("organisationsinställningar", () => {
   it("sparade val på enheten läses tillbaka", () => {
     localStorage.setItem(
       "gf-installningar",
-      JSON.stringify({ objekttyper: ["Elsystem"], identifieringsmetoder: ["Serienummer", "Manuell inmatning"] }),
+      JSON.stringify({ objekttyper: ["Electrical system"], identifieringsmetoder: ["Serial number", "Manual entry"] }),
     );
     const inst = lastaInstallningar();
-    expect(inst.objekttyper).toEqual(["Elsystem"]);
-    expect(inst.identifieringsmetoder).toEqual(["Serienummer", "Manuell inmatning"]);
+    expect(inst.objekttyper).toEqual(["Electrical system"]);
+    expect(inst.identifieringsmetoder).toEqual(["Serial number", "Manual entry"]);
   });
 });

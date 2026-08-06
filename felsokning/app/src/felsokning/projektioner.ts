@@ -262,19 +262,19 @@ export interface TillforlitlighetsRad {
 
 export function tillforlitlighet(arende: Arende): TillforlitlighetsRad[] {
   const rader: TillforlitlighetsRad[] = [];
-  if (objekt(arende)) rader.push({ niva: "hog", text: "Objekt identifierat" });
-  if (foton(arende).length > 0) rader.push({ niva: "hog", text: "Bilder dokumenterade" });
+  if (objekt(arende)) rader.push({ niva: "hog", text: "Object identified" });
+  if (foton(arende).length > 0) rader.push({ niva: "hog", text: "Images documented" });
   if (arende.handelser.some((p) => p.handelse.typ === "matvarde")) {
-    rader.push({ niva: "hog", text: "Mätvärden registrerade" });
+    rader.push({ niva: "hog", text: "Measurements recorded" });
   }
   if (utfordaKontroller(arende).length > 0) {
-    rader.push({ niva: "hog", text: "Kontroller dokumenterade" });
+    rader.push({ niva: "hog", text: "Checks documented" });
   }
   // Felorsaken är per definition inte verifierad förrän ärendet avslutats
   // med en verifierad slutsats — MVP:t markerar den alltid som ej verifierad
   // så länge ärendet är öppet.
   if (!arAvslutat(arende)) {
-    rader.push({ niva: "medel", text: "Felorsak ännu inte verifierad" });
+    rader.push({ niva: "medel", text: "Root cause not yet verified" });
   }
   return rader;
 }
@@ -306,7 +306,7 @@ export function brief(arende: Arende, metodik: Metodik, nu?: string): Brief {
       if (!rekommenderat.includes(text)) rekommenderat.push(text);
     }
     if (rekommenderat.length === 0) {
-      rekommenderat.push("Samtliga kontroller i metodiken utförda. Verifiera slutsats eller utöka felsökningen.");
+      rekommenderat.push("Every check in the methodology is complete. Verify the conclusion or extend the diagnosis.");
     }
   }
   return {
@@ -332,25 +332,25 @@ export function overlamningstext(arende: Arende, metodik: Metodik, nu?: string):
   if (b.objekt) rader.push(`Objekt: ${b.objekt.beskrivning} (${b.objekt.identifierare})${b.objekt.kund ? ` – Kund: ${b.objekt.kund}` : ""}`);
   if (b.felbeskrivning) rader.push(`Felbeskrivning: ${b.felbeskrivning}`);
   rader.push("");
-  rader.push("Utförda kontroller:");
-  if (b.utfordaKontroller.length === 0) rader.push("  (inga ännu)");
+  rader.push("Checks performed:");
+  if (b.utfordaKontroller.length === 0) rader.push("  (none yet)");
   for (const k of b.utfordaKontroller)
     rader.push(k.undantag ? `  ! ${k.text} — underlag saknas: ${k.undantag}` : `  ✓ ${k.text}${k.resultat ? ` — ${k.resultat}` : ""}`);
   rader.push("");
-  rader.push("Observationer:");
-  if (b.observationer.length === 0) rader.push("  (inga ännu)");
+  rader.push("Observations:");
+  if (b.observationer.length === 0) rader.push("  (none yet)");
   for (const o of b.observationer) rader.push(`  • ${o}`);
   if (b.hypoteser.length > 0) {
     rader.push("");
-    rader.push("Hypoteser (ej verifierade):");
+    rader.push("Hypotheses (unverified):");
     for (const h of b.hypoteser) rader.push(`  ? ${h.text}`);
   }
   rader.push("");
-  rader.push("Ej kontrollerat:");
-  if (b.ejKontrollerat.length === 0) rader.push("  (allt i metodiken utfört)");
+  rader.push("Not checked:");
+  if (b.ejKontrollerat.length === 0) rader.push("  (everything in the methodology is complete)");
   for (const e of b.ejKontrollerat) rader.push(`  – ${e}`);
   rader.push("");
-  rader.push("Rekommenderat nästa steg:");
+  rader.push("Recommended next step:");
   b.rekommenderatNastaSteg.forEach((s, i) => rader.push(`  ${i + 1}. ${s}`));
   rader.push("");
   rader.push(`Total arbetstid: ${b.totalArbetstid}`);

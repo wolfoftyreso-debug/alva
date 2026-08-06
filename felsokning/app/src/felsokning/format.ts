@@ -26,10 +26,10 @@ export function tidDatum(iso: string): string {
 export function skalaNerFoto(fil: File, maxSida = 1024): Promise<string> {
   return new Promise((resolve, reject) => {
     const lasare = new FileReader();
-    lasare.onerror = () => reject(new Error("Kunde inte läsa filen"));
+    lasare.onerror = () => reject(new Error("Could not read the file"));
     lasare.onload = () => {
       const bild = new Image();
-      bild.onerror = () => reject(new Error("Kunde inte tolka bilden"));
+      bild.onerror = () => reject(new Error("Could not interpret the image"));
       bild.onload = () => {
         const skala = Math.min(1, maxSida / Math.max(bild.width, bild.height));
         const canvas = document.createElement("canvas");
@@ -51,12 +51,12 @@ export const MAX_VIDEO_BYTE = 2_500_000;
 export function lasVideo(fil: File): Promise<string> {
   return new Promise((los, avvisa) => {
     if (fil.size > MAX_VIDEO_BYTE) {
-      avvisa(new Error("Videon är för stor — spela in ett kort klipp (ca 10–15 sekunder)."));
+      avvisa(new Error("The video is too large — record a short clip (about 10–15 seconds)."));
       return;
     }
     const lasare = new FileReader();
     lasare.onload = () => los(lasare.result as string);
-    lasare.onerror = () => avvisa(new Error("Videon kunde inte läsas."));
+    lasare.onerror = () => avvisa(new Error("The video could not be read."));
     lasare.readAsDataURL(fil);
   });
 }

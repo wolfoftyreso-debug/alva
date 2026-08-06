@@ -18,7 +18,7 @@ function byggArende(poster: [string, Handelse][]): Arende {
 const OBJEKT: Handelse = {
   typ: "objekt_identifierat",
   objekt: {
-    typ: "Personbil",
+    typ: "Passenger car",
     identifierare: "ABC123",
     identifieringsmetod: "Registreringsnummer",
     beskrivning: "Volvo XC60 D4 2019",
@@ -192,7 +192,7 @@ describe("brief", () => {
     const b = brief(arende, VIBRATION_METODIK, "2026-08-02T08:30:00Z");
     expect(b.hypoteser).toEqual([{ text: "Obalans i höger framhjul", niva: "lag" }]);
     expect(b.observationer).not.toContain("Obalans i höger framhjul");
-    expect(b.tillforlitlighet.some((r) => r.niva === "medel" && /inte verifierad/.test(r.text))).toBe(true);
+    expect(b.tillforlitlighet.some((r) => r.niva === "medel" && /not yet verified/i.test(r.text))).toBe(true);
   });
 
   it("är regenererbar: samma logg ger alltid samma brief", () => {

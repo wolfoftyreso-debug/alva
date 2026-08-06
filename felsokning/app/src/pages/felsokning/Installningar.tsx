@@ -84,7 +84,7 @@ function Integrationer() {
   if (leverantorer.length === 0) return null;
 
   return (
-    <Panel rubrik="Märkesspecifika kopplingar">
+    <Panel rubrik="Brand-specific connectors">
       <p className="mb-2 text-[12px] text-[#707070]">
         Organisationens egna avtal hos tillverkare och dataleverantörer. Uppgifterna lagras krypterat på
         plattformen och används bara av servern — de skickas aldrig till teknikernas enheter.
@@ -114,7 +114,7 @@ function Integrationer() {
                 )}
               </div>
               <span className={`shrink-0 text-[11px] font-semibold ${finns ? "text-[#1E6B34]" : "text-[#707070]"}`}>
-                {finns ? "Konfigurerad" : "Ej konfigurerad"}
+                {finns ? "Configured" : "Not configured"}
               </span>
             </div>
 
@@ -123,7 +123,7 @@ function Integrationer() {
                 {lev.falt.map((falt) => (
                   <TextFalt
                     key={falt.nyckel}
-                    label={`${falt.etikett}${falt.hemlig ? " (lagras krypterat)" : ""}`}
+                    label={`${falt.etikett}${falt.hemlig ? " (stored encrypted)" : ""}`}
                     varde={varden[falt.nyckel] ?? ""}
                     satt={(v) => setVarden((f) => ({ ...f, [falt.nyckel]: v }))}
                     losenord={falt.hemlig}
@@ -145,7 +145,7 @@ function Integrationer() {
                         setSparat(lev.namn);
                         ladda();
                       } catch (misslyckande) {
-                        setFel(misslyckande instanceof Error ? misslyckande.message : "Kunde inte spara.");
+                        setFel(misslyckande instanceof Error ? misslyckande.message : "Could not save.");
                       }
                     }}
                   >
@@ -172,7 +172,7 @@ function Integrationer() {
                     setVarden(start);
                   }}
                 >
-                  {finns ? "Uppdatera uppgifter" : "Lägg till uppgifter"}
+                  {finns ? "Update details" : "Add details"}
                 </StorKnapp>
                 {finns && (
                   <StorKnapp
@@ -210,7 +210,7 @@ export default function Installningar() {
 
   if (!farAndra) {
     return (
-      <FelsokningSkal rubrik="Inställningar" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
+      <FelsokningSkal rubrik="Settings" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel>
           <p className="text-[14px] text-[#333333]">
             Organisationens inställningar hanteras av er systemadministratör.
@@ -223,7 +223,7 @@ export default function Installningar() {
   const spara = async () => {
     if (inst.objekttyper.length === 0 || inst.identifieringsmetoder.length === 0) {
       setStatus("fel");
-      setFelText("Minst ett alternativ måste vara valt i varje lista.");
+      setFelText("At least one option must be selected in each list.");
       return;
     }
     setStatus("sparar");
@@ -233,7 +233,7 @@ export default function Installningar() {
       setStatus("sparat");
     } catch (misslyckande) {
       setStatus("fel");
-      setFelText(misslyckande instanceof Error ? misslyckande.message : "Kunde inte spara.");
+      setFelText(misslyckande instanceof Error ? misslyckande.message : "Could not save.");
     }
   };
 
@@ -243,17 +243,17 @@ export default function Installningar() {
   };
 
   return (
-    <FelsokningSkal rubrik="Inställningar" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
+    <FelsokningSkal rubrik="Settings" tillbaka={{ till: "/felsokning", text: "Cases" }}>
       <Panel>
         <p className="text-[#333333]">
           Välj vad som visas när ett nytt ärende startas.{" "}
           {inloggad
-            ? "Valet gäller alla i organisationen."
-            : "I lokalt läge gäller valet den här enheten; inloggad systemadministratör styr hela organisationen."}
+            ? "The setting applies to everyone in the organization."
+            : "In local mode the setting applies to this device; a signed-in system administrator governs the whole organization."}
         </p>
       </Panel>
 
-      <Panel rubrik="Objekttyper">
+      <Panel rubrik="Object types">
         <Vallista
           alla={ALLA_OBJEKTTYPER}
           valda={inst.objekttyper}
@@ -261,7 +261,7 @@ export default function Installningar() {
         />
       </Panel>
 
-      <Panel rubrik="Identifieringsmetoder">
+      <Panel rubrik="Identification methods">
         <Vallista
           alla={ALLA_IDENTIFIERINGSMETODER}
           valda={inst.identifieringsmetoder}
@@ -272,9 +272,9 @@ export default function Installningar() {
       {inloggad && <Integrationer />}
 
       {status === "fel" && <p className="mb-3 font-semibold text-[#8B1A1A]">{felText}</p>}
-      {status === "sparat" && <p className="mb-3 font-semibold text-[#1E6B34]">✓ Sparat</p>}
+      {status === "sparat" && <p className="mb-3 font-semibold text-[#1E6B34]">✓ Saved</p>}
       <StorKnapp disabled={status === "sparar"} onClick={spara}>
-        {status === "sparar" ? "Sparar …" : "Spara inställningar"}
+        {status === "sparar" ? "Saving …" : "Save settings"}
       </StorKnapp>
     </FelsokningSkal>
   );

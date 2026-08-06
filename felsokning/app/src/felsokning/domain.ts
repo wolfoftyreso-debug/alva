@@ -5,9 +5,9 @@
 export type Tillforlitlighet = "hog" | "medel" | "lag";
 
 export const TILLFORLITLIGHET_LABEL: Record<Tillforlitlighet, string> = {
-  hog: "Hög",
-  medel: "Medel",
-  lag: "Låg",
+  hog: "High",
+  medel: "Medium",
+  lag: "Low",
 };
 
 export type TidKategori =
@@ -20,20 +20,20 @@ export type TidKategori =
   | "paus";
 
 export const TIDKATEGORI_LABEL: Record<TidKategori, string> = {
-  aktiv_felsokning: "Aktiv felsökning",
-  vantetid: "Väntetid",
+  aktiv_felsokning: "Active diagnosis",
+  vantetid: "Waiting time",
   administration: "Administration",
-  reservdelssokning: "Reservdelssökning",
-  provkorning: "Provkörning",
-  kundkontakt: "Kundkontakt",
-  paus: "Paus",
+  reservdelssokning: "Parts search",
+  provkorning: "Road test",
+  kundkontakt: "Customer contact",
+  paus: "Break",
 };
 
 // Kundens besked på ett lämnat åtgärdsförslag.
 export const KUNDBESLUT_LABEL: Record<"godkant" | "avbojt" | "delvis", string> = {
-  godkant: "Godkänt",
-  avbojt: "Avböjt",
-  delvis: "Delvis godkänt",
+  godkant: "Approved",
+  avbojt: "Declined",
+  delvis: "Partly approved",
 };
 
 // Kvalitetskontrollens utfall efter utförd åtgärd.
@@ -41,10 +41,10 @@ export const KVALITETSKONTROLL_LABEL: Record<
   "symptomet_borta" | "kvarstar" | "delvis" | "ej_verifierbar",
   string
 > = {
-  symptomet_borta: "Symptomet är borta",
-  kvarstar: "Symptomet kvarstår",
-  delvis: "Symptomet delvis kvar",
-  ej_verifierbar: "Kunde inte verifieras",
+  symptomet_borta: "Symptom is gone",
+  kvarstar: "Symptom remains",
+  delvis: "Symptom partly remains",
+  ej_verifierbar: "Could not be verified",
 };
 
 // Fordonsobjektet är den röda tråden genom hela ärendet: identiteten
@@ -52,9 +52,9 @@ export const KVALITETSKONTROLL_LABEL: Record<
 // och export. Ärendereferenserna (AO/claim/skadenummer) hör till objektet
 // så att de följer med i alla vyer utan att kunduppgifter läcker.
 export interface Objekt {
-  typ: string; // t.ex. "Personbil", "Industrimaskin"
+  typ: string; // t.ex. "Passenger car", "Industrial machine"
   identifierare: string; // reg.nr, VIN, serienummer …
-  identifieringsmetod: string; // "Regnr", "VIN", "Serienummer", "Manuell inmatning"
+  identifieringsmetod: string; // "Reg. no.", "VIN", "Serial number", "Manual entry"
   beskrivning: string; // t.ex. "Volvo XC60 D4 2019"
   kund?: string;
   vin?: string;
@@ -331,7 +331,7 @@ export function handelseRubrik(post: LoggPost): string {
     case "atgard_utford":
       return h.utford
         ? `Åtgärd utförd: ${h.beskrivning}${h.delar ? ` (delar: ${h.delar})` : ""}`
-        : `Ingen åtgärd utförd — ${h.motivering ?? "orsak saknas"}`;
+        : `Ingen åtgärd utförd — ${h.motivering ?? "reason missing"}`;
     case "kvalitetskontroll":
       return `Kvalitetskontroll: ${KVALITETSKONTROLL_LABEL[h.resultat]} — ${h.beskrivning}`;
     case "export_skapad":
@@ -341,6 +341,6 @@ export function handelseRubrik(post: LoggPost): string {
       return `AI: ${forsta ? `${forsta.text} ` : ""}— Nästa steg: ${h.nastaSteg}`;
     }
     case "arende_avslutat":
-      return h.signatur ? `Felsökning avslutad — signerad av ${h.signatur}` : "Felsökning avslutad";
+      return h.signatur ? `Felsökning avslutad — signerad av ${h.signatur}` : "Diagnosis closed";
   }
 }

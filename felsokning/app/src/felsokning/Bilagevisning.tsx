@@ -46,10 +46,10 @@ export function Bild({
   delningskod?: string;
 }) {
   const kalla = useKalla(bilaga, delningskod);
-  if (kalla === "laddar") return <Platshallare text="Hämtar bild …" />;
+  if (kalla === "laddar") return <Platshallare text="Retrieving image …" />;
   // Ärligt om att bilden inte gick att hämta, i stället för en trasig
   // bildikon som lämnar teknikern i tvivel om vad som dokumenterats.
-  if (!kalla) return <Platshallare text="Bilden kunde inte hämtas." />;
+  if (!kalla) return <Platshallare text="The image could not be retrieved." />;
   return <img src={kalla} alt={alt} className={className} />;
 }
 
@@ -63,7 +63,7 @@ export function Klipp({
   delningskod?: string;
 }) {
   const kalla = useKalla(bilaga, delningskod);
-  if (kalla === "laddar") return <Platshallare text="Hämtar videoklipp …" />;
-  if (!kalla) return <Platshallare text="Videoklippet kunde inte hämtas." />;
+  if (kalla === "laddar") return <Platshallare text="Retrieving video …" />;
+  if (!kalla) return <Platshallare text="The video could not be retrieved." />;
   return <video src={kalla} controls className={className} />;
 }

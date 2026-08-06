@@ -87,10 +87,10 @@ export default function NyttArende() {
       const kandidater = resultat?.tolkning.varden.map((v) => v.varde) ?? [];
       const traff = kandidater.map((v) => tolkaKod(v)).find((k): k is AvlastKod => !!k);
       if (traff) anvandKod(traff);
-      else if (!resultat) setKodFel("Avläsning av typskylt kräver inloggning — ange identiteten manuellt.");
-      else setKodFel("Ingen identifierare kunde läsas ur bilden — försök igen eller ange manuellt.");
+      else if (!resultat) setKodFel("Reading the type plate requires sign-in — enter the identity manually.");
+      else setKodFel("No identifier could be read from the image — try again or enter it manually.");
     } catch {
-      setKodFel("Avläsningen kunde inte nås — ange identiteten manuellt.");
+      setKodFel("The reader could not be reached — enter the identity manually.");
     }
     setLaserTypskylt(false);
   };
@@ -110,7 +110,7 @@ export default function NyttArende() {
       const resultat = await tolkaArbetsorder(foto);
       if (resultat) {
         if (resultat.falt.length === 0) {
-          setSkanningsFel("Inga fält kunde läsas ur bilden — ta ett tydligare foto eller fyll i manuellt.");
+          setSkanningsFel("No fields could be read from the image — take a clearer photograph or fill in manually.");
         } else {
           setTolkning({ foto, falt: resultat.falt, modell: resultat.modell });
           setSteg("granska");
@@ -120,7 +120,7 @@ export default function NyttArende() {
         setSteg("granska");
       }
     } catch {
-      setSkanningsFel("Dokumenttolkningen kunde inte nås — försök igen eller fyll i manuellt.");
+      setSkanningsFel("Document interpretation could not be reached — try again or fill in manually.");
     }
     setSkannar(false);
   };
@@ -136,10 +136,10 @@ export default function NyttArende() {
     const vin = v("fordon_vin");
     const beskr = [v("fordon_marke"), v("fordon_modell"), v("fordon_arsmodell")].filter(Boolean).join(" ");
     const objektet: Objekt = {
-      typ: inst.objekttyper.includes("Personbil") ? "Personbil" : inst.objekttyper[0],
-      identifierare: (regnr ?? vin ?? "OKÄND").toUpperCase(),
-      identifieringsmetod: regnr ? "Regnr" : vin ? "VIN" : "Manuell inmatning",
-      beskrivning: beskr || "Se arbetsorder",
+      typ: inst.objekttyper.includes("Passenger car") ? "Passenger car" : inst.objekttyper[0],
+      identifierare: (regnr ?? vin ?? "UNKNOWN").toUpperCase(),
+      identifieringsmetod: regnr ? "Reg. no." : vin ? "VIN" : "Manual entry",
+      beskrivning: beskr || "View work order",
       kund: v("kund_namn"),
       // Ärendeidentiteten: registreras en gång här, återanvänds i alla vyer.
       vin: vin?.toUpperCase(),
@@ -148,7 +148,7 @@ export default function NyttArende() {
       claim: v("ao_claim"),
       skadenummer: v("ao_skadenummer"),
     };
-    const felText = v("felbeskrivning") ?? "Se skannad arbetsorder";
+    const felText = v("felbeskrivning") ?? "View the scanned work order";
     let metodikId: string | undefined;
     if (valjMetodik(felText).id === "generisk") {
       metodikId = (await valjMetodikMedAi(felText)) ?? undefined;
@@ -174,8 +174,8 @@ export default function NyttArende() {
 
   if (steg === "start") {
     return (
-      <FelsokningSkal rubrik="Starta ärende" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
-        <Panel rubrik="Skanna arbetsorder">
+      <FelsokningSkal rubrik="Start case" tillbaka={{ till: "/felsokning", text: "Cases" }}>
+        <Panel rubrik="Scan work order">
           <p className="mb-3 text-[#333333]">
             Fota arbetsorderns framsida. Systemet läser kund-, fordons- och ärendeuppgifter automatiskt —
             du granskar bara osäkra fält och trycker Starta diagnos.
@@ -193,7 +193,7 @@ export default function NyttArende() {
             }}
           />
           {skannar ? (
-            <p className="animate-pulse py-2 text-center font-semibold text-[#00437A]">Tolkar dokumentet …</p>
+            <p className="animate-pulse py-2 text-center font-semibold text-[#00437A]">Interpreting the document …</p>
           ) : (
             <StorKnapp onClick={() => skanRef.current?.click()}><IkonKamera /> Skanna arbetsorder</StorKnapp>
           )}
@@ -212,8 +212,8 @@ export default function NyttArende() {
     return (
       <FelsokningSkal
         bred
-        rubrik="Granska tolkad arbetsorder"
-        tillbaka={{ till: "/felsokning", text: "Ärenden" }}
+        rubrik="Review the interpreted work order"
+        tillbaka={{ till: "/felsokning", text: "Cases" }}
       >
         {tolkning.demo && (
           <p className="mb-3 border border-[#E0C36A] bg-[#FFF8E1] p-2 text-[12px] font-semibold text-[#9A6700]">
@@ -236,8 +236,8 @@ export default function NyttArende() {
 
   if (steg === "identifiera") {
     return (
-      <FelsokningSkal rubrik="Identifiera objekt" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
-        <Panel rubrik="Objekttyp">
+      <FelsokningSkal rubrik="Identify object" tillbaka={{ till: "/felsokning", text: "Cases" }}>
+        <Panel rubrik="Object type">
           <div className="grid grid-cols-2 gap-2">
             {inst.objekttyper.map((t) => (
               <StorKnapp key={t} variant={t === typ ? "primar" : "sekundar"} onClick={() => setTyp(t)}>
@@ -246,7 +246,7 @@ export default function NyttArende() {
             ))}
           </div>
         </Panel>
-        <Panel rubrik="Identifieringsmetod">
+        <Panel rubrik="Identification method">
           <div className="grid grid-cols-2 gap-2">
             {inst.identifieringsmetoder.map((m) => (
               <StorKnapp key={m} variant={m === metod ? "primar" : "sekundar"} onClick={() => setMetod(m)}>
@@ -258,7 +258,7 @@ export default function NyttArende() {
             QR-kod, streckkod och typskylt kan läsas av i nästa steg — eller ange identiteten manuellt.
           </p>
         </Panel>
-        <Panel rubrik="Läs av identiteten">
+        <Panel rubrik="Read the identity">
           <input
             ref={typskyltRef}
             type="file"
@@ -289,7 +289,7 @@ export default function NyttArende() {
                 </StorKnapp>
               )}
               <StorKnapp variant="sekundar" disabled={laserTypskylt} onClick={() => typskyltRef.current?.click()}>
-                <IkonKamera /> {laserTypskylt ? "Läser av …" : "Fotografera typskylt"}
+                <IkonKamera /> {laserTypskylt ? "Reading …" : "Photograph the type plate"}
               </StorKnapp>
             </div>
           )}
@@ -301,10 +301,10 @@ export default function NyttArende() {
           )}
           {kodFel && <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">{kodFel}</p>}
         </Panel>
-        <Panel rubrik="Objektets identitet">
-          <TextFalt label={metod} varde={identifierare} satt={setIdentifierare} platshallare="T.ex. ABC123" />
-          <TextFalt label="Beskrivning (märke, modell, år)" varde={beskrivning} satt={setBeskrivning} platshallare="T.ex. Volvo XC60 D4 2019" />
-          <TextFalt label="Kund (valfritt)" varde={kund} satt={setKund} platshallare="T.ex. Anders Svensson" />
+        <Panel rubrik="Object identity">
+          <TextFalt label={metod} varde={identifierare} satt={setIdentifierare} platshallare="e.g. ABC123" />
+          <TextFalt label="Description (make, model, year)" varde={beskrivning} satt={setBeskrivning} platshallare="T.ex. Volvo XC60 D4 2019" />
+          <TextFalt label="Customer (optional)" varde={kund} satt={setKund} platshallare="e.g. Alex Meyer" />
           <StorKnapp disabled={!identifierare.trim()} onClick={() => setSteg("bekrafta")}>
             Fortsätt
           </StorKnapp>
@@ -315,7 +315,7 @@ export default function NyttArende() {
 
   if (steg === "bekrafta") {
     return (
-      <FelsokningSkal rubrik="Bekräfta objekt" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
+      <FelsokningSkal rubrik="Confirm object" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel>
           <p className="text-[12px] font-semibold uppercase tracking-widest text-[#4A5560]">{objektet.typ}</p>
           <p className="mt-1 text-[20px] font-semibold">{objektet.beskrivning}</p>
@@ -327,7 +327,7 @@ export default function NyttArende() {
           <StorKnapp variant="sekundar" onClick={() => setSteg("identifiera")}>
             Ändra
           </StorKnapp>
-          <StorKnapp onClick={() => setSteg("felbeskrivning")}>Rätt objekt — fortsätt</StorKnapp>
+          <StorKnapp onClick={() => setSteg("felbeskrivning")}>Correct object — continue</StorKnapp>
         </div>
       </FelsokningSkal>
     );
@@ -336,13 +336,13 @@ export default function NyttArende() {
   const metodik = fel.trim() ? valjMetodik(fel) : undefined;
 
   return (
-    <FelsokningSkal rubrik="Beskriv felet" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
+    <FelsokningSkal rubrik="Describe the fault" tillbaka={{ till: "/felsokning", text: "Cases" }}>
       <Panel rubrik={`${objektet.beskrivning} · ${objektet.identifierare}`}>
         <TextFalt
-          label="Kundens/användarens felbeskrivning"
+          label="Customer's or user's fault description"
           varde={fel}
           satt={setFel}
-          platshallare="T.ex. Bilen vibrerar runt 88 km/h"
+          platshallare="e.g. The car vibrates at around 88 km/h"
           flerRad
           rost
         />
@@ -365,7 +365,7 @@ export default function NyttArende() {
             navigate(`/felsokning/arende/${id}`);
           }}
         >
-          {startar ? "Startar …" : "Starta arbetslogg"}
+          {startar ? "Starting …" : "Start work log"}
         </StorKnapp>
       </Panel>
     </FelsokningSkal>
@@ -396,16 +396,16 @@ function GranskaTolkning({
 
   const obekraftade = rader.filter((r) => !r.bekraftad);
   const vald = rader.find((r) => r.id === markerad);
-  const grupper: ArbetsorderGrupp[] = ["Kund", "Personbil", "Verkstad", "Ärende"];
+  const grupper: ArbetsorderGrupp[] = ["Customer", "Vehicle", "Workshop", "Case"];
 
   const uppdatera = (id: string, andring: Partial<(typeof rader)[number]>) =>
     setRader((r) => r.map((rad) => (rad.id === id ? { ...rad, ...andring } : rad)));
 
   return (
     <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-3">
-      <Panel rubrik="Skannad arbetsorder">
+      <Panel rubrik="Scanned work order">
         <div className="relative">
-          <img src={foto} alt="Skannad arbetsorder" className="w-full border border-[#C6C6C6]" />
+          <img src={foto} alt="Scanned work order" className="w-full border border-[#C6C6C6]" />
           {vald?.omrade && (
             <div
               className="pointer-events-none absolute border-2 border-[#00437A] bg-[#00437A]/15"
@@ -421,7 +421,7 @@ function GranskaTolkning({
         <p className="mt-1 text-[11px] text-[#707070]">
           {vald?.omrade
             ? `Markerat: ${vald.etikett} (ungefärlig position)`
-            : "Klicka på ett fält för att se var i dokumentet värdet hittades."}
+            : "Select a field to see where in the document the value was found."}
         </p>
       </Panel>
 
@@ -488,7 +488,7 @@ function GranskaTolkning({
             Skanna om
           </StorKnapp>
           <StorKnapp disabled={obekraftade.length > 0 || startar} onClick={() => vidStart(rader)}>
-            {startar ? "Startar …" : "Starta diagnos"}
+            {startar ? "Starting …" : "Start diagnosis"}
           </StorKnapp>
         </div>
       </div>

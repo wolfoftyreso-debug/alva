@@ -168,12 +168,12 @@ export interface NastaSteg {
  */
 export const SPARRFRAGOR: Record<string, { orsak: string; atgard: string }> = {
   "hogvolt/sakerhet/behorighet": {
-    orsak: "Arbete på högvoltsystem kräver dokumenterad behörighet.",
-    atgard: "Lämna över ärendet till en behörig tekniker. Arbetet får inte påbörjas utan behörighet.",
+    orsak: "Work on high-voltage systems requires documented authorisation.",
+    atgard: "Hand the case to an authorised technician. Work must not begin without authorisation.",
   },
   "hogvolt/sakerhet/avstangt": {
-    orsak: "Fordonet är inte spänningslöst enligt tillverkarens rutin.",
-    atgard: "Gör fordonet spänningslöst enligt tillverkarens anvisning innan något ingrepp påbörjas.",
+    orsak: "The vehicle is not de-energised per the manufacturer's procedure.",
+    atgard: "De-energise the vehicle per the manufacturer's instruction before any work begins.",
   },
 };
 
@@ -197,7 +197,7 @@ export function nastaSteg(arende: Arende, metodik: Metodik): NastaSteg {
       // Säkerhetsspärr: ett nekande svar stoppar metodiken här i stället
       // för att räknas som besvarat och släppa fram nästa steg.
       const sparr = SPARRFRAGOR[`${metodik.id}/${steg.id}/${fraga.id}`];
-      if (sparr && svar.get(`${steg.id}/${fraga.id}`) !== "Ja") {
+      if (sparr && svar.get(`${steg.id}/${fraga.id}`) !== "Yes") {
         return { steg, fraga, klart: false, sparr };
       }
     }

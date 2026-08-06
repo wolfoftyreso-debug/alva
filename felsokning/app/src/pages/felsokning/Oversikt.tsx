@@ -46,7 +46,7 @@ function Omfordela({ rad, vidKlar }: { rad: OversiktsRad; vidKlar: () => void })
   }
   return (
     <div className="col-span-2 border border-[#C6C6C6] bg-white p-2">
-      <p className="mb-2 text-[12px] font-semibold uppercase text-[#4A5560]">Ny ansvarig tekniker</p>
+      <p className="mb-2 text-[12px] font-semibold uppercase text-[#4A5560]">New responsible technician</p>
       <div className="grid grid-cols-2 gap-2">
         {personer.map((person) => (
           <button
@@ -92,14 +92,14 @@ export default function Oversikt() {
     if (!behorig) return;
     hamtaOversikt()
       .then(setRader)
-      .catch(() => setFel("Kunde inte hämta översikten — kontrollera inloggningen."));
+      .catch(() => setFel("Could not retrieve the overview — check the sign-in."));
     // Flottdata: återkommande felorsaker över organisationen.
     hamtaFelorsaksstatistik().then(setFelorsaker).catch(() => setFelorsaker([]));
   }, [behorig]);
 
   if (!behorig) {
     return (
-      <FelsokningSkal rubrik="Organisationsöversikt" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
+      <FelsokningSkal rubrik="Organization overview" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel>
           <p className="text-[14px] text-[#333333]">
             Översikten kräver arbetsledar- eller administratörsbehörighet på plattformen.
@@ -134,7 +134,7 @@ export default function Oversikt() {
       }
       navigate(`/felsokning/arende/${rad.id}`);
     } catch {
-      setFel("Kunde inte hämta ärendet.");
+      setFel("Could not retrieve the case.");
     }
   };
 
@@ -151,28 +151,28 @@ export default function Oversikt() {
 
   return (
     <FelsokningSkal
-      rubrik="Organisationsöversikt"
-      tillbaka={{ till: "/felsokning", text: "Ärenden" }}
+      rubrik="Organization overview"
+      tillbaka={{ till: "/felsokning", text: "Cases" }}
       hoger={<span className="text-[12px] font-semibold text-[#A9C3DE]">{konto?.organisation}</span>}
     >
       {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
-      {!rader && !fel && <p className="animate-pulse text-[14px] text-[#4A5560]">Hämtar …</p>}
+      {!rader && !fel && <p className="animate-pulse text-[14px] text-[#4A5560]">Retrieving …</p>}
 
       {rader && (
         <>
-          <Panel rubrik="Statistik">
+          <Panel rubrik="Statistics">
             <div className="grid grid-cols-3 gap-3 text-center">
               <div>
                 <p className="text-[20px] font-semibold">{rader.length}</p>
-                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">Totalt</p>
+                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">Total</p>
               </div>
               <div>
                 <p className="text-[20px] font-semibold text-[#00437A]">{pagaende.length}</p>
-                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">Pågående</p>
+                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">In progress</p>
               </div>
               <div>
                 <p className="text-[20px] font-semibold">{avslutade.length}</p>
-                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">Avslutade</p>
+                <p className="text-[12px] font-semibold uppercase text-[#4A5560]">Closed</p>
               </div>
             </div>
             {avslutade.length > 0 && (
@@ -183,7 +183,7 @@ export default function Oversikt() {
           </Panel>
 
           {felorsaker.length > 0 && (
-            <Panel rubrik="Felorsaksstatistik — återkommande fel i organisationen">
+            <Panel rubrik="Root cause statistics — recurring faults in the organization">
               {felorsaker.map((rad) => (
                 <div key={rad.orsak} className="flex items-center gap-2 py-0.5 text-[13px]">
                   <span className="w-52 shrink-0 text-[#333333]">{rad.orsak}</span>
@@ -200,7 +200,7 @@ export default function Oversikt() {
             </Panel>
           )}
 
-          {rader.length === 0 && <p className="text-center text-[14px] text-[#4A5560]">Inga ärenden i organisationen ännu.</p>}
+          {rader.length === 0 && <p className="text-center text-[14px] text-[#4A5560]">No cases in the organization yet.</p>}
 
           {rader.map((rad) => (
             <div key={rad.id} className="mb-3 border border-[#C6C6C6] bg-[#F7F7F7] p-4">
@@ -213,10 +213,10 @@ export default function Oversikt() {
                     rad.avslutat ? "bg-[#8A94A0] text-white" : "bg-[#00437A] text-white"
                   }`}
                 >
-                  {rad.avslutat ? "Avslutat" : "Pågående"}
+                  {rad.avslutat ? "Closed" : "In progress"}
                 </span>
               </div>
-              <p className="mt-1 text-[15px] font-semibold">{rad.objekt ?? "Okänt objekt"}</p>
+              <p className="mt-1 text-[15px] font-semibold">{rad.objekt ?? "Unknown object"}</p>
               {rad.felbeskrivning && <p className="text-[14px] text-[#333333]">”{rad.felbeskrivning}”</p>}
               <p className="mt-1 text-[12px] text-[#707070]">
                 Ansvarig: <span className="font-semibold text-[#333333]">{rad.ansvarig ?? rad.skapare ?? "—"}</span>

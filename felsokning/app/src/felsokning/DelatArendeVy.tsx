@@ -44,7 +44,7 @@ function BeslutsKnappar({
         <>
           <label className="mb-2 block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">
-              {val === "avbojt" ? "Kort motivering (valfritt)" : "Kommentar (valfritt)"}
+              {val === "avbojt" ? "Short rationale (optional)" : "Comment (optional)"}
             </span>
             <input
               value={kommentar}
@@ -64,7 +64,7 @@ function BeslutsKnappar({
               setSkickar(false);
             }}
           >
-            {skickar ? "Skickar …" : "Skicka besked"}
+            {skickar ? "Sending …" : "Send decision"}
           </StorKnapp>
           <p className="mt-1 text-[11px] text-[#707070]">
             Beskedet registreras i ärendet och kan inte ändras här — kontakta verkstaden om du ändrar dig.
@@ -78,14 +78,14 @@ function BeslutsKnappar({
 function IdentitetsPanel({ arende, avslutat }: { arende: Arende; avslutat: boolean }) {
   const idn = arendeidentitet(arende);
   const falt: [string, string | undefined][] = [
-    ["Arbetsorder", idn.arbetsorder],
+    ["Work order", idn.arbetsorder],
     ["Claim", idn.claim],
-    ["Skadenr", idn.skadenummer],
-    ["Regnr", idn.identifierare],
+    ["Claim no.", idn.skadenummer],
+    ["Reg. no.", idn.identifierare],
     ["VIN", idn.vin],
-    ["Miltal", idn.miltal],
-    ["Ansvarig tekniker", idn.ansvarig],
-    ["Status", avslutat ? "Avslutat" : "Felsökning pågår"],
+    ["Mileage", idn.miltal],
+    ["Responsible technician", idn.ansvarig],
+    ["Status", avslutat ? "Closed" : "Diagnosis in progress"],
   ];
   return (
     <div className="sticky top-11 z-10 mb-3 border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.1)] print:static">
@@ -142,14 +142,14 @@ export function DelatArendeVy({
 
   return (
     <FelsokningSkal
-      rubrik={b.objekt?.beskrivning ?? "Ärende"}
+      rubrik={b.objekt?.beskrivning ?? "Case"}
       hoger={
         <span
           className={`px-3 py-1 text-[12px] font-semibold uppercase ${
             avslutat ? "bg-[#3E5A78] text-white" : "bg-[#1E6B34] text-white"
           }`}
         >
-          {avslutat ? "Avslutat" : "Felsökning pågår"}
+          {avslutat ? "Closed" : "Diagnosis in progress"}
         </span>
       }
     >
@@ -163,7 +163,7 @@ export function DelatArendeVy({
           flottansvarig. De ska få bilden på fem sekunder och sedan kunna
           gå djupare — inte tvärtom. Texten härleds ur det nivåfiltrerade
           underlaget, så den kan aldrig avslöja något som nivån döljer. */}
-      <Panel rubrik="Sammanfattning">
+      <Panel rubrik="Summary">
         <p className="text-[15px] leading-[24px] text-[#1B1E22]">{sammanfatta(arende).text}</p>
       </Panel>
 
@@ -174,13 +174,13 @@ export function DelatArendeVy({
         if (!post || post.handelse.typ !== "slutsats") return null;
         const h = post.handelse;
         const rader: [string, string][] = [
-          [h.orsakFastställd === false ? "Skäl till att orsaken inte fastställts" : "Motivering", h.motivering],
-          ["Uteslutna alternativ", h.uteslutet],
-          ...(h.atgardsval ? ([["Val av åtgärd", h.atgardsval]] as [string, string][]) : []),
-          ["Kvarstående osäkerhet", h.kvarstaende],
+          [h.orsakFastställd === false ? "Reason the cause could not be established" : "Rationale", h.motivering],
+          ["Dismissed alternatives", h.uteslutet],
+          ...(h.atgardsval ? ([["Choice of action", h.atgardsval]] as [string, string][]) : []),
+          ["Remaining uncertainty", h.kvarstaende],
         ];
         return (
-          <Panel rubrik="Slutsats och motivering">
+          <Panel rubrik="Closing statement and rationale">
             <dl className="text-[14px] leading-[22px]">
               {rader.map(([etikett, text]) => (
                 <div key={etikett} className="border-t border-[#D7DCE2] py-2 first:border-t-0">
@@ -198,13 +198,13 @@ export function DelatArendeVy({
       </p>
 
       {b.felbeskrivning && (
-        <Panel rubrik="Kundens felbeskrivning">
+        <Panel rubrik="Customer's fault description">
           <p className="text-[14px]">”{b.felbeskrivning}”</p>
         </Panel>
       )}
 
       {forslag.length > 0 && (
-        <Panel rubrik="Åtgärdsförslag">
+        <Panel rubrik="Proposed action">
           {forslag.map((p) => {
             const h = p.handelse;
             if (h.typ !== "atgardsforslag") return null;
@@ -232,7 +232,7 @@ export function DelatArendeVy({
         </Panel>
       )}
 
-      <Panel rubrik="Aktuell status">
+      <Panel rubrik="Current status">
         {b.utfordaKontroller.map((k, i) => (
           <p key={`u${i}`} className="py-0.5 text-[14px]"><span className="text-[#1E6B34]"><IkonCheck /></span> {k.text}</p>
         ))}
@@ -253,7 +253,7 @@ export function DelatArendeVy({
         </Panel>
       )}
       {bilder.length > 0 && (
-        <Panel rubrik="Bilder">
+        <Panel rubrik="Images">
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
@@ -266,7 +266,7 @@ export function DelatArendeVy({
       )}
 
       {matvarden.length > 0 && (
-        <Panel rubrik="Mätvärden">
+        <Panel rubrik="Measurements">
           <table className="w-full text-[14px]">
             <tbody>
               {matvarden.map((p) => {
@@ -287,7 +287,7 @@ export function DelatArendeVy({
         </Panel>
       )}
 
-      <Panel rubrik="Tidslinje">
+      <Panel rubrik="Timeline">
         {kundposter.map((post) => (
           <p key={post.id} className="py-0.5 text-[13px]">
             <span className="font-mono font-semibold text-[#00437A]">{tidKlockslag(post.tidpunkt)}</span>{" "}
@@ -297,12 +297,12 @@ export function DelatArendeVy({
       </Panel>
 
       {!avslutat && pagaende && (
-        <Panel rubrik="Rekommenderat nästa steg">
+        <Panel rubrik="Recommended next step">
           <p className="text-[14px]">{pagaende}</p>
         </Panel>
       )}
 
-      <Panel rubrik="Arbetstid">
+      <Panel rubrik="Labour time">
         <p className="text-[17px] font-semibold">{b.totalArbetstid}</p>
         {tidsfordelningsRader(arende, nu).map((r) => (
           <p key={r.label} className="text-[#333333]">

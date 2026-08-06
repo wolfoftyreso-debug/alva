@@ -16,10 +16,10 @@ interface DelatSvar {
 }
 
 const NIVA_NOTIS: Record<string, string> = {
-  kund: "Skrivskyddad livevy från verkstaden — sidan uppdateras automatiskt när ny information registreras.",
+  kund: "Read-only live view from the workshop — the page updates automatically as new information is recorded.",
   partner:
-    "Skrivskyddad livevy (partnernivå) — inkluderar tekniska hypoteser, tydligt märkta som ej verifierade. Uppdateras automatiskt.",
-  intern: "Skrivskyddad livevy (intern nivå) — full insyn i ärendet. Uppdateras automatiskt.",
+    "Read-only live view (partner level) — includes technical hypotheses, clearly marked as unverified. Updates automatically.",
+  intern: "Read-only live view (internal level) — full visibility of the case. Updates automatically.",
 };
 
 async function hamtaDelat(kod: string): Promise<{ arende: Arende; niva: string } | undefined> {
@@ -87,12 +87,12 @@ export default function PublikDelning() {
 
   if (status !== "klar" || !arende) {
     return (
-      <FelsokningSkal rubrik="Delat ärende">
+      <FelsokningSkal rubrik="Shared case">
         <Panel>
           <p className="text-[14px] text-[#333333]">
             {status === "laddar"
-              ? "Hämtar ärendet …"
-              : "Ärendet är inte tillgängligt. Kontrollera länken med verkstaden — delningen kan ha stängts av."}
+              ? "Retrieving the case …"
+              : "The case is not available. Check the link with the workshop — the share may have been revoked."}
           </p>
         </Panel>
       </FelsokningSkal>
@@ -105,7 +105,7 @@ export default function PublikDelning() {
     niva === "kund" && kod
       ? async (beslut: "godkant" | "avbojt", kommentar: string) => {
           const { plattformAktiv, PLATTFORM_URL } = await import("@/felsokning/plattform");
-          if (!plattformAktiv()) return "Beskedet kan inte lämnas här — kontakta verkstaden.";
+          if (!plattformAktiv()) return "The decision cannot be given here — contact the workshop.";
           try {
             const res = await fetch(`${PLATTFORM_URL}/api/delad/${kod}/beslut`, {
               method: "POST",
@@ -114,14 +114,14 @@ export default function PublikDelning() {
             });
             if (!res.ok) {
               const data = (await res.json().catch(() => ({}))) as { error?: string };
-              return data.error ?? "Beskedet kunde inte registreras — försök igen.";
+              return data.error ?? "The decision could not be recorded — try again.";
             }
             // Hämta om direkt så kvittensen syns.
             const uppdaterat = await hamtaDelat(kod);
             if (uppdaterat) setArende(uppdaterat.arende);
             return null;
           } catch {
-            return "Beskedet kunde inte skickas — kontrollera anslutningen.";
+            return "The decision could not be sent — check the connection.";
           }
         }
       : undefined;

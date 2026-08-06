@@ -7,21 +7,21 @@
 import { plattformAktiv, plattformFetch, plattformToken } from "./plattform";
 
 export const ALLA_OBJEKTTYPER = [
-  "Personbil",
-  "Lastbil/Buss",
-  "Entreprenadmaskin",
-  "Industrimaskin",
-  "Elsystem",
-  "Hydraulik",
-  "Övrigt",
+  "Passenger car",
+  "Truck / bus",
+  "Construction machine",
+  "Industrial machine",
+  "Electrical system",
+  "Hydraulics",
+  "Other",
 ];
 
 export const ALLA_IDENTIFIERINGSMETODER = [
-  "Regnr",
+  "Reg. no.",
   "VIN",
-  "Serienummer",
-  "Maskinnummer",
-  "Manuell inmatning",
+  "Serial number",
+  "Machine number",
+  "Manual entry",
 ];
 
 export interface Installningar {

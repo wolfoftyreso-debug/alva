@@ -80,17 +80,17 @@ import { bilageFalt } from "@/felsokning/bilagor";
 
 const FLIKAR = [
   { id: "guide", label: "Guide" },
-  { id: "logg", label: "Logg" },
+  { id: "logg", label: "Log" },
   { id: "brief", label: "Brief" },
-  { id: "rapport", label: "Rapport" },
+  { id: "rapport", label: "Report" },
 ] as const;
 
 type Flik = (typeof FLIKAR)[number]["id"];
 
 const SYNKSTATUS_LABEL: Record<SynkStatus, string> = {
-  lokal: "Lokalt läge",
-  synkar: "Synkar …",
-  synkad: "Synkad",
+  lokal: "Local mode",
+  synkar: "Synchronizing …",
+  synkad: "Synchronized",
   offline: "Offline",
 };
 
@@ -144,8 +144,8 @@ export default function ArendeSida() {
 
   if (!arende || !id) {
     return (
-      <FelsokningSkal rubrik="Ärendet hittades inte" tillbaka={{ till: "/felsokning", text: "Ärenden" }}>
-        <p className="text-[14px] text-[#333333]">Ärendet finns inte på den här enheten.</p>
+      <FelsokningSkal rubrik="Case not found" tillbaka={{ till: "/felsokning", text: "Cases" }}>
+        <p className="text-[14px] text-[#333333]">The case does not exist on this device.</p>
       </FelsokningSkal>
     );
   }
@@ -172,12 +172,12 @@ export default function ArendeSida() {
     <FelsokningSkal
       bred
       rubrik={`#${arende.nummer} ${o?.beskrivning ?? ""}`}
-      tillbaka={{ till: "/felsokning", text: "Ärenden" }}
+      tillbaka={{ till: "/felsokning", text: "Cases" }}
       hoger={
         <div className="text-right">
           <p className="text-[13px] font-semibold text-white">{total}</p>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-[#A9C3DE]">
-            {avslutat ? "Avslutat" : "Pågår"} · {SYNKSTATUS_LABEL[synkStatus]}
+            {avslutat ? "Closed" : "In progress"} · {SYNKSTATUS_LABEL[synkStatus]}
           </p>
         </div>
       }
@@ -254,16 +254,16 @@ function IdentitetsRad({ arende, skicka }: { arende: Arende; skicka: (h: Handels
     ) : null;
   return (
     <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 border border-[#C6C6C6] bg-[#F7F7F7] px-3 py-1.5 text-[12px] print:hidden">
-      {del("AO", idn.arbetsorder)}
+      {del("WO", idn.arbetsorder)}
       {del("Claim", idn.claim)}
-      {del("Skadenr", idn.skadenummer)}
+      {del("Claim no.", idn.skadenummer)}
       {del("", idn.beskrivning)}
-      {del("Regnr", idn.identifierare)}
+      {del("Reg. no.", idn.identifierare)}
       {del("VIN", idn.vin)}
-      {del("Miltal", idn.miltal)}
-      {del("Ansvarig", idn.ansvarig)}
+      {del("Mileage", idn.miltal)}
+      {del("Responsible", idn.ansvarig)}
       <label className="ml-auto flex items-center gap-1">
-        <span className="text-[#707070]">Ärendetyp</span>
+        <span className="text-[#707070]">Case type</span>
         <select
           value={typ}
           disabled={idn.avslutat}
@@ -326,7 +326,7 @@ function MatarstallningSteg({ lage, skicka }: { lage: "ingaende" | "utgaende"; s
           <IkonKamera /> Fotografera instrumentpanelen
         </StorKnapp>
       )}
-      {laser && <p className="animate-pulse py-1 text-center text-[12px] font-semibold text-[#00437A]">Systemet läser av mätarställningen …</p>}
+      {laser && <p className="animate-pulse py-1 text-center text-[12px] font-semibold text-[#00437A]">Reading the odometer …</p>}
       {foto && !laser && (
         <div className="mt-2">
           {demo && (
@@ -334,8 +334,8 @@ function MatarstallningSteg({ lage, skicka }: { lage: "ingaende" | "utgaende"; s
               Demo-avläsning — bildtolkningen kräver inloggning. Kontrollera värdet.
             </p>
           )}
-          <img src={foto} alt="Instrumentpanel" className="mb-2 max-h-40 border border-[#C6C6C6]" />
-          <TextFalt label={`Mätarställning (${lage === "ingaende" ? "ingående" : "utgående"})`} varde={varde} satt={setVarde} platshallare="T.ex. 84 320 km" />
+          <img src={foto} alt="Instrument panel" className="mb-2 max-h-40 border border-[#C6C6C6]" />
+          <TextFalt label={`Mätarställning (${lage === "ingaende" ? "incoming" : "outgoing"})`} varde={varde} satt={setVarde} platshallare="e.g. 84,320 km" />
           <StorKnapp
             disabled={!varde.trim()}
             onClick={() => {
@@ -399,7 +399,7 @@ function TidigareArenden({ arende, skicka }: { arende: Arende; skicka: (h: Hande
         <div key={rad.id} className="border-b border-[#EBEBEB] py-1.5 text-[12px] last:border-0">
           <p>
             <span className="font-semibold">Ärende #{rad.nummer}</span> · {tidDatum(rad.skapad)} ·{" "}
-            {rad.avslutat ? "avslutat" : "pågående"}
+            {rad.avslutat ? "closed" : "in progress"}
             {rad.felbeskrivning && <span className="text-[#4A5560]"> — ”{rad.felbeskrivning}”</span>}
           </p>
           {rad.felorsaker.map((f, i) => (
@@ -437,7 +437,7 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
   const harTidiga = arende.handelser.some((p) => p.handelse.typ === "observation" || p.handelse.typ === "foto");
 
   return (
-    <Panel rubrik="Pre-diagnostik — innan felsökningen börjar">
+    <Panel rubrik="Pre-diagnostics — before the work begins">
       {rader.map((r) => (
         <p key={r.id} className="py-0.5 text-[13px]">
           <span className={r.klar ? "text-[#1E6B34]" : "text-[#8B1A1A]"}>{r.klar ? <IkonCheck /> : "☐"}</span> {r.rubrik}
@@ -456,16 +456,16 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
               Ja — kontrollerad
             </StorKnapp>
             <StorKnapp variant={historikVal === "nej" ? "fara" : "sekundar"} onClick={() => setHistorikVal("nej")}>
-              Nej
+              No
             </StorKnapp>
           </div>
           {historikVal && (
             <>
               <TextFalt
-                label={historikVal === "ja" ? "Relevanta tidigare arbeten (valfritt — orsakskedja)" : "Orsak till att historiken inte kontrollerats (obligatoriskt)"}
+                label={historikVal === "ja" ? "Relevant previous work (optional — causal chain)" : "Reason the history was not checked (required)"}
                 varde={historikText}
                 satt={setHistorikText}
-                platshallare={historikVal === "ja" ? "T.ex. Vattenpump bytt för 8 mån sedan — misstänkt läckage samma område" : ""}
+                platshallare={historikVal === "ja" ? "e.g. Water pump replaced 8 months ago — suspected leak in the same area" : ""}
                 rost
               />
               <StorKnapp
@@ -476,7 +476,7 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
                   setHistorikText("");
                 }}
               >
-                Dokumentera
+                Document
               </StorKnapp>
             </>
           )}
@@ -541,26 +541,26 @@ function ReproduceringPanel({ skicka }: { skicka: (h: Handelse) => void }) {
   const [text, setText] = useState("");
   const etikett =
     status === "ja"
-      ? "Hur reproducerades felet? (förhållanden, hastighet, temperatur, belastning …)"
+      ? "How was the fault reproduced? (conditions, speed, temperature, load …)"
       : status === "delvis"
-        ? "Vad kunde respektive kunde inte reproduceras?"
-        : "Motivering (obligatorisk) — varför kunde felet inte reproduceras?";
+        ? "What could and could not be reproduced?"
+        : "Rationale (required) — why could the fault not be reproduced?";
   return (
-    <Panel rubrik="Symptomverifiering — reproducering">
+    <Panel rubrik="Symptom verification — reproduction">
       <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4A5560]">
         Har kundens fel kunnat reproduceras?
       </p>
       <div className="mb-2 grid grid-cols-3 gap-2">
         {(["ja", "delvis", "nej"] as const).map((val) => (
           <StorKnapp key={val} variant={status === val ? "primar" : "sekundar"} onClick={() => setStatus(val)}>
-            {val === "ja" ? "Ja" : val === "delvis" ? "Delvis" : "Nej"}
+            {val === "ja" ? "Yes" : val === "delvis" ? "Partly" : "No"}
           </StorKnapp>
         ))}
       </div>
       {status && (
         <>
           <TextFalt label={etikett} varde={text} satt={setText} flerRad rost
-            platshallare={status === "ja" ? "T.ex. Reproducerad tre gånger vid 92–108 km/h på plan väg, varm motor" : ""} />
+            platshallare={status === "ja" ? "e.g. Reproduced three times at 92–108 km/h on level road, engine warm" : ""} />
           <StorKnapp
             disabled={!text.trim()}
             onClick={() => {
@@ -599,15 +599,15 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
   const spara = () => {
     const avvikelseFel = granskaAvvikelse(avvikelse);
     if (avvikelseFel) return setFel(avvikelseFel);
-    if (orsaker.length === 0) return setFel("Välj minst en orsakskategori.");
-    if (underlag.length === 0) return setFel("Koppla minst en evidenskälla till bedömningen.");
+    if (orsaker.length === 0) return setFel("Select at least one cause category.");
+    if (underlag.length === 0) return setFel("Link at least one evidence source to the assessment.");
     const saknat = underlag.find((k) => !underlagFinns(arende, k));
     if (saknat) return setFel(`Underlaget ”${saknat}” finns inte i ärendets logg — dokumentera det först eller välj en annan källa.`);
-    if (orsaker.includes("Okänd orsak") && !motivering.trim())
-      return setFel("Okänd orsak kräver en motivering till varför orsaken inte kunnat fastställas.");
+    if (orsaker.includes("Unknown cause") && !motivering.trim())
+      return setFel("An unknown cause requires a reason why the cause could not be established.");
     if (sakerhet !== "hog" && !ytterligare.trim())
-      return setFel("Vid medel/låg säkerhet: ange vilka ytterligare kontroller som skulle stärka bedömningen.");
-    if (!atgard.trim()) return setFel("Ange rekommenderad åtgärd.");
+      return setFel("At medium or low confidence: state which further checks would strengthen the assessment.");
+    if (!atgard.trim()) return setFel("State the recommended action.");
     skicka({
       typ: "felorsak",
       avvikelse: avvikelse.trim(),
@@ -630,7 +630,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
   };
 
   return (
-    <Panel rubrik="Felorsaksanalys — obligatorisk före avslut">
+    <Panel rubrik="Root cause analysis — required before closing">
       {dokumenterade.map((p) => {
         const h = p.handelse;
         if (h.typ !== "felorsak") return null;
@@ -651,14 +651,14 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
       ) : (
         <div>
           <TextFalt
-            label="1. Konstaterad avvikelse (inte bara komponenten)"
+            label="1. Established deviation (not just the component)"
             varde={avvikelse}
             satt={setAvvikelse}
             flerRad
             rost
-            platshallare="T.ex. Startmotorn aktiverar inte trots korrekt matningsspänning och god jordförbindelse."
+            platshallare="e.g. The starter motor does not engage despite correct supply voltage and a good earth connection."
           />
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">2. Mest sannolik orsak (en eller flera)</p>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">2. Most probable cause (one or more)</p>
           <div className="mb-3 grid grid-cols-2 gap-1 sm:grid-cols-3">
             {aktivtRegelpaket().orsakskategorier.map((o) => (
               <button
@@ -672,7 +672,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
               </button>
             ))}
           </div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">3. Underlag som stöder bedömningen</p>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">3. Evidence supporting the assessment</p>
           <div className="mb-3 grid grid-cols-2 gap-1 sm:grid-cols-4">
             {aktivtRegelpaket().underlagskallor.map((k) => (
               <button
@@ -686,7 +686,7 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
               </button>
             ))}
           </div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">4. Säkerhet i bedömningen</p>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">4. Confidence in the assessment</p>
           <div className="mb-3 grid grid-cols-3 gap-2">
             {(["hog", "medel", "lag"] as const).map((n) => (
               <button
@@ -702,28 +702,28 @@ function FelorsaksPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handel
           </div>
           {sakerhet !== "hog" && (
             <TextFalt
-              label="Vilka ytterligare kontroller skulle stärka bedömningen?"
+              label="Which further checks would strengthen the assessment?"
               varde={ytterligare}
               satt={setYtterligare}
               rost
             />
           )}
-          {orsaker.includes("Okänd orsak") && (
+          {orsaker.includes("Unknown cause") && (
             <TextFalt
-              label="Motivering — varför kunde orsaken inte fastställas?"
+              label="Rationale — why could the cause not be established?"
               varde={motivering}
               satt={setMotivering}
               flerRad
               rost
             />
           )}
-          <TextFalt label="Rekommenderad åtgärd" varde={atgard} satt={setAtgard} rost platshallare="T.ex. Balansera framhjulen och genomför ny provkörning." />
+          <TextFalt label="Recommended action" varde={atgard} satt={setAtgard} rost platshallare="e.g. Balance the front wheels and perform a new road test." />
           {fel && <p className="mb-2 text-[12px] font-semibold text-[#8B1A1A]">{fel}</p>}
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setOppen(false)}>
               Avbryt
             </StorKnapp>
-            <StorKnapp onClick={spara}>Spara felorsak</StorKnapp>
+            <StorKnapp onClick={spara}>Save root cause</StorKnapp>
           </div>
         </div>
       )}
@@ -762,7 +762,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
   const [kkText, setKkText] = useState("");
 
   return (
-    <Panel rubrik="Åtgärd och kvalitetskontroll">
+    <Panel rubrik="Action and quality check">
       {poster.map((p) => {
         const h = p.handelse;
         if (h.typ !== "atgard_utford") return null;
@@ -770,7 +770,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
           <p key={p.id} className="border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
             {h.utford ? (
               <>
-                <span className="font-semibold">Utförd åtgärd:</span> {h.beskrivning}
+                <span className="font-semibold">Action performed:</span> {h.beskrivning}
                 {h.delar && <span className="text-[#4A5560]"> · Delar: {h.delar}</span>}
               </>
             ) : (
@@ -792,7 +792,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
         if (h.typ !== "atgardsforslag") return null;
         return (
           <p key={p.id} className="border-b border-[#EBEBEB] py-1 text-[13px] last:border-0">
-            <span className="font-semibold">Åtgärdsförslag till kund:</span> {h.beskrivning}
+            <span className="font-semibold">Proposed action for the customer:</span> {h.beskrivning}
             {h.uppskattadKostnad && <span className="text-[#4A5560]"> · Uppskattad kostnad: {h.uppskattadKostnad}</span>}
           </p>
         );
@@ -827,14 +827,14 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
       {forslagsLage && (
         <div className="mb-3 border border-[#C6C6C6] bg-white p-2">
           <TextFalt
-            label="Föreslagen åtgärd (visas för kunden i delningsvyn)"
+            label="Proposed action (shown to the customer in the shared view)"
             varde={forslagText}
             satt={setForslagText}
             flerRad
             rost
-            platshallare="T.ex. Balansera om höger framhjul och genomför ny provkörning."
+            platshallare="e.g. Rebalance the right front wheel and perform a new road test."
           />
-          <TextFalt label="Uppskattad kostnad (valfritt)" varde={kostnad} satt={setKostnad} platshallare="T.ex. 1 200 kr inkl. moms" />
+          <TextFalt label="Estimated cost (optional)" varde={kostnad} satt={setKostnad} platshallare="e.g. 1,200 incl. VAT" />
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setForslagsLage(false)}>
               Avbryt
@@ -878,7 +878,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
           </div>
           {beslutsVal && (
             <>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">Hur lämnades beskedet?</p>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A5560]">How was the decision given?</p>
               <div className="mb-2 grid grid-cols-3 gap-1">
                 {KUNDKANALER.map((k) => (
                   <button
@@ -893,7 +893,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
                 ))}
               </div>
               <TextFalt
-                label={beslutsVal === "godkant" ? "Kommentar (valfritt)" : "Kundens motivering (obligatorisk)"}
+                label={beslutsVal === "godkant" ? "Comment (optional)" : "Customer's reason (required)"}
                 varde={beslutsKommentar}
                 satt={setBeslutsKommentar}
                 rost
@@ -929,7 +929,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
             Dokumentera utförd åtgärd
           </StorKnapp>
           <StorKnapp variant="sekundar" onClick={() => setLage("ingen")}>
-            Ingen åtgärd utförd
+            No action performed
           </StorKnapp>
         </div>
       )}
@@ -937,14 +937,14 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
       {lage === "utford" && (
         <div className="mt-2">
           <TextFalt
-            label="Vad gjordes? (kopplat till den dokumenterade felorsaken)"
+            label="What was done? (tied to the documented root cause)"
             varde={beskrivning}
             satt={setBeskrivning}
             flerRad
             rost
-            platshallare="T.ex. Balanserade om höger framhjul, ny balansvikt 40 g på insidan."
+            platshallare="e.g. Rebalanced the right front wheel, new 40 g weight on the inner rim."
           />
-          <TextFalt label="Delar (valfritt)" varde={delar} satt={setDelar} platshallare="T.ex. Balansvikter, artikelnr 30-1234" rost />
+          <TextFalt label="Parts (optional)" varde={delar} satt={setDelar} platshallare="e.g. Balance weights, part no. 30-1234" rost />
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setLage("")}>
               Avbryt
@@ -982,7 +982,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
               </button>
             ))}
           </div>
-          <TextFalt label="Eller egen orsak" varde={orsak && !INGEN_ATGARD_ORSAKER.includes(orsak) ? orsak : ""} satt={setOrsak} rost />
+          <TextFalt label="Or a cause of your own" varde={orsak && !INGEN_ATGARD_ORSAKER.includes(orsak) ? orsak : ""} satt={setOrsak} rost />
           {beslut?.beslut === "avbojt" && (
             <p className="mb-2 text-[11px] text-[#707070]">
               Kunden har avböjt åtgärden via {beslut.kanal} — beskedet finns registrerat i loggen.
@@ -995,12 +995,12 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
             <StorKnapp
               disabled={!orsak.trim()}
               onClick={() => {
-                skicka({ typ: "atgard_utford", beskrivning: "Ingen åtgärd utförd", utford: false, motivering: orsak.trim() });
+                skicka({ typ: "atgard_utford", beskrivning: "No action performed", utford: false, motivering: orsak.trim() });
                 setLage("");
                 setOrsak("");
               }}
             >
-              Dokumentera
+              Document
             </StorKnapp>
           </div>
         </div>
@@ -1034,16 +1034,16 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
               <TextFalt
                 label={
                   kkResultat === "symptomet_borta"
-                    ? "Hur verifierades det? (förhållanden, hastighet, provkörning …)"
+                    ? "How was it verified? (conditions, speed, road test …)"
                     : kkResultat === "ej_verifierbar"
-                      ? "Varför kunde det inte verifieras? (obligatorisk)"
-                      : "Vad kvarstår? (obligatorisk)"
+                      ? "Why could it not be verified? (required)"
+                      : "What remains? (required)"
                 }
                 varde={kkText}
                 satt={setKkText}
                 flerRad
                 rost
-                platshallare="T.ex. Ny provkörning 80–110 km/h på samma vägsträcka — ingen vibration."
+                platshallare="e.g. New road test at 80–110 km/h on the same stretch — no vibration."
               />
               <StorKnapp
                 disabled={!kkText.trim()}
@@ -1141,16 +1141,16 @@ function KontextPanel({
     ) : null;
   return (
     <div>
-      <Panel rubrik="Teknisk information">
-        {rad("Objekt", b.objekt?.beskrivning)}
+      <Panel rubrik="Technical information">
+        {rad("Object", b.objekt?.beskrivning)}
         {rad("Ident", b.objekt?.identifierare)}
-        {rad("Kund", b.objekt?.kund)}
-        {rad("Ansvarig", b.ansvarig)}
-        {rad("Status", b.avslutat ? "Avslutat" : "Pågår")}
-        {rad("Synk", SYNKSTATUS_LABEL[synkStatus])}
-        {rad("Arbetstid", b.totalArbetstid)}
+        {rad("Customer", b.objekt?.kund)}
+        {rad("Responsible", b.ansvarig)}
+        {rad("Status", b.avslutat ? "Closed" : "In progress")}
+        {rad("Sync", SYNKSTATUS_LABEL[synkStatus])}
+        {rad("Labour time", b.totalArbetstid)}
       </Panel>
-      <Panel rubrik="Tillförlitlighet">
+      <Panel rubrik="Reliability">
         {b.tillforlitlighet.map((r, i) => (
           <p key={i} className="py-0.5 text-[12px]">
             <NivaBadge niva={r.niva} /> {r.text}
@@ -1158,7 +1158,7 @@ function KontextPanel({
         ))}
       </Panel>
       {!b.avslutat && b.rekommenderatNastaSteg.length > 0 && (
-        <Panel rubrik="Rekommenderat nästa steg">
+        <Panel rubrik="Recommended next step">
           {b.rekommenderatNastaSteg.map((s, i) => (
             <p key={i} className="py-0.5 text-[12px] text-[#333333]">
               {i + 1}. {s}
@@ -1167,14 +1167,14 @@ function KontextPanel({
         </Panel>
       )}
       {senasteAi && senasteAi.handelse.typ === "ai_svar" && (
-        <Panel rubrik="Teknisk rekommendation">
+        <Panel rubrik="Technical recommendation">
           {senasteAi.handelse.rader.map((r, i) => (
             <p key={i} className="py-0.5 text-[12px]">
               <span className="font-semibold text-[#4A5560]">{AI_RADTYP_LABEL[r.typ]}:</span> {r.text}
             </p>
           ))}
           <p className="mt-1 text-[12px]">
-            <span className="font-semibold text-[#00437A]">Nästa steg:</span> {senasteAi.handelse.nastaSteg}
+            <span className="font-semibold text-[#00437A]">Next step:</span> {senasteAi.handelse.nastaSteg}
           </p>
           <p className="mt-1 text-[10px] uppercase tracking-wide text-[#707070]">
             Beslutsstöd · presenteras aldrig som konstaterat fel
@@ -1205,8 +1205,8 @@ function InaktivitetsBanner({
       <p className="mb-2 text-[14px] font-semibold text-[#00437A]">
         Ingen aktivitet har registrerats de senaste {minuter} minuterna.
       </p>
-      <p className="mb-3 text-[#333333]">Beskriv kort vad som gjorts under denna period.</p>
-      <TextFalt label="Vad har gjorts?" varde={text} satt={setText} platshallare="T.ex. Demonterade instrumentpanelen för att komma åt kabelstammen." rost />
+      <p className="mb-3 text-[#333333]">Briefly describe what was done during this period.</p>
+      <TextFalt label="What has been done?" varde={text} satt={setText} platshallare="e.g. Removed the instrument panel to reach the wiring harness." rost />
       <StorKnapp
         disabled={!text.trim()}
         onClick={() => {
@@ -1284,7 +1284,7 @@ function GuideFlik({
 
   if (avslutat) {
     return (
-      <Panel rubrik="Felsökningen är avslutad">
+      <Panel rubrik="The diagnosis is closed">
         <p className="text-[14px] text-[#333333]">
           Ärendet är låst för nya guidesteg. Loggen, briefen och rapporten finns kvar för spårbarhet och export.
         </p>
@@ -1338,7 +1338,7 @@ function GuideFlik({
       <Panel rubrik={`Metodik: ${metodik.namn} · Steg: ${steg.steg.rubrik}`}>
         {steg.klart ? (
           <>
-            <p className="mb-3 text-[15px] font-semibold">Samtliga steg i metodiken är dokumenterade.</p>
+            <p className="mb-3 text-[15px] font-semibold">Every step in the methodology is documented.</p>
             <p className="mb-4 text-[#333333]">
               Om felorsaken inte är verifierad: dokumentera en hypotes och utöka felsökningen, eller avsluta ärendet
               med rekommenderade nästa steg.
@@ -1353,7 +1353,7 @@ function GuideFlik({
           // hinder, inte en varning. Enda vägen framåt är att ändra
           // förutsättningen, inte att klicka förbi.
           <div className="border-2 border-[#B42318] bg-[#FEF3F2] p-4">
-            <p className="mb-2 text-[15px] font-semibold text-[#B42318]">Arbetet får inte fortsätta</p>
+            <p className="mb-2 text-[15px] font-semibold text-[#B42318]">Work must not continue</p>
             <p className="mb-2 text-[#333333]">{steg.sparr.orsak}</p>
             <p className="mb-3 font-semibold text-[#333333]">{steg.sparr.atgard}</p>
             <p className="text-[12px] text-[#666666]">
@@ -1373,12 +1373,12 @@ function GuideFlik({
           rubrik={
             senasteAiSvar?.handelse.typ === "ai_svar"
               ? `Handledning (${senasteAiSvar.handelse.modell})`
-              : "Handledning"
+              : "Guidance"
           }
         >
-          {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">Systemet analyserar …</p>}
+          {aiStatus === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">Analyzing …</p>}
           {aiStatus === "fel" && (
-            <p className="mb-2 font-semibold text-[#8B1A1A]">Analysen kunde inte hämtas — försök igen. Metodiken fortsätter som vanligt.</p>
+            <p className="mb-2 font-semibold text-[#8B1A1A]">The analysis could not be retrieved — try again. The methodology continues unaffected.</p>
           )}
           {senasteAiSvar && senasteAiSvar.handelse.typ === "ai_svar" && (
             <>
@@ -1388,7 +1388,7 @@ function GuideFlik({
                 </p>
               ))}
               <p className="mt-2 text-[14px]">
-                <span className="font-semibold text-[#00437A]">Nästa steg:</span>{" "}
+                <span className="font-semibold text-[#00437A]">Next step:</span>{" "}
                 {senasteAiSvar.handelse.nastaSteg}
               </p>
             </>
@@ -1414,7 +1414,7 @@ function GuideFlik({
       {/* Utgående mätarställning: obligatorisk för kvalitetsgrinden när
           ärendet avslutas — erbjuds så fort metodiken är genomarbetad. */}
       {!arende.handelser.some((p) => p.handelse.typ === "matarstallning" && p.handelse.lage === "utgaende") && (
-        <Panel rubrik="Utgående mätarställning — inför avslut">
+        <Panel rubrik="Outgoing odometer reading — before closing">
           <MatarstallningSteg lage="utgaende" skicka={skicka} />
         </Panel>
       )}
@@ -1498,8 +1498,8 @@ function FrageKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse) =>
       <p className="mb-4 text-[17px] font-semibold leading-snug">{fraga.text}</p>
       {fraga.svarstyp === "janej" && (
         <div className="grid grid-cols-2 gap-2">
-          <StorKnapp onClick={() => svara("Ja")}>Ja</StorKnapp>
-          <StorKnapp onClick={() => svara("Nej")}>Nej</StorKnapp>
+          <StorKnapp onClick={() => svara("Yes")}>Yes</StorKnapp>
+          <StorKnapp onClick={() => svara("No")}>No</StorKnapp>
         </div>
       )}
       {fraga.svarstyp === "val" && (
@@ -1513,7 +1513,7 @@ function FrageKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse) =>
       )}
       {fraga.svarstyp === "text" && (
         <>
-          <TextFalt label="Svar" varde={text} satt={setText} rost />
+          <TextFalt label="Answer" varde={text} satt={setText} rost />
           <StorKnapp disabled={!text.trim()} onClick={() => svara(text.trim())}>
             Spara svar
           </StorKnapp>
@@ -1576,29 +1576,29 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
               utford();
             }}
           />
-          <TextFalt label="Observation (valfritt)" varde={resultat} satt={setResultat} rost />
-          <StorKnapp onClick={() => filRef.current?.click()}><IkonKamera /> Ta foto — verifierar kontrollen</StorKnapp>
-          <p className="mt-2 text-[12px] text-[#707070]">Denna kontroll verifieras med foto.</p>
+          <TextFalt label="Observation (optional)" varde={resultat} satt={setResultat} rost />
+          <StorKnapp onClick={() => filRef.current?.click()}><IkonKamera /> Take a photograph — verifies the check</StorKnapp>
+          <p className="mt-2 text-[12px] text-[#707070]">This check is verified with a photograph.</p>
         </>
       ) : (
         <>
           <TextFalt
             label={
               krav === "matvarde"
-                ? "Uppmätt värde (krävs för verifiering)"
+                ? "Measured value (required for verification)"
                 : krav === "kommentar"
-                  ? "Vad observerades? (krävs för verifiering)"
-                  : "Resultat / avläst värde (valfritt)"
+                  ? "What was observed? (required for verification)"
+                  : "Result / value read (optional)"
             }
             varde={resultat}
             satt={setResultat}
-            platshallare={krav === "matvarde" ? "T.ex. 2,4 bar samtliga hjul" : "T.ex. Säkringen är hel, spänning på båda sidor"}
+            platshallare={krav === "matvarde" ? "e.g. 2.4 bar on all wheels" : "e.g. The fuse is intact, voltage on both sides"}
             rost
           />
           {!kravUppfyllt && (
             <p className="mb-3 text-[12px] font-semibold text-[#00437A]">
-              Ingen {krav === "matvarde" ? "mätning" : "observation"} har registrerats — lägg till en kort{" "}
-              {krav === "matvarde" ? "mätuppgift" : "kommentar"} innan kontrollen kan verifieras.
+              No {krav === "matvarde" ? "measurement" : "observation"} has been recorded — add a short{" "}
+              {krav === "matvarde" ? "measurement entry" : "comment"} before the check can be verified.
             </p>
           )}
           <StorKnapp disabled={!kravUppfyllt} onClick={utford}>
@@ -1656,7 +1656,7 @@ function Undantag({ vidUndantag }: { vidUndantag: (orsak: string) => void }) {
           </button>
         ))}
       </div>
-      <TextFalt label="Eller egen orsak" varde={orsak && !UNDANTAGSORSAKER.includes(orsak) ? orsak : ""} satt={setOrsak} rost />
+      <TextFalt label="Or a cause of your own" varde={orsak && !UNDANTAGSORSAKER.includes(orsak) ? orsak : ""} satt={setOrsak} rost />
       <div className="grid grid-cols-2 gap-2">
         <StorKnapp variant="sekundar" onClick={() => setOppen(false)}>
           Avbryt
@@ -1671,12 +1671,12 @@ function Undantag({ vidUndantag }: { vidUndantag: (orsak: string) => void }) {
 
 const DOKTYPER = [
   { id: "observation", label: "Observation" },
-  { id: "matvarde", label: "Mätvärde" },
-  { id: "foto", label: "Foto" },
+  { id: "matvarde", label: "Measurement" },
+  { id: "foto", label: "Photo" },
   { id: "video", label: "Video" },
   { id: "instrument", label: "Instrument" },
-  { id: "hypotes", label: "Hypotes" },
-  { id: "kommentar", label: "Kommentar" },
+  { id: "hypotes", label: "Hypothesis" },
+  { id: "comment", label: "Comment" },
 ] as const;
 
 // Fri dokumentation vid sidan av guiden. Hypoteser märks alltid som
@@ -1721,10 +1721,10 @@ function SnabbDokumentation({
       } else if (!resultat) {
         setAvlasning({ foto, tolkning: byggDemoInstrument(), demo: true });
       } else {
-        skicka({ typ: "foto", beskrivning: "Instrumentfoto — inga värden kunde läsas", dataUrl: foto });
+        skicka({ typ: "foto", beskrivning: "Instrument photograph — no values could be read", dataUrl: foto });
       }
     } catch {
-      skicka({ typ: "foto", beskrivning: "Instrumentfoto — avläsningen kunde inte nås", dataUrl: foto });
+      skicka({ typ: "foto", beskrivning: "Instrument photograph — the reader could not be reached", dataUrl: foto });
     }
     setLaserAv(false);
   };
@@ -1746,7 +1746,7 @@ function SnabbDokumentation({
         beskrivning: v.beskrivning,
         varde: v.varde,
         enhet: v.enhet,
-        kalla: "Instrumentavläsning (modelltolkad, bekräftad av tekniker)",
+        kalla: "Instrument reading (model-interpreted, confirmed by the technician)",
       });
     }
     paSparad?.(
@@ -1763,7 +1763,7 @@ function SnabbDokumentation({
       skicka({ typ: "observation", text: t });
       paSparad?.(`Observation: ${t}`);
     }
-    if (typ === "kommentar" && t) {
+    if (typ === "comment" && t) {
       skicka({ typ: "kommentar", text: t });
       paSparad?.(t);
     }
@@ -1779,7 +1779,7 @@ function SnabbDokumentation({
   };
 
   return (
-    <Panel rubrik="Dokumentera">
+    <Panel rubrik="Document">
       <div className="grid grid-cols-3 gap-2">
         {DOKTYPER.map((d) => (
           <button
@@ -1813,7 +1813,7 @@ function SnabbDokumentation({
           const fil = e.target.files?.[0];
           if (!fil) return;
           const dataUrl = await skalaNerFoto(fil);
-          skicka({ typ: "foto", beskrivning: "Foto", dataUrl });
+          skicka({ typ: "foto", beskrivning: "Photo", dataUrl });
           e.target.value = "";
         }}
       />
@@ -1843,7 +1843,7 @@ function SnabbDokumentation({
           try {
             setVideo({ dataUrl: await lasVideo(fil), beskrivning: "" });
           } catch (misslyckande) {
-            setVideoFel(misslyckande instanceof Error ? misslyckande.message : "Videon kunde inte läsas.");
+            setVideoFel(misslyckande instanceof Error ? misslyckande.message : "The video could not be read.");
           }
         }}
       />
@@ -1852,10 +1852,10 @@ function SnabbDokumentation({
         <div className="mt-3 border border-[#C6C6C6] bg-white p-2">
           <video src={video.dataUrl} controls className="mb-2 max-h-48 w-full border border-[#C6C6C6]" />
           <TextFalt
-            label="Vad visar videon? (obligatoriskt — det som låter eller rör sig)"
+            label="What does the video show? (required — what makes the noise or moves)"
             varde={video.beskrivning}
             satt={(beskrivning) => setVideo((v) => (v ? { ...v, beskrivning } : v))}
-            platshallare="T.ex. Motorljud vid tomgång — tickande från topplocket"
+            platshallare="e.g. Engine noise at idle — ticking from the cylinder head"
             rost
           />
           <div className="grid grid-cols-2 gap-2">
@@ -1875,7 +1875,7 @@ function SnabbDokumentation({
           </div>
         </div>
       )}
-      {laserAv && <p className="mt-2 animate-pulse text-center text-[12px] font-semibold text-[#00437A]">Systemet läser av instrumentet …</p>}
+      {laserAv && <p className="mt-2 animate-pulse text-center text-[12px] font-semibold text-[#00437A]">Reading the instrument …</p>}
       {avlasning && (
         <div className="mt-3 border border-[#C6C6C6] bg-white p-2">
           {avlasning.demo && (
@@ -1900,7 +1900,7 @@ function SnabbDokumentation({
             <StorKnapp variant="sekundar" onClick={() => setAvlasning(null)}>
               Förkasta
             </StorKnapp>
-            <StorKnapp onClick={sparaAvlasning}>Spara foto + värden</StorKnapp>
+            <StorKnapp onClick={sparaAvlasning}>Save photograph + values</StorKnapp>
           </div>
         </div>
       )}
@@ -1912,13 +1912,13 @@ function SnabbDokumentation({
             </p>
           )}
           <TextFalt
-            label={typ === "matvarde" ? "Vad mättes?" : DOKTYPER.find((d) => d.id === typ)!.label}
+            label={typ === "matvarde" ? "What was measured?" : DOKTYPER.find((d) => d.id === typ)!.label}
             varde={text}
             satt={setText}
-            platshallare={typ === "matvarde" ? "T.ex. Matningsspänning stift 30" : ""}
+            platshallare={typ === "matvarde" ? "e.g. Supply voltage at pin 30" : ""}
             rost
           />
-          {typ === "matvarde" && <TextFalt label="Värde (med enhet)" varde={varde} satt={setVarde} platshallare="T.ex. 13,9 V" />}
+          {typ === "matvarde" && <TextFalt label="Value (with unit)" varde={varde} satt={setVarde} platshallare="e.g. 13.9 V" />}
           <StorKnapp disabled={!text.trim() || (typ === "matvarde" && !varde.trim())} onClick={spara}>
             Spara
           </StorKnapp>
@@ -1968,7 +1968,7 @@ function OverlamningDialog({
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
       <div className="max-h-full w-full max-w-2xl overflow-y-auto border border-[#ADADAD] bg-[#F7F7F7] p-4">
-        <h2 className="mb-3 text-[15px] font-semibold">Överlämningsrapport</h2>
+        <h2 className="mb-3 text-[15px] font-semibold">Handover report</h2>
         <pre className="mb-3 overflow-x-auto whitespace-pre-wrap bg-white p-4 text-[12px] text-[#333333]">
           {text}
         </pre>
@@ -1977,9 +1977,9 @@ function OverlamningDialog({
             Komplettera analysen: risker &amp; osäkerheter
           </StorKnapp>
         )}
-        {aiLage === "arbetar" && <p className="mb-3 animate-pulse font-semibold text-[#00437A]">Systemet sammanfattar …</p>}
+        {aiLage === "arbetar" && <p className="mb-3 animate-pulse font-semibold text-[#00437A]">Summarizing …</p>}
         {aiLage === "fel" && (
-          <p className="mb-3 font-semibold text-[#8B1A1A]">Kunde inte hämtas — kräver inloggning. Överlämningen fungerar ändå.</p>
+          <p className="mb-3 font-semibold text-[#8B1A1A]">Could not be retrieved — requires sign-in. The handover works regardless.</p>
         )}
         {aiLage === "klar" && aiRader.length > 0 && (
           <div className="mb-3 bg-white p-4">
@@ -1990,7 +1990,7 @@ function OverlamningDialog({
             ))}
           </div>
         )}
-        <TextFalt label="Lämnas till (valfritt)" varde={till} satt={setTill} platshallare="T.ex. Johan" />
+        <TextFalt label="Handed to (optional)" varde={till} satt={setTill} platshallare="e.g. Jonas" />
         <div className="grid grid-cols-2 gap-2">
           <StorKnapp variant="sekundar" onClick={stang}>
             Avbryt
@@ -2010,9 +2010,9 @@ function OverlamningDialog({
 }
 
 const NIVA_LABEL: Record<DelningsNiva, string> = {
-  kund: "Kund",
-  partner: "Extern partner",
-  intern: "Intern",
+  kund: "Customer",
+  partner: "External partner",
+  intern: "Internal",
 };
 
 // Live Share-behörighetsnivåer: skapa och återkalla delningslänkar.
@@ -2028,7 +2028,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
       setDelningar(await hamtaDelningar(arende.id));
       setFel("");
     } catch {
-      setFel("Kunde inte hämta delningar — kräver inloggning och att ärendet är synkat.");
+      setFel("Could not retrieve shares — requires sign-in and a synchronized case.");
     }
   };
 
@@ -2054,7 +2054,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
         <div key={delning.kod} className="flex items-center justify-between gap-2 border-b border-[#DDDDDD] py-2 last:border-0">
           <span className="text-[14px]">
             {NIVA_LABEL[delning.niva]}{" "}
-            {delning.aterkallad && <span className="text-[12px] font-semibold text-[#8B1A1A]">(återkallad)</span>}
+            {delning.aterkallad && <span className="text-[12px] font-semibold text-[#8B1A1A]">(revoked)</span>}
           </span>
           {!delning.aterkallad && (
             <span className="flex gap-2">
@@ -2091,7 +2091,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
                 skicka({ typ: "kommentar", text: `Delningslänk skapad (${NIVA_LABEL[niva]}).` });
                 uppdatera();
               } catch {
-                setFel("Kunde inte skapa delning — kräver inloggning och att ärendet är synkat.");
+                setFel("Could not create a share — requires sign-in and a synchronized case.");
               }
             }}
           >
@@ -2109,7 +2109,7 @@ function DelningsHanterare({ arende, skicka }: { arende: Arende; skicka: (h: Han
 
 function LoggFlik({ arende }: { arende: Arende }) {
   return (
-    <Panel rubrik="Arbetslogg — append-only, ingenting skrivs över">
+    <Panel rubrik="Work log — append-only, nothing is overwritten">
       <ol>
         {arende.handelser.map((post) => (
           <li key={post.id} className="flex gap-3 border-b border-[#DDDDDD] py-2 last:border-0">
@@ -2162,14 +2162,14 @@ function BriefFlik({
   return (
     <>
       {!b.avslutat && (
-        <Panel rubrik="Granskning av underlaget">
+        <Panel rubrik="Review of the evidence">
           <p className="mb-2 text-[#333333]">
             Låt systemet gå igenom hela underlaget innan du lämnar det vidare: motsägelser mellan
             observationer, luckor i dokumentationen och slutsatser som saknar stöd.
           </p>
-          {granskning === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">Systemet granskar underlaget …</p>}
+          {granskning === "arbetar" && <p className="mb-2 animate-pulse font-semibold text-[#00437A]">Reviewing the evidence …</p>}
           {granskning === "fel" && (
-            <p className="mb-2 font-semibold text-[#8B1A1A]">Granskningen kunde inte hämtas — kräver inloggning. Försök igen.</p>
+            <p className="mb-2 font-semibold text-[#8B1A1A]">The review could not be retrieved — requires sign-in. Try again.</p>
           )}
           {senasteAi && senasteAi.handelse.typ === "ai_svar" && granskning === "vilar" && (
             <div className="mb-2">
@@ -2179,7 +2179,7 @@ function BriefFlik({
                 </p>
               ))}
               <p className="mt-1 text-[14px]">
-                <span className="font-semibold text-[#00437A]">Nästa steg:</span> {senasteAi.handelse.nastaSteg}
+                <span className="font-semibold text-[#00437A]">Next step:</span> {senasteAi.handelse.nastaSteg}
               </p>
               <p className="mt-1 text-[11px] text-[#707070]">Senaste analys ({senasteAi.handelse.modell})</p>
             </div>
@@ -2189,7 +2189,7 @@ function BriefFlik({
           </StorKnapp>
         </Panel>
       )}
-      <Panel rubrik="Objekt">
+      <Panel rubrik="Object">
         {b.objekt ? (
           <>
             <p className="text-[15px] font-semibold">{b.objekt.beskrivning}</p>
@@ -2198,14 +2198,14 @@ function BriefFlik({
             {b.ansvarig && <p className="text-[#333333]">Ansvarig tekniker: {b.ansvarig}</p>}
           </>
         ) : (
-          <p className="text-[#4A5560]">Ej identifierat</p>
+          <p className="text-[#4A5560]">Not identified</p>
         )}
       </Panel>
-      <Panel rubrik="Kundens beskrivning">
+      <Panel rubrik="Customer's description">
         <p className="text-[14px]">{b.felbeskrivning ? `”${b.felbeskrivning}”` : "—"}</p>
       </Panel>
-      <Panel rubrik="Utförda kontroller">
-        {b.utfordaKontroller.length === 0 && <p className="text-[#4A5560]">Inga ännu.</p>}
+      <Panel rubrik="Checks performed">
+        {b.utfordaKontroller.length === 0 && <p className="text-[#4A5560]">None yet.</p>}
         {b.utfordaKontroller.map((k, i) =>
           k.undantag ? (
             <p key={i} className="py-0.5 text-[14px] text-[#9A6700]">
@@ -2219,14 +2219,14 @@ function BriefFlik({
           ),
         )}
       </Panel>
-      <Panel rubrik="Observationer">
-        {b.observationer.length === 0 && <p className="text-[#4A5560]">Inga ännu.</p>}
+      <Panel rubrik="Observations">
+        {b.observationer.length === 0 && <p className="text-[#4A5560]">None yet.</p>}
         {b.observationer.map((o, i) => (
           <p key={i} className="py-0.5 text-[14px]">• {o}</p>
         ))}
       </Panel>
       {b.hypoteser.length > 0 && (
-        <Panel rubrik="Hypoteser — kräver verifiering">
+        <Panel rubrik="Hypotheses — require verification">
           {b.hypoteser.map((h, i) => (
             <p key={i} className="py-0.5 text-[14px]">
               <NivaBadge niva={h.niva} /> {h.text}
@@ -2234,27 +2234,27 @@ function BriefFlik({
           ))}
         </Panel>
       )}
-      <Panel rubrik="Ej kontrollerat">
-        {b.ejKontrollerat.length === 0 && <p className="text-[#4A5560]">Allt i metodiken är utfört.</p>}
+      <Panel rubrik="Not checked">
+        {b.ejKontrollerat.length === 0 && <p className="text-[#4A5560]">Every step in the methodology is complete.</p>}
         {b.ejKontrollerat.map((e, i) => (
           <p key={i} className="py-0.5 text-[14px] text-[#333333]">– {e}</p>
         ))}
       </Panel>
       {!b.avslutat && (
-        <Panel rubrik="Rekommenderat nästa steg">
+        <Panel rubrik="Recommended next step">
           {b.rekommenderatNastaSteg.map((s, i) => (
             <p key={i} className="py-0.5 text-[14px]">{i + 1}. {s}</p>
           ))}
         </Panel>
       )}
-      <Panel rubrik="Tillförlitlighet">
+      <Panel rubrik="Reliability">
         {b.tillforlitlighet.map((r, i) => (
           <p key={i} className="py-0.5 text-[14px]">
             <NivaBadge niva={r.niva} /> {r.text}
           </p>
         ))}
       </Panel>
-      <Panel rubrik="Total arbetstid">
+      <Panel rubrik="Total labour time">
         <p className="text-[17px] font-semibold">{b.totalArbetstid}</p>
       </Panel>
     </>
@@ -2338,7 +2338,7 @@ function RapportFlik({
                 {rad.ok ? <IkonCheck /> : rad.kravs ? <IkonKryss /> : <IkonVarning />}
               </span>{" "}
               {rad.rubrik}
-              {!rad.kravs && <span className="text-[11px] text-[#707070]"> (rekommenderas)</span>}
+              {!rad.kravs && <span className="text-[11px] text-[#707070]"> (recommended)</span>}
             </p>
             {rad.detalj && <p className="pl-6 text-[12px] text-[#707070]">{rad.detalj}</p>}
           </div>
@@ -2350,7 +2350,7 @@ function RapportFlik({
           </p>
         )}
       </Panel>
-      <Panel rubrik="Kundrapport">
+      <Panel rubrik="Customer report">
         <p className="mb-2 text-[#333333]">
           Delningsbar sammanställning av utfört arbete. Granska innehållet innan rapporten delas — bilder kan
           innehålla uppgifter om andra kunder.
@@ -2364,7 +2364,7 @@ function RapportFlik({
           </StorKnapp>
         </div>
         <Link to={`/felsokning/dela/${arende.id}`} className="mt-2 block">
-          <StorKnapp variant="sekundar"><IkonPunkt farg="#1E6B34" /> Öppna Live Share-vy</StorKnapp>
+          <StorKnapp variant="sekundar"><IkonPunkt farg="#1E6B34" /> Open Live Share view</StorKnapp>
         </Link>
         {plattformAktiv() ? (
           <DelningsHanterare arende={arende} skicka={skicka} />
@@ -2375,10 +2375,10 @@ function RapportFlik({
               className="mt-2"
               onClick={() => {
                 navigator.clipboard.writeText(`${window.location.origin}/felsokning/delad/${arende.delningskod}`);
-                skicka({ typ: "kommentar", text: "Delningslänk kopierad för extern mottagare." });
+                skicka({ typ: "kommentar", text: "Share link copied for an external recipient." });
               }}
             >
-              <IkonLank /> Kopiera delningslänk
+              <IkonLank /> Copy share link
             </StorKnapp>
           )
         )}
@@ -2390,9 +2390,9 @@ function RapportFlik({
           rapporten — kund, handläggare, nästa tekniker — ska få bilden
           på fem sekunder och sedan kunna gå djupare. Texten är härledd
           ur loggen, så den kan inte säga något som inte står där. */}
-      <Panel rubrik="Sammanfattning">
+      <Panel rubrik="Summary">
         <p className="text-[15px] leading-[24px] text-[#1B1E22]">{sammanfatta(arende).text}</p>
-        <p className="mt-2 font-mono text-[11px] text-[#4D5662]">ALVA-PROC-0030 · härledd ur händelseloggen</p>
+        <p className="mt-2 font-mono text-[11px] text-[#4D5662]">ALVA-PROC-0030 · derived from the case log</p>
       </Panel>
 
       {/* ALVA-RULE-200 · Teknikerns varför. Placerad före underlaget:
@@ -2402,12 +2402,12 @@ function RapportFlik({
         if (!s || s.handelse.typ !== "slutsats") return null;
         const h = s.handelse;
         return (
-          <Panel rubrik="Slutsats och motivering">
+          <Panel rubrik="Closing statement and rationale">
             {identitetsRader([
-              [h.orsakFastställd === false ? "Skäl till att orsaken inte fastställts" : "Motivering", h.motivering],
-              ["Uteslutna alternativ", h.uteslutet],
-              ["Val av åtgärd", h.atgardsval ?? "—"],
-              ["Kvarstående osäkerhet", h.kvarstaende],
+              [h.orsakFastställd === false ? "Reason the cause could not be established" : "Rationale", h.motivering],
+              ["Dismissed alternatives", h.uteslutet],
+              ["Choice of action", h.atgardsval ?? "—"],
+              ["Remaining uncertainty", h.kvarstaende],
             ])}
           </Panel>
         );
@@ -2415,43 +2415,43 @@ function RapportFlik({
 
       {/* Rapportens första sida: ärendeidentiteten — registrerad en gång,
           återanvänd här automatiskt. */}
-      <Panel rubrik="Ärendeinformation">
+      <Panel rubrik="Case information">
         {identitetsRader([
-          ["Ärende", `#${arende.nummer}`],
-          ["Arbetsorder", idn.arbetsorder],
-          ["Claim-/garantinr", idn.claim],
-          ["Skadenummer", idn.skadenummer],
-          ["Ärendetyp", typ],
-          ["Ansvarig tekniker", idn.ansvarig],
+          ["Case", `#${arende.nummer}`],
+          ["Work order", idn.arbetsorder],
+          ["Claim / warranty no.", idn.claim],
+          ["Claim number", idn.skadenummer],
+          ["Case type", typ],
+          ["Responsible technician", idn.ansvarig],
         ])}
       </Panel>
-      <Panel rubrik="Fordonsinformation">
+      <Panel rubrik="Vehicle information">
         {identitetsRader([
-          ["Personbil", idn.beskrivning],
-          ["Regnr", idn.identifierare],
+          ["Passenger car", idn.beskrivning],
+          ["Reg. no.", idn.identifierare],
           ["VIN", idn.vin],
-          ["Mätarställning in", matIn],
-          ["Mätarställning ut", matUt],
-          ["Kund", idn.kund],
+          ["Odometer in", matIn],
+          ["Odometer out", matUt],
+          ["Customer", idn.kund],
         ])}
       </Panel>
       {/* Beviskedjan: kundens upplevelse, teknikerns verifiering och den
           tekniska slutsatsen hålls strikt åtskilda och spårbara. */}
-      <Panel rubrik="Kundens beskrivning">
+      <Panel rubrik="Customer's description">
         <p className="text-[14px]">{b.felbeskrivning ? `”${b.felbeskrivning}”` : "—"}</p>
       </Panel>
-      <Panel rubrik="Verifierad observation">
+      <Panel rubrik="Verified observation">
         {repro ? (
           <>
             <p className="text-[14px] font-semibold">{reproduceringsText(repro.status)}</p>
             <p className="text-[13px] text-[#4A5560]">{repro.beskrivning}</p>
           </>
         ) : (
-          <p className="text-[14px] text-[#4A5560]">Reproducering ej dokumenterad ännu.</p>
+          <p className="text-[14px] text-[#4A5560]">Reproduction not documented yet.</p>
         )}
       </Panel>
-      <Panel rubrik="Felorsaksanalys">
-        {orsakerLista.length === 0 && <p className="text-[14px] text-[#4A5560]">Felorsaksanalys ej dokumenterad ännu.</p>}
+      <Panel rubrik="Root cause analysis">
+        {orsakerLista.length === 0 && <p className="text-[14px] text-[#4A5560]">Root cause analysis not documented yet.</p>}
         {orsakerLista.map((p) => {
           const h = p.handelse;
           if (h.typ !== "felorsak") return null;
@@ -2459,42 +2459,42 @@ function RapportFlik({
             <div key={p.id} className="mb-3 border-b border-[#EBEBEB] pb-2 last:mb-0 last:border-0">
               <p className="text-[14px] font-semibold">{h.avvikelse}</p>
               {identitetsRader([
-                ["Bedömd grundorsak", h.orsaker.join(", ")],
-                ["Underlag för bedömningen", h.underlag.join(", ")],
-                ["Säkerhetsnivå", TILLFORLITLIGHET_LABEL[h.sakerhet]],
-                ["Rekommenderad åtgärd", h.atgard],
-                ["Motivering", h.motivering],
-                ["Stärkande kontroller", h.ytterligareKontroller],
+                ["Assessed root cause", h.orsaker.join(", ")],
+                ["Evidence for the assessment", h.underlag.join(", ")],
+                ["Confidence level", TILLFORLITLIGHET_LABEL[h.sakerhet]],
+                ["Recommended action", h.atgard],
+                ["Rationale", h.motivering],
+                ["Strengthening checks", h.ytterligareKontroller],
               ])}
             </div>
           );
         })}
       </Panel>
       {(forslagRader.length > 0 || beslutRad) && (
-        <Panel rubrik="Åtgärdsförslag och kundens besked">
+        <Panel rubrik="Proposed action and customer decision">
           {forslagRader.map((p) => {
             const h = p.handelse;
             if (h.typ !== "atgardsforslag") return null;
             return (
               <div key={p.id}>
                 {identitetsRader([
-                  ["Föreslagen åtgärd", h.beskrivning],
-                  ["Uppskattad kostnad", h.uppskattadKostnad],
-                  ["Uppskattad tid", h.uppskattadTid],
+                  ["Proposed action", h.beskrivning],
+                  ["Estimated cost", h.uppskattadKostnad],
+                  ["Estimated time", h.uppskattadTid],
                 ])}
               </div>
             );
           })}
           {beslutRad &&
             identitetsRader([
-              ["Kundens besked", KUNDBESLUT_LABEL[beslutRad.beslut]],
-              ["Lämnat via", beslutRad.kanal],
-              ["Kommentar", beslutRad.kommentar],
+              ["Customer decision", KUNDBESLUT_LABEL[beslutRad.beslut]],
+              ["Given via", beslutRad.kanal],
+              ["Comment", beslutRad.kommentar],
             ])}
         </Panel>
       )}
-      <Panel rubrik="Utförd åtgärd och verifiering">
-        {atgardsRader.length === 0 && <p className="text-[14px] text-[#4A5560]">Ingen åtgärd dokumenterad ännu.</p>}
+      <Panel rubrik="Action performed and verification">
+        {atgardsRader.length === 0 && <p className="text-[14px] text-[#4A5560]">No action documented yet.</p>}
         {atgardsRader.map((p) => {
           const h = p.handelse;
           if (h.typ !== "atgard_utford") return null;
@@ -2502,8 +2502,8 @@ function RapportFlik({
             <div key={p.id} className="mb-2">
               {h.utford ? (
                 identitetsRader([
-                  ["Utförd åtgärd", h.beskrivning],
-                  ["Delar", h.delar],
+                  ["Action performed", h.beskrivning],
+                  ["Parts", h.delar],
                 ])
               ) : (
                 <p className="text-[14px] text-[#9A6700]">Ingen åtgärd utförd — {h.motivering}</p>
@@ -2513,12 +2513,12 @@ function RapportFlik({
         })}
         {kkRad &&
           identitetsRader([
-            ["Kvalitetskontroll", KVALITETSKONTROLL_LABEL[kkRad.resultat]],
-            ["Verifiering", kkRad.beskrivning],
+            ["Quality check", KVALITETSKONTROLL_LABEL[kkRad.resultat]],
+            ["Verification", kkRad.beskrivning],
           ])}
       </Panel>
-      <Panel rubrik="Sammanfattning">
-        <p className="text-[14px]">Total arbetstid: <span className="font-semibold">{b.totalArbetstid}</span></p>
+      <Panel rubrik="Summary">
+        <p className="text-[14px]">Total labour time: <span className="font-semibold">{b.totalArbetstid}</span></p>
         {fordelning.length > 0 && (
           <div className="mt-2">
             {fordelning.map((r) => (
@@ -2527,7 +2527,7 @@ function RapportFlik({
           </div>
         )}
       </Panel>
-      <Panel rubrik="Tidslinje">
+      <Panel rubrik="Timeline">
         {kundposter.map((post) => (
           <p key={post.id} className="py-0.5 text-[13px]">
             <span className="font-mono font-semibold text-[#00437A]">{tidKlockslag(post.tidpunkt)}</span>{" "}
@@ -2536,7 +2536,7 @@ function RapportFlik({
         ))}
       </Panel>
       {klipp.length > 0 && (
-        <Panel rubrik="Dokumenterad video">
+        <Panel rubrik="Documented video">
           {klipp.map((v, i) => (
             <figure key={i} className="mb-2">
               <Klipp bilaga={v.bilaga} className="w-full border border-[#C6C6C6]" />
@@ -2546,7 +2546,7 @@ function RapportFlik({
         </Panel>
       )}
       {bilder.length > 0 && (
-        <Panel rubrik="Dokumenterade bilder">
+        <Panel rubrik="Documented images">
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
@@ -2558,7 +2558,7 @@ function RapportFlik({
         </Panel>
       )}
       {!b.avslutat || b.ejKontrollerat.length > 0 ? (
-        <Panel rubrik="Rekommenderade nästa steg">
+        <Panel rubrik="Recommended next steps">
           {(b.avslutat ? b.ejKontrollerat : b.rekommenderatNastaSteg).map((s, i) => (
             <p key={i} className="py-0.5 text-[14px]">{i + 1}. {s}</p>
           ))}
@@ -2601,7 +2601,7 @@ function Felanmalan({ arende, metodik }: { arende: Arende; metodik: Metodik | nu
     try {
       const { anmalSupport, plattformAktiv } = await import("@/felsokning/plattform");
       if (!plattformAktiv()) {
-        setUtfall({ fel: "Ingen plattform är konfigurerad — anmälan kan inte skickas härifrån." });
+        setUtfall({ fel: "No platform is configured — the report cannot be sent from here." });
         return;
       }
       const { beteckning } = await anmalSupport({
@@ -2633,42 +2633,42 @@ function Felanmalan({ arende, metodik }: { arende: Arende; metodik: Metodik | nu
           onClick={() => setOppen(true)}
           className="text-[12px] uppercase tracking-wide text-[#4A5560] underline"
         >
-          Rapportera ett problem med systemet
+          Report a problem with the system
         </button>
       </p>
     );
   }
 
   return (
-    <Panel rubrik="Rapportera ett problem med systemet">
+    <Panel rubrik="Report a problem with the system">
       <p className="mb-2 text-[12px] text-[#707070]">
         Ärende, metodik och plattformsversion följer med automatiskt. Inget om fordonet eller kunden
         skickas.
       </p>
       <div className="mb-2 grid grid-cols-3 gap-2">
         {[
-          ["felanmalan", "Fel"],
-          ["fraga", "Fråga"],
-          ["forbattring", "Förbättring"],
+          ["felanmalan", "Fault"],
+          ["fraga", "Question"],
+          ["forbattring", "Improvement"],
         ].map(([id, etikett]) => (
           <StorKnapp key={id} variant={typ === id ? "primar" : "sekundar"} onClick={() => setTyp(id)}>
             {etikett}
           </StorKnapp>
         ))}
       </div>
-      <TextFalt label="Vad gäller det?" varde={rubrik} satt={setRubrik} platshallare="Kort rubrik" />
+      <TextFalt label="What is it about?" varde={rubrik} satt={setRubrik} platshallare="Short title" />
       <TextFalt
-        label="Vad hände, och vad väntade du dig?"
+        label="What happened, and what did you expect?"
         varde={text}
         satt={setText}
-        platshallare="Den som svarar ser inte din skärm."
+        platshallare="Whoever answers cannot see your screen."
         flerRad
       />
       {utfall.ok && <p className="mt-2 text-[13px] text-[#1E6B34]">Anmäld som {utfall.ok}.</p>}
       {utfall.fel && <p className="mt-2 text-[13px] text-[#8B1A1A]">{utfall.fel}</p>}
       <div className="mt-2 grid grid-cols-2 gap-2">
         <StorKnapp onClick={skicka} disabled={skickar || rubrik.trim().length < 5 || text.trim().length < 20}>
-          {skickar ? "Skickar" : "Skicka anmälan"}
+          {skickar ? "Sending" : "Send report"}
         </StorKnapp>
         <StorKnapp variant="sekundar" onClick={() => setOppen(false)}>
           Stäng
@@ -2695,16 +2695,16 @@ function Ritningsstampel({ arende }: { arende: Arende }) {
   const paket = aktivtRegelpaket();
   const avslutad = [...arende.handelser].reverse().find((p) => p.handelse.typ === "arende_avslutat");
   const falt: [string, string][] = [
-    ["Beteckning", arendebeteckning(arende.nummer)],
-    ["Regelpaket", paket.version],
-    ["Evidensmodell", `ECM ${ECM_VERSION}`],
+    ["Designation", arendebeteckning(arende.nummer)],
+    ["Rule package", paket.version],
+    ["Evidence model", `ECM ${ECM_VERSION}`],
     // Versionen VID AVSLUTET, inte dagens. Stämpeln läste tidigare den
     // aktuella konstanten, så ett ärende stängt under 1.0 visade 3.1 —
     // vilket är exakt det stämpelns beskrivning ovan säger att den inte
     // ska göra. Ett öppet ärende visar dagens, eftersom det är sant då.
-    ["Plattform", avslutad ? versionVidAvslut(avslutad.handelse) : PLATTFORMSVERSION],
+    ["Platform", avslutad ? versionVidAvslut(avslutad.handelse) : PLATTFORMSVERSION],
     ["Status", avslutad ? "Closed" : "In progress"],
-    ["Utgåva", avslutad ? new Date(avslutad.tidpunkt).toISOString().slice(0, 10) : "—"],
+    ["Release", avslutad ? new Date(avslutad.tidpunkt).toISOString().slice(0, 10) : "—"],
   ];
 
   return (

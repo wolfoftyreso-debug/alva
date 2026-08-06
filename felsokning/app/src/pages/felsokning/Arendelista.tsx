@@ -23,9 +23,9 @@ import { tidDatum, tidKlockslag } from "@/felsokning/format";
 type Filter = "alla" | "pagaende" | "klara";
 
 const ROLL_LABEL: Record<PlattformRoll, string> = {
-  tekniker: "Tekniker",
-  arbetsledare: "Arbetsledare",
-  admin: "Systemadministratör",
+  tekniker: "Technician",
+  arbetsledare: "Supervisor",
+  admin: "System administrator",
 };
 
 // Självhostat läge: inloggning mot plattformstjänsten i klustret.
@@ -43,7 +43,7 @@ function PlattformInloggning() {
   if (konto) {
     return (
       <>
-        <Panel rubrik="Plattformskonto">
+        <Panel rubrik="Platform account">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[14px]">
               <span className="font-semibold">{konto.namn}</span> · {ROLL_LABEL[konto.roll]} ·{" "}
@@ -61,12 +61,12 @@ function PlattformInloggning() {
           </div>
           {(konto.roll === "arbetsledare" || konto.roll === "admin") && (
             <Link to="/felsokning/oversikt" className="mt-3 block">
-              <StorKnapp variant="sekundar"><IkonDiagram /> Organisationsöversikt</StorKnapp>
+              <StorKnapp variant="sekundar"><IkonDiagram /> Organization overview</StorKnapp>
             </Link>
           )}
           {konto.roll === "admin" && (
             <Link to="/felsokning/installningar" className="mt-2 block">
-              <StorKnapp variant="sekundar"><IkonKugghjul /> Inställningar för organisationen</StorKnapp>
+              <StorKnapp variant="sekundar"><IkonKugghjul /> Organization settings</StorKnapp>
             </Link>
           )}
         </Panel>
@@ -76,7 +76,7 @@ function PlattformInloggning() {
   }
 
   return (
-    <Panel rubrik="Plattformskonto">
+    <Panel rubrik="Platform account">
       {lage === "stangd" ? (
         <>
           <p className="mb-2 text-[#333333]">
@@ -85,9 +85,9 @@ function PlattformInloggning() {
           </p>
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setLage("registrera")}>
-              Skapa organisation
+              Create organization
             </StorKnapp>
-            <StorKnapp onClick={() => setLage("loggaIn")}>Logga in</StorKnapp>
+            <StorKnapp onClick={() => setLage("loggaIn")}>Sign in</StorKnapp>
           </div>
         </>
       ) : (
@@ -102,18 +102,18 @@ function PlattformInloggning() {
                   : await registreraPlattform(epost, losenord, nyttNamn, organisation),
               );
             } catch (misslyckande) {
-              setFel(misslyckande instanceof Error ? misslyckande.message : "Något gick fel.");
+              setFel(misslyckande instanceof Error ? misslyckande.message : "Something went wrong.");
             }
           }}
         >
           {lage === "registrera" && (
             <>
-              <TextFalt label="Organisation" varde={organisation} satt={setOrganisation} platshallare="T.ex. Verkstad Syd AB" />
-              <TextFalt label="Ditt namn" varde={nyttNamn} satt={setNyttNamn} platshallare="T.ex. Anna" />
+              <TextFalt label="Organisation" varde={organisation} satt={setOrganisation} platshallare="e.g. Southside Motors Ltd" />
+              <TextFalt label="Your name" varde={nyttNamn} satt={setNyttNamn} platshallare="e.g. Anna" />
             </>
           )}
-          <TextFalt label="E-post" varde={epost} satt={setEpost} platshallare="anna@verkstaden.se" />
-          <TextFalt label="Lösenord (minst 8 tecken)" varde={losenord} satt={setLosenord} losenord />
+          <TextFalt label="E-mail" varde={epost} satt={setEpost} platshallare="anna@workshop.example" />
+          <TextFalt label="Password (at least 8 characters)" varde={losenord} satt={setLosenord} losenord />
           {fel && <p className="mb-3 font-semibold text-[#8B1A1A]">{fel}</p>}
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => setLage("stangd")}>
@@ -127,7 +127,7 @@ function PlattformInloggning() {
                 (lage === "registrera" && (!nyttNamn.trim() || !organisation.trim()))
               }
             >
-              {lage === "loggaIn" ? "Logga in" : "Skapa organisation"}
+              {lage === "loggaIn" ? "Sign in" : "Create organization"}
             </StorKnapp>
           </div>
         </form>
@@ -151,13 +151,13 @@ function AnvandarAdmin() {
     try {
       setLista(await hamtaAnvandare());
     } catch {
-      setFel("Kunde inte hämta användare.");
+      setFel("Could not retrieve users.");
     }
   };
 
   if (!oppen) {
     return (
-      <Panel rubrik="Användare">
+      <Panel rubrik="Users">
         <StorKnapp
           variant="sekundar"
           onClick={() => {
@@ -172,7 +172,7 @@ function AnvandarAdmin() {
   }
 
   return (
-    <Panel rubrik="Användare">
+    <Panel rubrik="Users">
       {lista.map((anv) => (
         <div
           key={anv.id}
@@ -184,7 +184,7 @@ function AnvandarAdmin() {
             </span>{" "}
             · {ROLL_LABEL[anv.roll]} <span className="text-[#707070]">{anv.epost}</span>
             {anv.aktiv === false && (
-              <span className="ml-1 text-[12px] font-semibold text-[#8B1A1A]">Avstängd</span>
+              <span className="ml-1 text-[12px] font-semibold text-[#8B1A1A]">Disabled</span>
             )}
           </p>
           <button
@@ -200,11 +200,11 @@ function AnvandarAdmin() {
                 await sattKontoAktiv(anv.id, anv.aktiv === false);
                 await uppdatera();
               } catch (misslyckande) {
-                setFel(misslyckande instanceof Error ? misslyckande.message : "Något gick fel.");
+                setFel(misslyckande instanceof Error ? misslyckande.message : "Something went wrong.");
               }
             }}
           >
-            {anv.aktiv === false ? "Öppna igen" : "Stäng av"}
+            {anv.aktiv === false ? "Reopen" : "Disable"}
           </button>
         </div>
       ))}
@@ -223,13 +223,13 @@ function AnvandarAdmin() {
             setLosenord("");
             await uppdatera();
           } catch (misslyckande) {
-            setFel(misslyckande instanceof Error ? misslyckande.message : "Något gick fel.");
+            setFel(misslyckande instanceof Error ? misslyckande.message : "Something went wrong.");
           }
         }}
       >
-        <TextFalt label="Namn" varde={namn} satt={setNamn} />
-        <TextFalt label="E-post" varde={epost} satt={setEpost} />
-        <TextFalt label="Lösenord (minst 8 tecken)" varde={losenord} satt={setLosenord} losenord />
+        <TextFalt label="Name" varde={namn} satt={setNamn} />
+        <TextFalt label="E-mail" varde={epost} satt={setEpost} />
+        <TextFalt label="Password (at least 8 characters)" varde={losenord} satt={setLosenord} losenord />
         <div className="mb-3 grid grid-cols-3 gap-2">
           {(Object.keys(ROLL_LABEL) as PlattformRoll[]).map((valbar) => (
             <button
@@ -270,8 +270,8 @@ export default function Arendelista() {
 
   if (!anvandare) {
     return (
-      <FelsokningSkal rubrik="Guidad Felsökning">
-        <Panel rubrik="Vem arbetar?">
+      <FelsokningSkal rubrik="Guided Diagnostics">
+        <Panel rubrik="Who is working?">
           <p className="mb-3 text-[14px] text-[#333333]">
             Allt arbete loggas med användare och tidpunkt. Ange ditt namn för att börja.
           </p>
@@ -281,7 +281,7 @@ export default function Arendelista() {
               if (namn.trim()) sattAnvandare(namn);
             }}
           >
-            <TextFalt label="Namn" varde={namn} satt={setNamn} platshallare="T.ex. Anna" />
+            <TextFalt label="Name" varde={namn} satt={setNamn} platshallare="e.g. Anna" />
             <StorKnapp type="submit" disabled={!namn.trim()}>
               Fortsätt
             </StorKnapp>
@@ -297,18 +297,18 @@ export default function Arendelista() {
   const lista = filter === "pagaende" ? pagaende : filter === "klara" ? klara : alla;
 
   const FILTER: { id: Filter; label: string; antal: number }[] = [
-    { id: "alla", label: "Alla", antal: alla.length },
-    { id: "pagaende", label: "Pågående", antal: pagaende.length },
-    { id: "klara", label: "Klara", antal: klara.length },
+    { id: "alla", label: "All", antal: alla.length },
+    { id: "pagaende", label: "In progress", antal: pagaende.length },
+    { id: "klara", label: "Complete", antal: klara.length },
   ];
 
   return (
     <FelsokningSkal
-      rubrik="Guidad Felsökning"
+      rubrik="Guided Diagnostics"
       hoger={<span className="text-[12px] font-semibold text-[#A9C3DE]">{anvandare}</span>}
     >
       <Link to="/felsokning/nytt">
-        <StorKnapp className="mb-4">+ Nytt ärende</StorKnapp>
+        <StorKnapp className="mb-4">+ New case</StorKnapp>
       </Link>
 
       {alla.length > 0 && (
@@ -328,7 +328,7 @@ export default function Arendelista() {
       )}
 
       {alla.length === 0 && (
-        <Panel rubrik="Kom igång">
+        <Panel rubrik="Get started">
           <p className="mb-3 text-[14px] text-[#333333]">
             Inga ärenden ännu. Starta med att identifiera ett objekt — eller utforska ett färdigt demoärende
             med komplett arbetslogg, brief och kundrapport.
@@ -340,18 +340,18 @@ export default function Arendelista() {
       )}
 
       {lista.length === 0 && alla.length > 0 && (
-        <p className="text-center text-[14px] text-[#4A5560]">Inga ärenden i det här filtret.</p>
+        <p className="text-center text-[14px] text-[#4A5560]">No cases in this filter.</p>
       )}
 
       {plattformAktiv() && <PlattformInloggning />}
 
       {!plattformKonto() && (
         <Link to="/felsokning/installningar" className="mb-4 block">
-          <StorKnapp variant="sekundar"><IkonKugghjul /> Inställningar</StorKnapp>
+          <StorKnapp variant="sekundar"><IkonKugghjul /> Settings</StorKnapp>
         </Link>
       )}
 
-      <Panel rubrik="Beslutsstöd">
+      <Panel rubrik="Decision support">
         <p className="text-[#333333]">
           När du är inloggad hjälper systemet dig medan du arbetar: föreslår nästa steg utifrån det du
           dokumenterar, granskar hela ärendet på begäran och skriver utkast till överlämningen. Den
@@ -379,10 +379,10 @@ export default function Arendelista() {
                     avslutat ? "bg-[#8A94A0] text-white" : "bg-[#00437A] text-white"
                   }`}
                 >
-                  {avslutat ? "Avslutat" : "Pågående"}
+                  {avslutat ? "Closed" : "In progress"}
                 </span>
               </div>
-              <p className="mt-1 text-[15px] font-semibold">{o ? o.beskrivning : "Okänt objekt"}</p>
+              <p className="mt-1 text-[15px] font-semibold">{o ? o.beskrivning : "Unknown object"}</p>
               {o && <p className="text-[12px] font-semibold text-[#4A5560]">{o.identifierare}{o.kund ? ` · ${o.kund}` : ""}</p>}
               {fel && <p className="mt-2 text-[14px] text-[#333333]">”{fel}”</p>}
               <p className="mt-2 text-[12px] text-[#707070]">

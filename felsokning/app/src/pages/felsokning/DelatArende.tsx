@@ -20,8 +20,8 @@ export default function DelatArende() {
 
   if (!arende) {
     return (
-      <FelsokningSkal rubrik="Delat ärende">
-        <p className="text-[14px] text-[#333333]">Ärendet är inte tillgängligt.</p>
+      <FelsokningSkal rubrik="Shared case">
+        <p className="text-[14px] text-[#333333]">The case is not available.</p>
       </FelsokningSkal>
     );
   }
@@ -30,7 +30,7 @@ export default function DelatArende() {
     <DelatArendeVy
       arende={arende}
       nu={nu}
-      notis="Skrivskyddad livevy — uppdateras automatiskt när verkstaden registrerar ny information. Detta är förhandsvisningen; den externa delningslänken visar samma vy."
+      notis="Read-only live view — updates automatically as the workshop records new information. This is the preview; the external share link shows the same view."
     />
   );
 }

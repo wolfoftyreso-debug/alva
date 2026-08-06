@@ -188,17 +188,17 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
 // fält → starta diagnos) kan provas ändå. Märks alltid som demo i UI:t.
 export function byggDemoTolkning(): TolkatFalt[] {
   return [
-    { id: "kund_namn", etikett: "Namn", grupp: "Kund", varde: "Anders Svensson", konfidens: 0.98 },
-    { id: "kund_telefon", etikett: "Telefon", grupp: "Kund", varde: "070-123 45 67", konfidens: 0.91, omrade: { x: 0.08, y: 0.22, bredd: 0.3, hojd: 0.04 } },
-    { id: "fordon_regnr", etikett: "Regnr", grupp: "Personbil", varde: "ABC123", konfidens: 0.99, omrade: { x: 0.62, y: 0.12, bredd: 0.2, hojd: 0.05 } },
-    { id: "fordon_vin", etikett: "VIN", grupp: "Personbil", varde: "YV1DZ8256F2123456", konfidens: 0.74, omrade: { x: 0.55, y: 0.19, bredd: 0.38, hojd: 0.04 } },
-    { id: "fordon_marke", etikett: "Märke", grupp: "Personbil", varde: "Volvo", konfidens: 0.99 },
-    { id: "fordon_modell", etikett: "Modell", grupp: "Personbil", varde: "XC60 D4", konfidens: 0.97 },
-    { id: "fordon_arsmodell", etikett: "Årsmodell", grupp: "Personbil", varde: "2019", konfidens: 0.96 },
-    { id: "fordon_matarstallning", etikett: "Mätarställning", grupp: "Personbil", varde: "8 432 mil", konfidens: 0.87, omrade: { x: 0.62, y: 0.27, bredd: 0.18, hojd: 0.04 } },
-    { id: "ao_nummer", etikett: "Arbetsordernr", grupp: "Verkstad", varde: "AO-2496", konfidens: 0.99 },
-    { id: "ao_serviceradgivare", etikett: "Servicerådgivare", grupp: "Verkstad", varde: "M. Lindqvist", konfidens: 0.82 },
-    { id: "felbeskrivning", etikett: "Felbeskrivning", grupp: "Ärende", varde: "Kunden upplever vibrationer i ratten vid ca 90 km/h", konfidens: 0.97, omrade: { x: 0.08, y: 0.45, bredd: 0.84, hojd: 0.07 } },
+    { id: "kund_namn", etikett: "Namn", grupp: "Customer", varde: "Anders Svensson", konfidens: 0.98 },
+    { id: "kund_telefon", etikett: "Telefon", grupp: "Customer", varde: "070-123 45 67", konfidens: 0.91, omrade: { x: 0.08, y: 0.22, bredd: 0.3, hojd: 0.04 } },
+    { id: "fordon_regnr", etikett: "Regnr", grupp: "Vehicle", varde: "ABC123", konfidens: 0.99, omrade: { x: 0.62, y: 0.12, bredd: 0.2, hojd: 0.05 } },
+    { id: "fordon_vin", etikett: "VIN", grupp: "Vehicle", varde: "YV1DZ8256F2123456", konfidens: 0.74, omrade: { x: 0.55, y: 0.19, bredd: 0.38, hojd: 0.04 } },
+    { id: "fordon_marke", etikett: "Märke", grupp: "Vehicle", varde: "Volvo", konfidens: 0.99 },
+    { id: "fordon_modell", etikett: "Modell", grupp: "Vehicle", varde: "XC60 D4", konfidens: 0.97 },
+    { id: "fordon_arsmodell", etikett: "Årsmodell", grupp: "Vehicle", varde: "2019", konfidens: 0.96 },
+    { id: "fordon_matarstallning", etikett: "Mätarställning", grupp: "Vehicle", varde: "8 432 mil", konfidens: 0.87, omrade: { x: 0.62, y: 0.27, bredd: 0.18, hojd: 0.04 } },
+    { id: "ao_nummer", etikett: "Arbetsordernr", grupp: "Workshop", varde: "AO-2496", konfidens: 0.99 },
+    { id: "ao_serviceradgivare", etikett: "Servicerådgivare", grupp: "Workshop", varde: "M. Lindqvist", konfidens: 0.82 },
+    { id: "felbeskrivning", etikett: "Felbeskrivning", grupp: "Case", varde: "Kunden upplever vibrationer i ratten vid ca 90 km/h", konfidens: 0.97, omrade: { x: 0.08, y: 0.45, bredd: 0.84, hojd: 0.07 } },
   ];
 }
 
