@@ -111,6 +111,9 @@ export type Handelse =
       matdonId?: string;
       matdonBeteckning?: string;
       matdonKalibreradTill?: string;
+      /** Serverns stämpel: gällde kalibreringen vid mottagandet? Fryses
+          vid skrivningen — grinden får aldrig fråga klockan. */
+      kalibreradVidMatning?: boolean;
       /**
        * Härkomst när värdet inte skrevs in av teknikern själv — en
        * modelltolkad instrumentavläsning, eller en importerad protokollrad

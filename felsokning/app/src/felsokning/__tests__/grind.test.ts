@@ -41,7 +41,7 @@ function komplettLogg(extra: Record<string, unknown>[] = []) {
     },
     // Spårbart mätvärde (mätdon ur registret): utan det bär underlaget
     // inte sakerhet "hog", och grinden spärrar — se ALVA-SPEC-071.
-    { typ: "matvarde", beskrivning: "Lufttryck", varde: "2,4", matdonId: "m-1" },
+    { typ: "matvarde", beskrivning: "Lufttryck", varde: "2,4", matdonId: "m-1", kalibreradVidMatning: true },
     { typ: "foto", beskrivning: "Objektet" },
     { typ: "foto", beskrivning: "Typskylt" },
     ...GENERISK.steg.flatMap((s) =>

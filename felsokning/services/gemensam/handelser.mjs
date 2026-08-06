@@ -95,7 +95,12 @@ export const VALFRIA_FÄLT = {
   // diagnosprotokoll (ALVA-SPEC-020). Fältet måste vara deklarerat:
   // integrationen fungerade tidigare bara därför att schemat var öppet.
   observation: ["kalla"],
-  matvarde: ["enhet", "matdonId", "matdonBeteckning", "matdonKalibreradTill", "kalla"],
+  // `kalibreradVidMatning` är serverns stämpel av ett FAKTUM vid
+  // mottagandet: gällde mätdonets kalibrering då? Grinden får inte
+  // fråga klockan (samma logg ska alltid ge samma utfall), så faktumet
+  // måste frysas när det fortfarande är ett faktum. Klientens värde
+  // skrivs alltid över av mätdonsFakta (TÜV-2 T-13).
+  matvarde: ["enhet", "matdonId", "matdonBeteckning", "matdonKalibreradTill", "kalibreradVidMatning", "kalla"],
   overlamning: ["till"],
   historik_kontrollerad: ["kommentar"],
   felorsak: ["motivering", "ytterligareKontroller"],

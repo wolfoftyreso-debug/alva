@@ -1068,6 +1068,55 @@ curl -s -o /dev/null -X POST "$BAS/api/arenden/arende-tal/handelser" -H "Authori
 TAL=$(curl -s "$BAS/api/arenden/arende-tal/kedja" -H "Authorization: Bearer $TOKEN_A")
 kontroll "kedjan överlever numerisk rundresa genom jsonb" "$(echo "$TAL" | falt .ok)" "true"
 
+# 18h. Kalibreringsfaktumet fryses vid mottagandet (TÜV-2 T-13)
+#
+# Grinden får aldrig fråga klockan — samma logg ska ge samma utfall om
+# tio år. Faktumet "gällde kalibreringen?" måste därför stämplas när det
+# fortfarande är ett faktum. Ett mätdon med utgången kalibrering tas
+# emot (att vägra vore att förstöra evidens) men stämplas falskt, och
+# säkerhetstaket räknar det inte som spårbart.
+UTGANGET_ID=$(curl -s -X POST "$BAS/api/matdon" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"beteckning":"Gammal momentnyckel","serienummer":"GM-1","kalibrerad_till":"2019-01-01"}' | falt .id)
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-kal","nummer":91,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
+curl -s -o /dev/null -X POST "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d "{\"handelser\":[{\"id\":\"kal-1\",\"tidpunkt\":\"2026-08-06T10:01:00Z\",\"anvandare\":\"Anna\",\"handelse\":{\"typ\":\"matvarde\",\"beskrivning\":\"Moment\",\"varde\":\"120\",\"enhet\":\"Nm\",\"matdonId\":\"$UTGANGET_ID\",\"kalibreradVidMatning\":true}}]}"
+KAL=$(curl -s "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "utgången kalibrering stämplas falsk — trots klientens påstådda sanna" \
+  "$(echo "$KAL" | falt '.handelser[0].handelse.kalibreradVidMatning')" "false"
+kontroll "registrets datum följer med, inte klientens" \
+  "$(echo "$KAL" | falt '.handelser[0].handelse.matdonKalibreradTill')" "2019-01-01"
+
+# Giltig kalibrering stämplas sann.
+curl -s -o /dev/null -X POST "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d "{\"handelser\":[{\"id\":\"kal-2\",\"tidpunkt\":\"2026-08-06T10:02:00Z\",\"anvandare\":\"Anna\",\"handelse\":{\"typ\":\"matvarde\",\"beskrivning\":\"Obalans\",\"varde\":\"38\",\"enhet\":\"g\",\"matdonId\":\"$MATDON_ID\"}}]}"
+KAL2=$(curl -s "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "giltig kalibrering stämplas sann" \
+  "$(echo "$KAL2" | falt '.handelser[1].handelse.kalibreradVidMatning')" "true"
+
+# 18i. Registret gäller även leverantörer (TÜV-2 T-14)
+#
+# Protokollvägen gick förbi mätdonsFakta: en leverantörsprofil kunde
+# stämpla in vilket matdonId som helst — T-2 återuppstånden genom
+# sidodörren. Ett okänt instrument avvisas inte (en webhook kan inte
+# registrera det på plats) men matdonspåståendena stryks, graderingen
+# faller till E1, och nedgraderingen redovisas i svaret.
+PROT=$(curl -s -X POST "$BAS/api/arenden/arende-kal/protokoll" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"kalla":"Leverantor X","profil":{"matvarden":{"vag":"varden","beskrivning":"namn","varde":"v","instrumentId":"instr"}},"protokoll":{"varden":[{"namn":"Batterispanning","v":"12.4","instr":"pahittat-id"}]}}')
+kontroll "okänt leverantörsinstrument nedgraderas i stället för att tros på" \
+  "$(echo "$PROT" | falt '.nedgraderade.length')" "1"
+PROTH=$(curl -s "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "det nedgraderade värdet skrevs utan matdonspåstående" \
+  "$(echo "$PROTH" | falt '.handelser.filter(h=>h.handelse.beskrivning==="Batterispanning")[0].handelse.matdonId ?? "struket"')" "struket"
+
+# Känt instrument via leverantör stämplas ur registret som allt annat.
+PROT2=$(curl -s -X POST "$BAS/api/arenden/arende-kal/protokoll" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d "{\"kalla\":\"Leverantor X\",\"profil\":{\"matvarden\":{\"vag\":\"varden\",\"beskrivning\":\"namn\",\"varde\":\"v\",\"instrumentId\":\"instr\"}},\"protokoll\":{\"varden\":[{\"namn\":\"Kastmatning\",\"v\":\"0.4\",\"instr\":\"$MATDON_ID\"}]}}")
+kontroll "känt leverantörsinstrument nedgraderas inte" "$(echo "$PROT2" | falt '.nedgraderade.length')" "0"
+PROTH2=$(curl -s "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bearer $TOKEN_A")
+kontroll "leverantörens mätvärde bär registrets stämpel" \
+  "$(echo "$PROTH2" | falt '.handelser.filter(h=>h.handelse.beskrivning==="Kastmatning")[0].handelse.kalibreradVidMatning')" "true"
+
 # 19. Support och felanmälan (ALVA-PROC-0050)
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true

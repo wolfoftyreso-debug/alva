@@ -51,11 +51,12 @@ insert into anvandare (id, organisation_id, epost, losen_hash, namn, roll)
           'a@b.se', crypt('x', gen_salt('bf')), 'Anna Tekniker', 'admin');
 insert into felsokning_arenden (id, organisation_id, nummer, skapad, identifierare_index)
   values ('ar-1', '11111111-1111-1111-1111-111111111111', 1, now(), 'blindat-abc123');
-insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse) values
+insert into felsokning_handelser (id, arende_id, tidpunkt, anvandare, handelse, sekvens, kedjehash) values
   ('h-1', 'ar-1', now() - interval '2 hours', 'Anna Tekniker',
-   '{"typ":"objekt_identifierat","objekt":{"identifierare":"ABC123"}}'),
+   '{"typ":"objekt_identifierat","objekt":{"identifierare":"ABC123"}}', 1, 'lank-1'),
   ('h-2', 'ar-1', now() - interval '1 hour', 'Anna Tekniker',
-   '{"typ":"matvarde","beskrivning":"Lufttryck","varde":"2,4","matdonId":"m1"}');
+   '{"typ":"matvarde","beskrivning":"Lufttryck","varde":"2,4","matdonId":"m1"}', 2, 'lank-2');
+update felsokning_arenden set kedjerot = 'lank-2', forsegling = 'abcd', forseglad = now() where id = 'ar-1';
 insert into personnycklar (id, organisation_id, subjekt, nyckel)
   values ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111',
           'ar-1', decode('00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff','hex'));
@@ -93,6 +94,15 @@ kontroll "bilagans hash följde med" "1" \
 kontroll "append-only-triggarna följde med" "2" \
   "$(kor $MAL "select count(*) from pg_trigger where tgrelid in ('felsokning_handelser'::regclass,'felsokning_arenden'::regclass) and not tgisinternal")"
 
+# Kedjan och förseglingen är bevisets ryggrad — en återställning som
+# tappar dem ger en logg som aldrig mer verifierar (TÜV-2).
+kontroll "kedjelänkarna följde med" "lank-2" \
+  "$(kor $MAL "select kedjehash from felsokning_handelser where id='h-2'")"
+kontroll "kedjeordningen följde med" "2" \
+  "$(kor $MAL "select sekvens from felsokning_handelser where id='h-2'")"
+kontroll "förseglingen följde med" "abcd" \
+  "$(kor $MAL "select forsegling from felsokning_arenden where id='ar-1'")"
+
 echo "→ verifierar att triggarna faktiskt biter i den återställda databasen"
 if su postgres -c "psql -qtAX -d $MAL -c \"update felsokning_handelser set anvandare='Någon annan' where id='h-1'\"" >/dev/null 2>&1; then
   echo "   ✗ append-only bryts i den återställda databasen — historiken går att skriva om"
@@ -105,6 +115,14 @@ if su postgres -c "psql -qtAX -d $MAL -c \"delete from felsokning_handelser wher
   fel=1
 else
   echo "   ✓ raderingsförsök avvisas"
+fi
+# Förseglingslåset ska också överleva dumpen — en försegling som kan
+# skrivas om efter en återställning är ingen försegling.
+if su postgres -c "psql -qtAX -d $MAL -c \"update felsokning_arenden set forsegling='ffff' where id='ar-1'\"" >/dev/null 2>&1; then
+  echo "   ✗ förseglingen gick att skriva om i den återställda databasen"
+  fel=1
+else
+  echo "   ✓ omförsegling avvisas"
 fi
 
 su postgres -c "dropdb --if-exists $KALLA; dropdb --if-exists $MAL"
@@ -119,4 +137,4 @@ fi
 
 echo
 echo "Återställningen bevarade händelser, härkomst, ordning, bilagehashar,"
-echo "personnycklar och append-only-skyddet."
+echo "personnycklar, kedjelänkar, förseglingar och append-only-skyddet."

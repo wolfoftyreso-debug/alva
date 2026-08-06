@@ -48,9 +48,18 @@ export function sakerhetstak(handelser) {
   const av = (typ) => handelser.filter((h) => h?.typ === typ);
 
   const reproducerat = av("reproducering").some((h) => h.status === "ja");
-  // Spårbart = mätdonet kommer ur registret. `matdonId` sätts av servern
-  // vid uppslaget (TÜV T-2), så fältet går inte att dikta från klienten.
-  const sparbartMatvarde = av("matvarde").some((h) => h.matdonId);
+  // Spårbart = mätdonet kommer ur registret OCH kalibreringen gällde
+  // när mätningen togs emot. Stämpeln `kalibreradVidMatning` sätts av
+  // servern vid uppslaget (TÜV T-2, TÜV-2 T-13) — utan den räknade
+  // taket ett instrument med utgången kalibrering som spårbart, och
+  // "hög" gick att nå med ett mätdon som evidensmodellen själv graderar
+  // E1. Fältet går inte att dikta från klienten: mätdonsFakta skriver
+  // alltid över det.
+  //
+  // Strikt även bakåt: ett mätvärde utan stämpel (skrivet före
+  // regeln) räknas INTE som spårbart. Samma princip som för påstådda
+  // beteckningar — det som inte kan styrkas bär inte "hög".
+  const sparbartMatvarde = av("matvarde").some((h) => h.matdonId && h.kalibreradVidMatning === true);
   const evidensOverE1 =
     sparbartMatvarde || av("matvarde").length > 0 || av("foto").length > 0 || av("video").length > 0;
 

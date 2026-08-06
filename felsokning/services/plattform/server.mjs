@@ -20,6 +20,9 @@
 //   SUPPORT_NYCKEL      vår egen supports nyckel; krävs för att svara och sätta status
 //   PERSONNYCKEL_HUVUD  32 byte (hex/base64) — kuverterar personnycklarna så att
 //                       en återställd databasdump inte innehåller läsbara nycklar
+//   FORSEGLING_NYCKEL   HMAC-nyckel för kedjeförseglingen vid avslut; hålls utanför
+//                       databasen. Utan den skrivs kedjan men avslut förseglas inte —
+//                       varnas vid start OCH per avslut, aldrig tyst (TÜV-2 T-15)
 //   PORT                default 8080
 
 import { createServer } from "node:http";
@@ -962,7 +965,7 @@ async function mätdonsFakta(organisationId, handelse) {
   // ett giltigt mätvärde — bara inte ett spårbart. Påstådd beteckning
   // eller kalibrering utan mätdon tas bort: den kan inte styrkas.
   if (!handelse.matdonId) {
-    const { matdonBeteckning, matdonKalibreradTill, ...rest } = handelse;
+    const { matdonBeteckning, matdonKalibreradTill, kalibreradVidMatning, ...rest } = handelse;
     return { handelse: rest };
   }
 
@@ -978,8 +981,16 @@ async function mätdonsFakta(organisationId, handelse) {
   // Ett mätdon utan kalibreringsdatum i registret får inget datum alls —
   // inte klientens. Fältet utelämnas, och graderingen faller till E1.
   delete härledd.matdonKalibreradTill;
+  // Om kalibreringen GÄLLDE vid mottagandet stämplas här, medan det
+  // fortfarande är ett faktum och inte en fråga till klockan. Grinden
+  // och säkerhetstaket läser stämpeln, aldrig datumet mot "nu": samma
+  // logg ska ge samma utfall om tio år (TÜV-2 T-13). Klientens eget
+  // påstående om fältet skrevs just över av spridningen ovan — det är
+  // avsikten, inte en bieffekt.
+  härledd.kalibreradVidMatning = false;
   if (rad.rows[0].kalibrerad_till) {
     härledd.matdonKalibreradTill = new Date(rad.rows[0].kalibrerad_till).toISOString().slice(0, 10);
+    härledd.kalibreradVidMatning = härledd.matdonKalibreradTill >= new Date().toISOString().slice(0, 10);
   }
   return { handelse: härledd };
 }
@@ -2373,6 +2384,7 @@ export function skapaServer() {
         // av samma protokoll idempotent i stället för dubblerande.
         const nyckel = await personnyckel(anspr.org, protokollVag[1]);
         const avvisade = [];
+        const nedgraderade = [];
         const poster = [];
         for (const [i, h] of handelser.entries()) {
           const avtryck = crypto
@@ -2385,6 +2397,26 @@ export function skapaServer() {
             avvisade.push({ index: i, typ: h.typ, orsak: fel });
             continue;
           }
+
+          // Registret gäller även leverantörer (TÜV-2 T-14). Vägen gick
+          // tidigare förbi mätdonsFakta, så en leverantörsprofil kunde
+          // stämpla in vilket matdonId som helst — T-2 återuppstånden
+          // genom sidodörren. Skillnaden mot teknikerns väg: ett okänt
+          // instrument AVVISAS inte, för en webhook kan inte registrera
+          // det på plats och att kasta evidensen vore värre. Värdet
+          // behålls men matdonspåståendena stryks — graderingen faller
+          // till E1, och nedgraderingen redovisas i svaret i stället
+          // för att ske i tysthet.
+          const uppslag = await mätdonsFakta(anspr.org, post.handelse);
+          if (uppslag.fel) {
+            const { matdonId, matdonBeteckning, matdonKalibreradTill, kalibreradVidMatning, ...utan } =
+              post.handelse;
+            post.handelse = utan;
+            nedgraderade.push({ index: i, orsak: uppslag.fel });
+          } else {
+            post.handelse = uppslag.handelse;
+          }
+
           post.handelse = skyddaHändelse(post.handelse, nyckel.id, nyckel.nyckel);
           poster.push(post);
         }
@@ -2402,6 +2434,7 @@ export function skapaServer() {
           skrivna,
           dubbletter,
           avvisade,
+          nedgraderade,
         });
       }
 
@@ -2819,6 +2852,16 @@ export function skapaServer() {
 }
 
 if (process.env.NODE_ENV !== "test") {
+  // Oförseglad drift ska synas VID START, inte upptäckas i en tvist.
+  // Varje avslut varnar redan för sig, men en rad per avslut i en
+  // loggström är brus; en rad vid start är ett beslut någon fattat
+  // (TÜV-2 T-15).
+  if (!FORSEGLING_NYCKEL) {
+    logga("varning", "FORSEGLING_NYCKEL saknas", {
+      konsekvens:
+        "Kedjan skrivs men inga avslut förseglas. Verifieringen svarar 'saknas' för varje ärende som stängs i det här läget.",
+    });
+  }
   skapaServer().listen(PORT, () => {
     console.log(`plattform lyssnar på :${PORT}`);
   });

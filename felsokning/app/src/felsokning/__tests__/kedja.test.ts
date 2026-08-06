@@ -107,7 +107,8 @@ describe("förseglingen", () => {
 
 describe("säkerhetstaket (ALVA-SPEC-071)", () => {
   const REPRO = { typ: "reproducering", status: "ja", beskrivning: "Reproducerad tre gånger." };
-  const SPARBAR = { typ: "matvarde", beskrivning: "Obalans", varde: "38 g", matdonId: "m-1" };
+  const SPARBAR = { typ: "matvarde", beskrivning: "Obalans", varde: "38 g", matdonId: "m-1", kalibreradVidMatning: true };
+  const UTGANGEN = { typ: "matvarde", beskrivning: "Obalans", varde: "38 g", matdonId: "m-1", kalibreradVidMatning: false };
   const OSPARBAR = { typ: "matvarde", beskrivning: "Obalans", varde: "38 g" };
   const FOTO = { typ: "foto", beskrivning: "Höger framhjul" };
   const OBS = { typ: "observation", text: "Slitage på innerkanten" };
@@ -116,6 +117,16 @@ describe("säkerhetstaket (ALVA-SPEC-071)", () => {
     expect(sakerhetstak([REPRO, SPARBAR])).toBe("hog");
     expect(sakerhetstak([REPRO, OSPARBAR])).toBe("medel");
     expect(sakerhetstak([SPARBAR])).toBe("medel");
+  });
+
+  it("utgången kalibrering bär inte hög — evidensmodellen graderar den E1", () => {
+    // TÜV-2 T-13: taket räknade tidigare bara matdonId, så ett
+    // instrument vars kalibrering gick ut 2019 räknades som spårbart.
+    expect(sakerhetstak([REPRO, UTGANGEN])).toBe("medel");
+  });
+
+  it("ett mätvärde utan stämpel räknas inte som spårbart — det som inte kan styrkas bär inte hög", () => {
+    expect(sakerhetstak([REPRO, { typ: "matvarde", beskrivning: "x", varde: "1", matdonId: "m-1" }])).toBe("medel");
   });
 
   it("delvis reproducerat bär inte hög — delvis betyder att felet inte är förstått", () => {
