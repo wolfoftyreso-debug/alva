@@ -50,7 +50,7 @@ export const EN = {
   // reason a technician cannot close a case, so it has to say what is
   // missing — not that something is missing.
   "grind.objekt": "Vehicle or object identification verified",
-  "grind.historik": "Vehicle history checked or justified",
+  "grind.historik": "Vehicle history checked, or the omission justified",
   "grind.historik.nekad": "A declined history check requires a stated reason.",
   "grind.historik.saknas": "No history check documented.",
   "grind.matarstallning.ingaende": "Incoming odometer reading photographed",
@@ -60,22 +60,22 @@ export const EN = {
     "The reading is entered but not photographed. Photograph the odometer, or state why that is not possible.",
   "grind.reproducering": "Symptom verification: reproduced, or documented as not reproducible",
   "grind.felorsak": "Root cause analysis documented",
-  "grind.atgard": "Corrective action documented or justified",
+  "grind.atgard": "Corrective action documented, or its absence justified",
   "grind.atgard.saknas": "Neither a performed action nor a reason for its absence is documented.",
   "grind.kundbeslut": "Customer decision on the proposal recorded",
   "grind.kundbeslut.avbojt": "Work performed despite a declined proposal",
   "grind.kundbeslut.avbojt.detalj": "The customer declined the proposal, but work has been documented as performed.",
-  "grind.kvalitetskontroll": "Quality check performed — symptom verified",
+  "grind.kvalitetskontroll": "Quality check performed — symptom verified as resolved",
   "grind.kontroller": "Methodology checks: evidence, or a documented exemption",
   "grind.foton": "Photographs present for checks that require them",
   "grind.slutsats": "Closing statement (ALVA-RULE-200)",
-  "grind.hogvolt.behorighet": "High-voltage authorisation confirmed",
-  "grind.hogvolt.spanningslos": "Vehicle de-energised per the manufacturer’s procedure",
+  "grind.hogvolt.behorighet": "High-voltage authorization confirmed",
+  "grind.hogvolt.spanningslos": "Vehicle de-energized per the manufacturer’s procedure",
   "grind.regelpaket": "Rule package signature does not match — closing blocked.",
   "grind.regelpaket.osignerat": "An external rule package is in use without a signature — closing blocked.",
   "grind.evidens": "Evidence above E0",
   "grind.evidens.saknas": "No evidence of any kind is present in the log.",
-  "grind.foton.detalj": "{kontroller} checks require a photograph, {foton} photographs in the log.",
+  "grind.foton.detalj": "{kontroller} checks require a photograph; {foton} photographs are in the log.",
   "grind.sparr.ej_uppfyllt": "The safety requirement is not met.",
   "grind.arendetyp.okant": "Unknown requirement in the rule package: {krav}",
   "grind.arendetyp.krav": "Requirement for this case type: {krav}",
@@ -112,7 +112,7 @@ export const EN = {
   "arende.kan_ej_avslutas": "The case cannot be closed yet",
   "arende.hinder": "Outstanding before closing",
   "arende.overlamna": "Hand over",
-  "arende.ansvarig": "Responsible",
+  "arende.ansvarig": "Assigned to",
 
   // ---- Pre-diagnostics ------------------------------------------------------
   "pre.rubrik": "Pre-diagnostics — before the work begins",
@@ -122,9 +122,9 @@ export const EN = {
   "pre.historik.skal": "Reason the history was not checked (required)",
   "pre.historik.relevant": "Relevant previous work (optional — causal chain)",
   "pre.matarstallning": "Odometer reading",
-  "pre.fotografera": "Photograph the instrument panel",
-  "pre.felbeskrivning": "Customer’s description verified",
-  "pre.observationer": "Anything else on receipt?",
+  "pre.fotografera": "Photograph the instrument cluster",
+  "pre.felbeskrivning": "Customer’s fault description verified",
+  "pre.observationer": "Anything else noted at vehicle reception?",
 
   // ---- Common actions --------------------------------------------------------
   "handling.spara": "Save",
@@ -145,7 +145,7 @@ export const EN = {
   "matning.matdon": "Instrument",
   "matning.matdon.valj": "Select instrument",
   "matning.matdon.okant": "Unknown instrument. Register it before saving the measurement.",
-  "matning.kalibrerad_till": "Calibrated until",
+  "matning.kalibrerad_till": "Calibration valid until",
 
   // ---- Report --------------------------------------------------------------------
   "rapport.rubrik": "Case report",
@@ -158,7 +158,7 @@ export const EN = {
   "sprak.valj": "Language",
   "sprak.granskat": "Reviewed",
   "sprak.ogranskat": "Not reviewed",
-  "sprak.tackning": "{procent} % of the interface",
+  "sprak.tackning": "{procent}% of the interface",
 
   // Shown when the methodology content has not been reviewed by a
   // specialist in the user’s language. Deliberately specific: a general
@@ -176,8 +176,8 @@ export const EN = {
   // visitor’s footer choice.
   "webb.nav.oversikt": "Overview",
   "webb.ansok": "Request account",
-  "webb.loggain": "Login",
-  "webb.fot.impressum": "Impressum",
+  "webb.loggain": "Sign in",
+  "webb.fot.impressum": "Legal notice",
   "webb.fot.dataskydd": "Privacy",
   "webb.fot.villkor": "Terms",
   "webb.fot.tillganglighet": "Accessibility",
@@ -203,7 +203,7 @@ export const EN = {
   "webb.drift.etikett": "Operation",
   "webb.drift.rubrik": "How it works",
   "webb.drift.s1.rubrik": "Create organization",
-  "webb.drift.s1.text": "Registration is submitted and reviewed.",
+  "webb.drift.s1.text": "An application is submitted and reviewed.",
   "webb.drift.s2.rubrik": "Users receive accounts",
   "webb.drift.s2.text": "Roles are assigned by the organization administrator.",
   "webb.drift.s3.rubrik": "Guided diagnostic procedures",
@@ -220,7 +220,7 @@ export const EN = {
   "webb.larande.p1":
     "The platform continuously refines diagnostic procedures using verified operational experience from your own organization.",
   "webb.larande.p2":
-    "Every completed diagnostic contributes to subsequent guidance. Only verified outcomes are used — a case closed without confirmed root cause contributes nothing, by design.",
+    "Every completed diagnostic contributes to subsequent guidance. Only verified outcomes are used — a case closed without a confirmed root cause contributes nothing, by design.",
   "webb.larande.p3":
     "The knowledge base belongs to the organization. It is derived from your cases, your procedures and your documentation, and it is not aggregated across customers.",
   "webb.larande.block": "Derived from",
@@ -253,7 +253,7 @@ export const EN = {
   "webb.pris.moduler.grund": "Optional, per module",
   "webb.pris.betalning": "No online payment. No subscription sign-up. Invoicing follows review of the application.",
   "webb.pris.aktivering": "Activation sequence",
-  "webb.pris.a1": "Organization submits registration.",
+  "webb.pris.a1": "Organization submits an application.",
   "webb.pris.a2": "Application is reviewed.",
   "webb.pris.a3": "Invoice is issued.",
   "webb.pris.a4": "Payment is registered.",
@@ -277,7 +277,7 @@ export const EN = {
 
   "webb.login.etikett": "Access",
   "webb.login.demo":
-    "This login authenticates nothing. Type anything into Email and Password and press Sign in — no account is needed, and the portal behind it presents fixed example data. Connected to a platform instance this page authenticates against it, and the portal is closed without a valid session.",
+    "This login authenticates nothing. Type anything into Email and Password and press Sign in — no account is needed, and the portal behind it presents fixed example data. When connected to a platform instance, this page authenticates against it, and the portal is closed without a valid session.",
   "webb.login.losenord": "Password",
   "webb.login.ofullstandigt": "Authentication incomplete. Email and password required.",
   "webb.login.misslyckades": "Authentication failed.",
@@ -290,7 +290,7 @@ export const EN = {
     "Nothing is sent. Submitting this form stores nothing, notifies no one, and creates no application — there is no intake behind it yet. The description below states how registration is intended to work, not what happens today.",
   "webb.ansokan.avsikt": "Intended operation: applications are reviewed manually and no payment is taken at this stage.",
   "webb.falt.foretag": "Company",
-  "webb.falt.orgnummer": "Organization number",
+  "webb.falt.orgnummer": "Company registration number",
   "webb.falt.kontakt": "Contact person",
   "webb.falt.epost": "Email",
   "webb.falt.telefon": "Phone",
@@ -310,7 +310,7 @@ export const EN = {
   "webb.ansokan.granskning":
     "Applications are reviewed manually. An invoice is issued on approval. The organization is activated once payment is registered.",
 
-  "webb.sprak.etikett": "Localization",
+  "webb.sprak.etikett": "Translation",
   "webb.sprak.rubrik": "Languages",
   "webb.sprak.ingress":
     "English is the default and the source language. Nine translations follow. What the platform does not do is claim that a translated interface means a translated method.",
@@ -323,7 +323,7 @@ export const EN = {
   "webb.sprak.metodik.rubrik": "Procedure text",
   "webb.sprak.metodik.beteckning": "Never falls back silently",
   "webb.sprak.metodik.text":
-    "Instructions for work on a vehicle. Here an unreviewed translation is worse than a foreign language one — because English looks foreign, while a bad translation looks like an instruction. It is shown in English and marked, with the language named.",
+    "Instructions for work on a vehicle. Here an unreviewed translation is worse than a foreign-language one — because English looks foreign, while a bad translation looks like an instruction. It is shown in English and marked, with the language named.",
   "webb.sprak.invariant":
     "The method itself is never translated. Phase names and status words are ALVA’s structure and read identically in every country, so an auditor can read a Romanian and a German case record without knowing which language the workshop works in.",
   "webb.sprak.tackning.etikett": "Coverage",
@@ -352,7 +352,7 @@ export const EN = {
   "webb.sprak.val.s2.rubrik": "Organization setting",
   "webb.sprak.val.s2.text": "The workshop’s documentation language.",
   "webb.sprak.val.s3.rubrik": "Browser language",
-  "webb.sprak.val.s3.text": "The first language the platform recognises.",
+  "webb.sprak.val.s3.text": "The first language the platform recognizes.",
   "webb.sprak.val.s4.rubrik": "English",
   "webb.sprak.val.s4.text": "The default, and the source.",
   "webb.sprak.val.notering":

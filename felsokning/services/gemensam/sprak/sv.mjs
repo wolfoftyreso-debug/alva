@@ -21,7 +21,7 @@ export const SV = {
 
   // ---- Kvalitetsgrinden ---------------------------------------------------
   "grind.objekt": "Fordonets eller objektets identitet verifierad",
-  "grind.historik": "Fordonets historik kontrollerad eller motiverad",
+  "grind.historik": "Fordonets historik kontrollerad, eller den uteblivna kontrollen motiverad",
   "grind.historik.nekad": "En nekad historikkontroll kräver ett angivet skäl.",
   "grind.historik.saknas": "Ingen historikkontroll dokumenterad.",
   "grind.matarstallning.ingaende": "Ingående mätarställning fotograferad",
@@ -30,28 +30,28 @@ export const SV = {
   "grind.matarstallning.ej_foto":
     "Mätarställningen är inmatad men inte fotograferad. Fotografera mätaren, eller ange varför det inte är möjligt.",
   "grind.reproducering": "Symtomverifiering: reproducerat, eller dokumenterat som ej reproducerbart",
-  "grind.felorsak": "Felorsaksanalys dokumenterad",
-  "grind.atgard": "Åtgärd dokumenterad eller motiverad",
+  "grind.felorsak": "Grundorsaksanalys dokumenterad",
+  "grind.atgard": "Åtgärd dokumenterad, eller den uteblivna åtgärden motiverad",
   "grind.atgard.saknas": "Varken utförd åtgärd eller skäl till att den uteblivit är dokumenterat.",
   "grind.kundbeslut": "Kundens beslut om förslaget registrerat",
   "grind.kundbeslut.avbojt": "Arbete utfört trots avböjt förslag",
   "grind.kundbeslut.avbojt.detalj": "Kunden avböjde förslaget, men arbete är dokumenterat som utfört.",
-  "grind.kvalitetskontroll": "Kvalitetskontroll utförd — symtomet verifierat",
+  "grind.kvalitetskontroll": "Kvalitetskontroll utförd — symtomet verifierat avhjälpt",
   "grind.kontroller": "Metodikens kontrollpunkter: evidens, eller dokumenterat undantag",
-  "grind.foton": "Foton finns för de kontroller som kräver det",
+  "grind.foton": "Foton finns för de kontrollpunkter som kräver det",
   "grind.slutsats": "Slutsats (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Högvoltsbehörighet bekräftad",
-  "grind.hogvolt.spanningslos": "Fordonet spänningslöst enligt tillverkarens metod",
+  "grind.hogvolt.spanningslos": "Fordonet spänningslöst enligt tillverkarens procedur",
   "grind.regelpaket": "Regelpaketets signatur stämmer inte — avslut spärrat.",
   "grind.regelpaket.osignerat": "Ett externt regelpaket används utan signatur — avslut spärrat.",
   "grind.evidens": "Evidensnivå över E0",
   "grind.evidens.saknas": "Ingen evidens av något slag finns i loggen.",
-  "grind.foton.detalj": "{kontroller} kontroller kräver foto, {foton} foton i loggen.",
+  "grind.foton.detalj": "{kontroller} kontrollpunkter kräver foto, {foton} foton i loggen.",
   "grind.sparr.ej_uppfyllt": "Säkerhetskravet är inte uppfyllt.",
   "grind.arendetyp.okant": "Okänt krav i regelpaketet: {krav}",
   "grind.arendetyp.krav": "Krav för ärendetypen: {krav}",
-  "grind.sakerhet": "Säkerhetsnivån inom vad underlaget bär",
-  "grind.sakerhet.detalj": "Angiven säkerhet ({niva}) överstiger vad underlaget bär ({tak}). Komplettera underlaget, eller sänk nivån — ärlig osäkerhet är information.",
+  "grind.sakerhet": "Konfidensnivån inom vad underlaget bär",
+  "grind.sakerhet.detalj": "Angiven konfidens ({niva}) överstiger vad underlaget bär ({tak}). Komplettera underlaget, eller sänk nivån — ärlig osäkerhet är information.",
 
 
   // ---- Slutsatsen (ALVA-RULE-200) -----------------------------------------
@@ -69,9 +69,9 @@ export const SV = {
   "slutsats.saknas": "{falt} saknas.",
   "slutsats.ickesvar.falt": "{falt}: ”{text}” är inget skäl. Beskriv vad som faktiskt gäller och varför.",
   "slutsats.for_kort": "{falt} är för kort ({langd} av minst {minsta} tecken) för att gå att granska i efterhand.",
-  "slutsats.utan_varfor": "{falt} anger vad, men inte varför. Knyt slutsatsen till underlaget — vad i evidensen gör att det här följer?",
+  "slutsats.utan_varfor": "{falt} anger vad, men inte varför. Knyt slutsatsen till evidensen — vad i den gör att det här följer?",
   "slutsats.utan_slutsats": "Ärendet kan inte avslutas utan en slutsats. Motivera varför slutsatsen följer av underlaget.",
-  "slutsats.hypotes_obemott": "Hypotesen ”{text}” finns i loggen men bemöts inte. Ange varför den uteslöts, eller varför den kvarstår.",
+  "slutsats.hypotes_obemott": "Hypotesen ”{text}” finns i loggen men bemöts inte. Ange varför den avfärdades, eller varför den kvarstår.",
 
 
   // ---- Ärendeflödet -------------------------------------------------------
@@ -80,7 +80,7 @@ export const SV = {
   "arende.avslutade": "Avslutade ärenden",
   "arende.avsluta": "Avsluta ärendet",
   "arende.avslutat": "Ärendet avslutat",
-  "arende.kan_ej_avslutas": "Ärendet kan inte avslutas än",
+  "arende.kan_ej_avslutas": "Ärendet kan ännu inte avslutas",
   "arende.hinder": "Kvarstår före avslut",
   "arende.overlamna": "Lämna över",
   "arende.ansvarig": "Ansvarig",
@@ -116,7 +116,7 @@ export const SV = {
   "matning.matdon": "Mätdon",
   "matning.matdon.valj": "Välj mätdon",
   "matning.matdon.okant": "Okänt mätdon. Registrera det innan mätningen sparas.",
-  "matning.kalibrerad_till": "Kalibrerad till",
+  "matning.kalibrerad_till": "Kalibrerad t.o.m.",
 
   // ---- Rapport ------------------------------------------------------------
   "rapport.rubrik": "Ärenderapport",
@@ -145,7 +145,7 @@ export const SV = {
   "webb.fot.villkor": "Villkor",
   "webb.fot.tillganglighet": "Tillgänglighet",
   "webb.fot.sprak": "Språk",
-  "webb.fot.utgavor": "Utgåvor",
+  "webb.fot.utgavor": "Versionsinformation",
 
   "webb.hero.position": "Guidad diagnostikplattform",
   "webb.hero.definition": "Standardiserade diagnosprocedurer för repeterbar och verifierbar felsökning.",
@@ -229,7 +229,7 @@ export const SV = {
     "ALVA använder organisationens egna auktoriserade kunskapskällor. Arkitekturen är leverantörsneutral: varje källa implementerar samma gränssnitt, och ingen leverantör förutsätts.",
   "webb.kallor.p2":
     "En betainstallation arbetar enbart mot intern dokumentation. Externa leverantörer aktiveras senare via separata anslutningar, utan ändring i plattformskärnan.",
-  "webb.kallor.block": "Källornas upplösningsordning",
+  "webb.kallor.block": "Källornas prioritetsordning",
   "webb.kallor.k1": "Interna företagsprocedurer",
   "webb.kallor.k2": "OEM-dokumentation",
   "webb.kallor.k3": "Tekniska bulletiner",
@@ -250,7 +250,7 @@ export const SV = {
 
   "webb.ansokan.etikett": "Registrering",
   "webb.ansokan.demo":
-    "Ingenting skickas. Att skicka formuläret lagrar ingenting, meddelar ingen och skapar ingen ansökan — det finns ännu inget mottag bakom det. Beskrivningen nedan anger hur registreringen är avsedd att fungera, inte vad som sker i dag.",
+    "Ingenting skickas. Att skicka formuläret lagrar ingenting, meddelar ingen och skapar ingen ansökan — det finns ännu inget mottagande system bakom det. Beskrivningen nedan anger hur registreringen är avsedd att fungera, inte vad som sker i dag.",
   "webb.ansokan.avsikt": "Avsedd drift: ansökningar granskas manuellt och ingen betalning tas i detta skede.",
   "webb.falt.foretag": "Företag",
   "webb.falt.orgnummer": "Organisationsnummer",
@@ -267,7 +267,7 @@ export const SV = {
   "webb.ansokan.mottagen.etikett": "Ansökan",
   "webb.ansokan.mottagen": "Inskickad",
   "webb.ansokan.mottagen.demo":
-    "Ingenting skickades och ingen underrättades. Referensen nedan beräknades i din webbläsare ur det du skrev och finns ingen annanstans — den är borta när du stänger sidan.",
+    "Ingenting skickades och ingen underrättades. Referensen nedan beräknades i er webbläsare ur det ni skrev och finns ingen annanstans — den är borta när ni stänger sidan.",
   "webb.ansokan.status": "Status",
   "webb.ansokan.referens": "Referens",
   "webb.ansokan.granskning":
@@ -286,7 +286,7 @@ export const SV = {
   "webb.sprak.metodik.rubrik": "Metodiktext",
   "webb.sprak.metodik.beteckning": "Faller aldrig tillbaka tyst",
   "webb.sprak.metodik.text":
-    "Instruktioner för arbete på ett fordon. Här är en ogranskad översättning sämre än en på främmande språk — därför att engelska ser främmande ut, medan en dålig översättning ser ut som en instruktion. Den visas på engelska och märks, med språket namngivet.",
+    "Instruktioner för arbete på ett fordon. Här är en ogranskad översättning sämre än en på främmande språk — därför att engelska ser främmande ut, medan en dålig översättning ser ut som en instruktion. Den visas på engelska och markeras, med språket namngivet.",
   "webb.sprak.invariant":
     "Metoden själv översätts aldrig. Fasnamn och statusord är ALVA:s struktur och läses likadant i varje land, så att en revisor kan läsa en rumänsk och en tysk ärendejournal utan att veta vilket språk verkstaden arbetar på.",
   "webb.sprak.tackning.etikett": "Täckning",
@@ -303,7 +303,7 @@ export const SV = {
   "webb.sprak.bevis.etikett": "Verifiering",
   "webb.sprak.bevis.rubrik": "Strängarna som stoppar ett ärende",
   "webb.sprak.bevis.ingress":
-    "Detta är meningarna som nekar en tekniker att avsluta ett ärende. En nekan ingen förstår är en nekan utan väg igenom — så det är rätt strängar att bedöma en översättning på.",
+    "Detta är meningarna som nekar en tekniker att avsluta ett ärende. Ett avslag ingen förstår är ett avslag utan väg igenom — så det är rätt strängar att bedöma en översättning på.",
   "webb.sprak.ej_granskad": "Ej granskad",
   "webb.sprak.granskad": "Granskad",
   "webb.sprak.granskad.text":

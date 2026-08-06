@@ -277,7 +277,7 @@ function IdentitetsRad({ arende, skicka }: { arende: Arende; skicka: (h: Handels
       {del("Reg. no.", idn.identifierare)}
       {del("VIN", idn.vin)}
       {del("Mileage", idn.miltal)}
-      {del("Responsible", idn.ansvarig)}
+      {del("Assigned to", idn.ansvarig)}
       <label className="ml-auto flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">Case type</span>
         <select
@@ -339,7 +339,7 @@ function MatarstallningSteg({ lage, skicka }: { lage: "ingaende" | "utgaende"; s
       />
       {!foto && !laser && (
         <StorKnapp variant="sekundar" onClick={() => filRef.current?.click()}>
-          <IkonKamera /> Photograph the instrument panel
+          <IkonKamera /> Photograph the instrument cluster
         </StorKnapp>
       )}
       {laser && <p className="py-2 text-center text-[12px] font-semibold text-[#005CA9]">Reading the odometer …</p>}
@@ -502,7 +502,7 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
       {!rad("matarstallning_in").klar && (
         <div className="mt-4 border-t border-[#D7DCE2] pt-2">
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
-            Incoming odometer reading — photograph the instrument panel
+            Incoming odometer reading — photograph the instrument cluster
           </p>
           <MatarstallningSteg lage="ingaende" skicka={skicka} />
         </div>
@@ -527,7 +527,7 @@ function PreDiagnostikPanel({ arende, skicka }: { arende: Arende; skicka: (h: Ha
       {!rad("tidiga_observationer").klar && (
         <div className="mt-4 border-t border-[#D7DCE2] pt-2">
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
-            Anything else on receipt? (traces of repair, modifications, damage, leaks, corrosion …)
+            Anything else noted at vehicle reception? (traces of repair, modifications, damage, leaks, corrosion …)
           </p>
           <div className="grid grid-cols-2 gap-2">
             <StorKnapp variant="sekundar" onClick={() => skicka({ typ: "kommentar", text: `${MARKOR_INGA_TIDIGA_OBSERVATIONER}.` })}>
@@ -1170,7 +1170,7 @@ function KontextPanel({
         {rad("Object", b.objekt?.beskrivning)}
         {rad("Ident", b.objekt?.identifierare)}
         {rad("Customer", b.objekt?.kund)}
-        {rad("Responsible", b.ansvarig)}
+        {rad("Assigned to", b.ansvarig)}
         {rad("Status", b.avslutat ? "Closed" : "In progress")}
         {rad("Sync", SYNKSTATUS_LABEL[synkStatus])}
         {rad("Labour time", b.totalArbetstid)}

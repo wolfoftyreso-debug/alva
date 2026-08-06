@@ -21,8 +21,8 @@ export const IT = {
 
   // ---- Il controllo di chiusura -------------------------------------------
   "grind.objekt": "Identificazione del veicolo o dell’oggetto verificata",
-  "grind.historik": "Storico del veicolo verificato o motivato",
-  "grind.historik.nekad": "Un controllo dello storico rifiutato richiede un motivo indicato.",
+  "grind.historik": "Storico del veicolo verificato, o l’omissione motivata",
+  "grind.historik.nekad": "Un controllo dello storico rifiutato richiede l’indicazione di un motivo.",
   "grind.historik.saknas": "Nessun controllo dello storico documentato.",
   "grind.matarstallning.ingaende": "Chilometraggio in accettazione fotografato",
   "grind.matarstallning.utgaende": "Chilometraggio alla riconsegna fotografato",
@@ -31,15 +31,15 @@ export const IT = {
     "Il chilometraggio è inserito ma non fotografato. Fotografare il contachilometri, oppure indicare perché non è possibile.",
   "grind.reproducering": "Verifica del sintomo: riprodotto, oppure documentato come non riproducibile",
   "grind.felorsak": "Analisi della causa radice documentata",
-  "grind.atgard": "Intervento documentato o motivato",
+  "grind.atgard": "Intervento correttivo documentato, o la sua assenza motivata",
   "grind.atgard.saknas": "Non è documentato né un intervento eseguito né un motivo della sua assenza.",
   "grind.kundbeslut": "Decisione del cliente sulla proposta registrata",
   "grind.kundbeslut.avbojt": "Lavoro eseguito nonostante una proposta rifiutata",
   "grind.kundbeslut.avbojt.detalj":
-    "Il cliente ha rifiutato la proposta, ma risulta documentato del lavoro come eseguito.",
-  "grind.kvalitetskontroll": "Controllo qualità eseguito — sintomo verificato",
+    "Il cliente ha rifiutato la proposta, ma risulta documentato lavoro eseguito.",
+  "grind.kvalitetskontroll": "Controllo qualità eseguito — sintomo verificato come risolto",
   "grind.kontroller": "Punti di controllo della metodologia: evidenza, oppure deroga documentata",
-  "grind.foton": "Fotografie presenti per i controlli che le richiedono",
+  "grind.foton": "Fotografie presenti per i punti di controllo che le richiedono",
   "grind.slutsats": "Conclusione (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Abilitazione alta tensione confermata",
   "grind.hogvolt.spanningslos": "Veicolo messo fuori tensione secondo la procedura del costruttore",
@@ -47,7 +47,7 @@ export const IT = {
   "grind.regelpaket.osignerat": "È in uso un pacchetto di regole esterno privo di firma — chiusura bloccata.",
   "grind.evidens": "Livello di evidenza superiore a E0",
   "grind.evidens.saknas": "Nel registro non è presente alcuna evidenza.",
-  "grind.foton.detalj": "{kontroller} controlli richiedono una fotografia, {foton} fotografie nel registro.",
+  "grind.foton.detalj": "{kontroller} punti di controllo richiedono una fotografia, {foton} fotografie nel registro.",
   "grind.sparr.ej_uppfyllt": "Il requisito di sicurezza non è soddisfatto.",
   "grind.arendetyp.okant": "Requisito sconosciuto nel pacchetto di regole: {krav}",
   "grind.arendetyp.krav": "Requisito per questo tipo di pratica: {krav}",
@@ -62,7 +62,7 @@ export const IT = {
   "slutsats.avfardat": "Quali ipotesi sono state escluse, e perché",
   "slutsats.osakert": "Che cosa resta incerto",
   "slutsats.ickesvar":
-    "Questa non è una conclusione. Indicare che cosa è stato accertato e quale evidenza lo sostiene.",
+    "Questa non è una risposta. Indicare che cosa è stato accertato e quale evidenza lo sostiene.",
   "slutsats.falt.motivering": "Motivazione",
   "slutsats.falt.motivering_ej": "Motivo per cui la causa non è stata accertata",
   "slutsats.falt.uteslutet": "Alternative escluse",
@@ -70,8 +70,8 @@ export const IT = {
   "slutsats.falt.atgardsval": "Scelta dell’intervento",
   "slutsats.saknas": "{falt} manca.",
   "slutsats.ickesvar.falt": "{falt}: «{text}» non è una motivazione. Indicare che cosa vale realmente, e perché.",
-  "slutsats.for_kort": "{falt} è troppo breve ({langd} su almeno {minsta} caratteri) per poter essere verificato in seguito.",
-  "slutsats.utan_varfor": "{falt} indica il che cosa, non il perché. Collegare la conclusione all’evidenza — che cosa in essa la sostiene?",
+  "slutsats.for_kort": "{falt} è troppo breve ({langd} su almeno {minsta} caratteri) per consentirne la verifica in seguito.",
+  "slutsats.utan_varfor": "{falt} indica che cosa, non perché. Collegare la conclusione all’evidenza — che cosa in essa la sostiene?",
   "slutsats.utan_slutsats": "La pratica non può essere chiusa senza una conclusione. Indicare perché la conclusione discende dall’evidenza.",
   "slutsats.hypotes_obemott": "L’ipotesi «{text}» è presente nel registro ma non viene trattata. Indicare perché è stata esclusa, o perché resta aperta.",
 
@@ -96,8 +96,8 @@ export const IT = {
   "pre.historik.skal": "Motivo per cui lo storico non è stato verificato (obbligatorio)",
   "pre.historik.relevant": "Lavori precedenti rilevanti (facoltativo — catena causale)",
   "pre.matarstallning": "Chilometraggio",
-  "pre.fotografera": "Fotografa il quadro strumenti",
-  "pre.felbeskrivning": "Descrizione del guasto del cliente verificata",
+  "pre.fotografera": "Fotografare il quadro strumenti",
+  "pre.felbeskrivning": "Descrizione del guasto fornita dal cliente verificata",
   "pre.observationer": "Altro in fase di accettazione?",
 
   // ---- Azioni -------------------------------------------------------------
@@ -142,9 +142,9 @@ export const IT = {
   // ---- Sito pubblico (webb.) ---------------------------------------------
   "webb.nav.oversikt": "Panoramica",
   "webb.ansok": "Richiedi un account",
-  "webb.loggain": "Accesso",
+  "webb.loggain": "Accedi",
   "webb.fot.impressum": "Note legali",
-  "webb.fot.dataskydd": "Riservatezza",
+  "webb.fot.dataskydd": "Privacy",
   "webb.fot.villkor": "Condizioni",
   "webb.fot.tillganglighet": "Accessibilità",
   "webb.fot.sprak": "Lingue",
@@ -173,11 +173,11 @@ export const IT = {
   "webb.drift.s2.rubrik": "Gli utenti ricevono gli account",
   "webb.drift.s2.text": "I ruoli sono assegnati dall’amministratore dell’organizzazione.",
   "webb.drift.s3.rubrik": "Procedure diagnostiche guidate",
-  "webb.drift.s3.text": "Ogni caso segue una procedura definita.",
+  "webb.drift.s3.text": "Ogni pratica segue una procedura definita.",
   "webb.drift.s4.rubrik": "Verifica",
   "webb.drift.s4.text": "La causa radice viene confermata prima dell’azione correttiva.",
   "webb.drift.s5.rubrik": "Documentazione",
-  "webb.drift.s5.text": "Il rapporto è generato dal registro del caso.",
+  "webb.drift.s5.text": "Il rapporto è generato dal registro della pratica.",
   "webb.drift.s6.rubrik": "Miglioramento continuo",
   "webb.drift.s6.text": "Gli esiti verificati affinano le procedure successive.",
 
@@ -186,9 +186,9 @@ export const IT = {
   "webb.larande.p1":
     "La piattaforma affina di continuo le procedure diagnostiche con l’esperienza operativa verificata della vostra stessa organizzazione.",
   "webb.larande.p2":
-    "Ogni diagnosi completata alimenta la guida successiva. Si usano solo esiti verificati — un caso chiuso senza causa radice confermata non apporta nulla, per costruzione.",
+    "Ogni diagnosi completata alimenta la guida successiva. Si usano solo esiti verificati — una pratica chiusa senza causa radice confermata non apporta nulla, per costruzione.",
   "webb.larande.p3":
-    "La base di conoscenza appartiene all’organizzazione. È derivata dai vostri casi, dalle vostre procedure e dalla vostra documentazione, e non viene aggregata tra clienti.",
+    "La base di conoscenza appartiene all’organizzazione. È derivata dalle vostre pratiche, dalle vostre procedure e dalla vostra documentazione, e non viene aggregata tra clienti.",
   "webb.larande.block": "Derivata da",
   "webb.larande.k1": "Cause radice verificate",
   "webb.larande.k2": "Azioni correttive confermate",
@@ -199,13 +199,13 @@ export const IT = {
   "webb.rapport.etikett": "Rendicontazione",
   "webb.rapport.rubrik": "Rapporto trimestrale di miglioramento",
   "webb.rapport.ingress":
-    "Una volta a trimestre la piattaforma risponde a sei domande sul lavoro dell’officina stessa. Ogni risposta è derivata dal registro dei casi — nulla è stimato, e a nessuno viene chiesto nulla.",
+    "Una volta a trimestre la piattaforma risponde a sei domande sul lavoro dell’officina stessa. Ogni risposta è derivata dal registro delle pratiche — nulla è stimato, e a nessuno viene chiesto nulla.",
   "webb.rapport.f1": "Quali guasti diagnostichiamo ora correttamente al primo tentativo?",
   "webb.rapport.f2": "Quanto spesso una causa sospetta si rivela quella reale?",
   "webb.rapport.f3": "Quali guasti continuano a ripresentarsi nella flotta?",
-  "webb.rapport.f4": "Quali passi della procedura vengono saltati, e perché?",
+  "webb.rapport.f4": "Quali passaggi della procedura vengono saltati, e perché?",
   "webb.rapport.f5": "Cosa sa oggi l’officina che non sapeva il trimestre scorso?",
-  "webb.rapport.f6": "I casi vengono chiusi, verificati e documentati — o soltanto chiusi?",
+  "webb.rapport.f6": "Le pratiche vengono chiuse, verificate e documentate — o soltanto chiuse?",
 
   "webb.pris.etikett": "Commerciale",
   "webb.pris.rubrik": "Licenze",
@@ -238,7 +238,7 @@ export const IT = {
   "webb.kallor.k3": "Bollettini tecnici",
   "webb.kallor.k4": "Informazioni di garanzia",
   "webb.kallor.k5": "Manuali di officina",
-  "webb.kallor.k6": "Diagnosi verificate storiche",
+  "webb.kallor.k6": "Storico delle diagnosi verificate",
   "webb.kallor.k7": "Buone pratiche dell’organizzazione",
 
   "webb.login.etikett": "Accesso",
@@ -253,10 +253,10 @@ export const IT = {
 
   "webb.ansokan.etikett": "Registrazione",
   "webb.ansokan.demo":
-    "Non viene inviato nulla. Inviare questo modulo non salva nulla, non avvisa nessuno e non crea alcuna richiesta — dietro non c’è ancora una ricezione. La descrizione qui sotto dice come la registrazione è pensata per funzionare, non cosa accade oggi.",
+    "Non viene inviato nulla. Inviare questo modulo non salva nulla, non avvisa nessuno e non crea alcuna richiesta — dietro non c’è ancora alcun sistema che la riceva. La descrizione qui sotto dice come la registrazione è pensata per funzionare, non cosa accade oggi.",
   "webb.ansokan.avsikt": "Funzionamento previsto: le richieste sono esaminate manualmente e in questa fase non viene riscosso alcun pagamento.",
   "webb.falt.foretag": "Azienda",
-  "webb.falt.orgnummer": "Numero di registro delle imprese",
+  "webb.falt.orgnummer": "Numero di iscrizione al Registro delle Imprese",
   "webb.falt.kontakt": "Referente",
   "webb.falt.epost": "E-mail",
   "webb.falt.telefon": "Telefono",
@@ -285,7 +285,7 @@ export const IT = {
   "webb.sprak.granssnitt.rubrik": "Testo d’interfaccia",
   "webb.sprak.granssnitt.beteckning": "Ripiega in silenzio",
   "webb.sprak.granssnitt.text":
-    "Etichette, pulsanti, stati. Finito, cambia di rado. Una stringa inglese che raggiunge un utente tedesco è un fastidio, non un pericolo — una traduzione mancante ripiega quindi sull’inglese senza commento.",
+    "Etichette, pulsanti, stati. Un insieme finito, che cambia di rado. Una stringa inglese che raggiunge un utente tedesco è un fastidio, non un pericolo — una traduzione mancante ripiega quindi sull’inglese senza commento.",
   "webb.sprak.metodik.rubrik": "Testo di procedura",
   "webb.sprak.metodik.beteckning": "Non ripiega mai in silenzio",
   "webb.sprak.metodik.text":
@@ -304,13 +304,13 @@ export const IT = {
   "webb.sprak.kallsprak":
     "Il testo di procedura inglese è una traduzione della fonte svedese e non è ancora stato letto da uno specialista che esercita il mestiere. È tenuto allo stesso standard delle altre nove lingue, e qui se ne fa la stessa dichiarazione invece di esentarlo in silenzio perché è la fonte.",
   "webb.sprak.bevis.etikett": "Verifica",
-  "webb.sprak.bevis.rubrik": "Le frasi che fermano un caso",
+  "webb.sprak.bevis.rubrik": "Le frasi che fermano una pratica",
   "webb.sprak.bevis.ingress":
-    "Queste sono le frasi che negano a un tecnico la chiusura di un caso. Un rifiuto che nessuno capisce è un rifiuto senza via d’uscita — sono quindi le frasi giuste per giudicare una traduzione.",
+    "Queste sono le frasi che negano a un tecnico la chiusura di una pratica. Un rifiuto che nessuno capisce è un rifiuto senza via d’uscita — sono quindi le frasi giuste per giudicare una traduzione.",
   "webb.sprak.ej_granskad": "Non revisionato",
   "webb.sprak.granskad": "Revisionato",
   "webb.sprak.granskad.text":
-    "Il testo di procedura in {sprak} è stato letto da uno specialista che esercita il mestiere. Passi e punti di controllo sono mostrati in {sprak} ovunque.",
+    "Il testo di procedura in {sprak} è stato letto da uno specialista che esercita il mestiere. Passaggi e punti di controllo sono mostrati in {sprak} ovunque.",
   "webb.sprak.val.etikett": "Funzionamento",
   "webb.sprak.val.rubrik": "Come viene scelta la lingua",
   "webb.sprak.val.s1.rubrik": "Preferenza dell’utente",

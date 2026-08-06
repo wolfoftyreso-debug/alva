@@ -22,23 +22,23 @@ export const DE = {
 
   // ---- Qualitätsschranke --------------------------------------------------
   "grind.objekt": "Identität des Fahrzeugs oder Objekts verifiziert",
-  "grind.historik": "Fahrzeughistorie geprüft oder begründet",
-  "grind.historik.nekad": "Eine abgelehnte Historienprüfung erfordert eine angegebene Begründung.",
+  "grind.historik": "Fahrzeughistorie geprüft, oder das Unterlassen begründet",
+  "grind.historik.nekad": "Eine abgelehnte Historienprüfung erfordert eine Begründung.",
   "grind.historik.saknas": "Keine Historienprüfung dokumentiert.",
   "grind.matarstallning.ingaende": "Kilometerstand bei Annahme fotografiert",
-  "grind.matarstallning.utgaende": "Kilometerstand bei Ausgabe fotografiert",
+  "grind.matarstallning.utgaende": "Kilometerstand bei Rückgabe fotografiert",
   "grind.matarstallning.saknas": "Kein Kilometerstand dokumentiert.",
   "grind.matarstallning.ej_foto":
     "Der Kilometerstand ist eingetragen, aber nicht fotografiert. Kilometerzähler fotografieren, oder angeben, warum dies nicht möglich ist.",
   "grind.reproducering": "Symptomverifizierung: reproduziert oder als nicht reproduzierbar dokumentiert",
-  "grind.felorsak": "Fehlerursachenanalyse dokumentiert",
-  "grind.atgard": "Maßnahme dokumentiert oder begründet",
+  "grind.felorsak": "Grundursachenanalyse dokumentiert",
+  "grind.atgard": "Korrekturmaßnahme dokumentiert, oder ihr Ausbleiben begründet",
   "grind.atgard.saknas": "Weder eine durchgeführte Maßnahme noch ein Grund für deren Ausbleiben ist dokumentiert.",
   "grind.kundbeslut": "Kundenentscheidung zum Vorschlag erfasst",
   "grind.kundbeslut.avbojt": "Arbeit trotz abgelehntem Vorschlag durchgeführt",
   "grind.kundbeslut.avbojt.detalj":
     "Der Kunde hat den Vorschlag abgelehnt, es ist jedoch durchgeführte Arbeit dokumentiert.",
-  "grind.kvalitetskontroll": "Qualitätskontrolle durchgeführt — Symptom verifiziert",
+  "grind.kvalitetskontroll": "Qualitätsprüfung durchgeführt — Symptom nachweislich behoben",
   "grind.kontroller": "Prüfpunkte der Methodik: Evidenz oder dokumentierte Ausnahme",
   "grind.foton": "Fotos für die Prüfpunkte vorhanden, die sie erfordern",
   "grind.slutsats": "Abschlussfeststellung (ALVA-RULE-200)",
@@ -63,16 +63,16 @@ export const DE = {
   "slutsats.avfardat": "Welche Hypothesen verworfen wurden, und warum",
   "slutsats.osakert": "Was unsicher bleibt",
   "slutsats.ickesvar":
-    "Das ist keine Feststellung. Angeben, was festgestellt wurde und welche Evidenz dies trägt.",
+    "Das ist keine Antwort. Angeben, was festgestellt wurde und welche Evidenz dies trägt.",
   "slutsats.falt.motivering": "Begründung",
-  "slutsats.falt.motivering_ej": "Grund, warum die Ursache nicht festgestellt wurde",
+  "slutsats.falt.motivering_ej": "Grund, warum die Ursache nicht festgestellt werden konnte",
   "slutsats.falt.uteslutet": "Verworfene Alternativen",
   "slutsats.falt.kvarstaende": "Verbleibende Unsicherheit",
   "slutsats.falt.atgardsval": "Wahl der Maßnahme",
   "slutsats.saknas": "{falt} fehlt.",
   "slutsats.ickesvar.falt": "{falt}: „{text}“ ist keine Begründung. Angeben, was tatsächlich gilt, und warum.",
   "slutsats.for_kort": "{falt} ist zu kurz ({langd} von mindestens {minsta} Zeichen), um im Nachhinein prüfbar zu sein.",
-  "slutsats.utan_varfor": "{falt} nennt das Was, nicht das Warum. Die Feststellung an die Evidenz binden — was darin lässt dies folgen?",
+  "slutsats.utan_varfor": "{falt} nennt das Was, nicht das Warum. Die Feststellung an die Evidenz binden — was darin begründet diese Folgerung?",
   "slutsats.utan_slutsats": "Der Vorgang kann ohne Abschlussfeststellung nicht abgeschlossen werden. Angeben, warum die Feststellung aus der Evidenz folgt.",
   "slutsats.hypotes_obemott": "Die Hypothese „{text}“ steht im Protokoll, wird aber nicht behandelt. Angeben, warum sie verworfen wurde oder warum sie offen bleibt.",
 
@@ -91,7 +91,7 @@ export const DE = {
   // ---- Vorprüfung ---------------------------------------------------------
   "pre.rubrik": "Vorprüfung — vor Arbeitsbeginn",
   "pre.historik.fraga":
-    "Ist die Fahrzeughistorie geprüft? (frühere Arbeiten, wiederkehrende Fehler, TSB, Rückrufaktionen)",
+    "Ist die Fahrzeughistorie geprüft? (frühere Arbeiten, wiederkehrende Fehler, TSB, Rückruf- und Serviceaktionen)",
   "pre.historik.ja": "Ja — geprüft",
   "pre.historik.nej": "Nein",
   "pre.historik.skal": "Grund, warum die Historie nicht geprüft wurde (erforderlich)",
@@ -119,7 +119,7 @@ export const DE = {
   "matning.enhet": "Einheit",
   "matning.matdon": "Messmittel",
   "matning.matdon.valj": "Messmittel wählen",
-  "matning.matdon.okant": "Unbekanntes Messmittel. Vor dem Speichern der Messung registrieren.",
+  "matning.matdon.okant": "Unbekanntes Messmittel. Das Messmittel vor dem Speichern der Messung registrieren.",
   "matning.kalibrerad_till": "Kalibriert bis",
 
   // ---- Bericht ------------------------------------------------------------
@@ -146,7 +146,7 @@ export const DE = {
   "webb.loggain": "Anmeldung",
   "webb.fot.impressum": "Impressum",
   "webb.fot.dataskydd": "Datenschutz",
-  "webb.fot.villkor": "Bedingungen",
+  "webb.fot.villkor": "Nutzungsbedingungen",
   "webb.fot.tillganglighet": "Barrierefreiheit",
   "webb.fot.sprak": "Sprachen",
   "webb.fot.utgavor": "Versionshinweise",
@@ -160,8 +160,8 @@ export const DE = {
     "ALVA ist eine standardisierte Methode für systematische Analyse, Lokalisierung, Verifikation und Maßnahme. Jede Entscheidung ist nachvollziehbar, jede Schlussfolgerung verifizierbar, jede Maßnahme reproduzierbar.",
   "webb.fas.analysis.syfte": "Evidenz sammeln.",
   "webb.fas.analysis.avgransning": "Nur Fakten. Hypothesen werden in dieser Phase nicht erfasst.",
-  "webb.fas.localization.syfte": "Den Fehler eingrenzen.",
-  "webb.fas.localization.avgransning": "Den Bereich einengen. Die Ursache ist noch nicht festgestellt.",
+  "webb.fas.localization.syfte": "Den Fehler isolieren.",
+  "webb.fas.localization.avgransning": "Den Bereich eingrenzen. Die Ursache ist noch nicht festgestellt.",
   "webb.fas.verification.syfte": "Grundursache bestätigen.",
   "webb.fas.verification.avgransning": "Verifiziert wird die Ursache — nicht das Symptom.",
   "webb.fas.action.syfte": "Korrekturmaßnahme durchführen.",
@@ -174,11 +174,11 @@ export const DE = {
   "webb.drift.s2.rubrik": "Benutzer erhalten Konten",
   "webb.drift.s2.text": "Rollen werden vom Administrator der Organisation vergeben.",
   "webb.drift.s3.rubrik": "Geführte Diagnoseprozeduren",
-  "webb.drift.s3.text": "Jeder Fall folgt einer definierten Prozedur.",
+  "webb.drift.s3.text": "Jeder Vorgang folgt einer definierten Prozedur.",
   "webb.drift.s4.rubrik": "Verifikation",
   "webb.drift.s4.text": "Die Grundursache wird vor der Korrekturmaßnahme bestätigt.",
   "webb.drift.s5.rubrik": "Dokumentation",
-  "webb.drift.s5.text": "Der Bericht wird aus dem Fallprotokoll erzeugt.",
+  "webb.drift.s5.text": "Der Bericht wird aus dem Vorgangsprotokoll erzeugt.",
   "webb.drift.s6.rubrik": "Kontinuierliche Verbesserung",
   "webb.drift.s6.text": "Verifizierte Ergebnisse verfeinern nachfolgende Prozeduren.",
 
@@ -187,9 +187,9 @@ export const DE = {
   "webb.larande.p1":
     "Die Plattform verfeinert Diagnoseprozeduren fortlaufend mit verifizierter Betriebserfahrung aus der eigenen Organisation.",
   "webb.larande.p2":
-    "Jede abgeschlossene Diagnose fließt in die nachfolgende Führung ein. Nur verifizierte Ergebnisse werden verwendet — ein Fall, der ohne bestätigte Grundursache geschlossen wurde, trägt bewusst nichts bei.",
+    "Jede abgeschlossene Diagnose fließt in die nachfolgende Anleitung ein. Nur verifizierte Ergebnisse werden verwendet — ein Vorgang, der ohne bestätigte Grundursache geschlossen wurde, trägt bewusst nichts bei.",
   "webb.larande.p3":
-    "Die Wissensbasis gehört der Organisation. Sie wird aus Ihren Fällen, Ihren Prozeduren und Ihrer Dokumentation abgeleitet und nicht über Kunden hinweg zusammengeführt.",
+    "Die Wissensbasis gehört der Organisation. Sie wird aus Ihren Vorgängen, Ihren Prozeduren und Ihrer Dokumentation abgeleitet und nicht über Kunden hinweg zusammengeführt.",
   "webb.larande.block": "Abgeleitet aus",
   "webb.larande.k1": "Verifizierte Grundursachen",
   "webb.larande.k2": "Bestätigte Korrekturmaßnahmen",
@@ -200,13 +200,13 @@ export const DE = {
   "webb.rapport.etikett": "Berichtswesen",
   "webb.rapport.rubrik": "Vierteljährlicher Verbesserungsbericht",
   "webb.rapport.ingress":
-    "Einmal im Quartal beantwortet die Plattform sechs Fragen zur eigenen Arbeit des Betriebs. Jede Antwort wird aus dem Fallprotokoll abgeleitet — nichts wird geschätzt, und niemand wird befragt.",
+    "Einmal im Quartal beantwortet die Plattform sechs Fragen zur eigenen Arbeit des Betriebs. Jede Antwort wird aus dem Vorgangsprotokoll abgeleitet — nichts wird geschätzt, und niemand wird befragt.",
   "webb.rapport.f1": "Welche Fehler diagnostizieren wir jetzt beim ersten Mal richtig?",
   "webb.rapport.f2": "Wie oft erweist sich eine vermutete Ursache als die tatsächliche?",
   "webb.rapport.f3": "Welche Fehler kehren in der Flotte immer wieder?",
   "webb.rapport.f4": "Welche Prozedurschritte werden übersprungen, und warum?",
   "webb.rapport.f5": "Was weiß der Betrieb jetzt, was er im letzten Quartal nicht wusste?",
-  "webb.rapport.f6": "Werden Fälle abgeschlossen, verifiziert und dokumentiert — oder nur abgeschlossen?",
+  "webb.rapport.f6": "Werden Vorgänge abgeschlossen, verifiziert und dokumentiert — oder nur abgeschlossen?",
 
   "webb.pris.etikett": "Kommerzielles",
   "webb.pris.rubrik": "Lizenzierung",
@@ -215,7 +215,7 @@ export const DE = {
   "webb.pris.plattform": "Plattformlizenz",
   "webb.pris.plattform.grund": "Je Organisation, jährlich",
   "webb.pris.anvandare": "Benutzerlizenzen",
-  "webb.pris.anvandare.grund": "Je aktivem Benutzer, monatlich",
+  "webb.pris.anvandare.grund": "Pro aktivem Benutzer, monatlich",
   "webb.pris.moduler": "Unternehmensmodule",
   "webb.pris.moduler.grund": "Optional, je Modul",
   "webb.pris.betalning": "Keine Online-Zahlung. Keine Abo-Anmeldung. Die Rechnungsstellung folgt auf die Prüfung des Antrags.",
@@ -254,7 +254,7 @@ export const DE = {
 
   "webb.ansokan.etikett": "Registrierung",
   "webb.ansokan.demo":
-    "Nichts wird gesendet. Das Absenden dieses Formulars speichert nichts, benachrichtigt niemanden und erzeugt keinen Antrag — dahinter steht noch keine Annahme. Die Beschreibung unten sagt, wie die Registrierung arbeiten soll, nicht was heute geschieht.",
+    "Nichts wird gesendet. Das Absenden dieses Formulars speichert nichts, benachrichtigt niemanden und erzeugt keinen Antrag — dahinter steht noch keine Antragsentgegennahme. Die Beschreibung unten sagt, wie die Registrierung funktionieren soll, nicht was heute geschieht.",
   "webb.ansokan.avsikt": "Vorgesehener Betrieb: Anträge werden manuell geprüft, und in diesem Schritt wird keine Zahlung erhoben.",
   "webb.falt.foretag": "Unternehmen",
   "webb.falt.orgnummer": "Handelsregisternummer",
@@ -286,13 +286,13 @@ export const DE = {
   "webb.sprak.granssnitt.rubrik": "Oberflächentext",
   "webb.sprak.granssnitt.beteckning": "Fällt still zurück",
   "webb.sprak.granssnitt.text":
-    "Beschriftungen, Schaltflächen, Status. Endlich, selten geändert. Eine englische Zeichenkette bei einem deutschen Benutzer ist ein Ärgernis, keine Gefahr — eine fehlende Übersetzung fällt daher kommentarlos auf Englisch zurück.",
+    "Beschriftungen, Schaltflächen, Status. Begrenzter Bestand, selten geändert. Eine englische Zeichenkette bei einem deutschen Benutzer ist ein Ärgernis, keine Gefahr — eine fehlende Übersetzung fällt daher kommentarlos auf Englisch zurück.",
   "webb.sprak.metodik.rubrik": "Verfahrenstext",
   "webb.sprak.metodik.beteckning": "Fällt nie still zurück",
   "webb.sprak.metodik.text":
     "Anweisungen für Arbeiten an einem Fahrzeug. Hier ist eine ungeprüfte Übersetzung schlimmer als eine fremdsprachige — denn Englisch sieht fremd aus, während eine schlechte Übersetzung wie eine Anweisung aussieht. Sie wird auf Englisch gezeigt und gekennzeichnet, mit benannter Sprache.",
   "webb.sprak.invariant":
-    "Die Methode selbst wird nie übersetzt. Phasennamen und Statusworte sind ALVAs Struktur und lesen sich in jedem Land gleich, sodass ein Prüfer eine rumänische und eine deutsche Fallakte lesen kann, ohne zu wissen, in welcher Sprache der Betrieb arbeitet.",
+    "Die Methode selbst wird nie übersetzt. Phasennamen und Statuswörter sind ALVAs Struktur und lesen sich in jedem Land gleich, sodass ein Prüfer eine rumänische und eine deutsche Vorgangsakte lesen kann, ohne zu wissen, in welcher Sprache der Betrieb arbeitet.",
   "webb.sprak.tackning.etikett": "Abdeckung",
   "webb.sprak.tackning.rubrik": "Was übersetzt ist, und was geprüft ist",
   "webb.sprak.kolumn.sprak": "Sprache",
@@ -305,9 +305,9 @@ export const DE = {
   "webb.sprak.kallsprak":
     "Der englische Verfahrenstext ist eine Übersetzung der schwedischen Quelle und wurde noch nicht von einer im Handwerk tätigen Fachkraft gelesen. Er wird am selben Maßstab gemessen wie die anderen neun Sprachen, und dieselbe Aussage steht hier über ihn, statt ihn still auszunehmen, weil er die Quelle ist.",
   "webb.sprak.bevis.etikett": "Verifikation",
-  "webb.sprak.bevis.rubrik": "Die Sätze, die einen Fall stoppen",
+  "webb.sprak.bevis.rubrik": "Die Sätze, die einen Vorgang stoppen",
   "webb.sprak.bevis.ingress":
-    "Dies sind die Sätze, die einem Techniker den Abschluss eines Falls verweigern. Eine Verweigerung, die niemand versteht, ist eine Verweigerung ohne Ausweg — also sind es die richtigen Sätze, um eine Übersetzung zu beurteilen.",
+    "Dies sind die Sätze, die einem Techniker den Abschluss eines Vorgangs verweigern. Eine Verweigerung, die niemand versteht, ist eine Verweigerung ohne Ausweg — also sind es die richtigen Sätze, um eine Übersetzung zu beurteilen.",
   "webb.sprak.ej_granskad": "Nicht geprüft",
   "webb.sprak.granskad": "Geprüft",
   "webb.sprak.granskad.text":
@@ -323,5 +323,5 @@ export const DE = {
   "webb.sprak.val.s4.rubrik": "Englisch",
   "webb.sprak.val.s4.text": "Der Standard, und die Quelle.",
   "webb.sprak.val.notering":
-    "Die Organisation steht bewusst über dem Browser. Ein Betrieb in Deutschland mit einem polnischen Techniker braucht eine gemeinsame Dokumentationssprache — die Fallakte darf die Sprache nicht danach wechseln, wer die Zeile gerade geschrieben hat.",
+    "Die Organisation steht bewusst über dem Browser. Ein Betrieb in Deutschland mit einem polnischen Techniker braucht eine gemeinsame Dokumentationssprache — die Sprache der Vorgangsakte darf nicht davon abhängen, wer die Zeile gerade geschrieben hat.",
 };

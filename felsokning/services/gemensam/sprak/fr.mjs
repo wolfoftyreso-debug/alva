@@ -22,25 +22,25 @@ export const FR = {
 
   // ---- Le contrôle de clôture ---------------------------------------------
   "grind.objekt": "Identification du véhicule ou de l’objet vérifiée",
-  "grind.historik": "Historique du véhicule vérifié ou justifié",
-  "grind.historik.nekad": "Un contrôle d’historique refusé exige un motif indiqué.",
+  "grind.historik": "Historique du véhicule vérifié, ou son omission justifiée",
+  "grind.historik.nekad": "Un contrôle d’historique refusé exige que le motif soit indiqué.",
   "grind.historik.saknas": "Aucun contrôle d’historique documenté.",
   "grind.matarstallning.ingaende": "Kilométrage à la réception photographié",
   "grind.matarstallning.utgaende": "Kilométrage à la restitution photographié",
   "grind.matarstallning.saknas": "Aucun kilométrage documenté.",
   "grind.matarstallning.ej_foto":
     "Le kilométrage est saisi mais non photographié. Photographier le compteur, ou indiquer pourquoi cela n’est pas possible.",
-  "grind.reproducering": "Vérification du symptôme : reproduit, ou documenté comme non reproductible",
+  "grind.reproducering": "Vérification du symptôme : reproduit, ou documenté comme non reproductible",
   "grind.felorsak": "Analyse de la cause racine documentée",
-  "grind.atgard": "Action corrective documentée ou justifiée",
+  "grind.atgard": "Action corrective documentée, ou son absence justifiée",
   "grind.atgard.saknas": "Ni action réalisée ni motif de son absence n’est documenté.",
   "grind.kundbeslut": "Décision du client sur la proposition enregistrée",
   "grind.kundbeslut.avbojt": "Travaux réalisés malgré une proposition refusée",
   "grind.kundbeslut.avbojt.detalj":
     "Le client a refusé la proposition, mais des travaux sont documentés comme réalisés.",
-  "grind.kvalitetskontroll": "Contrôle qualité effectué — symptôme vérifié",
-  "grind.kontroller": "Points de contrôle de la méthode : preuve, ou dérogation documentée",
-  "grind.foton": "Photographies présentes pour les contrôles qui l’exigent",
+  "grind.kvalitetskontroll": "Contrôle qualité effectué — symptôme vérifié comme résolu",
+  "grind.kontroller": "Points de contrôle de la méthode : preuve, ou dérogation documentée",
+  "grind.foton": "Photographies présentes pour les points de contrôle qui les exigent",
   "grind.slutsats": "Conclusion (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Habilitation haute tension confirmée",
   "grind.hogvolt.spanningslos": "Véhicule consigné hors tension selon la procédure du constructeur",
@@ -48,10 +48,10 @@ export const FR = {
   "grind.regelpaket.osignerat": "Un paquet de règles externe est utilisé sans signature — clôture bloquée.",
   "grind.evidens": "Niveau de preuve supérieur à E0",
   "grind.evidens.saknas": "Aucune preuve d’aucune sorte ne figure dans le journal.",
-  "grind.foton.detalj": "{kontroller} contrôles exigent une photographie, {foton} photographies dans le journal.",
+  "grind.foton.detalj": "{kontroller} points de contrôle exigent une photographie, {foton} photographies dans le journal.",
   "grind.sparr.ej_uppfyllt": "L’exigence de sécurité n’est pas satisfaite.",
-  "grind.arendetyp.okant": "Exigence inconnue dans le paquet de règles : {krav}",
-  "grind.arendetyp.krav": "Exigence pour ce type de dossier : {krav}",
+  "grind.arendetyp.okant": "Exigence inconnue dans le paquet de règles : {krav}",
+  "grind.arendetyp.krav": "Exigence pour ce type de dossier : {krav}",
   "grind.sakerhet": "Niveau de confiance dans les limites de ce que les preuves soutiennent",
   "grind.sakerhet.detalj": "La confiance indiquée ({niva}) dépasse ce que les preuves soutiennent ({tak}). Compléter les preuves, ou abaisser le niveau — une incertitude honnête est une information.",
 
@@ -62,18 +62,18 @@ export const FR = {
   "slutsats.evidens": "Quelles preuves l’étayent",
   "slutsats.avfardat": "Quelles hypothèses ont été écartées, et pourquoi",
   "slutsats.osakert": "Ce qui reste incertain",
-  "slutsats.ickesvar": "Ce n’est pas une conclusion. Indiquer ce qui est établi et quelles preuves l’étayent.",
+  "slutsats.ickesvar": "Ce n’est pas une réponse. Indiquer ce qui est établi et quelles preuves l’étayent.",
   "slutsats.falt.motivering": "Justification",
   "slutsats.falt.motivering_ej": "Motif pour lequel la cause n’a pas pu être établie",
   "slutsats.falt.uteslutet": "Alternatives écartées",
   "slutsats.falt.kvarstaende": "Incertitude restante",
   "slutsats.falt.atgardsval": "Choix de l’action",
-  "slutsats.saknas": "{falt} est absent.",
-  "slutsats.ickesvar.falt": "{falt} : « {text} » n’est pas un motif. Indiquer ce qui s’applique réellement, et pourquoi.",
-  "slutsats.for_kort": "{falt} est trop court ({langd} sur au moins {minsta} caractères) pour être vérifiable après coup.",
-  "slutsats.utan_varfor": "{falt} indique le quoi, mais pas le pourquoi. Relier la conclusion aux preuves — qu’est-ce qui, dans celles-ci, la rend fondée ?",
+  "slutsats.saknas": "Le champ « {falt} » est absent.",
+  "slutsats.ickesvar.falt": "{falt} : « {text} » n’est pas un motif. Indiquer ce qui s’applique réellement, et pourquoi.",
+  "slutsats.for_kort": "Le champ « {falt} » est trop court ({langd} caractères sur un minimum de {minsta}) pour être vérifiable après coup.",
+  "slutsats.utan_varfor": "{falt} indique le quoi, mais pas le pourquoi. Relier la conclusion aux preuves — qu’est-ce qui, dans celles-ci, la rend fondée ?",
   "slutsats.utan_slutsats": "Le dossier ne peut pas être clôturé sans conclusion. Indiquer pourquoi la conclusion découle des preuves.",
-  "slutsats.hypotes_obemott": "L’hypothèse « {text} » figure dans le journal mais n’est pas traitée. Indiquer pourquoi elle a été écartée, ou pourquoi elle reste ouverte.",
+  "slutsats.hypotes_obemott": "L’hypothèse « {text} » figure dans le journal mais n’est pas traitée. Indiquer pourquoi elle a été écartée, ou pourquoi elle reste ouverte.",
 
 
   // ---- Flux du dossier ----------------------------------------------------
@@ -83,14 +83,14 @@ export const FR = {
   "arende.avsluta": "Clôturer le dossier",
   "arende.avslutat": "Dossier clôturé",
   "arende.kan_ej_avslutas": "Le dossier ne peut pas encore être clôturé",
-  "arende.hinder": "Reste avant clôture",
+  "arende.hinder": "En suspens avant clôture",
   "arende.overlamna": "Transmettre",
   "arende.ansvarig": "Responsable",
 
   // ---- Contrôle préalable -------------------------------------------------
   "pre.rubrik": "Contrôle préalable — avant le début des travaux",
   "pre.historik.fraga":
-    "L’historique du véhicule a-t-il été vérifié ? (travaux antérieurs, défauts récurrents, TSB, campagnes)",
+    "L’historique du véhicule a-t-il été vérifié ? (travaux antérieurs, défauts récurrents, TSB, campagnes)",
   "pre.historik.ja": "Oui — vérifié",
   "pre.historik.nej": "Non",
   "pre.historik.skal": "Motif pour lequel l’historique n’a pas été vérifié (obligatoire)",
@@ -98,7 +98,7 @@ export const FR = {
   "pre.matarstallning": "Kilométrage",
   "pre.fotografera": "Photographier le tableau de bord",
   "pre.felbeskrivning": "Description du défaut par le client vérifiée",
-  "pre.observationer": "Autre chose à la réception ?",
+  "pre.observationer": "Autre chose à la réception ?",
 
   // ---- Actions ------------------------------------------------------------
   "handling.spara": "Enregistrer",
@@ -118,7 +118,7 @@ export const FR = {
   "matning.enhet": "Unité",
   "matning.matdon": "Instrument",
   "matning.matdon.valj": "Sélectionner un instrument",
-  "matning.matdon.okant": "Instrument inconnu. L’enregistrer avant de sauvegarder la mesure.",
+  "matning.matdon.okant": "Instrument inconnu. Le déclarer avant d’enregistrer la mesure.",
   "matning.kalibrerad_till": "Étalonné jusqu’au",
 
   // ---- Rapport ------------------------------------------------------------
@@ -127,7 +127,7 @@ export const FR = {
   "rapport.evidens": "Preuves",
   "rapport.atgarder": "Actions",
   "rapport.harledd":
-    "Dérivé du journal du dossier. Les observations et les mesures sont rapportées sans conclusions dépourvues de fondement.",
+    "Généré à partir du journal du dossier. Les observations et les mesures sont rapportées sans conclusions dépourvues de fondement.",
 
   // ---- Langue -------------------------------------------------------------
   "sprak.valj": "Langue",
@@ -151,7 +151,7 @@ export const FR = {
   "webb.fot.utgavor": "Notes de version",
 
   "webb.hero.position": "Plateforme de diagnostic guidé",
-  "webb.hero.definition": "Des procédures de diagnostic normalisées pour un dépannage répétable et vérifiable.",
+  "webb.hero.definition": "Des procédures de diagnostic normalisées pour une recherche de pannes répétable et vérifiable.",
 
   "webb.metod.etikett": "Méthodologie",
   "webb.metod.rubrik": "Le modèle ALVA",
@@ -186,7 +186,7 @@ export const FR = {
   "webb.larande.p1":
     "La plateforme affine en continu les procédures de diagnostic à partir de l’expérience opérationnelle vérifiée de votre propre organisation.",
   "webb.larande.p2":
-    "Chaque diagnostic achevé nourrit le guidage suivant. Seuls les résultats vérifiés sont utilisés — un dossier clos sans cause racine confirmée n’apporte rien, à dessein.",
+    "Chaque diagnostic achevé nourrit le guidage suivant. Seuls les résultats vérifiés sont utilisés — un dossier clôturé sans cause racine confirmée n’apporte rien, à dessein.",
   "webb.larande.p3":
     "La base de connaissances appartient à l’organisation. Elle est dérivée de vos dossiers, de vos procédures et de votre documentation, et elle n’est pas agrégée entre clients.",
   "webb.larande.block": "Dérivée de",
@@ -200,12 +200,12 @@ export const FR = {
   "webb.rapport.rubrik": "Rapport trimestriel d’amélioration",
   "webb.rapport.ingress":
     "Une fois par trimestre, la plateforme répond à six questions sur le travail de l’atelier lui-même. Chaque réponse est dérivée du journal des dossiers — rien n’est estimé, et rien n’est demandé à personne.",
-  "webb.rapport.f1": "Quels défauts diagnostiquons-nous désormais correctement du premier coup ?",
-  "webb.rapport.f2": "À quelle fréquence une cause soupçonnée se révèle-t-elle être la vraie ?",
-  "webb.rapport.f3": "Quels défauts reviennent sans cesse dans le parc ?",
-  "webb.rapport.f4": "Quelles étapes de procédure sont sautées, et pourquoi ?",
-  "webb.rapport.f5": "Que sait l’atelier aujourd’hui qu’il ne savait pas au trimestre dernier ?",
-  "webb.rapport.f6": "Les dossiers sont-ils clos, vérifiés et documentés — ou seulement clos ?",
+  "webb.rapport.f1": "Quels défauts diagnostiquons-nous désormais correctement du premier coup ?",
+  "webb.rapport.f2": "À quelle fréquence une cause soupçonnée se révèle-t-elle être la vraie ?",
+  "webb.rapport.f3": "Quels défauts reviennent sans cesse dans le parc ?",
+  "webb.rapport.f4": "Quelles étapes de procédure sont sautées, et pourquoi ?",
+  "webb.rapport.f5": "Que sait l’atelier aujourd’hui qu’il ne savait pas au trimestre dernier ?",
+  "webb.rapport.f6": "Les dossiers sont-ils clôturés, vérifiés et documentés — ou seulement clôturés ?",
 
   "webb.pris.etikett": "Commercial",
   "webb.pris.rubrik": "Licences",
@@ -227,9 +227,9 @@ export const FR = {
   "webb.pris.a6": "Les utilisateurs supplémentaires sont facturés mensuellement.",
 
   "webb.kallor.etikett": "Infrastructure",
-  "webb.kallor.rubrik": "Infrastructure de connaissances opérationnelle",
+  "webb.kallor.rubrik": "Infrastructure de connaissances opérationnelles",
   "webb.kallor.p1":
-    "ALVA utilise les sources de connaissances autorisées propres à l’organisation. L’architecture est neutre vis-à-vis des fournisseurs : chaque source implémente la même interface, et aucun fournisseur n’est présupposé.",
+    "ALVA utilise les sources de connaissances autorisées propres à l’organisation. L’architecture est neutre vis-à-vis des fournisseurs : chaque source implémente la même interface, et aucun fournisseur n’est présupposé.",
   "webb.kallor.p2":
     "Une installation bêta fonctionne sur la seule documentation interne. Les fournisseurs externes sont activés plus tard par des connecteurs séparés, sans modification du cœur de la plateforme.",
   "webb.kallor.block": "Ordre de résolution des sources",
@@ -253,11 +253,11 @@ export const FR = {
 
   "webb.ansokan.etikett": "Inscription",
   "webb.ansokan.demo":
-    "Rien n’est envoyé. Soumettre ce formulaire n’enregistre rien, ne notifie personne et ne crée aucune demande — il n’y a pas encore de réception derrière. La description ci-dessous indique comment l’inscription est censée fonctionner, pas ce qui se passe aujourd’hui.",
-  "webb.ansokan.avsikt": "Fonctionnement prévu : les demandes sont examinées manuellement et aucun paiement n’est perçu à ce stade.",
+    "Rien n’est envoyé. Soumettre ce formulaire n’enregistre rien, ne notifie personne et ne crée aucune demande — aucun traitement n’existe encore derrière. La description ci-dessous indique comment l’inscription est censée fonctionner, pas ce qui se passe aujourd’hui.",
+  "webb.ansokan.avsikt": "Fonctionnement prévu : les demandes sont examinées manuellement et aucun paiement n’est perçu à ce stade.",
   "webb.falt.foretag": "Entreprise",
-  "webb.falt.orgnummer": "Numéro d’immatriculation",
-  "webb.falt.kontakt": "Personne de contact",
+  "webb.falt.orgnummer": "Numéro d’immatriculation de l’entreprise",
+  "webb.falt.kontakt": "Personne à contacter",
   "webb.falt.epost": "E-mail",
   "webb.falt.telefon": "Téléphone",
   "webb.falt.tekniker": "Nombre de techniciens",
@@ -279,7 +279,7 @@ export const FR = {
   "webb.sprak.etikett": "Localisation",
   "webb.sprak.rubrik": "Langues",
   "webb.sprak.ingress":
-    "L’anglais est la langue par défaut et la langue source. Neuf traductions suivent. Ce que la plateforme ne fait pas : prétendre qu’une interface traduite signifie une méthode traduite.",
+    "L’anglais est la langue par défaut et la langue source. Neuf traductions suivent. Ce que la plateforme ne fait pas : prétendre qu’une interface traduite signifie une méthode traduite.",
   "webb.sprak.princip.etikett": "Principe",
   "webb.sprak.princip.rubrik": "Deux sortes de texte",
   "webb.sprak.granssnitt.rubrik": "Texte d’interface",
@@ -300,13 +300,13 @@ export const FR = {
   "webb.sprak.granskat.ja": "Oui",
   "webb.sprak.granskat.nej": "Non — texte de procédure affiché en anglais",
   "webb.sprak.matt":
-    "La couverture de l’interface est mesurée, pas estimée : un test fait échouer la compilation si une clé manque dans une langue. Le statut de relecture est une affirmation sur des personnes, pas sur des fichiers, et il est fixé à la main.",
+    "La couverture de l’interface est mesurée, pas estimée : un test fait échouer la compilation si une clé manque dans une langue. Le statut de relecture est une affirmation sur des personnes, pas sur des fichiers, et il est fixé à la main.",
   "webb.sprak.kallsprak":
     "Le texte de procédure anglais est une traduction de la source suédoise et n’a pas encore été lu par un spécialiste exerçant le métier. Il est tenu au même niveau d’exigence que les neuf autres langues, et la même déclaration est faite ici à son sujet au lieu de l’excepter discrètement parce qu’il est la source.",
   "webb.sprak.bevis.etikett": "Vérification",
   "webb.sprak.bevis.rubrik": "Les phrases qui arrêtent un dossier",
   "webb.sprak.bevis.ingress":
-    "Ce sont les phrases qui refusent à un technicien de clore un dossier. Un refus que personne ne comprend est un refus sans issue — ce sont donc les bonnes phrases pour juger une traduction.",
+    "Ce sont les phrases qui empêchent un technicien de clôturer un dossier. Un refus que personne ne comprend est un refus sans issue — ce sont donc les bonnes phrases pour juger une traduction.",
   "webb.sprak.ej_granskad": "Non relu",
   "webb.sprak.granskad": "Relu",
   "webb.sprak.granskad.text":

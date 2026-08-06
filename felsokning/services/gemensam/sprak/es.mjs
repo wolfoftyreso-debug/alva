@@ -21,8 +21,8 @@ export const ES = {
 
   // ---- El control de cierre -----------------------------------------------
   "grind.objekt": "Identificación del vehículo u objeto verificada",
-  "grind.historik": "Historial del vehículo comprobado o justificado",
-  "grind.historik.nekad": "Una comprobación de historial rechazada exige un motivo indicado.",
+  "grind.historik": "Historial del vehículo comprobado, o su omisión justificada",
+  "grind.historik.nekad": "Una comprobación de historial rechazada exige que se indique el motivo.",
   "grind.historik.saknas": "No hay ninguna comprobación de historial documentada.",
   "grind.matarstallning.ingaende": "Kilometraje de entrada fotografiado",
   "grind.matarstallning.utgaende": "Kilometraje de salida fotografiado",
@@ -31,15 +31,15 @@ export const ES = {
     "El kilometraje está introducido pero no fotografiado. Fotografiar el cuentakilómetros, o indicar por qué no es posible.",
   "grind.reproducering": "Verificación del síntoma: reproducido, o documentado como no reproducible",
   "grind.felorsak": "Análisis de la causa raíz documentado",
-  "grind.atgard": "Acción correctiva documentada o justificada",
-  "grind.atgard.saknas": "No está documentada ni una acción realizada ni un motivo de su ausencia.",
-  "grind.kundbeslut": "Decisión del cliente sobre la propuesta registrada",
+  "grind.atgard": "Acción correctiva documentada, o su ausencia justificada",
+  "grind.atgard.saknas": "No se ha documentado ni una acción realizada ni un motivo de su ausencia.",
+  "grind.kundbeslut": "Decisión del cliente sobre la propuesta: registrada",
   "grind.kundbeslut.avbojt": "Trabajo realizado pese a una propuesta rechazada",
   "grind.kundbeslut.avbojt.detalj":
     "El cliente rechazó la propuesta, pero hay trabajo documentado como realizado.",
-  "grind.kvalitetskontroll": "Control de calidad realizado — síntoma verificado",
+  "grind.kvalitetskontroll": "Control de calidad realizado — síntoma verificado como resuelto",
   "grind.kontroller": "Puntos de control de la metodología: evidencia, o exención documentada",
-  "grind.foton": "Hay fotografías para los controles que las exigen",
+  "grind.foton": "Hay fotografías para los puntos de control que las exigen",
   "grind.slutsats": "Conclusión (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Habilitación de alta tensión confirmada",
   "grind.hogvolt.spanningslos": "Vehículo sin tensión según el procedimiento del fabricante",
@@ -47,12 +47,12 @@ export const ES = {
   "grind.regelpaket.osignerat": "Se utiliza un paquete de reglas externo sin firma — cierre bloqueado.",
   "grind.evidens": "Nivel de evidencia superior a E0",
   "grind.evidens.saknas": "No hay ninguna evidencia de ningún tipo en el registro.",
-  "grind.foton.detalj": "{kontroller} controles exigen fotografía, {foton} fotografías en el registro.",
+  "grind.foton.detalj": "{kontroller} puntos de control exigen fotografía, {foton} fotografías en el registro.",
   "grind.sparr.ej_uppfyllt": "El requisito de seguridad no se cumple.",
   "grind.arendetyp.okant": "Requisito desconocido en el paquete de reglas: {krav}",
   "grind.arendetyp.krav": "Requisito para este tipo de expediente: {krav}",
   "grind.sakerhet": "Nivel de confianza dentro de lo que sustenta la evidencia",
-  "grind.sakerhet.detalj": "La confianza indicada ({niva}) supera lo que sustenta la evidencia ({tak}). Completar la evidencia, o bajar el nivel — la incertidumbre honesta es información.",
+  "grind.sakerhet.detalj": "La confianza indicada ({niva}) supera lo que sustenta la evidencia ({tak}). Añadir evidencia que la sustente, o bajar el nivel — la incertidumbre honesta es información.",
 
 
   // ---- La conclusión (ALVA-RULE-200) --------------------------------------
@@ -61,15 +61,15 @@ export const ES = {
   "slutsats.evidens": "Qué evidencia lo sustenta",
   "slutsats.avfardat": "Qué hipótesis se han descartado, y por qué",
   "slutsats.osakert": "Qué sigue siendo incierto",
-  "slutsats.ickesvar": "Eso no es una conclusión. Indicar qué se ha establecido y qué evidencia lo sustenta.",
+  "slutsats.ickesvar": "Eso no es una respuesta. Indicar qué se ha establecido y qué evidencia lo sustenta.",
   "slutsats.falt.motivering": "Justificación",
   "slutsats.falt.motivering_ej": "Motivo por el que no se pudo establecer la causa",
   "slutsats.falt.uteslutet": "Alternativas descartadas",
   "slutsats.falt.kvarstaende": "Incertidumbre restante",
   "slutsats.falt.atgardsval": "Elección de la acción",
-  "slutsats.saknas": "Falta {falt}.",
+  "slutsats.saknas": "Falta el campo «{falt}».",
   "slutsats.ickesvar.falt": "{falt}: «{text}» no es un motivo. Indicar qué se aplica realmente, y por qué.",
-  "slutsats.for_kort": "{falt} es demasiado corto ({langd} de al menos {minsta} caracteres) para poder revisarse después.",
+  "slutsats.for_kort": "El campo «{falt}» es demasiado corto ({langd} de al menos {minsta} caracteres) para poder revisarse después.",
   "slutsats.utan_varfor": "{falt} indica el qué, pero no el porqué. Vincular la conclusión con la evidencia — ¿qué hay en ella que la sustente?",
   "slutsats.utan_slutsats": "El expediente no se puede cerrar sin una conclusión. Indicar por qué la conclusión se desprende de la evidencia.",
   "slutsats.hypotes_obemott": "La hipótesis «{text}» figura en el registro pero no se aborda. Indicar por qué se descartó, o por qué sigue abierta.",
@@ -89,14 +89,14 @@ export const ES = {
   // ---- Comprobación previa ------------------------------------------------
   "pre.rubrik": "Comprobación previa — antes de iniciar el trabajo",
   "pre.historik.fraga":
-    "¿Se ha comprobado el historial del vehículo? (trabajos anteriores, fallos recurrentes, TSB, campañas)",
+    "¿Se ha comprobado el historial del vehículo? (trabajos anteriores, averías recurrentes, TSB, campañas)",
   "pre.historik.ja": "Sí — comprobado",
   "pre.historik.nej": "No",
   "pre.historik.skal": "Motivo por el que no se ha comprobado el historial (obligatorio)",
   "pre.historik.relevant": "Trabajos anteriores relevantes (opcional — cadena causal)",
   "pre.matarstallning": "Kilometraje",
   "pre.fotografera": "Fotografiar el cuadro de instrumentos",
-  "pre.felbeskrivning": "Descripción del fallo del cliente verificada",
+  "pre.felbeskrivning": "Descripción de la avería según el cliente verificada",
   "pre.observationer": "¿Algo más en la recepción?",
 
   // ---- Acciones -----------------------------------------------------------
@@ -158,7 +158,7 @@ export const ES = {
     "ALVA es un método estandarizado de análisis, localización, verificación y acción sistemáticos. Cada decisión es trazable, cada conclusión verificable, cada acción reproducible.",
   "webb.fas.analysis.syfte": "Reunir evidencia.",
   "webb.fas.analysis.avgransning": "Solo hechos. En esta fase no se recogen hipótesis.",
-  "webb.fas.localization.syfte": "Acotar la avería.",
+  "webb.fas.localization.syfte": "Aislar la avería.",
   "webb.fas.localization.avgransning": "Delimitar la zona. La causa aún no está establecida.",
   "webb.fas.verification.syfte": "Confirmar la causa raíz.",
   "webb.fas.verification.avgransning": "Se verifica la causa — no el síntoma.",
@@ -172,11 +172,11 @@ export const ES = {
   "webb.drift.s2.rubrik": "Los usuarios reciben cuentas",
   "webb.drift.s2.text": "El administrador de la organización asigna los roles.",
   "webb.drift.s3.rubrik": "Procedimientos de diagnóstico guiados",
-  "webb.drift.s3.text": "Cada caso sigue un procedimiento definido.",
+  "webb.drift.s3.text": "Cada expediente sigue un procedimiento definido.",
   "webb.drift.s4.rubrik": "Verificación",
   "webb.drift.s4.text": "La causa raíz se confirma antes de la acción correctiva.",
   "webb.drift.s5.rubrik": "Documentación",
-  "webb.drift.s5.text": "El informe se genera a partir del registro del caso.",
+  "webb.drift.s5.text": "El informe se genera a partir del registro del expediente.",
   "webb.drift.s6.rubrik": "Mejora continua",
   "webb.drift.s6.text": "Los resultados verificados refinan los procedimientos posteriores.",
 
@@ -185,26 +185,26 @@ export const ES = {
   "webb.larande.p1":
     "La plataforma refina continuamente los procedimientos de diagnóstico con la experiencia operativa verificada de su propia organización.",
   "webb.larande.p2":
-    "Cada diagnóstico completado alimenta la guía posterior. Solo se usan resultados verificados — un caso cerrado sin causa raíz confirmada no aporta nada, por diseño.",
+    "Cada diagnóstico completado alimenta la guía posterior. Solo se usan resultados verificados — un expediente cerrado sin causa raíz confirmada no aporta nada, por diseño.",
   "webb.larande.p3":
     "La base de conocimiento pertenece a la organización. Se deriva de sus casos, sus procedimientos y su documentación, y no se agrega entre clientes.",
   "webb.larande.block": "Derivada de",
   "webb.larande.k1": "Causas raíz verificadas",
   "webb.larande.k2": "Acciones correctivas confirmadas",
   "webb.larande.k3": "Categorías de averías recurrentes",
-  "webb.larande.k4": "Procedimientos completados",
+  "webb.larande.k4": "Registros de procedimientos completados",
   "webb.larande.k5": "Documentación de la organización",
 
   "webb.rapport.etikett": "Informes",
   "webb.rapport.rubrik": "Informe trimestral de mejora",
   "webb.rapport.ingress":
-    "Una vez al trimestre, la plataforma responde seis preguntas sobre el propio trabajo del taller. Cada respuesta se deriva del registro de casos — nada se estima y no se pregunta a nadie.",
+    "Una vez al trimestre, la plataforma responde seis preguntas sobre el propio trabajo del taller. Cada respuesta se deriva del registro de expedientes — nada se estima y no se pregunta a nadie.",
   "webb.rapport.f1": "¿Qué averías diagnosticamos ahora bien a la primera?",
   "webb.rapport.f2": "¿Con qué frecuencia la causa sospechada resulta ser la real?",
   "webb.rapport.f3": "¿Qué averías vuelven una y otra vez en la flota?",
   "webb.rapport.f4": "¿Qué pasos del procedimiento se omiten, y por qué?",
   "webb.rapport.f5": "¿Qué sabe el taller ahora que no sabía el trimestre pasado?",
-  "webb.rapport.f6": "¿Se cierran, verifican y documentan los casos — o solo se cierran?",
+  "webb.rapport.f6": "¿Se cierran, verifican y documentan los expedientes — o solo se cierran?",
 
   "webb.pris.etikett": "Comercial",
   "webb.pris.rubrik": "Licencias",
@@ -237,7 +237,7 @@ export const ES = {
   "webb.kallor.k3": "Boletines técnicos",
   "webb.kallor.k4": "Información de garantía",
   "webb.kallor.k5": "Manuales de taller",
-  "webb.kallor.k6": "Diagnósticos verificados históricos",
+  "webb.kallor.k6": "Histórico de diagnósticos verificados",
   "webb.kallor.k7": "Buenas prácticas de la organización",
 
   "webb.login.etikett": "Acceso",
@@ -252,7 +252,7 @@ export const ES = {
 
   "webb.ansokan.etikett": "Registro",
   "webb.ansokan.demo":
-    "No se envía nada. Enviar este formulario no guarda nada, no avisa a nadie y no crea ninguna solicitud — todavía no hay recepción detrás. La descripción de abajo indica cómo está previsto que funcione el registro, no lo que ocurre hoy.",
+    "No se envía nada. Enviar este formulario no guarda nada, no avisa a nadie y no crea ninguna solicitud — todavía no hay ningún proceso de recepción detrás. La descripción de abajo indica cómo está previsto que funcione el registro, no lo que ocurre hoy.",
   "webb.ansokan.avsikt": "Funcionamiento previsto: las solicitudes se revisan manualmente y en esta fase no se cobra ningún pago.",
   "webb.falt.foretag": "Empresa",
   "webb.falt.orgnummer": "Número de registro mercantil",
@@ -303,9 +303,9 @@ export const ES = {
   "webb.sprak.kallsprak":
     "El texto de procedimiento en inglés es una traducción de la fuente sueca y aún no ha sido leído por un especialista que ejerza el oficio. Se le exige lo mismo que a los otros nueve idiomas, y aquí se hace sobre él la misma declaración en lugar de exceptuarlo en silencio por ser la fuente.",
   "webb.sprak.bevis.etikett": "Verificación",
-  "webb.sprak.bevis.rubrik": "Las frases que detienen un caso",
+  "webb.sprak.bevis.rubrik": "Las frases que detienen un expediente",
   "webb.sprak.bevis.ingress":
-    "Estas son las frases que niegan a un técnico cerrar un caso. Una negativa que nadie entiende es una negativa sin salida — por eso son las frases correctas para juzgar una traducción.",
+    "Estas son las frases que impiden a un técnico cerrar un expediente. Una negativa que nadie entiende es una negativa sin salida — por eso son las frases correctas para juzgar una traducción.",
   "webb.sprak.ej_granskad": "Sin revisar",
   "webb.sprak.granskad": "Revisado",
   "webb.sprak.granskad.text":

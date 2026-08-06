@@ -596,7 +596,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const historik = pre.find((r) => r.id === "historik")!;
   rader.push({
     id: "historik",
-    rubrik: "Vehicle history checked or justified",
+    rubrik: "Vehicle history checked, or the omission justified",
     ok: historik.klar,
     kravs: true,
     detalj: historik.klar ? historik.varning : "Check the history, or document why that was not possible.",
@@ -607,7 +607,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     rubrik: "Incoming odometer reading documented",
     ok: matIn.klar,
     kravs: true,
-    detalj: matIn.klar ? undefined : "Photograph the instrument panel (or document an exemption).",
+    detalj: matIn.klar ? undefined : "Photograph the instrument cluster (or document an exemption).",
   });
   const felb = pre.find((r) => r.id === "felbeskrivning")!;
   rader.push({
@@ -651,7 +651,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const utfordAtgard = atgardsposter.some((p) => p.handelse.typ === "atgard_utford" && p.handelse.utford);
   rader.push({
     id: "atgard",
-    rubrik: "Corrective action documented or justified",
+    rubrik: "Corrective action documented, or its absence justified",
     ok: atgardsposter.length > 0,
     kravs: avslutat,
     detalj:
@@ -692,7 +692,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
   const kk = kvalitetskontroll(arende);
   rader.push({
     id: "kvalitetskontroll",
-    rubrik: "Quality check performed — symptom verified",
+    rubrik: "Quality check performed — symptom verified as resolved",
     ok: !!kk,
     kravs: avslutat && utfordAtgard,
     detalj: kk
@@ -713,7 +713,7 @@ export function kvalitetsgrind(arende: Arende, metodik: Metodik): GrindRad[] {
     rubrik: "Outgoing odometer reading documented",
     ok: matUt,
     kravs: avslutat,
-    detalj: matUt ? undefined : "Photograph the instrument panel when the work is complete.",
+    detalj: matUt ? undefined : "Photograph the instrument cluster when the work is complete.",
   });
 
   // Metodikens kontroller: evidens eller dokumenterat undantag per kontroll.

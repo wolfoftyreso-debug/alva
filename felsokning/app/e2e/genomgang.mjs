@@ -211,7 +211,7 @@ async function kor(sida, fall) {
         await klicka(btn(/^Document$/i, pre));
         continue;
       }
-      if (await finns(btn(/Photograph the instrument panel/i, pre))) {
+      if (await finns(btn(/Photograph the instrument cluster/i, pre))) {
         await foto(pre.locator('input[type="file"]'));
         const falt = pre.locator('input:not([type="file"])');
         if (await finns(falt)) {
