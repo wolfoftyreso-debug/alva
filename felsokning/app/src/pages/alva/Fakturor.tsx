@@ -10,12 +10,13 @@
 // underlag — antalet aktiva användare är inte en uppskattning utan de
 // konton som faktiskt kan logga in.
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PRISLISTA,
   fakturera,
   formateraBelopp,
 } from "../../../../services/gemensam/fakturering.mjs";
+import { hamtaFakturor, plattformAktiv } from "@/felsokning/plattform";
 import { Block, Demonstration, Etikett, FARG, Rubrik, Statusmärke, Tabell } from "@/alva/komponenter";
 import { Ram } from "./Ram";
 
@@ -51,7 +52,9 @@ const STATUSAV: Record<string, "passed" | "pending" | "not_applicable"> = {
 };
 
 export default function Fakturor() {
-  const faktura = useMemo(
+  // Exemplet räknas alltid fram, av samma modul som servern använder. Det
+  // är vad som visas när ingen plattform är konfigurerad.
+  const exempel = useMemo(
     () =>
       fakturera({
         nummer: 1,
@@ -62,6 +65,56 @@ export default function Fakturor() {
       }) as Faktura,
     [],
   );
+
+  // Mot en konfigurerad plattform visas organisationens verkliga
+  // fakturor. Misslyckas hämtningen visas felet — inte exemplet: en
+  // tystnad som ser ut som data är värre än ett fel som syns.
+  const [hamtade, setHamtade] = useState<Faktura[] | null>(null);
+  const [hamtningsfel, setHamtningsfel] = useState("");
+  const skarpt = plattformAktiv();
+
+  useEffect(() => {
+    if (!skarpt) return;
+    let avbruten = false;
+    hamtaFakturor()
+      .then((f) => {
+        if (!avbruten) setHamtade(f as unknown as Faktura[]);
+      })
+      .catch((orsak) => {
+        if (!avbruten) setHamtningsfel(orsak instanceof Error ? orsak.message : String(orsak));
+      });
+    return () => {
+      avbruten = true;
+    };
+  }, [skarpt]);
+
+  // Senast utfärdad först — servern sorterar redan så.
+  const faktura = skarpt ? hamtade?.[0] : exempel;
+
+  // `!faktura` och inte `skarpt && !faktura`: exemplet är alltid
+  // definierat, så det här smalnar av typen i stället för att bara
+  // beskriva samma villkor en gång till.
+  if (!faktura) {
+    return (
+      <Ram portal>
+        <div className="mx-auto max-w-[1040px] px-6 py-12">
+          <Etikett>Commercial</Etikett>
+          <div className="mt-2 mb-8">
+            <Rubrik niva={1}>Invoices</Rubrik>
+          </div>
+          <Block rubrik="Status" beteckning="ALVA-PROC-0001">
+            <p className="text-[13px] leading-[20px]" style={{ color: FARG.steel }}>
+              {hamtningsfel
+                ? `Invoices could not be retrieved: ${hamtningsfel}`
+                : hamtade
+                  ? "No invoice has been issued for this organization."
+                  : "Retrieving invoices."}
+            </p>
+          </Block>
+        </div>
+      </Ram>
+    );
+  }
 
   return (
     <Ram portal>
@@ -77,17 +130,19 @@ export default function Fakturor() {
           actually holds.
         </p>
 
-        <Demonstration>
-          The organization below is an example, and the price list is a placeholder to be set per market.
-          The invoice itself is not: it is computed by the same module the server uses, from the inputs
-          shown.
-        </Demonstration>
+        {!skarpt && (
+          <Demonstration>
+            The organization below is an example, and the price list is a placeholder to be set per market.
+            The invoice itself is not: it is computed by the same module the server uses, from the inputs
+            shown. Connected to a platform instance this page shows the organization&rsquo;s own invoices.
+          </Demonstration>
+        )}
 
         <Block rubrik="Invoice" beteckning={faktura.beteckning}>
           <div className="grid gap-6 sm:grid-cols-2">
             <dl className="text-[13px] leading-[22px]">
               {[
-                ["Organization", faktura.organisation],
+                ["Organization", faktura.organisation ?? "This organization"],
                 ["Period", `${faktura.period.fran} – ${faktura.period.till}`],
                 ["Issued", faktura.utfardad],
                 ["Due", faktura.forfaller],

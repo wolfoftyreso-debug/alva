@@ -419,7 +419,7 @@ changed, so a re-audit can verify rather than take it on trust.
 | **M-8** | ✅ Closed | Per-event outcomes replace the count: rejected events are returned with index, type and reason, and a partial import answers `207`, not `200`. Ids derive from a SHA-256 of case, source, index and content, which removes the millisecond collision and makes re-uploading the same protocol idempotent rather than duplicating. The whole import runs in one transaction. |
 | **M-9** | ✅ Closed | A generated secret is returned once at creation with an explicit note that it will not be shown again. A caller-supplied secret is still never echoed. |
 | **m-8** | ✅ Closed | Profile path lookups are restricted to own enumerable properties, so `__proto__` and `constructor.prototype` are unreachable from an external profile. |
-| **m-9** | ◐ Open | The portal remains a presentation shell with an authenticating-looking login. Deliberately deferred: the honest fix is to gate the route behind the real platform session, which is a product decision about what the portal is for. |
+| **m-9** | ✅ Closed | Every portal route now passes through `Portalvakt`. With a platform configured (`VITE_PLATTFORM_URL`), the login authenticates against `/api/auth/logga-in` and the portal is unreachable without a valid session; the invoice view reads the organization's own invoices from `GET /api/fakturor`, and a failed fetch shows the error rather than falling back to the example — data that looks real but is not is worse than a visible fault. Without a platform there is no session to demand, and the demonstration notice appears exactly in that case. The guarantee is not a source-code assertion: `e2e/portalsparr.mjs` builds with the platform configured and checks where a visitor actually lands, including that signing out clears the token and re-closes the portal. Mutation-proved — unwrapping one route makes it fail. |
 | **m-10** | ✅ Closed | `observationer()` suppresses a `matvarde` whose description and value already appear as a check result, so a measurement taken through the methodology is reported once. |
 
 ### The defect M-7 uncovered
@@ -504,7 +504,6 @@ walkthrough would quietly start testing a different application.
 | Rev 1 · C-4 | Processor agreement and transfer impact assessment | Documents to be written and signed, not code. |
 | Rev 1 · m-4 | Retiring the Supabase orchestrator | A deployment decision belonging to the product owner. |
 | Rev 1 · m-6 | Manual accessibility review | Automated tooling finds malformation, not usability. |
-| Rev 2 · m-9 | The portal mock | A product decision about what the portal is for. |
 
 ### Two backend defects found by running the suite that was never run
 

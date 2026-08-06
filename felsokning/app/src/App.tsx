@@ -29,6 +29,7 @@ import AlvaKunskapskallor from "./pages/alva/Kunskapskallor";
 import AlvaAnalys from "./pages/alva/Analys";
 import AlvaFakturor from "./pages/alva/Fakturor";
 import AlvaIntegration from "./pages/alva/Integration";
+import { Portalvakt } from "./pages/alva/Portalvakt";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 const queryClient = new QueryClient();
@@ -65,11 +66,14 @@ function AppContent() {
         <Route path="/alva" element={<AlvaStart />} />
         <Route path="/alva/ansokan" element={<AlvaAnsokan />} />
         <Route path="/alva/logga-in" element={<AlvaLoggaIn />} />
-        <Route path="/alva/portal" element={<AlvaPortal />} />
-        <Route path="/alva/portal/kunskapskallor" element={<AlvaKunskapskallor />} />
-        <Route path="/alva/portal/analys" element={<AlvaAnalys />} />
-        <Route path="/alva/portal/integration" element={<AlvaIntegration />} />
-        <Route path="/alva/portal/fakturor" element={<AlvaFakturor />} />
+        {/* Portalen är stängd utan giltig plattformssession — se
+            Portalvakt. Utan konfigurerad plattform finns ingen session
+            att kräva, och vyerna är då märkta som demonstration. */}
+        <Route path="/alva/portal" element={<Portalvakt><AlvaPortal /></Portalvakt>} />
+        <Route path="/alva/portal/kunskapskallor" element={<Portalvakt><AlvaKunskapskallor /></Portalvakt>} />
+        <Route path="/alva/portal/analys" element={<Portalvakt><AlvaAnalys /></Portalvakt>} />
+        <Route path="/alva/portal/integration" element={<Portalvakt><AlvaIntegration /></Portalvakt>} />
+        <Route path="/alva/portal/fakturor" element={<Portalvakt><AlvaFakturor /></Portalvakt>} />
         <Route path="/felsokning" element={<Arendelista />} />
         <Route path="/felsokning/nytt" element={<NyttArende />} />
         <Route path="/felsokning/arende/:id" element={<ArendeSida />} />

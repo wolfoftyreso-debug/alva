@@ -350,3 +350,52 @@ describe("ingen betalleverantör laddas", () => {
     expect(Object.keys(m)).not.toContain("betala");
   });
 });
+
+// ---- Portalens spärr (revision 2, m-9) ---------------------------------
+//
+// Anmärkningen var att en inloggning som SER ut att autentisera ger
+// portalen bakom den en auktoritet den inte har. Rättelsen kan gå sönder
+// på två motsatta sätt, och bägge prövas här: spärren tas bort igen, eller
+// demonstrationsskylten tas bort medan spärren inte spärrar något.
+describe("portalen är stängd, eller uttryckligen en demonstration", () => {
+  const app = readFileSync("src/App.tsx", "utf8");
+  const vakt = readFileSync("src/pages/alva/Portalvakt.tsx", "utf8");
+  const loggaIn = readFileSync("src/pages/alva/LoggaIn.tsx", "utf8");
+
+  it("varje portalväg går genom vakten", () => {
+    const vagar = [...app.matchAll(/<Route path="(\/alva\/portal[^"]*)" element=\{([^}]*)\}/g)];
+    expect(vagar.length).toBeGreaterThanOrEqual(5);
+    for (const [, vag, element] of vagar) {
+      expect(element, vag).toContain("Portalvakt");
+    }
+  });
+
+  it("vakten kräver en verklig session när plattformen är konfigurerad", () => {
+    expect(vakt).toContain("plattformAktiv()");
+    expect(vakt).toContain("plattformKonto()");
+    expect(vakt).toContain("Navigate");
+  });
+
+  it("inloggningen autentiserar på riktigt när det finns något att autentisera mot", () => {
+    expect(loggaIn).toContain("loggaInPlattform");
+    // Och skylten står kvar exakt när den ska: bara i det läge där
+    // inloggningen inte prövar något.
+    expect(loggaIn).toMatch(/!skarpt && \(\s*<Demonstration>/);
+  });
+
+  it("fakturavyn visar organisationens egna fakturor mot en plattform", () => {
+    const fakturor = readFileSync("src/pages/alva/Fakturor.tsx", "utf8");
+    expect(fakturor).toContain("hamtaFakturor");
+    // Ett misslyckat anrop får inte tyst falla tillbaka på exemplet:
+    // data som ser äkta ut men inte är det är värre än ett synligt fel.
+    expect(fakturor).toContain("hamtningsfel");
+    expect(fakturor).toMatch(/skarpt \? hamtade\?\.\[0\] : exempel/);
+  });
+
+  it("utloggning visas bara när det finns en session att avsluta", () => {
+    const ram = readFileSync("src/pages/alva/Ram.tsx", "utf8");
+    expect(ram).toContain("loggaUtPlattform");
+    expect(ram).toMatch(/konto = portal \? plattformKonto\(\) : null/);
+    expect(ram).toMatch(/\{konto && \(/);
+  });
+});

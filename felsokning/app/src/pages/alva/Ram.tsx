@@ -5,7 +5,8 @@
 // något i ett industrisystem vet vad det heter.
 
 import type { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { loggaUtPlattform, plattformKonto } from "@/felsokning/plattform";
 import { ALVA, PLATTFORMSVERSION } from "@/alva/system";
 import { FARG } from "@/alva/komponenter";
 
@@ -26,7 +27,12 @@ const PORTAL = [
 
 export function Ram({ children, portal = false }: { children: ReactNode; portal?: boolean }) {
   const plats = useLocation();
+  const navigera = useNavigate();
   const lankar = portal ? PORTAL : PUBLIKT;
+  // Finns en riktig session ska den gå att avsluta. Utan konfigurerad
+  // plattform finns ingen, och då visas ingen utloggning heller — en
+  // knapp som inte loggar ut något är samma sorts sken som m-9 gällde.
+  const konto = portal ? plattformKonto() : null;
 
   return (
     // `alva-yta` bär typografin ur ALVA-SPEC-001 och håller den skild
@@ -67,6 +73,30 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
           </nav>
         </div>
       </header>
+
+      {konto && (
+        <div className="border-b" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>
+          <div
+            className="mx-auto flex max-w-[1040px] flex-wrap items-center justify-between gap-2 px-6 py-2 text-[11px] uppercase tracking-[0.08em]"
+            style={{ color: FARG.steel }}
+          >
+            <span>
+              {konto.organisation} · {konto.namn} · {konto.roll}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                loggaUtPlattform();
+                navigera("/alva/logga-in", { replace: true });
+              }}
+              className="uppercase tracking-[0.08em] underline"
+              style={{ color: FARG.steel }}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
 
       <main>{children}</main>
 

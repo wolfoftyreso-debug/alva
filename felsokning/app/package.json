@@ -12,7 +12,8 @@
     "typkontroll": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "genomgang": "node e2e/genomgang.mjs"
+    "genomgang": "node e2e/genomgang.mjs",
+    "portalsparr": "node e2e/portalsparr.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",

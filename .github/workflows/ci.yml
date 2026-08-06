@@ -67,6 +67,9 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run genomgang
+      # Portalspärren kräver ett eget bygge (plattformen konfigurerad),
+      # så den kan inte ligga i genomgången.
+      - run: npm run portalsparr
 
   # Plattformstjänsten mot en riktig Postgres.
   #

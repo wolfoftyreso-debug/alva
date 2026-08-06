@@ -195,6 +195,44 @@ export async function hamtaFelorsaksstatistik(): Promise<{ orsak: string; antal:
   return ((await res.json()) as { orsaker: { orsak: string; antal: number }[] }).orsaker;
 }
 
+// Organisationens fakturor (ALVA-PROC-0001). Läsning, aldrig mer:
+// utfärdande och betalning hör till utfärdaren och har en egen nyckel som
+// aldrig finns i en webbläsare.
+//
+// `status` är härledd på servern ur fakturahändelserna, inte lagrad —
+// en utfärdad faktura ändras aldrig.
+export interface Fakturarad {
+  benamning: string;
+  underlag: string;
+  antal: number;
+  enhet: string;
+  apris: number;
+  belopp: number;
+}
+
+export interface Faktura {
+  id: string;
+  beteckning: string;
+  utfardad: string;
+  forfaller: string;
+  valuta: string;
+  totalt: number;
+  netto: number;
+  moms: number;
+  momssats: number;
+  period: { fran: string; till: string };
+  krediterar: string | null;
+  status: "utfardad" | "betald" | "krediterad";
+  betalningssatt: string;
+  rader: Fakturarad[];
+}
+
+export async function hamtaFakturor(): Promise<Faktura[]> {
+  const res = await plattformFetch("/api/fakturor");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return ((await res.json()) as { fakturor: Faktura[] }).fakturor;
+}
+
 // Märkesspecifika kopplingar. Uppgifterna lagras krypterat på servern
 // och returneras alltid maskerade — klienten ser aldrig hemligheterna.
 export interface LeverantorsFalt {
