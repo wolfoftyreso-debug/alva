@@ -199,6 +199,23 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* iOS Safari zoomar in på ett formulärfält vars text är mindre än 16 px
+   — och zoomar inte ut igen efter navigeringen. Den som loggade in på en
+   telefon fastnade därför i inzoomat läge på portalens första sida.
+
+   Botemedlet är fältets textstorlek, inte viewport-metataggen:
+   `maximum-scale=1` hade också stoppat inzoomningen men samtidigt tagit
+   ifrån användaren nypzoomen, och ett tillgänglighetsverktyg ska inte
+   offras för att slippa en CSS-rad. Regeln gäller bara pekskärmar —
+   på skrivbordet finns ingen autozoom och 13 px är rätt täthet. */
+@media (hover: none) and (pointer: coarse) {
+  .alva-yta input:not([type="checkbox"]):not([type="radio"]),
+  .alva-yta select,
+  .alva-yta textarea {
+    font-size: 16px;
+  }
+}
+
 .alva-yta .font-mono {
   font-family:
     ui-monospace,

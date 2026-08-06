@@ -232,6 +232,19 @@ describe("ALVA-ytan bär sin egen typografi", () => {
   it("siffror sätts med fast bredd så beteckningar går att jämföra", () => {
     expect(css).toContain("tabular-nums");
   });
+
+  it("formulärfält är minst 16 px på pekskärm — annars autozoomar iOS och fastnar", () => {
+    // Buggen som rapporterades från en telefon: inloggningens fält är
+    // 14 px, iOS zoomar in vid fokus och zoomar aldrig ut, och portalens
+    // första sida möts i inzoomat läge. Botemedlet är textstorleken,
+    // inte maximum-scale — nypzoomen är ett tillgänglighetsverktyg och
+    // får inte offras.
+    const regel = css.match(/@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\n\}/)?.[0] ?? "";
+    expect(regel).toContain(".alva-yta input");
+    expect(regel).toContain(".alva-yta textarea");
+    expect(regel).toContain(".alva-yta select");
+    expect(regel).toContain("font-size: 16px");
+  });
 });
 
 // ---- Snittet måste följa med i bygget ----------------------------------
