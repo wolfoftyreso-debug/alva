@@ -66,6 +66,18 @@ export const RO = {
   "slutsats.avfardat": "Ce ipoteze au fost înlăturate și de ce",
   "slutsats.osakert": "Ce rămâne incert",
   "slutsats.ickesvar": "Aceasta nu este o concluzie. Indică ce a fost stabilit și ce dovezi susțin acest lucru.",
+  "slutsats.falt.motivering": "Justificare",
+  "slutsats.falt.motivering_ej": "Motivul pentru care cauza nu a putut fi stabilită",
+  "slutsats.falt.uteslutet": "Alternative înlăturate",
+  "slutsats.falt.kvarstaende": "Incertitudine rămasă",
+  "slutsats.falt.atgardsval": "Alegerea acțiunii",
+  "slutsats.saknas": "Lipsește: {falt}.",
+  "slutsats.ickesvar.falt": "{falt}: „{text}” nu este o justificare. Indică ce se aplică în realitate și de ce.",
+  "slutsats.for_kort": "{falt} este prea scurt ({langd} din cel puțin {minsta} caractere) pentru a putea fi verificat ulterior.",
+  "slutsats.utan_varfor": "{falt} spune ce, dar nu de ce. Leagă concluzia de dovezi — ce anume din ele face ca aceasta să decurgă?",
+  "slutsats.utan_slutsats": "Cazul nu poate fi închis fără o concluzie finală. Indică de ce concluzia decurge din dovezi.",
+  "slutsats.hypotes_obemott": "Ipoteza „{text}” se află în jurnal, dar nu este tratată. Indică de ce a fost înlăturată sau de ce rămâne deschisă.",
+
 
   // ---- Parcursul cazului --------------------------------------------------
   "arende.nytt": "Caz nou",

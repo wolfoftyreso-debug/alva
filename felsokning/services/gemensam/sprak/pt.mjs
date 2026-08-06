@@ -60,6 +60,18 @@ export const PT = {
   "slutsats.avfardat": "Que hipóteses foram afastadas, e porquê",
   "slutsats.osakert": "O que permanece incerto",
   "slutsats.ickesvar": "Isso não é uma conclusão. Indicar o que foi estabelecido e que evidência o sustenta.",
+  "slutsats.falt.motivering": "Fundamentação",
+  "slutsats.falt.motivering_ej": "Motivo pelo qual a causa não pôde ser estabelecida",
+  "slutsats.falt.uteslutet": "Alternativas afastadas",
+  "slutsats.falt.kvarstaende": "Incerteza remanescente",
+  "slutsats.falt.atgardsval": "Escolha da ação",
+  "slutsats.saknas": "Falta {falt}.",
+  "slutsats.ickesvar.falt": "{falt}: «{text}» não é uma fundamentação. Indicar o que se aplica realmente, e porquê.",
+  "slutsats.for_kort": "{falt} é demasiado curto ({langd} de pelo menos {minsta} caracteres) para poder ser verificado posteriormente.",
+  "slutsats.utan_varfor": "{falt} indica o quê, mas não o porquê. Ligar a conclusão à evidência — o que nela faz com que isto decorra?",
+  "slutsats.utan_slutsats": "O processo não pode ser encerrado sem uma conclusão. Indicar por que motivo a conclusão decorre da evidência.",
+  "slutsats.hypotes_obemott": "A hipótese «{text}» consta do registo mas não é tratada. Indicar por que motivo foi afastada, ou por que motivo permanece em aberto.",
+
 
   // ---- Fluxo do processo --------------------------------------------------
   "arende.nytt": "Novo processo",

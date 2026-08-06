@@ -17,6 +17,12 @@ import {
   granskaSlutsats,
   obemottaHypoteser,
 } from "../../../../services/gemensam/motivering.mjs";
+import { ICKESVAR_PER_SPRAK } from "../../../../services/gemensam/sprak/ord.mjs";
+
+// Fältet anges numera med sin katalognyckel, inte med en svensk etikett.
+// Testerna prövar därför mönster som gäller på engelska — standardspråket
+// — och språkberoendet prövas för sig längst ned.
+const MOT = "slutsats.falt.motivering";
 
 const GILTIG = {
   typ: "slutsats",
@@ -34,8 +40,8 @@ const ARBETE = [{ typ: "atgard_utford", beskrivning: "Bytte bränslepumpsrelä."
 
 describe("motiveringen måste vara ett skäl, inte en upprepning", () => {
   it("avvisar tomt fält", () => {
-    expect(granskaFalt("Motivering", "")).toMatch(/saknas/);
-    expect(granskaFalt("Motivering", "   ")).toMatch(/saknas/);
+    expect(granskaFalt(MOT, "")).toMatch(/is missing/);
+    expect(granskaFalt(MOT, "   ")).toMatch(/is missing/);
   });
 
   it.each([
@@ -53,11 +59,11 @@ describe("motiveringen måste vara ett skäl, inte en upprepning", () => {
     "-",
     "n/a",
   ])("avvisar icke-svaret %s", (text) => {
-    expect(granskaFalt("Motivering", text)).toMatch(/är inget skäl/);
+    expect(granskaFalt(MOT, text)).toMatch(/is not a reason/);
   });
 
   it("avvisar text som är för kort för att gå att granska", () => {
-    expect(granskaFalt("Motivering", "Reläet var dåligt", { minsta: MINSTA_MOTIVERING })).toMatch(/för kort/);
+    expect(granskaFalt(MOT, "Reläet var dåligt", { minsta: MINSTA_MOTIVERING })).toMatch(/too short/);
   });
 
   it("avvisar en omformulering av slutsatsen utan orsakssamband", () => {
@@ -65,15 +71,15 @@ describe("motiveringen måste vara ett skäl, inte en upprepning", () => {
     // svåraste att fånga — texten ser fullgod ut tills man frågar vad
     // den egentligen påstår.
     const fel = granskaFalt(
-      "Motivering",
+      MOT,
       "Reläet till bränslepumpen fungerade inte som det ska och byttes därmed ut mot ett nytt relä.",
       { minsta: MINSTA_MOTIVERING, kravOrsak: true },
     );
-    expect(fel).toMatch(/anger vad, men inte varför/);
+    expect(fel).toMatch(/states what, but not why/);
   });
 
   it("godtar ett resonemang med orsakssamband", () => {
-    expect(granskaFalt("Motivering", GILTIG.motivering, { minsta: MINSTA_MOTIVERING, kravOrsak: true })).toBeNull();
+    expect(granskaFalt(MOT, GILTIG.motivering, { minsta: MINSTA_MOTIVERING, kravOrsak: true })).toBeNull();
   });
 
   it("godtar konkreta mätvärden som evidensreferens även utan orsaksord", () => {
@@ -81,7 +87,7 @@ describe("motiveringen måste vara ett skäl, inte en upprepning", () => {
     // utan att säga ordet mätning. Regeln får inte tvinga fram ett
     // språkbruk som inte är teknikerns.
     expect(
-      granskaFalt("Motivering", "Stift 14 låg på 12,4 V med tändning på, stift 7 på 0,03 ohm mot jord.", {
+      granskaFalt(MOT, "Stift 14 låg på 12,4 V med tändning på, stift 7 på 0,03 ohm mot jord.", {
         minsta: MINSTA_MOTIVERING,
         kravOrsak: true,
       }),
@@ -93,7 +99,8 @@ describe("hela slutsatsen inför avslut", () => {
   it("saknad slutsats spärrar avslutet", () => {
     const brister = granskaSlutsats(undefined, []);
     expect(brister).toHaveLength(1);
-    expect(brister[0].text).toMatch(/kan inte avslutas utan en slutsats/);
+    expect(brister[0].nyckel).toBe("slutsats.utan_slutsats");
+    expect(brister[0].text).toMatch(/cannot be closed without a closing statement/);
   });
 
   it("en fullständig slutsats passerar", () => {
@@ -134,7 +141,7 @@ describe("dokumenterade hypoteser måste bemötas", () => {
 
   it("en obemött hypotes spärrar avslutet", () => {
     const brister = granskaSlutsats(GILTIG, [...ARBETE, HYPOTES]);
-    expect(brister.map((b) => b.text).join(" ")).toMatch(/finns i loggen men bemöts inte/);
+    expect(brister.map((b) => b.text).join(" ")).toMatch(/is in the log but is not addressed/);
   });
 
   it("hypotesen är bemött när uteslutandet nämner den", () => {
@@ -162,7 +169,7 @@ describe("dokumenterade hypoteser måste bemötas", () => {
       HYPOTES,
       { typ: "hypotes", text: "Möjlig obalans i framhjulen", niva: "lag" },
     ];
-    const brister = granskaSlutsats(GILTIG, logg).filter((b) => b.text.includes("bemöts inte"));
+    const brister = granskaSlutsats(GILTIG, logg).filter((b) => b.nyckel === "slutsats.hypotes_obemott");
     expect(brister).toHaveLength(2);
   });
 
@@ -316,5 +323,82 @@ describe("kundbeskedet går att registrera även när åtgärden skrevs först",
 
   it("beskedsrutan öppnas av att ett förslag finns", () => {
     expect(kod).toContain("{forslag.length > 0 && !beslut && (");
+  });
+});
+
+// ---- Regeln gällde bara på svenska (ALVA-SPEC-060) ----------------------
+//
+// Icke-svarslistan var enbart svensk. En tysk tekniker som skrev
+// "erledigt" i motiveringsfältet passerade filtret — inte därför att
+// texten dög, utan därför att filtret bara kände igen "klart". Grinden
+// släppte igenom avslutet och rapporten såg fullständig ut.
+//
+// Det var alltså inte en översättningsbrist utan ett hål i den regel som
+// är hela produktens värde, och det gällde varje marknad utom en.
+describe("icke-svar fångas oavsett språk", () => {
+  const SPRAKPROV: [string, string][] = [
+    ["de", "erledigt"],
+    ["en", "done"],
+    ["fr", "réparé"],
+    ["es", "hecho"],
+    ["it", "fatto"],
+    ["pl", "zrobione"],
+    ["nl", "klaar"],
+    ["pt", "feito"],
+    ["ro", "gata"],
+    ["sv", "klart"],
+  ];
+
+  it.each(SPRAKPROV)("%s: %s är inget skäl", (_kod, text) => {
+    expect(granskaFalt(MOT, text)).toMatch(/is not a reason/);
+  });
+
+  it("varje språk har en egen lista, inte en kopia av svenskan", () => {
+    // Motvikt mot provet ovan: det hade också passerat om alla listor
+    // vore samma svenska lista och proven råkade stå i den.
+    const per = ICKESVAR_PER_SPRAK as Record<string, string[]>;
+    for (const [kod, lista] of Object.entries(per)) {
+      expect(lista.length, kod).toBeGreaterThan(15);
+      if (kod === "sv") continue;
+      const egna = lista.filter((o) => !per.sv.includes(o));
+      expect(egna.length, kod).toBeGreaterThan(10);
+    }
+  });
+
+  it("ett giltigt kort svar är fortfarande giltigt", () => {
+    // "Inget kvarstår" får inte fångas som icke-svar. Att tvinga fram
+    // utfyllnad är sämre än ett kort sant svar — se sprak/ord.mjs.
+    expect(granskaFalt("slutsats.falt.kvarstaende", "Inget", { minsta: 5 })).toBeNull();
+    expect(granskaFalt("slutsats.falt.kvarstaende", "Nothing", { minsta: 5 })).toBeNull();
+    expect(granskaFalt("slutsats.falt.kvarstaende", "Keine", { minsta: 5 })).toBeNull();
+  });
+
+  it("orsakssamband känns igen på andra språk än svenska", () => {
+    // Utan det här nekas en tysk eller polsk tekniker avslut på ett
+    // korrekt skrivet underlag — vilket är värre än att släppa igenom
+    // ett dåligt, eftersom det gör spärren till något man kringgår.
+    const prov = [
+      "Der Relaiskontakt war eingebrannt, was den Startaussetzer erklärt und im Foto zu sehen ist.",
+      "The relay contact was pitted, which explains the intermittent no-start; the photo shows the arcing.",
+      "Styk przekaźnika był wypalony, dlatego rozrusznik nie zawsze działał, co widać na zdjęciu.",
+    ];
+    for (const text of prov) {
+      expect(granskaFalt(MOT, text, { minsta: MINSTA_MOTIVERING, kravOrsak: true }), text).toBeNull();
+    }
+  });
+});
+
+describe("slutsatsen talar organisationens språk", () => {
+  it("samma brist, olika språk, samma nyckel", () => {
+    const en = granskaSlutsats(undefined, [])[0];
+    const de = granskaSlutsats(undefined, [], "de")[0];
+    expect(de.nyckel).toBe(en.nyckel);
+    expect(de.text).not.toBe(en.text);
+    expect(de.text).toMatch(/Abschlussfeststellung/);
+  });
+
+  it("fältnamnet översätts med resten av meningen", () => {
+    expect(granskaFalt(MOT, "", { sprak: "de" })).toBe("Begründung fehlt.");
+    expect(granskaFalt(MOT, "", { sprak: "sv" })).toBe("Motivering saknas.");
   });
 });

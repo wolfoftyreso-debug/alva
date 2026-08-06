@@ -61,6 +61,18 @@ export const IT = {
   "slutsats.osakert": "Che cosa resta incerto",
   "slutsats.ickesvar":
     "Questa non è una conclusione. Indicare che cosa è stato accertato e quale evidenza lo sostiene.",
+  "slutsats.falt.motivering": "Motivazione",
+  "slutsats.falt.motivering_ej": "Motivo per cui la causa non è stata accertata",
+  "slutsats.falt.uteslutet": "Alternative escluse",
+  "slutsats.falt.kvarstaende": "Incertezza residua",
+  "slutsats.falt.atgardsval": "Scelta dell'intervento",
+  "slutsats.saknas": "{falt} manca.",
+  "slutsats.ickesvar.falt": "{falt}: «{text}» non è una motivazione. Indicare che cosa vale realmente, e perché.",
+  "slutsats.for_kort": "{falt} è troppo breve ({langd} su almeno {minsta} caratteri) per poter essere verificato in seguito.",
+  "slutsats.utan_varfor": "{falt} indica il che cosa, non il perché. Collegare la conclusione all'evidenza — che cosa in essa la sostiene?",
+  "slutsats.utan_slutsats": "La pratica non può essere chiusa senza una conclusione. Indicare perché la conclusione discende dall'evidenza.",
+  "slutsats.hypotes_obemott": "L'ipotesi «{text}» è presente nel registro ma non viene trattata. Indicare perché è stata esclusa, o perché resta aperta.",
+
 
   // ---- Flusso della pratica -----------------------------------------------
   "arende.nytt": "Nuova pratica",

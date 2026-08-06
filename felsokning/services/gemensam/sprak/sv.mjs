@@ -59,6 +59,18 @@ export const SV = {
   "slutsats.avfardat": "Vilka hypoteser som avfärdats, och varför",
   "slutsats.osakert": "Vad som fortfarande är osäkert",
   "slutsats.ickesvar": "Det är inte ett svar. Ange vad som är konstaterat och vilken evidens som bär det.",
+  "slutsats.falt.motivering": "Motivering",
+  "slutsats.falt.motivering_ej": "Skäl till att orsaken inte fastställts",
+  "slutsats.falt.uteslutet": "Uteslutna alternativ",
+  "slutsats.falt.kvarstaende": "Kvarstående osäkerhet",
+  "slutsats.falt.atgardsval": "Val av åtgärd",
+  "slutsats.saknas": "{falt} saknas.",
+  "slutsats.ickesvar.falt": "{falt}: ”{text}” är inget skäl. Beskriv vad som faktiskt gäller och varför.",
+  "slutsats.for_kort": "{falt} är för kort ({langd} av minst {minsta} tecken) för att gå att granska i efterhand.",
+  "slutsats.utan_varfor": "{falt} anger vad, men inte varför. Knyt slutsatsen till underlaget — vad i evidensen gör att det här följer?",
+  "slutsats.utan_slutsats": "Ärendet kan inte avslutas utan en slutsats. Motivera varför slutsatsen följer av underlaget.",
+  "slutsats.hypotes_obemott": "Hypotesen ”{text}” finns i loggen men bemöts inte. Ange varför den uteslöts, eller varför den kvarstår.",
+
 
   // ---- Ärendeflödet -------------------------------------------------------
   "arende.nytt": "Nytt ärende",

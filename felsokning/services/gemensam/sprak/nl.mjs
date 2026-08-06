@@ -60,6 +60,18 @@ export const NL = {
   "slutsats.avfardat": "Welke hypothesen zijn verworpen, en waarom",
   "slutsats.osakert": "Wat onzeker blijft",
   "slutsats.ickesvar": "Dat is geen conclusie. Aangeven wat is vastgesteld en welk bewijs dat draagt.",
+  "slutsats.falt.motivering": "Onderbouwing",
+  "slutsats.falt.motivering_ej": "Reden waarom de oorzaak niet kon worden vastgesteld",
+  "slutsats.falt.uteslutet": "Verworpen alternatieven",
+  "slutsats.falt.kvarstaende": "Resterende onzekerheid",
+  "slutsats.falt.atgardsval": "Keuze van de maatregel",
+  "slutsats.saknas": "{falt} ontbreekt.",
+  "slutsats.ickesvar.falt": "{falt}: „{text}” is geen onderbouwing. Aangeven wat er werkelijk geldt, en waarom.",
+  "slutsats.for_kort": "{falt} is te kort ({langd} van minstens {minsta} tekens) om achteraf toetsbaar te zijn.",
+  "slutsats.utan_varfor": "{falt} geeft het wat aan, niet het waarom. Verbind de conclusie met het bewijs — wat daarin maakt dat dit volgt?",
+  "slutsats.utan_slutsats": "De zaak kan niet worden afgesloten zonder eindconclusie. Aangeven waarom de conclusie uit het bewijs volgt.",
+  "slutsats.hypotes_obemott": "De hypothese „{text}” staat in het logboek maar wordt niet behandeld. Aangeven waarom zij is verworpen, of waarom zij open blijft.",
+
 
   // ---- Zaakverloop --------------------------------------------------------
   "arende.nytt": "Nieuwe zaak",

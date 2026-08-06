@@ -60,6 +60,18 @@ export const ES = {
   "slutsats.avfardat": "Qué hipótesis se han descartado, y por qué",
   "slutsats.osakert": "Qué sigue siendo incierto",
   "slutsats.ickesvar": "Eso no es una conclusión. Indicar qué se ha establecido y qué evidencia lo sustenta.",
+  "slutsats.falt.motivering": "Justificación",
+  "slutsats.falt.motivering_ej": "Motivo por el que no se pudo establecer la causa",
+  "slutsats.falt.uteslutet": "Alternativas descartadas",
+  "slutsats.falt.kvarstaende": "Incertidumbre restante",
+  "slutsats.falt.atgardsval": "Elección de la acción",
+  "slutsats.saknas": "Falta {falt}.",
+  "slutsats.ickesvar.falt": "{falt}: «{text}» no es un motivo. Indicar qué se aplica realmente, y por qué.",
+  "slutsats.for_kort": "{falt} es demasiado corto ({langd} de al menos {minsta} caracteres) para poder revisarse después.",
+  "slutsats.utan_varfor": "{falt} indica el qué, pero no el porqué. Vincular la conclusión con la evidencia — ¿qué hay en ella que la sustente?",
+  "slutsats.utan_slutsats": "El expediente no se puede cerrar sin una conclusión. Indicar por qué la conclusión se desprende de la evidencia.",
+  "slutsats.hypotes_obemott": "La hipótesis «{text}» figura en el registro pero no se aborda. Indicar por qué se descartó, o por qué sigue abierta.",
+
 
   // ---- Flujo del expediente -----------------------------------------------
   "arende.nytt": "Nuevo expediente",

@@ -62,6 +62,18 @@ export const PL = {
   "slutsats.avfardat": "Które hipotezy odrzucono i dlaczego",
   "slutsats.osakert": "Co pozostaje niepewne",
   "slutsats.ickesvar": "To nie jest wniosek. Podać, co zostało ustalone i jakie dowody to potwierdzają.",
+  "slutsats.falt.motivering": "Uzasadnienie",
+  "slutsats.falt.motivering_ej": "Powód, dla którego nie ustalono przyczyny",
+  "slutsats.falt.uteslutet": "Odrzucone alternatywy",
+  "slutsats.falt.kvarstaende": "Pozostała niepewność",
+  "slutsats.falt.atgardsval": "Wybór działania",
+  "slutsats.saknas": "Brakuje: {falt}.",
+  "slutsats.ickesvar.falt": "{falt}: „{text}” nie jest uzasadnieniem. Podać, co faktycznie obowiązuje i dlaczego.",
+  "slutsats.for_kort": "{falt} jest za krótkie ({langd} z co najmniej {minsta} znaków), aby dało się je później zweryfikować.",
+  "slutsats.utan_varfor": "{falt} podaje co, ale nie dlaczego. Powiązać wniosek z dowodami — co w nich sprawia, że to wynika?",
+  "slutsats.utan_slutsats": "Sprawy nie można zamknąć bez wniosku końcowego. Podać, dlaczego wniosek wynika z dowodów.",
+  "slutsats.hypotes_obemott": "Hipoteza „{text}” znajduje się w dzienniku, ale nie została omówiona. Podać, dlaczego ją odrzucono lub dlaczego pozostaje otwarta.",
+
 
   // ---- Przebieg sprawy ----------------------------------------------------
   "arende.nytt": "Nowa sprawa",

@@ -88,6 +88,18 @@ export const EN = {
   "slutsats.avfardat": "Which hypotheses were dismissed, and why",
   "slutsats.osakert": "What remains uncertain",
   "slutsats.ickesvar": "That is not an answer. State what was established and which evidence carries it.",
+  "slutsats.falt.motivering": "Rationale",
+  "slutsats.falt.motivering_ej": "Reason the cause could not be established",
+  "slutsats.falt.uteslutet": "Dismissed alternatives",
+  "slutsats.falt.kvarstaende": "Remaining uncertainty",
+  "slutsats.falt.atgardsval": "Choice of action",
+  "slutsats.saknas": "{falt} is missing.",
+  "slutsats.ickesvar.falt": "{falt}: “{text}” is not a reason. State what actually applies, and why.",
+  "slutsats.for_kort": "{falt} is too short ({langd} of at least {minsta} characters) to be reviewable afterwards.",
+  "slutsats.utan_varfor": "{falt} states what, but not why. Tie the conclusion to the evidence — what in it makes this follow?",
+  "slutsats.utan_slutsats": "The case cannot be closed without a closing statement. State why the conclusion follows from the evidence.",
+  "slutsats.hypotes_obemott": "The hypothesis “{text}” is in the log but is not addressed. State why it was dismissed, or why it remains open.",
+
 
   // ---- Case flow -----------------------------------------------------------
   "arende.nytt": "New case",

@@ -61,6 +61,18 @@ export const FR = {
   "slutsats.avfardat": "Quelles hypothèses ont été écartées, et pourquoi",
   "slutsats.osakert": "Ce qui reste incertain",
   "slutsats.ickesvar": "Ce n'est pas une conclusion. Indiquer ce qui est établi et quelles preuves l'étayent.",
+  "slutsats.falt.motivering": "Justification",
+  "slutsats.falt.motivering_ej": "Motif pour lequel la cause n'a pas pu être établie",
+  "slutsats.falt.uteslutet": "Alternatives écartées",
+  "slutsats.falt.kvarstaende": "Incertitude restante",
+  "slutsats.falt.atgardsval": "Choix de l'action",
+  "slutsats.saknas": "{falt} est absent.",
+  "slutsats.ickesvar.falt": "{falt} : « {text} » n'est pas un motif. Indiquer ce qui s'applique réellement, et pourquoi.",
+  "slutsats.for_kort": "{falt} est trop court ({langd} sur au moins {minsta} caractères) pour être vérifiable après coup.",
+  "slutsats.utan_varfor": "{falt} indique le quoi, mais pas le pourquoi. Relier la conclusion aux preuves — qu'est-ce qui, dans celles-ci, la rend fondée ?",
+  "slutsats.utan_slutsats": "Le dossier ne peut pas être clôturé sans conclusion. Indiquer pourquoi la conclusion découle des preuves.",
+  "slutsats.hypotes_obemott": "L'hypothèse « {text} » figure dans le journal mais n'est pas traitée. Indiquer pourquoi elle a été écartée, ou pourquoi elle reste ouverte.",
+
 
   // ---- Flux du dossier ----------------------------------------------------
   "arende.nytt": "Nouveau dossier",

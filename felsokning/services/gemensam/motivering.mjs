@@ -44,69 +44,8 @@
 // kunde det. Det är också ett varför, och ofta ett mer användbart än en
 // påhittad orsak.
 
-/** Fraser som ser ut som svar men inte är det. */
-const ICKESVAR = [
-  "klart",
-  "ok",
-  "okej",
-  "åtgärdat",
-  "atgardat",
-  "fixat",
-  "se ovan",
-  "se logg",
-  "enligt ovan",
-  "som vanligt",
-  "trasig",
-  "defekt",
-  "sliten",
-  "utsliten",
-  "behöver bytas",
-  "behover bytas",
-  "byttes",
-  "bytt",
-  "enligt kund",
-  "kunden sa",
-  "vet ej",
-  "ingen aning",
-  "diverse",
-  "allmänt slitage",
-  "-",
-  "n/a",
-  "na",
-];
-
-// Ett resonemang innehåller ett därför. Utan orsakssamband är texten en
-// omformulering av slutsatsen, inte ett skäl för den.
-const ORSAKSORD = [
-  "eftersom",
-  "därför",
-  "darfor",
-  "beror",
-  "orsakas",
-  "orsakade",
-  "medför",
-  "medfor",
-  "leder till",
-  "ledde till",
-  "vilket",
-  "på grund av",
-  "pga",
-  "resulterar",
-  "resulterade",
-  "innebär",
-  "innebar",
-  "följaktligen",
-  "foljaktligen",
-  "till följd av",
-  "förklarar",
-  "forklarar",
-  "stämmer överens",
-  "stammer overens",
-  "bekräftas av",
-  "bekraftas av",
-  "visar att",
-  "utesluter",
-];
+import { EVIDENSORD, ICKESVAR, MINSTA_ORSAKSORD, ORSAKSORD } from "./sprak/ord.mjs";
+import { STANDARD, t } from "./sprak/index.mjs";
 
 export const MINSTA_MOTIVERING = 40;
 export const MINSTA_KORT = 15;
@@ -119,9 +58,14 @@ function ärIckesvar(text) {
   return ICKESVAR.includes(n);
 }
 
+// Ett resonemang innehåller ett därför. Utan orsakssamband är texten en
+// omformulering av slutsatsen, inte ett skäl för den.
+//
+// Orden jämförs som delsträngar och kommer från alla språk samtidigt —
+// se sprak/ord.mjs för varför unionen är rätt riktning att fela åt.
 function harOrsakssamband(text) {
   const n = normalisera(text);
-  return ORSAKSORD.some((ord) => n.includes(ord));
+  return ORSAKSORD.some((ord) => ord.length >= MINSTA_ORSAKSORD && n.includes(ord));
 }
 
 /**
@@ -132,26 +76,24 @@ function harOrsakssamband(text) {
  */
 function refererarEvidens(text) {
   const n = normalisera(text);
-  const ord = ["mät", "mat", "foto", "bild", "video", "felkod", "avläs", "avlas", "prov", "test", "dokument", "historik", "kontroll"];
   const värde = /\d+([.,]\d+)?\s*(v|volt|a|ampere|ω|ohm|bar|kpa|mpa|nm|°c|c|mm|km|mil|%|g|hz|rpm|varv)\b/;
-  return ord.some((o) => n.includes(o)) || värde.test(n);
+  return EVIDENSORD.some((o) => n.includes(o)) || värde.test(n);
 }
 
 /**
  * Granskar ett fält i slutsatsen.
  * @returns null när fältet duger, annars en förklaring till teknikern.
  */
-export function granskaFalt(namn, text, { minsta = MINSTA_KORT, kravOrsak = false } = {}) {
+export function granskaFalt(faltNyckel, text, { minsta = MINSTA_KORT, kravOrsak = false, sprak = STANDARD } = {}) {
   const rå = String(text ?? "").trim();
-  if (!rå) return `${namn} saknas.`;
-  if (ärIckesvar(rå)) {
-    return `${namn}: "${rå}" är inget skäl. Beskriv vad som faktiskt gäller och varför.`;
-  }
+  const falt = t(sprak, faltNyckel);
+  if (!rå) return t(sprak, "slutsats.saknas", { falt });
+  if (ärIckesvar(rå)) return t(sprak, "slutsats.ickesvar.falt", { falt, text: rå });
   if (rå.length < minsta) {
-    return `${namn} är för kort (${rå.length} av minst ${minsta} tecken) för att gå att granska i efterhand.`;
+    return t(sprak, "slutsats.for_kort", { falt, langd: rå.length, minsta });
   }
   if (kravOrsak && !harOrsakssamband(rå) && !refererarEvidens(rå)) {
-    return `${namn} anger vad, men inte varför. Knyt slutsatsen till underlaget — vad i evidensen gör att det här följer?`;
+    return t(sprak, "slutsats.utan_varfor", { falt });
   }
   return null;
 }
@@ -193,48 +135,42 @@ export function obemottaHypoteser(handelser, slutsats) {
  * @param handelser hela loggen, för de regler som härleds ur den
  * @returns lista med brister; tom lista betyder godkänd
  */
-export function granskaSlutsats(slutsats, handelser = []) {
+export function granskaSlutsats(slutsats, handelser = [], sprak = STANDARD) {
   const brister = [];
   const lägg = (fält, text) => text && brister.push({ falt: fält, text });
+  const g = (nyckel, text, val) => granskaFalt(nyckel, text, { ...val, sprak });
 
   if (!slutsats) {
-    return [
-      {
-        falt: "slutsats",
-        text: "Ärendet kan inte avslutas utan en slutsats. Motivera varför slutsatsen följer av underlaget.",
-      },
-    ];
+    return [{ falt: "slutsats", nyckel: "slutsats.utan_slutsats", text: t(sprak, "slutsats.utan_slutsats") }];
   }
 
   const fastställd = slutsats.orsakFastställd !== false;
 
   if (fastställd) {
-    lägg("motivering", granskaFalt("Motivering", slutsats.motivering, { minsta: MINSTA_MOTIVERING, kravOrsak: true }));
+    lägg("motivering", g("slutsats.falt.motivering", slutsats.motivering, { minsta: MINSTA_MOTIVERING, kravOrsak: true }));
   } else {
     // Den ärliga vägen. Att orsaken inte kunnat fastställas är ett
     // giltigt utfall — men varför den inte kunnat det är fortfarande ett
     // varför, och det måste stå där.
     lägg(
       "motivering",
-      granskaFalt("Skäl till att orsaken inte fastställts", slutsats.motivering, {
-        minsta: MINSTA_MOTIVERING,
-        kravOrsak: true,
-      }),
+      g("slutsats.falt.motivering_ej", slutsats.motivering, { minsta: MINSTA_MOTIVERING, kravOrsak: true }),
     );
   }
 
-  lägg("uteslutet", granskaFalt("Uteslutna alternativ", slutsats.uteslutet, { minsta: MINSTA_KORT }));
-  lägg("kvarstaende", granskaFalt("Kvarstående osäkerhet", slutsats.kvarstaende, { minsta: 5 }));
+  lägg("uteslutet", g("slutsats.falt.uteslutet", slutsats.uteslutet, { minsta: MINSTA_KORT }));
+  lägg("kvarstaende", g("slutsats.falt.kvarstaende", slutsats.kvarstaende, { minsta: 5 }));
 
   const utfördArbete = handelser.some((h) => h?.typ === "atgard_utford" && h.utford === true);
   if (utfördArbete) {
-    lägg("atgardsval", granskaFalt("Val av åtgärd", slutsats.atgardsval, { minsta: MINSTA_KORT, kravOrsak: true }));
+    lägg("atgardsval", g("slutsats.falt.atgardsval", slutsats.atgardsval, { minsta: MINSTA_KORT, kravOrsak: true }));
   }
 
   for (const text of obemottaHypoteser(handelser, slutsats)) {
     brister.push({
       falt: "uteslutet",
-      text: `Hypotesen "${text}" finns i loggen men bemöts inte. Ange varför den uteslöts, eller varför den kvarstår.`,
+      nyckel: "slutsats.hypotes_obemott",
+      text: t(sprak, "slutsats.hypotes_obemott", { text }),
     });
   }
 

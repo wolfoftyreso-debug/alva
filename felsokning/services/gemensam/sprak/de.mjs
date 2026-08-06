@@ -62,6 +62,18 @@ export const DE = {
   "slutsats.osakert": "Was unsicher bleibt",
   "slutsats.ickesvar":
     "Das ist keine Feststellung. Angeben, was festgestellt wurde und welche Evidenz dies trägt.",
+  "slutsats.falt.motivering": "Begründung",
+  "slutsats.falt.motivering_ej": "Grund, warum die Ursache nicht festgestellt wurde",
+  "slutsats.falt.uteslutet": "Verworfene Alternativen",
+  "slutsats.falt.kvarstaende": "Verbleibende Unsicherheit",
+  "slutsats.falt.atgardsval": "Wahl der Maßnahme",
+  "slutsats.saknas": "{falt} fehlt.",
+  "slutsats.ickesvar.falt": "{falt}: „{text}“ ist keine Begründung. Angeben, was tatsächlich gilt, und warum.",
+  "slutsats.for_kort": "{falt} ist zu kurz ({langd} von mindestens {minsta} Zeichen), um im Nachhinein prüfbar zu sein.",
+  "slutsats.utan_varfor": "{falt} nennt das Was, nicht das Warum. Die Feststellung an die Evidenz binden — was darin lässt dies folgen?",
+  "slutsats.utan_slutsats": "Der Vorgang kann ohne Abschlussfeststellung nicht abgeschlossen werden. Angeben, warum die Feststellung aus der Evidenz folgt.",
+  "slutsats.hypotes_obemott": "Die Hypothese „{text}“ steht im Protokoll, wird aber nicht behandelt. Angeben, warum sie verworfen wurde oder warum sie offen bleibt.",
+
 
   // ---- Vorgangsablauf -----------------------------------------------------
   "arende.nytt": "Neuer Vorgang",

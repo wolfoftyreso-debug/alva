@@ -177,8 +177,8 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
   // varför det ena medför det andra. Det är precis det steget en
   // garantihandläggare eller försäkringsbedömare behöver granska.
   const slutsats = av(handelser, "slutsats").at(-1);
-  for (const brist of granskaSlutsats(slutsats, handelser)) {
-    hinder.push({ id: `slutsats_${brist.falt}`, rubrik: brist.text });
+  for (const brist of granskaSlutsats(slutsats, handelser, sprak)) {
+    hinder.push({ id: `slutsats_${brist.falt}`, nyckel: brist.nyckel, rubrik: brist.text });
   }
 
   // Säkerhetsspärrar. Ett nekande svar på en spärrfråga får aldrig
