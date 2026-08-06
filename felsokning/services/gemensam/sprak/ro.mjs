@@ -17,8 +17,8 @@ export const RO = {
   // ---- Grade de dovadă ----------------------------------------------------
   "evidens.E1": "Observație",
   "evidens.E2": "Fotografie",
-  "evidens.E3": "Videoclip cu sunet",
-  "evidens.E4": "Măsurare, instrument etalonat",
+  "evidens.E3": "Înregistrare video cu sunet",
+  "evidens.E4": "Măsurătoare, instrument etalonat",
   "evidens.E5": "Document",
   "evidens.ej_kalibrerad": "etalonare lipsă sau expirată",
   "evidens.ej_angivet": "instrument neindicat",
@@ -26,23 +26,23 @@ export const RO = {
 
   // ---- Controlul de închidere ---------------------------------------------
   "grind.objekt": "Identificarea vehiculului sau a obiectului verificată",
-  "grind.historik": "Istoricul vehiculului verificat sau justificat",
-  "grind.historik.nekad": "O verificare a istoricului refuzată necesită un motiv indicat.",
+  "grind.historik": "Istoricul vehiculului verificat, sau omiterea verificării justificată",
+  "grind.historik.nekad": "O verificare refuzată a istoricului necesită un motiv declarat.",
   "grind.historik.saknas": "Nicio verificare a istoricului documentată.",
   "grind.matarstallning.ingaende": "Kilometrajul la primire fotografiat",
   "grind.matarstallning.utgaende": "Kilometrajul la predare fotografiat",
   "grind.matarstallning.saknas": "Niciun kilometraj documentat.",
   "grind.matarstallning.ej_foto":
-    "Kilometrajul este introdus, dar nu este fotografiat. Fotografiază contorul de kilometraj sau indică de ce acest lucru nu este posibil.",
+    "Kilometrajul este introdus, dar nu este fotografiat. Fotografiază odometrul sau indică de ce acest lucru nu este posibil.",
   "grind.reproducering": "Verificarea simptomului: reprodus sau documentat ca nereproductibil",
-  "grind.felorsak": "Analiza cauzei-rădăcină documentată",
-  "grind.atgard": "Acțiune corectivă documentată sau justificată",
+  "grind.felorsak": "Analiza cauzei rădăcină documentată",
+  "grind.atgard": "Acțiune corectivă documentată, sau absența ei justificată",
   "grind.atgard.saknas": "Nu este documentată nici o acțiune efectuată, nici un motiv pentru absența acesteia.",
-  "grind.kundbeslut": "Decizia clientului privind propunerea înregistrată",
+  "grind.kundbeslut": "Decizia clientului cu privire la propunere, înregistrată",
   "grind.kundbeslut.avbojt": "Lucrare efectuată în pofida unei propuneri refuzate",
   "grind.kundbeslut.avbojt.detalj":
     "Clientul a refuzat propunerea, dar există lucrări documentate ca fiind efectuate.",
-  "grind.kvalitetskontroll": "Control de calitate efectuat — simptom verificat",
+  "grind.kvalitetskontroll": "Control de calitate efectuat — simptom verificat ca rezolvat",
   "grind.kontroller": "Punctele de control ale metodologiei: dovadă sau o excepție documentată",
   "grind.foton": "Fotografii prezente pentru controalele care le impun",
   "grind.slutsats": "Concluzie finală (ALVA-RULE-200)",
@@ -53,7 +53,7 @@ export const RO = {
     "Se utilizează un pachet de reguli extern fără semnătură — închiderea este blocată.",
   "grind.evidens": "Nivel de dovadă peste E0",
   "grind.evidens.saknas": "În jurnal nu există nicio dovadă.",
-  "grind.foton.detalj": "{kontroller} controale necesită o fotografie, {foton} fotografii în jurnal.",
+  "grind.foton.detalj": "Controale care necesită fotografie: {kontroller}; fotografii în jurnal: {foton}.",
   "grind.sparr.ej_uppfyllt": "Cerința de siguranță nu este îndeplinită.",
   "grind.arendetyp.okant": "Cerință necunoscută în pachetul de reguli: {krav}",
   "grind.arendetyp.krav": "Cerință pentru acest tip de caz: {krav}",
@@ -67,7 +67,7 @@ export const RO = {
   "slutsats.evidens": "Ce dovezi susțin acest lucru",
   "slutsats.avfardat": "Ce ipoteze au fost înlăturate și de ce",
   "slutsats.osakert": "Ce rămâne incert",
-  "slutsats.ickesvar": "Aceasta nu este o concluzie. Indică ce a fost stabilit și ce dovezi susțin acest lucru.",
+  "slutsats.ickesvar": "Acesta nu este un răspuns. Indică ce a fost stabilit și ce dovezi susțin acest lucru.",
   "slutsats.falt.motivering": "Justificare",
   "slutsats.falt.motivering_ej": "Motivul pentru care cauza nu a putut fi stabilită",
   "slutsats.falt.uteslutet": "Alternative înlăturate",
@@ -75,7 +75,7 @@ export const RO = {
   "slutsats.falt.atgardsval": "Alegerea acțiunii",
   "slutsats.saknas": "Lipsește: {falt}.",
   "slutsats.ickesvar.falt": "{falt}: „{text}” nu este o justificare. Indică ce se aplică în realitate și de ce.",
-  "slutsats.for_kort": "{falt} este prea scurt ({langd} din cel puțin {minsta} caractere) pentru a putea fi verificat ulterior.",
+  "slutsats.for_kort": "Câmpul {falt} este prea scurt pentru a putea fi verificat ulterior (caractere: {langd}, minim: {minsta}).",
   "slutsats.utan_varfor": "{falt} spune ce, dar nu de ce. Leagă concluzia de dovezi — ce anume din ele face ca aceasta să decurgă?",
   "slutsats.utan_slutsats": "Cazul nu poate fi închis fără o concluzie finală. Indică de ce concluzia decurge din dovezi.",
   "slutsats.hypotes_obemott": "Ipoteza „{text}” se află în jurnal, dar nu este tratată. Indică de ce a fost înlăturată sau de ce rămâne deschisă.",
@@ -101,7 +101,7 @@ export const RO = {
   "pre.historik.skal": "Motivul pentru care istoricul nu a fost verificat (obligatoriu)",
   "pre.historik.relevant": "Lucrări anterioare relevante (opțional — lanț cauzal)",
   "pre.matarstallning": "Kilometraj",
-  "pre.fotografera": "Fotografiază panoul de bord",
+  "pre.fotografera": "Fotografiază panoul de instrumente",
   "pre.felbeskrivning": "Descrierea defectului de către client verificată",
   "pre.observationer": "Altceva la primire?",
 
@@ -123,7 +123,7 @@ export const RO = {
   "matning.enhet": "Unitate",
   "matning.matdon": "Instrument",
   "matning.matdon.valj": "Selectează instrumentul",
-  "matning.matdon.okant": "Instrument necunoscut. Înregistrează-l înainte de salvarea măsurării.",
+  "matning.matdon.okant": "Instrument necunoscut. Înregistrează-l înainte de salvarea măsurătorii.",
   "matning.kalibrerad_till": "Etalonat până la",
 
   // ---- Raport -------------------------------------------------------------
@@ -132,12 +132,12 @@ export const RO = {
   "rapport.evidens": "Dovezi",
   "rapport.atgarder": "Acțiuni",
   "rapport.harledd":
-    "Derivat din jurnalul cazului. Observațiile și măsurările sunt prezentate fără concluzii lipsite de temei.",
+    "Derivat din jurnalul cazului. Observațiile și măsurătorile sunt prezentate fără concluzii lipsite de temei.",
 
   // ---- Limbă --------------------------------------------------------------
   "sprak.valj": "Limbă",
-  "sprak.granskat": "Verificat",
-  "sprak.ogranskat": "Neverificat",
+  "sprak.granskat": "Revizuit",
+  "sprak.ogranskat": "Nerevizuit",
   "sprak.tackning": "{procent} % din interfață",
 
   "metodik.ogranskad":
@@ -162,13 +162,13 @@ export const RO = {
   "webb.metod.rubrik": "Modelul ALVA",
   "webb.metod.ingress":
     "ALVA este o metodă standardizată de analiză, localizare, verificare și acțiune sistematice. Fiecare decizie este trasabilă, fiecare concluzie verificabilă, fiecare acțiune reproductibilă.",
-  "webb.fas.analysis.syfte": "Strângeți dovezile.",
+  "webb.fas.analysis.syfte": "Strânge dovezile.",
   "webb.fas.analysis.avgransning": "Doar fapte. În această fază nu se adună ipoteze.",
-  "webb.fas.localization.syfte": "Delimitați defectul.",
-  "webb.fas.localization.avgransning": "Restrângeți zona. Cauza nu este încă stabilită.",
-  "webb.fas.verification.syfte": "Confirmați cauza rădăcină.",
+  "webb.fas.localization.syfte": "Izolează defectul.",
+  "webb.fas.localization.avgransning": "Restrânge zona. Cauza nu este încă stabilită.",
+  "webb.fas.verification.syfte": "Confirmă cauza rădăcină.",
   "webb.fas.verification.avgransning": "Se verifică cauza — nu simptomul.",
-  "webb.fas.action.syfte": "Executați acțiunea corectivă.",
+  "webb.fas.action.syfte": "Execută acțiunea corectivă.",
   "webb.fas.action.avgransning": "Rezultat verificat și documentat. Altfel faza este incompletă.",
 
   "webb.drift.etikett": "Funcționare",
@@ -182,7 +182,7 @@ export const RO = {
   "webb.drift.s4.rubrik": "Verificare",
   "webb.drift.s4.text": "Cauza rădăcină este confirmată înaintea acțiunii corective.",
   "webb.drift.s5.rubrik": "Documentare",
-  "webb.drift.s5.text": "Raportul este generat din jurnalul cazului.",
+  "webb.drift.s5.text": "Dosarul este generat din jurnalul cazului.",
   "webb.drift.s6.rubrik": "Îmbunătățire continuă",
   "webb.drift.s6.text": "Rezultatele verificate rafinează procedurile următoare.",
 
@@ -191,14 +191,14 @@ export const RO = {
   "webb.larande.p1":
     "Platforma rafinează continuu procedurile de diagnosticare cu experiența operațională verificată a propriei organizații.",
   "webb.larande.p2":
-    "Fiecare diagnostic încheiat alimentează ghidarea următoare. Se folosesc doar rezultate verificate — un caz închis fără cauză rădăcină confirmată nu aduce nimic, în mod intenționat.",
+    "Fiecare diagnostic încheiat alimentează ghidarea ulterioară. Se folosesc doar rezultate verificate — un caz închis fără cauză rădăcină confirmată nu contribuie cu nimic, în mod intenționat.",
   "webb.larande.p3":
-    "Baza de cunoștințe aparține organizației. Este derivată din cazurile, procedurile și documentația voastră și nu este agregată între clienți.",
+    "Baza de cunoștințe aparține organizației. Este derivată din cazurile, procedurile și documentația dumneavoastră și nu este agregată între clienți.",
   "webb.larande.block": "Derivată din",
   "webb.larande.k1": "Cauze rădăcină verificate",
   "webb.larande.k2": "Acțiuni corective confirmate",
   "webb.larande.k3": "Categorii de defecte recurente",
-  "webb.larande.k4": "Proceduri duse la capăt",
+  "webb.larande.k4": "Evidențe de finalizare a procedurilor",
   "webb.larande.k5": "Documentația organizației",
 
   "webb.rapport.etikett": "Raportare",
@@ -208,7 +208,7 @@ export const RO = {
   "webb.rapport.f1": "Ce defecte diagnosticăm acum corect din prima?",
   "webb.rapport.f2": "Cât de des o cauză bănuită se dovedește a fi cea reală?",
   "webb.rapport.f3": "Ce defecte revin mereu în flotă?",
-  "webb.rapport.f4": "Ce pași de procedură sunt săriți, și de ce?",
+  "webb.rapport.f4": "Ce pași de procedură sunt omiși, și de ce?",
   "webb.rapport.f5": "Ce știe atelierul acum și nu știa trimestrul trecut?",
   "webb.rapport.f6": "Cazurile sunt încheiate, verificate și documentate — sau doar încheiate?",
 
@@ -222,7 +222,7 @@ export const RO = {
   "webb.pris.anvandare.grund": "Per utilizator activ, lunar",
   "webb.pris.moduler": "Module pentru întreprinderi",
   "webb.pris.moduler.grund": "Opționale, per modul",
-  "webb.pris.betalning": "Fără plată online. Fără abonare directă. Facturarea urmează examinării cererii.",
+  "webb.pris.betalning": "Fără plată online. Fără înscriere la abonament. Facturarea urmează examinării cererii.",
   "webb.pris.aktivering": "Secvența de activare",
   "webb.pris.a1": "Organizația depune înregistrarea.",
   "webb.pris.a2": "Cererea este examinată.",
@@ -243,7 +243,7 @@ export const RO = {
   "webb.kallor.k3": "Buletine tehnice",
   "webb.kallor.k4": "Informații de garanție",
   "webb.kallor.k5": "Manuale de atelier",
-  "webb.kallor.k6": "Diagnostice verificate istorice",
+  "webb.kallor.k6": "Diagnostice istorice verificate",
   "webb.kallor.k7": "Bune practici ale organizației",
 
   "webb.login.etikett": "Acces",
@@ -258,7 +258,7 @@ export const RO = {
 
   "webb.ansokan.etikett": "Înregistrare",
   "webb.ansokan.demo":
-    "Nu se trimite nimic. Trimiterea formularului nu salvează nimic, nu anunță pe nimeni și nu creează nicio cerere — încă nu există o recepție în spate. Descrierea de mai jos spune cum este gândită înregistrarea să funcționeze, nu ce se întâmplă azi.",
+    "Nu se trimite nimic. Trimiterea formularului nu salvează nimic, nu anunță pe nimeni și nu creează nicio cerere — în spate nu există încă niciun proces de preluare. Descrierea de mai jos arată cum ar urma să funcționeze înregistrarea, nu ce se întâmplă astăzi.",
   "webb.ansokan.avsikt": "Funcționare prevăzută: cererile sunt examinate manual și în această etapă nu se percepe nicio plată.",
   "webb.falt.foretag": "Firmă",
   "webb.falt.orgnummer": "Număr de înregistrare",
@@ -294,14 +294,14 @@ export const RO = {
   "webb.sprak.metodik.rubrik": "Text de procedură",
   "webb.sprak.metodik.beteckning": "Nu revine niciodată în tăcere",
   "webb.sprak.metodik.text":
-    "Instrucțiuni pentru lucrul la un vehicul. Aici o traducere neverificată este mai rea decât una într-o limbă străină — pentru că engleza pare străină, în timp ce o traducere proastă pare o instrucțiune. Este afișat în engleză și marcat, cu limba numită.",
+    "Instrucțiuni pentru lucrul la un vehicul. Aici o traducere neverificată este mai rea decât una într-o limbă străină — pentru că engleza pare străină, în timp ce o traducere proastă pare o instrucțiune. Este afișat în engleză și marcat, cu indicarea limbii.",
   "webb.sprak.invariant":
     "Metoda în sine nu se traduce niciodată. Numele fazelor și cuvintele de stare sunt structura ALVA și se citesc identic în fiecare țară, astfel încât un auditor poate citi un dosar românesc și unul german fără să știe în ce limbă lucrează atelierul.",
   "webb.sprak.tackning.etikett": "Acoperire",
   "webb.sprak.tackning.rubrik": "Ce este tradus, și ce este verificat",
   "webb.sprak.kolumn.sprak": "Limbă",
   "webb.sprak.kolumn.granssnitt": "Interfață",
-  "webb.sprak.kolumn.granskat": "Metodă verificată de un specialist",
+  "webb.sprak.kolumn.granskat": "Metodă revizuită de un specialist",
   "webb.sprak.granskat.ja": "Da",
   "webb.sprak.granskat.nej": "Nu — textul de procedură afișat în engleză",
   "webb.sprak.matt":
@@ -312,10 +312,10 @@ export const RO = {
   "webb.sprak.bevis.rubrik": "Frazele care opresc un caz",
   "webb.sprak.bevis.ingress":
     "Acestea sunt frazele care refuză unui tehnician închiderea unui caz. Un refuz pe care nimeni nu îl înțelege este un refuz fără ieșire — deci sunt frazele potrivite pentru a judeca o traducere.",
-  "webb.sprak.ej_granskad": "Neverificat",
-  "webb.sprak.granskad": "Verificat",
+  "webb.sprak.ej_granskad": "Nerevizuit",
+  "webb.sprak.granskad": "Revizuit",
   "webb.sprak.granskad.text":
-    "Textul de procedură în limba {sprak} a fost citit de un specialist care practică meseria. Pașii și punctele de control sunt afișate peste tot în limba {sprak}.",
+    "Textul de procedură în limba {sprak} a fost revizuit de un specialist care practică meseria. Pașii și punctele de control sunt afișate peste tot în limba {sprak}.",
   "webb.sprak.val.etikett": "Funcționare",
   "webb.sprak.val.rubrik": "Cum se alege limba",
   "webb.sprak.val.s1.rubrik": "Preferința utilizatorului",
@@ -325,7 +325,7 @@ export const RO = {
   "webb.sprak.val.s3.rubrik": "Limba browserului",
   "webb.sprak.val.s3.text": "Prima limbă pe care platforma o recunoaște.",
   "webb.sprak.val.s4.rubrik": "Engleza",
-  "webb.sprak.val.s4.text": "Implicit, și sursa.",
+  "webb.sprak.val.s4.text": "Limba implicită — și limba sursă.",
   "webb.sprak.val.notering":
     "Organizația trece intenționat înaintea browserului. Un atelier din Germania cu un tehnician polonez are nevoie de o singură limbă de documentare — dosarul nu trebuie să schimbe limba în funcție de cine a scris rândul.",
 };

@@ -24,7 +24,7 @@ export const PL = {
 
   // ---- Kontrola zamknięcia ------------------------------------------------
   "grind.objekt": "Identyfikacja pojazdu lub obiektu zweryfikowana",
-  "grind.historik": "Historia pojazdu sprawdzona lub uzasadniona",
+  "grind.historik": "Historia pojazdu sprawdzona albo brak sprawdzenia uzasadniony",
   "grind.historik.nekad": "Odmowa sprawdzenia historii wymaga podania powodu.",
   "grind.historik.saknas": "Nie udokumentowano sprawdzenia historii.",
   "grind.matarstallning.ingaende": "Stan licznika przy przyjęciu sfotografowany",
@@ -34,22 +34,22 @@ export const PL = {
     "Stan licznika został wprowadzony, ale nie sfotografowany. Sfotografować licznik lub podać, dlaczego nie jest to możliwe.",
   "grind.reproducering": "Weryfikacja objawu: odtworzony lub udokumentowany jako nieodtwarzalny",
   "grind.felorsak": "Analiza przyczyny źródłowej udokumentowana",
-  "grind.atgard": "Działanie naprawcze udokumentowane lub uzasadnione",
+  "grind.atgard": "Działanie naprawcze udokumentowane albo jego brak uzasadniony",
   "grind.atgard.saknas": "Nie udokumentowano ani wykonanego działania, ani powodu jego braku.",
   "grind.kundbeslut": "Decyzja klienta w sprawie propozycji zarejestrowana",
   "grind.kundbeslut.avbojt": "Praca wykonana mimo odrzuconej propozycji",
   "grind.kundbeslut.avbojt.detalj": "Klient odrzucił propozycję, ale praca jest udokumentowana jako wykonana.",
-  "grind.kvalitetskontroll": "Kontrola jakości wykonana — objaw zweryfikowany",
+  "grind.kvalitetskontroll": "Kontrola jakości wykonana — potwierdzono ustąpienie objawu",
   "grind.kontroller": "Punkty kontrolne metodyki: dowód lub udokumentowane odstępstwo",
-  "grind.foton": "Fotografie obecne przy kontrolach, które ich wymagają",
+  "grind.foton": "Fotografie obecne przy punktach kontrolnych, które ich wymagają",
   "grind.slutsats": "Wniosek końcowy (ALVA-RULE-200)",
-  "grind.hogvolt.behorighet": "Uprawnienia wysokonapięciowe potwierdzone",
-  "grind.hogvolt.spanningslos": "Pojazd odłączony od napięcia zgodnie z procedurą producenta",
+  "grind.hogvolt.behorighet": "Uprawnienia do prac przy wysokim napięciu potwierdzone",
+  "grind.hogvolt.spanningslos": "Pojazd pozbawiony napięcia zgodnie z procedurą producenta",
   "grind.regelpaket": "Podpis pakietu reguł nie zgadza się — zamknięcie zablokowane.",
   "grind.regelpaket.osignerat": "Używany jest zewnętrzny pakiet reguł bez podpisu — zamknięcie zablokowane.",
   "grind.evidens": "Poziom dowodu powyżej E0",
   "grind.evidens.saknas": "W dzienniku nie ma żadnego dowodu.",
-  "grind.foton.detalj": "{kontroller} kontroli wymaga fotografii, {foton} fotografii w dzienniku.",
+  "grind.foton.detalj": "Punktów kontrolnych wymagających fotografii: {kontroller}; fotografii w dzienniku: {foton}.",
   "grind.sparr.ej_uppfyllt": "Wymóg bezpieczeństwa nie jest spełniony.",
   "grind.arendetyp.okant": "Nieznany wymóg w pakiecie reguł: {krav}",
   "grind.arendetyp.krav": "Wymóg dla tego rodzaju sprawy: {krav}",
@@ -70,8 +70,8 @@ export const PL = {
   "slutsats.falt.kvarstaende": "Pozostała niepewność",
   "slutsats.falt.atgardsval": "Wybór działania",
   "slutsats.saknas": "Brakuje: {falt}.",
-  "slutsats.ickesvar.falt": "{falt}: „{text}” nie jest uzasadnieniem. Podać, co faktycznie obowiązuje i dlaczego.",
-  "slutsats.for_kort": "{falt} jest za krótkie ({langd} z co najmniej {minsta} znaków), aby dało się je później zweryfikować.",
+  "slutsats.ickesvar.falt": "{falt}: „{text}” nie jest uzasadnieniem. Podać, jaki jest stan faktyczny i dlaczego.",
+  "slutsats.for_kort": "Pole „{falt}” jest za krótkie ({langd} z co najmniej {minsta} znaków), aby dało się je później zweryfikować.",
   "slutsats.utan_varfor": "{falt} podaje co, ale nie dlaczego. Powiązać wniosek z dowodami — co w nich sprawia, że to wynika?",
   "slutsats.utan_slutsats": "Sprawy nie można zamknąć bez wniosku końcowego. Podać, dlaczego wniosek wynika z dowodów.",
   "slutsats.hypotes_obemott": "Hipoteza „{text}” znajduje się w dzienniku, ale nie została omówiona. Podać, dlaczego ją odrzucono lub dlaczego pozostaje otwarta.",
@@ -86,10 +86,10 @@ export const PL = {
   "arende.kan_ej_avslutas": "Sprawy nie można jeszcze zamknąć",
   "arende.hinder": "Do wykonania przed zamknięciem",
   "arende.overlamna": "Przekaż",
-  "arende.ansvarig": "Odpowiedzialny",
+  "arende.ansvarig": "Osoba odpowiedzialna",
 
   // ---- Kontrola wstępna ---------------------------------------------------
-  "pre.rubrik": "Kontrola wstępna — przed rozpoczęciem pracy",
+  "pre.rubrik": "Diagnostyka wstępna — przed rozpoczęciem pracy",
   "pre.historik.fraga":
     "Czy historia pojazdu została sprawdzona? (wcześniejsze naprawy, powtarzające się usterki, TSB, akcje serwisowe)",
   "pre.historik.ja": "Tak — sprawdzona",
@@ -120,7 +120,7 @@ export const PL = {
   "matning.matdon": "Przyrząd",
   "matning.matdon.valj": "Wybierz przyrząd",
   "matning.matdon.okant": "Nieznany przyrząd. Zarejestrować go przed zapisaniem pomiaru.",
-  "matning.kalibrerad_till": "Wzorcowany do",
+  "matning.kalibrerad_till": "Wzorcowanie ważne do",
 
   // ---- Raport -------------------------------------------------------------
   "rapport.rubrik": "Raport sprawy",
@@ -152,7 +152,7 @@ export const PL = {
   "webb.fot.utgavor": "Informacje o wydaniach",
 
   "webb.hero.position": "Platforma diagnostyki prowadzonej",
-  "webb.hero.definition": "Znormalizowane procedury diagnostyczne dla powtarzalnego i weryfikowalnego wykrywania usterek.",
+  "webb.hero.definition": "Znormalizowane procedury diagnostyczne dla powtarzalnego i weryfikowalnego diagnozowania usterek.",
 
   "webb.metod.etikett": "Metodyka",
   "webb.metod.rubrik": "Model ALVA",
@@ -160,17 +160,17 @@ export const PL = {
     "ALVA to znormalizowana metoda systematycznej analizy, lokalizacji, weryfikacji i działania. Każda decyzja jest identyfikowalna, każdy wniosek weryfikowalny, każde działanie powtarzalne.",
   "webb.fas.analysis.syfte": "Zebrać dowody.",
   "webb.fas.analysis.avgransning": "Wyłącznie fakty. W tej fazie nie zbiera się hipotez.",
-  "webb.fas.localization.syfte": "Zawęzić usterkę.",
+  "webb.fas.localization.syfte": "Zlokalizować usterkę.",
   "webb.fas.localization.avgransning": "Ograniczyć obszar. Przyczyna nie jest jeszcze ustalona.",
   "webb.fas.verification.syfte": "Potwierdzić przyczynę źródłową.",
   "webb.fas.verification.avgransning": "Weryfikowana jest przyczyna — nie objaw.",
   "webb.fas.action.syfte": "Wykonać działanie naprawcze.",
   "webb.fas.action.avgransning": "Wynik zweryfikowany i udokumentowany. Inaczej faza jest niezakończona.",
 
-  "webb.drift.etikett": "Działanie",
+  "webb.drift.etikett": "Sposób działania",
   "webb.drift.rubrik": "Jak to działa",
   "webb.drift.s1.rubrik": "Utworzenie organizacji",
-  "webb.drift.s1.text": "Rejestracja zostaje złożona i rozpatrzona.",
+  "webb.drift.s1.text": "Wniosek rejestracyjny zostaje złożony i rozpatrzony.",
   "webb.drift.s2.rubrik": "Użytkownicy otrzymują konta",
   "webb.drift.s2.text": "Role przydziela administrator organizacji.",
   "webb.drift.s3.rubrik": "Prowadzone procedury diagnostyczne",
@@ -182,14 +182,14 @@ export const PL = {
   "webb.drift.s6.rubrik": "Ciągłe doskonalenie",
   "webb.drift.s6.text": "Zweryfikowane wyniki udoskonalają kolejne procedury.",
 
-  "webb.larande.etikett": "Zdolność",
+  "webb.larande.etikett": "Możliwości",
   "webb.larande.rubrik": "Uczenie się organizacji",
   "webb.larande.p1":
     "Platforma stale udoskonala procedury diagnostyczne na podstawie zweryfikowanego doświadczenia operacyjnego własnej organizacji.",
   "webb.larande.p2":
-    "Każda ukończona diagnoza zasila kolejne wskazówki. Używane są wyłącznie zweryfikowane wyniki — sprawa zamknięta bez potwierdzonej przyczyny źródłowej celowo nie wnosi nic.",
+    "Każda ukończona diagnoza zasila kolejne wskazówki. Używane są wyłącznie zweryfikowane wyniki — sprawa zamknięta bez potwierdzonej przyczyny źródłowej z założenia nie wnosi niczego.",
   "webb.larande.p3":
-    "Baza wiedzy należy do organizacji. Powstaje z waszych spraw, waszych procedur i waszej dokumentacji i nie jest agregowana między klientami.",
+    "Baza wiedzy należy do organizacji. Powstaje z jej własnych spraw, procedur i dokumentacji i nie jest agregowana między klientami.",
   "webb.larande.block": "Pochodzi z",
   "webb.larande.k1": "Zweryfikowane przyczyny źródłowe",
   "webb.larande.k2": "Potwierdzone działania naprawcze",
@@ -218,22 +218,22 @@ export const PL = {
   "webb.pris.anvandare.grund": "Na aktywnego użytkownika, miesięcznie",
   "webb.pris.moduler": "Moduły korporacyjne",
   "webb.pris.moduler.grund": "Opcjonalne, na moduł",
-  "webb.pris.betalning": "Bez płatności online. Bez samodzielnej subskrypcji. Fakturowanie następuje po rozpatrzeniu wniosku.",
+  "webb.pris.betalning": "Bez płatności online. Bez samodzielnego wykupu subskrypcji. Fakturowanie następuje po rozpatrzeniu wniosku.",
   "webb.pris.aktivering": "Kolejność aktywacji",
-  "webb.pris.a1": "Organizacja składa rejestrację.",
+  "webb.pris.a1": "Organizacja składa wniosek rejestracyjny.",
   "webb.pris.a2": "Wniosek jest rozpatrywany.",
   "webb.pris.a3": "Wystawiana jest faktura.",
   "webb.pris.a4": "Płatność zostaje zaksięgowana.",
   "webb.pris.a5": "Organizacja zostaje aktywowana.",
-  "webb.pris.a6": "Kolejni użytkownicy są rozliczani miesięcznie.",
+  "webb.pris.a6": "Dodatkowi użytkownicy są rozliczani miesięcznie.",
 
   "webb.kallor.etikett": "Infrastruktura",
   "webb.kallor.rubrik": "Operacyjna infrastruktura wiedzy",
   "webb.kallor.p1":
-    "ALVA korzysta z własnych, autoryzowanych źródeł wiedzy organizacji. Architektura jest neutralna wobec dostawców: każde źródło implementuje ten sam interfejs i żaden dostawca nie jest zakładany.",
+    "ALVA korzysta z własnych, autoryzowanych źródeł wiedzy organizacji. Architektura jest neutralna wobec dostawców: każde źródło implementuje ten sam interfejs i żadnego dostawcy nie zakłada się z góry.",
   "webb.kallor.p2":
-    "Instalacja beta pracuje wyłącznie na dokumentacji wewnętrznej. Zewnętrzni dostawcy są włączani później przez osobne łączniki, bez zmian w rdzeniu platformy.",
-  "webb.kallor.block": "Kolejność rozstrzygania źródeł",
+    "Instalacja beta pracuje wyłącznie na dokumentacji wewnętrznej. Zewnętrzni dostawcy są włączani później przez osobne konektory, bez zmian w rdzeniu platformy.",
+  "webb.kallor.block": "Kolejność przeszukiwania źródeł",
   "webb.kallor.k1": "Wewnętrzne procedury firmy",
   "webb.kallor.k2": "Dokumentacja OEM",
   "webb.kallor.k3": "Biuletyny techniczne",
@@ -244,17 +244,17 @@ export const PL = {
 
   "webb.login.etikett": "Dostęp",
   "webb.login.demo":
-    "To logowanie niczego nie uwierzytelnia. Wpisz cokolwiek w polach E-mail i Hasło i naciśnij Zaloguj — konto nie jest potrzebne, a portal za nim pokazuje stałe dane przykładowe. Połączona z instancją platformy strona uwierzytelnia się wobec niej, a bez ważnej sesji portal jest zamknięty.",
+    "To logowanie niczego nie uwierzytelnia. Wpisz cokolwiek w polach E-mail i Hasło i naciśnij Zaloguj się — konto nie jest potrzebne, a portal za nim pokazuje stałe dane przykładowe. Połączona z instancją platformy strona uwierzytelnia się wobec niej, a bez ważnej sesji portal jest zamknięty.",
   "webb.login.losenord": "Hasło",
   "webb.login.ofullstandigt": "Uwierzytelnianie niekompletne. Wymagane są e-mail i hasło.",
   "webb.login.misslyckades": "Uwierzytelnianie nie powiodło się.",
-  "webb.login.logga_in": "Zaloguj",
+  "webb.login.logga_in": "Zaloguj się",
   "webb.login.loggar_in": "Logowanie w toku",
   "webb.login.glomt": "Nie pamiętam hasła",
 
   "webb.ansokan.etikett": "Rejestracja",
   "webb.ansokan.demo":
-    "Nic nie jest wysyłane. Wysłanie formularza niczego nie zapisuje, nikogo nie powiadamia i nie tworzy wniosku — nie ma za nim jeszcze punktu przyjęć. Opis poniżej mówi, jak rejestracja ma działać, a nie co dzieje się dziś.",
+    "Nic nie jest wysyłane. Wysłanie formularza niczego nie zapisuje, nikogo nie powiadamia i nie tworzy wniosku — nie stoi za nim jeszcze żaden proces przyjmowania zgłoszeń. Opis poniżej mówi, jak rejestracja ma działać, a nie co dzieje się dziś.",
   "webb.ansokan.avsikt": "Zamierzone działanie: wnioski są rozpatrywane ręcznie i na tym etapie nie jest pobierana żadna płatność.",
   "webb.falt.foretag": "Firma",
   "webb.falt.orgnummer": "Numer rejestrowy",
@@ -271,7 +271,7 @@ export const PL = {
   "webb.ansokan.mottagen.etikett": "Wniosek",
   "webb.ansokan.mottagen": "Złożono",
   "webb.ansokan.mottagen.demo":
-    "Nic nie zostało przekazane i nikt nie został powiadomiony. Poniższy numer referencyjny obliczono w twojej przeglądarce z tego, co wpisano, i nie istnieje nigdzie indziej — zniknie po zamknięciu tej strony.",
+    "Nic nie zostało przekazane i nikt nie został powiadomiony. Poniższy numer referencyjny został obliczony w przeglądarce z tego, co wpisano, i nie istnieje nigdzie indziej — zniknie po zamknięciu tej strony.",
   "webb.ansokan.status": "Status",
   "webb.ansokan.referens": "Numer referencyjny",
   "webb.ansokan.granskning":
@@ -284,13 +284,13 @@ export const PL = {
   "webb.sprak.princip.etikett": "Zasada",
   "webb.sprak.princip.rubrik": "Dwa rodzaje tekstu",
   "webb.sprak.granssnitt.rubrik": "Tekst interfejsu",
-  "webb.sprak.granssnitt.beteckning": "Cofa się po cichu",
+  "webb.sprak.granssnitt.beteckning": "Po cichu wraca do angielskiego",
   "webb.sprak.granssnitt.text":
-    "Etykiety, przyciski, statusy. Skończony, rzadko zmieniany. Angielski napis, który trafi do niemieckiego użytkownika, to irytacja, nie zagrożenie — brakujące tłumaczenie cofa się więc do angielskiego bez komentarza.",
+    "Etykiety, przyciski, statusy. Zbiór skończony, rzadko zmieniany. Angielski tekst, który trafi do niemieckiego użytkownika, to irytacja, nie zagrożenie — brakujące tłumaczenie jest więc bez komentarza zastępowane angielskim.",
   "webb.sprak.metodik.rubrik": "Tekst procedur",
-  "webb.sprak.metodik.beteckning": "Nigdy nie cofa się po cichu",
+  "webb.sprak.metodik.beteckning": "Nigdy nie wraca po cichu",
   "webb.sprak.metodik.text":
-    "Instrukcje pracy przy pojeździe. Tu niesprawdzone tłumaczenie jest gorsze niż tekst w obcym języku — bo angielski wygląda obco, a złe tłumaczenie wygląda jak instrukcja. Jest pokazywany po angielsku i oznaczany, z nazwanym językiem.",
+    "Instrukcje pracy przy pojeździe. Tu niesprawdzone tłumaczenie jest gorsze niż tekst w obcym języku — bo angielski wygląda obco, a złe tłumaczenie wygląda jak instrukcja. Taki tekst jest pokazywany po angielsku i oznaczany, z podaną nazwą języka.",
   "webb.sprak.invariant":
     "Sama metoda nigdy nie jest tłumaczona. Nazwy faz i słowa statusów to struktura ALVA i czyta się je identycznie w każdym kraju, więc audytor może przeczytać rumuńskie i niemieckie akta sprawy, nie wiedząc, w jakim języku pracuje warsztat.",
   "webb.sprak.tackning.etikett": "Pokrycie",
@@ -301,7 +301,7 @@ export const PL = {
   "webb.sprak.granskat.ja": "Tak",
   "webb.sprak.granskat.nej": "Nie — tekst procedur po angielsku",
   "webb.sprak.matt":
-    "Pokrycie interfejsu jest mierzone, nie szacowane: test wywraca kompilację, jeśli jakikolwiek klucz brakuje w jakimkolwiek języku. Status sprawdzenia to stwierdzenie o ludziach, nie o plikach, i ustawia się go ręcznie.",
+    "Pokrycie interfejsu jest mierzone, nie szacowane: test przerywa kompilację, jeśli w którymkolwiek języku brakuje jakiegokolwiek klucza. Status sprawdzenia to stwierdzenie o ludziach, nie o plikach, i ustawia się go ręcznie.",
   "webb.sprak.kallsprak":
     "Angielski tekst procedur jest tłumaczeniem szwedzkiego źródła i nie został jeszcze przeczytany przez specjalistę pracującego w zawodzie. Obowiązuje go ten sam standard co pozostałe dziewięć języków i tutaj pada o nim to samo stwierdzenie, zamiast po cichu robić wyjątek dlatego, że jest źródłem.",
   "webb.sprak.bevis.etikett": "Weryfikacja",
@@ -311,8 +311,8 @@ export const PL = {
   "webb.sprak.ej_granskad": "Niesprawdzone",
   "webb.sprak.granskad": "Sprawdzone",
   "webb.sprak.granskad.text":
-    "Tekst procedur w języku {sprak} został przeczytany przez specjalistę pracującego w zawodzie. Kroki i punkty kontrolne są wszędzie pokazywane w języku {sprak}.",
-  "webb.sprak.val.etikett": "Działanie",
+    "Tekst procedur w tym języku ({sprak}) został przeczytany przez specjalistę pracującego w zawodzie. Kroki i punkty kontrolne są w całości pokazywane w tym języku ({sprak}).",
+  "webb.sprak.val.etikett": "Sposób działania",
   "webb.sprak.val.rubrik": "Jak wybierany jest język",
   "webb.sprak.val.s1.rubrik": "Wybór użytkownika",
   "webb.sprak.val.s1.text": "To, co wybrała dana osoba.",
@@ -321,7 +321,7 @@ export const PL = {
   "webb.sprak.val.s3.rubrik": "Język przeglądarki",
   "webb.sprak.val.s3.text": "Pierwszy język, który platforma rozpoznaje.",
   "webb.sprak.val.s4.rubrik": "Angielski",
-  "webb.sprak.val.s4.text": "Domyślny, i źródłowy.",
+  "webb.sprak.val.s4.text": "Domyślny i źródłowy.",
   "webb.sprak.val.notering":
-    "Organizacja celowo stoi wyżej niż przeglądarka. Warsztat w Niemczech z polskim technikiem potrzebuje jednego języka dokumentacji — akta sprawy nie mogą zmieniać języka w zależności od tego, kto akurat napisał wiersz.",
+    "Organizacja celowo stoi wyżej niż przeglądarka. Warsztat w Niemczech z polskim technikiem potrzebuje jednego języka dokumentacji — akta sprawy nie mogą zmieniać języka w zależności od tego, kto akurat dokonał wpisu.",
 };

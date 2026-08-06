@@ -21,7 +21,7 @@ export const NL = {
 
   // ---- De afsluitcontrole -------------------------------------------------
   "grind.objekt": "Identificatie van voertuig of object geverifieerd",
-  "grind.historik": "Voertuighistorie gecontroleerd of gemotiveerd",
+  "grind.historik": "Voertuighistorie gecontroleerd, of het achterwege blijven ervan gemotiveerd",
   "grind.historik.nekad": "Een geweigerde historiecontrole vereist een opgegeven reden.",
   "grind.historik.saknas": "Geen historiecontrole gedocumenteerd.",
   "grind.matarstallning.ingaende": "Kilometerstand bij inname gefotografeerd",
@@ -31,17 +31,17 @@ export const NL = {
     "De kilometerstand is ingevoerd maar niet gefotografeerd. Kilometerteller fotograferen, of aangeven waarom dat niet mogelijk is.",
   "grind.reproducering": "Symptoomverificatie: gereproduceerd, of gedocumenteerd als niet reproduceerbaar",
   "grind.felorsak": "Analyse van de grondoorzaak gedocumenteerd",
-  "grind.atgard": "Corrigerende maatregel gedocumenteerd of gemotiveerd",
+  "grind.atgard": "Corrigerende maatregel gedocumenteerd, of het uitblijven ervan gemotiveerd",
   "grind.atgard.saknas": "Noch een uitgevoerde maatregel noch een reden voor het uitblijven ervan is gedocumenteerd.",
   "grind.kundbeslut": "Klantbeslissing over het voorstel vastgelegd",
   "grind.kundbeslut.avbojt": "Werk uitgevoerd ondanks een afgewezen voorstel",
   "grind.kundbeslut.avbojt.detalj":
     "De klant heeft het voorstel afgewezen, maar er is werk gedocumenteerd als uitgevoerd.",
-  "grind.kvalitetskontroll": "Kwaliteitscontrole uitgevoerd — symptoom geverifieerd",
+  "grind.kvalitetskontroll": "Kwaliteitscontrole uitgevoerd — symptoom aantoonbaar verholpen",
   "grind.kontroller": "Controlepunten van de methodiek: bewijs, of een gedocumenteerde uitzondering",
   "grind.foton": "Foto's aanwezig bij de controles die dat vereisen",
   "grind.slutsats": "Eindconclusie (ALVA-RULE-200)",
-  "grind.hogvolt.behorighet": "Hoogspanningsbevoegdheid bevestigd",
+  "grind.hogvolt.behorighet": "Hoogvoltbevoegdheid bevestigd",
   "grind.hogvolt.spanningslos": "Voertuig spanningsloos gemaakt volgens de procedure van de fabrikant",
   "grind.regelpaket": "Handtekening van het regelpakket komt niet overeen — afsluiten geblokkeerd.",
   "grind.regelpaket.osignerat": "Er wordt een extern regelpakket zonder handtekening gebruikt — afsluiten geblokkeerd.",
@@ -52,7 +52,7 @@ export const NL = {
   "grind.arendetyp.okant": "Onbekende eis in het regelpakket: {krav}",
   "grind.arendetyp.krav": "Eis voor dit zaaktype: {krav}",
   "grind.sakerhet": "Betrouwbaarheidsniveau binnen wat het bewijs draagt",
-  "grind.sakerhet.detalj": "De opgegeven betrouwbaarheid ({niva}) overstijgt wat het bewijs draagt ({tak}). Vul het bewijs aan, of verlaag het niveau — eerlijke onzekerheid is informatie.",
+  "grind.sakerhet.detalj": "De opgegeven betrouwbaarheid ({niva}) overstijgt wat het bewijs draagt ({tak}). Het bewijs aanvullen, of het niveau verlagen — eerlijke onzekerheid is informatie.",
 
 
   // ---- De eindconclusie (ALVA-RULE-200) -----------------------------------
@@ -61,7 +61,7 @@ export const NL = {
   "slutsats.evidens": "Welk bewijs dat draagt",
   "slutsats.avfardat": "Welke hypothesen zijn verworpen, en waarom",
   "slutsats.osakert": "Wat onzeker blijft",
-  "slutsats.ickesvar": "Dat is geen conclusie. Aangeven wat is vastgesteld en welk bewijs dat draagt.",
+  "slutsats.ickesvar": "Dat is geen antwoord. Aangeven wat is vastgesteld en welk bewijs dat draagt.",
   "slutsats.falt.motivering": "Onderbouwing",
   "slutsats.falt.motivering_ej": "Reden waarom de oorzaak niet kon worden vastgesteld",
   "slutsats.falt.uteslutet": "Verworpen alternatieven",
@@ -70,7 +70,7 @@ export const NL = {
   "slutsats.saknas": "{falt} ontbreekt.",
   "slutsats.ickesvar.falt": "{falt}: „{text}” is geen onderbouwing. Aangeven wat er werkelijk geldt, en waarom.",
   "slutsats.for_kort": "{falt} is te kort ({langd} van minstens {minsta} tekens) om achteraf toetsbaar te zijn.",
-  "slutsats.utan_varfor": "{falt} geeft het wat aan, niet het waarom. Verbind de conclusie met het bewijs — wat daarin maakt dat dit volgt?",
+  "slutsats.utan_varfor": "{falt} geeft het wat aan, niet het waarom. De conclusie met het bewijs verbinden — wat daarin maakt dat dit volgt?",
   "slutsats.utan_slutsats": "De zaak kan niet worden afgesloten zonder eindconclusie. Aangeven waarom de conclusie uit het bewijs volgt.",
   "slutsats.hypotes_obemott": "De hypothese „{text}” staat in het logboek maar wordt niet behandeld. Aangeven waarom zij is verworpen, of waarom zij open blijft.",
 
@@ -135,8 +135,8 @@ export const NL = {
   "sprak.tackning": "{procent} % van de interface",
 
   "metodik.ogranskad":
-    "De proceduretekst is niet gecontroleerd door een technisch specialist in het {sprak}. Stappen en controlepunten worden in het Engels weergegeven waar geen gecontroleerde vertaling bestaat — een ongecontroleerde vertaling van een veiligheidsinstructie is slechter dan een anderstalige, omdat die er niet anderstalig uitziet.",
-  "metodik.pa_engelska": "Weergegeven in het Engels — geen gecontroleerde vertaling in het {sprak}",
+    "De proceduretekst is niet gecontroleerd door een technisch specialist voor {sprak}. Stappen en controlepunten worden in het Engels weergegeven waar geen gecontroleerde vertaling bestaat — een ongecontroleerde vertaling van een veiligheidsinstructie is slechter dan een anderstalige, omdat die er niet anderstalig uitziet.",
+  "metodik.pa_engelska": "Weergegeven in het Engels — geen gecontroleerde vertaling in {sprak}",
 
   // ---- Publieke website (webb.) ------------------------------------------
   "webb.nav.oversikt": "Overzicht",
@@ -162,7 +162,7 @@ export const NL = {
   "webb.fas.localization.avgransning": "Het gebied verkleinen. De oorzaak staat nog niet vast.",
   "webb.fas.verification.syfte": "De grondoorzaak bevestigen.",
   "webb.fas.verification.avgransning": "De oorzaak wordt geverifieerd — niet het symptoom.",
-  "webb.fas.action.syfte": "De corrigerende actie uitvoeren.",
+  "webb.fas.action.syfte": "De corrigerende maatregel uitvoeren.",
   "webb.fas.action.avgransning": "Resultaat geverifieerd en gedocumenteerd. Anders is de fase onvolledig.",
 
   "webb.drift.etikett": "Werking",
@@ -174,29 +174,29 @@ export const NL = {
   "webb.drift.s3.rubrik": "Geleide diagnoseprocedures",
   "webb.drift.s3.text": "Elke zaak volgt een gedefinieerde procedure.",
   "webb.drift.s4.rubrik": "Verificatie",
-  "webb.drift.s4.text": "De grondoorzaak wordt bevestigd vóór de corrigerende actie.",
+  "webb.drift.s4.text": "De grondoorzaak wordt bevestigd vóór de corrigerende maatregel.",
   "webb.drift.s5.rubrik": "Documentatie",
-  "webb.drift.s5.text": "Het rapport wordt gegenereerd uit het zaaklogboek.",
+  "webb.drift.s5.text": "Het dossier wordt gegenereerd uit het zaaklogboek.",
   "webb.drift.s6.rubrik": "Continue verbetering",
   "webb.drift.s6.text": "Geverifieerde uitkomsten verfijnen volgende procedures.",
 
-  "webb.larande.etikett": "Vermogen",
+  "webb.larande.etikett": "Functionaliteit",
   "webb.larande.rubrik": "Lerende organisatie",
   "webb.larande.p1":
     "Het platform verfijnt diagnoseprocedures voortdurend met geverifieerde praktijkervaring uit de eigen organisatie.",
   "webb.larande.p2":
-    "Elke afgeronde diagnose voedt de volgende begeleiding. Alleen geverifieerde uitkomsten worden gebruikt — een zaak die zonder bevestigde grondoorzaak is gesloten draagt bewust niets bij.",
+    "Elke afgeronde diagnose voedt de volgende begeleiding. Alleen geverifieerde uitkomsten worden gebruikt — een zaak die zonder bevestigde grondoorzaak is afgesloten draagt bewust niets bij.",
   "webb.larande.p3":
     "De kennisbank is van de organisatie. Ze wordt afgeleid uit uw zaken, uw procedures en uw documentatie, en wordt niet over klanten heen samengevoegd.",
   "webb.larande.block": "Afgeleid uit",
   "webb.larande.k1": "Geverifieerde grondoorzaken",
-  "webb.larande.k2": "Bevestigde corrigerende acties",
+  "webb.larande.k2": "Bevestigde corrigerende maatregelen",
   "webb.larande.k3": "Terugkerende storingscategorieën",
-  "webb.larande.k4": "Afgeronde procedures",
+  "webb.larande.k4": "Registraties van afgeronde procedures",
   "webb.larande.k5": "Documentatie van de organisatie",
 
   "webb.rapport.etikett": "Rapportage",
-  "webb.rapport.rubrik": "Kwartaalrapport verbetering",
+  "webb.rapport.rubrik": "Verbeterrapport per kwartaal",
   "webb.rapport.ingress":
     "Eén keer per kwartaal beantwoordt het platform zes vragen over het eigen werk van de werkplaats. Elk antwoord wordt afgeleid uit het zaaklogboek — niets wordt geschat, en niemand wordt iets gevraagd.",
   "webb.rapport.f1": "Welke storingen stellen we nu in één keer goed vast?",
@@ -220,7 +220,7 @@ export const NL = {
   "webb.pris.aktivering": "Activeringsvolgorde",
   "webb.pris.a1": "De organisatie dient de registratie in.",
   "webb.pris.a2": "De aanvraag wordt beoordeeld.",
-  "webb.pris.a3": "De factuur wordt opgesteld.",
+  "webb.pris.a3": "De factuur wordt verstuurd.",
   "webb.pris.a4": "De betaling wordt geregistreerd.",
   "webb.pris.a5": "De organisatie wordt geactiveerd.",
   "webb.pris.a6": "Extra gebruikers worden maandelijks gefactureerd.",
@@ -238,21 +238,21 @@ export const NL = {
   "webb.kallor.k4": "Garantie-informatie",
   "webb.kallor.k5": "Werkplaatshandboeken",
   "webb.kallor.k6": "Historische geverifieerde diagnoses",
-  "webb.kallor.k7": "Beste praktijken van de organisatie",
+  "webb.kallor.k7": "Best practices van de organisatie",
 
   "webb.login.etikett": "Toegang",
   "webb.login.demo":
-    "Deze aanmelding authenticeert niets. Typ wat dan ook in E-mail en Wachtwoord en druk op Aanmelden — er is geen account nodig, en het portaal erachter toont vaste voorbeeldgegevens. Verbonden met een platforminstantie authenticeert deze pagina zich daartegen, en zonder geldige sessie is het portaal gesloten.",
+    "Deze login authenticeert niets. Typ wat dan ook in E-mail en Wachtwoord en druk op Inloggen — er is geen account nodig, en het portaal erachter toont vaste voorbeeldgegevens. Verbonden met een platforminstantie authenticeert deze pagina zich daartegen, en zonder geldige sessie is het portaal gesloten.",
   "webb.login.losenord": "Wachtwoord",
   "webb.login.ofullstandigt": "Authenticatie onvolledig. E-mail en wachtwoord vereist.",
   "webb.login.misslyckades": "Authenticatie mislukt.",
-  "webb.login.logga_in": "Aanmelden",
-  "webb.login.loggar_in": "Bezig met aanmelden",
+  "webb.login.logga_in": "Inloggen",
+  "webb.login.loggar_in": "Bezig met inloggen",
   "webb.login.glomt": "Wachtwoord vergeten",
 
   "webb.ansokan.etikett": "Registratie",
   "webb.ansokan.demo":
-    "Er wordt niets verzonden. Dit formulier indienen slaat niets op, meldt niemand iets en maakt geen aanvraag aan — er zit nog geen ontvangst achter. De beschrijving hieronder zegt hoe de registratie bedoeld is te werken, niet wat er vandaag gebeurt.",
+    "Er wordt niets verzonden. Dit formulier indienen slaat niets op, meldt niemand iets en maakt geen aanvraag aan — er zit nog geen verwerking achter. De beschrijving hieronder zegt hoe de registratie bedoeld is te werken, niet wat er vandaag gebeurt.",
   "webb.ansokan.avsikt": "Beoogde werking: aanvragen worden handmatig beoordeeld en in dit stadium wordt geen betaling geïnd.",
   "webb.falt.foretag": "Bedrijf",
   "webb.falt.orgnummer": "Registratienummer",
@@ -273,7 +273,7 @@ export const NL = {
   "webb.ansokan.status": "Status",
   "webb.ansokan.referens": "Referentie",
   "webb.ansokan.granskning":
-    "Aanvragen worden handmatig beoordeeld. Bij goedkeuring wordt een factuur opgesteld. De organisatie wordt geactiveerd zodra de betaling is geregistreerd.",
+    "Aanvragen worden handmatig beoordeeld. Bij goedkeuring wordt een factuur verstuurd. De organisatie wordt geactiveerd zodra de betaling is geregistreerd.",
 
   "webb.sprak.etikett": "Lokalisatie",
   "webb.sprak.rubrik": "Talen",
@@ -282,15 +282,15 @@ export const NL = {
   "webb.sprak.princip.etikett": "Principe",
   "webb.sprak.princip.rubrik": "Twee soorten tekst",
   "webb.sprak.granssnitt.rubrik": "Interfacetekst",
-  "webb.sprak.granssnitt.beteckning": "Valt stil terug",
+  "webb.sprak.granssnitt.beteckning": "Valt stilzwijgend terug",
   "webb.sprak.granssnitt.text":
     "Labels, knoppen, statussen. Eindig, zelden gewijzigd. Een Engelse tekst die een Duitse gebruiker bereikt is een ergernis, geen gevaar — een ontbrekende vertaling valt dus zonder commentaar terug op het Engels.",
   "webb.sprak.metodik.rubrik": "Proceduretekst",
-  "webb.sprak.metodik.beteckning": "Valt nooit stil terug",
+  "webb.sprak.metodik.beteckning": "Valt nooit stilzwijgend terug",
   "webb.sprak.metodik.text":
-    "Instructies voor werk aan een voertuig. Hier is een ongecontroleerde vertaling erger dan een anderstalige — want Engels ziet er vreemd uit, terwijl een slechte vertaling eruitziet als een instructie. Ze wordt in het Engels getoond en gemarkeerd, met de taal benoemd.",
+    "Instructies voor werk aan een voertuig. Hier is een ongecontroleerde vertaling erger dan een anderstalige — want Engels ziet er anderstalig uit, terwijl een slechte vertaling eruitziet als een instructie. De tekst wordt in het Engels getoond en gemarkeerd, met de taal benoemd.",
   "webb.sprak.invariant":
-    "De methode zelf wordt nooit vertaald. Fasenamen en statuswoorden zijn de structuur van ALVA en lezen in elk land hetzelfde, zodat een auditor een Roemeens en een Duits dossier kan lezen zonder te weten in welke taal de werkplaats werkt.",
+    "De methode zelf wordt nooit vertaald. Fasenamen en statuswoorden zijn de structuur van ALVA en luiden in elk land hetzelfde, zodat een auditor een Roemeens en een Duits dossier kan lezen zonder te weten in welke taal de werkplaats werkt.",
   "webb.sprak.tackning.etikett": "Dekking",
   "webb.sprak.tackning.rubrik": "Wat vertaald is, en wat gecontroleerd is",
   "webb.sprak.kolumn.sprak": "Taal",
@@ -299,17 +299,17 @@ export const NL = {
   "webb.sprak.granskat.ja": "Ja",
   "webb.sprak.granskat.nej": "Nee — proceduretekst in het Engels",
   "webb.sprak.matt":
-    "De dekking van de interface wordt gemeten, niet geschat: een test laat de build falen als een sleutel in een taal ontbreekt. De controlestatus is een uitspraak over mensen, niet over bestanden, en wordt met de hand gezet.",
+    "De dekking van de interface wordt gemeten, niet geschat: een test laat de build falen als een sleutel in een taal ontbreekt. De controlestatus is een uitspraak over mensen, niet over bestanden, en wordt handmatig ingesteld.",
   "webb.sprak.kallsprak":
-    "De Engelse proceduretekst is een vertaling van de Zweedse bron en is nog niet gelezen door een specialist die het vak uitoefent. Hij wordt aan dezelfde maatstaf gehouden als de andere negen talen, en hier wordt over hem dezelfde uitspraak gedaan in plaats van hem stilletjes uit te zonderen omdat hij de bron is.",
+    "De Engelse proceduretekst is een vertaling van de Zweedse bron en is nog niet gelezen door een specialist die het vak uitoefent. Hij wordt langs dezelfde meetlat gelegd als de andere negen talen, en hier wordt over hem dezelfde uitspraak gedaan in plaats van hem stilletjes uit te zonderen omdat hij de bron is.",
   "webb.sprak.bevis.etikett": "Verificatie",
   "webb.sprak.bevis.rubrik": "De zinnen die een zaak stoppen",
   "webb.sprak.bevis.ingress":
-    "Dit zijn de zinnen die een technicus weigeren een zaak te sluiten. Een weigering die niemand begrijpt is een weigering zonder uitweg — dus zijn dit de juiste zinnen om een vertaling op te beoordelen.",
+    "Dit zijn de zinnen die een technicus beletten een zaak af te sluiten. Een weigering die niemand begrijpt is een weigering zonder uitweg — dus zijn dit de juiste zinnen om een vertaling op te beoordelen.",
   "webb.sprak.ej_granskad": "Niet gecontroleerd",
   "webb.sprak.granskad": "Gecontroleerd",
   "webb.sprak.granskad.text":
-    "De proceduretekst in het {sprak} is gelezen door een specialist die het vak uitoefent. Stappen en controlepunten worden overal in het {sprak} getoond.",
+    "De proceduretekst in {sprak} is gelezen door een specialist die het vak uitoefent. Stappen en controlepunten worden overal in {sprak} getoond.",
   "webb.sprak.val.etikett": "Werking",
   "webb.sprak.val.rubrik": "Hoe de taal wordt gekozen",
   "webb.sprak.val.s1.rubrik": "Voorkeur van de gebruiker",
@@ -321,5 +321,5 @@ export const NL = {
   "webb.sprak.val.s4.rubrik": "Engels",
   "webb.sprak.val.s4.text": "De standaard, en de bron.",
   "webb.sprak.val.notering":
-    "De organisatie gaat bewust vóór de browser. Een werkplaats in Duitsland met een Poolse technicus heeft één documentatietaal nodig — het dossier mag niet van taal wisselen afhankelijk van wie de regel toevallig schreef.",
+    "De organisatie gaat bewust vóór de browser. Een werkplaats in Duitsland met een Poolse technicus heeft één documentatietaal nodig — het dossier mag niet van taal wisselen afhankelijk van wie de tekst toevallig schreef.",
 };
