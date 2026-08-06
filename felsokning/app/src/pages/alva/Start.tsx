@@ -163,45 +163,37 @@ export default function Start() {
         </div>
       </Sektion>
 
-      {/* ---- Kvartalsrapport ---- */}
+      {/* ---- Kvartalsrapport ----
+          Stod tidigare som en tabell med kolumnerna Section, Content och
+          Basis — alltså en beskrivning av rapportens DISPOSITION. Det är
+          dokumentation, inte en startsida: läsaren fick veta hur
+          rapporten är uppbyggd innan den fått veta vad den svarar på.
+
+          Nu står frågorna i stället. En verkstadschef känner igen sina
+          egna frågor; ingen känner igen en innehållsförteckning. */}
       <Sektion etikett="Reporting" rubrik="Quarterly improvement report">
         <p className="mb-8 max-w-[680px] text-[15px] leading-[24px]" style={{ color: FARG.steel }}>
-          Each quarter the organization receives an automatically generated operational report. The format is
-          that of an engineering audit: findings, evidence, recommendation.
+          Once a quarter, the platform answers six questions about the workshop&rsquo;s own work. Every
+          answer is derived from the case log — nothing is estimated, and nothing is asked of anyone.
         </p>
-        <Tabell
-          kolumner={["Section", "Content", "Basis"]}
-          rader={[
-            ["New validated diagnostic patterns", "Patterns confirmed by verified outcomes", "Case log"],
-            ["Diagnostic precision", "Ratio of confirmed to hypothesized causes", "Verification records"],
-            ["Recurring fault categories", "Distribution across the fleet", "Root cause analyses"],
-            ["Recommended procedural improvements", "Steps with high exemption rates", "Procedure records"],
-            ["Knowledge growth", "Documents, sources and coverage", "Knowledge infrastructure"],
-            ["Organizational maturity", "Completion, verification and documentation ratios", "Aggregate"],
-          ]}
-        />
-      </Sektion>
-
-      {/* ---- Roadmap. Faser, inte löften med datum. ---- */}
-      <Sektion etikett="Development" rubrik="Roadmap">
-        <div className="grid gap-px md:grid-cols-4" style={{ background: FARG.lightSteel }}>
+        <ul className="grid max-w-[760px] gap-4">
           {[
-            ["Phase 1", "Guided diagnostics", "Current"],
-            ["Phase 2", "Organization learning", "In development"],
-            ["Phase 3", "Performance analytics", "Specified"],
-            ["Phase 4", "Operational intelligence", "Planned"],
-          ].map(([fas, namn, status], i) => (
-            <div key={fas} className="bg-white p-6">
-              <Etikett ton={i === 0 ? "blue" : "steel"}>{fas}</Etikett>
-              <div className="mt-4 text-[15px] font-semibold" style={{ color: FARG.graphite }}>
-                {namn}
-              </div>
-              <div className="mt-2 text-[12px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
-                {status}
-              </div>
-            </div>
+            "Which faults are we now diagnosing correctly the first time?",
+            "How often does a suspected cause turn out to be the actual one?",
+            "Which faults keep coming back across the fleet?",
+            "Which procedure steps are being skipped, and why?",
+            "What does the workshop know now that it did not know last quarter?",
+            "Are cases being completed, verified and documented — or only completed?",
+          ].map((fraga) => (
+            <li
+              key={fraga}
+              className="border-l-2 pl-6 text-[15px] leading-[24px]"
+              style={{ borderColor: FARG.lightSteel, color: FARG.graphite }}
+            >
+              {fraga}
+            </li>
           ))}
-        </div>
+        </ul>
       </Sektion>
 
       {/* ---- Pris. Ingen onlinebetalning. ---- */}
