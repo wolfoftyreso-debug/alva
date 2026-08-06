@@ -56,7 +56,7 @@ export default function Start() {
               <Knapp>Request account</Knapp>
             </Link>
             <Link to="/alva/logga-in">
-              <Knapp variant="sekundar">Customer login</Knapp>
+              <Knapp variant="sekundar">Login</Knapp>
             </Link>
           </div>
         </div>
@@ -283,7 +283,7 @@ export default function Start() {
               <Knapp>Request account</Knapp>
             </Link>
             <Link to="/alva/logga-in">
-              <Knapp variant="sekundar">Customer login</Knapp>
+              <Knapp variant="sekundar">Login</Knapp>
             </Link>
           </div>
         </div>

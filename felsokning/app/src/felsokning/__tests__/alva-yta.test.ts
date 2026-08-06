@@ -399,3 +399,31 @@ describe("portalen är stängd, eller uttryckligen en demonstration", () => {
     expect(ram).toMatch(/\{konto && \(/);
   });
 });
+
+// ---- En destination, ett namn ------------------------------------------
+//
+// Startsidans knapp hette "Customer login" medan navigationen kallade
+// samma sida "Login". Två namn på samma destination är förvirrande i sig,
+// men det här var värre än så: "customer" är i det här systemet FORDONETS
+// ÄGARE — den som får delningslänken och godkänner en åtgärd. Verkstaden
+// som loggar in är inte den. Knappen lovade alltså en ingång för fel
+// person, med produktens eget ord för någon annan.
+describe("inloggningen heter samma sak överallt", () => {
+  const ram = readFileSync("src/pages/alva/Ram.tsx", "utf8");
+  const start = readFileSync("src/pages/alva/Start.tsx", "utf8");
+
+  it("navigationens namn på inloggningen är det som används", () => {
+    const namn = ram.match(/\{ till: "\/alva\/logga-in", text: "([^"]+)" \}/)?.[1];
+    expect(namn).toBeTruthy();
+    // Varje länk till inloggningen på startsidan bär samma text.
+    const knappar = [...start.matchAll(/to="\/alva\/logga-in">\s*<Knapp[^>]*>([^<]+)<\/Knapp>/g)];
+    expect(knappar.length).toBeGreaterThan(0);
+    for (const [, text] of knappar) expect(text.trim()).toBe(namn);
+  });
+
+  it("ingen ingång kallar verkstaden för kund", () => {
+    // "customer" får förekomma — men om den vem som helst kan logga in.
+    const rader = start.split("\n").filter((r) => /customer/i.test(r) && /logga-in|login/i.test(r));
+    expect(rader).toEqual([]);
+  });
+});
