@@ -49,7 +49,14 @@ export default function Start() {
           <h1 className="text-[64px] font-semibold leading-none tracking-[0.02em]" style={{ color: FARG.graphite }}>
             {ALVA.namn}
           </h1>
-          <p className="mt-4 text-[15px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
+          {/* Utläsningen är en rad, inte ett stycke — bryts den blir
+              "ACTION" en egen rad och läser sig som ett kommando. På smal
+              skärm sätts den i sidhuvudets 10 px med tätare spärrning i
+              stället för att brytas; från sm gäller ordinarie grad. */}
+          <p
+            className="mt-4 whitespace-nowrap text-[10px] uppercase tracking-[0.05em] sm:text-[15px] sm:tracking-[0.08em]"
+            style={{ color: FARG.steel }}
+          >
             {ALVA.utlast}
           </p>
           <p className="mt-2 text-[13px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
