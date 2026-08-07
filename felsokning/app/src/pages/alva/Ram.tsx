@@ -17,6 +17,7 @@ import { loggaUtPlattform, plattformKonto } from "@/felsokning/plattform";
 import { ALVA, PLATTFORMSVERSION } from "@/alva/system";
 import { FARG } from "@/alva/komponenter";
 import { useWebbSprak, sattWebbSprak } from "@/alva/webbsprak";
+import { INSTALLNINGAR, INSTALLNINGSVAG } from "./installningsomraden";
 import { SPRAK, oversattare } from "../../../../services/gemensam/sprak/index.mjs";
 
 type Sprakpost = { kod: string; namn: string; egetNamn: string; granskat: boolean };
@@ -28,17 +29,18 @@ const PUBLIKT = [
   { till: "/alva/logga-in", nyckel: "webb.loggain" },
 ];
 
+// Portalens nivå ett är ARBETET: översikt, analys, de två register man
+// slår i under ett ärende, och verktyget självt. Allt som KONFIGURERAR
+// organisationen — källor, integrationer, abonnemang, fakturor och
+// supportärenden mot plattformen — ligger samlat under Settings. Tio
+// länkar i tre brutna rader var ingen meny, det var en ordlista.
 const PORTAL = [
   { till: "/alva/portal", text: "Dashboard" },
   { till: "/alva/portal/analys", text: "Analysis" },
-  { till: "/alva/portal/kunskapskallor", text: "Knowledge sources" },
-  { till: "/alva/portal/integration", text: "Integration" },
   { till: "/alva/portal/garantier", text: "Warranty" },
   { till: "/alva/portal/forsakring", text: "Insurance" },
-  { till: "/alva/portal/support", text: "Support" },
-  { till: "/alva/portal/abonnemang", text: "Subscription" },
-  { till: "/alva/portal/fakturor", text: "Invoices" },
   { till: "/felsokning", text: "Diagnostics" },
+  { till: INSTALLNINGSVAG, text: "Settings" },
 ];
 
 const FOT = [
@@ -59,6 +61,10 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
   // plattform finns ingen, och då visas ingen utloggning heller — en
   // knapp som inte loggar ut något är samma sorts sken som m-9 gällde.
   const konto = portal ? plattformKonto() : null;
+  // Var i portalen inställningarna börjar. Styr både markeringen av
+  // SETTINGS i huvudraden och den egna raden med områdena — den som
+  // står i en inställningsvy ska aldrig behöva undra var den är.
+  const iInstallningar = portal && (plats.pathname === INSTALLNINGSVAG || INSTALLNINGAR.some((p) => plats.pathname === p.till));
 
   return (
     // `alva-yta` bär typografin ur ALVA-SPEC-001 och håller den skild
@@ -86,7 +92,7 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
           <nav aria-label={portal ? "Portal" : "Site"} className="w-full sm:w-auto">
             <ul className="flex flex-wrap justify-between gap-x-4 gap-y-2 sm:justify-end sm:gap-6">
               {(portal ? PORTAL : PUBLIKT).map((l) => {
-                const aktiv = plats.pathname === l.till;
+                const aktiv = l.till === INSTALLNINGSVAG ? iInstallningar : plats.pathname === l.till;
                 const text = "nyckel" in l ? t(l.nyckel) : l.text;
                 return (
                   <li key={l.till}>
@@ -105,6 +111,42 @@ export function Ram({ children, portal = false }: { children: ReactNode; portal?
           </nav>
         </div>
       </header>
+
+      {/* Inne i inställningarna visas områdena som en egen, alltid synlig
+          rad — ingen fällmeny att träffa rätt i, inget läge att gissa.
+          Raden börjar med SETTINGS, som är länken tillbaka till
+          översikten, följt av de fem områdena med det aktiva markerat. */}
+      {iInstallningar && (
+        <nav aria-label="Settings" className="border-b" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>
+          <ul className="mx-auto flex max-w-[1040px] flex-wrap items-center gap-x-4 gap-y-2 px-6 py-2">
+            <li>
+              <Link
+                to={INSTALLNINGSVAG}
+                aria-current={plats.pathname === INSTALLNINGSVAG ? "page" : undefined}
+                className="text-[11px] font-semibold uppercase tracking-[0.08em]"
+                style={{ color: plats.pathname === INSTALLNINGSVAG ? FARG.blue : FARG.graphite }}
+              >
+                Settings /
+              </Link>
+            </li>
+            {INSTALLNINGAR.map((p) => {
+              const aktiv = plats.pathname === p.till;
+              return (
+                <li key={p.till}>
+                  <Link
+                    to={p.till}
+                    aria-current={aktiv ? "page" : undefined}
+                    className="text-[11px] uppercase tracking-[0.08em]"
+                    style={{ color: aktiv ? FARG.blue : FARG.steel }}
+                  >
+                    {p.text}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
 
       {konto && (
         <div className="border-b" style={{ borderColor: FARG.lightSteel, background: FARG.white }}>

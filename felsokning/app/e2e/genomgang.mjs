@@ -494,6 +494,7 @@ try {
     "/alva/portal/garantier",
     "/alva/portal/forsakring",
     "/alva/portal/support",
+    "/alva/portal/installningar",
     "/alva/impressum",
     "/alva/utgavor",
   ]) {

@@ -36,6 +36,7 @@ import AlvaUtgavor from "./pages/alva/Utgavor";
 import AlvaSprak from "./pages/alva/Sprak";
 import AlvaForsakring from "./pages/alva/Forsakring";
 import AlvaSupport from "./pages/alva/Support";
+import AlvaInstallningar from "./pages/alva/Installningar";
 import { Portalvakt } from "./pages/alva/Portalvakt";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
@@ -90,6 +91,7 @@ function AppContent() {
         <Route path="/alva/portal/garantier" element={<Portalvakt><AlvaGarantier /></Portalvakt>} />
         <Route path="/alva/portal/forsakring" element={<Portalvakt><AlvaForsakring /></Portalvakt>} />
         <Route path="/alva/portal/support" element={<Portalvakt><AlvaSupport /></Portalvakt>} />
+        <Route path="/alva/portal/installningar" element={<Portalvakt><AlvaInstallningar /></Portalvakt>} />
         <Route path="/felsokning" element={<Arendelista />} />
         <Route path="/felsokning/nytt" element={<NyttArende />} />
         <Route path="/felsokning/arende/:id" element={<ArendeSida />} />
