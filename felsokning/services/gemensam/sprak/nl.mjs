@@ -53,6 +53,8 @@ export const NL = {
   "grind.arendetyp.krav": "Eis voor dit zaaktype: {krav}",
   "grind.sakerhet": "Betrouwbaarheidsniveau binnen wat het bewijs draagt",
   "grind.sakerhet.detalj": "De opgegeven betrouwbaarheid ({niva}) overstijgt wat het bewijs draagt ({tak}). Het bewijs aanvullen, of het niveau verlagen — eerlijke onzekerheid is informatie.",
+  "grind.eskalering": "Technische escalaties beantwoord",
+  "grind.eskalering.detalj": "Er staat een escalatie open ({referens}). Wacht het antwoord af en documenteer het voordat de zaak wordt afgesloten.",
 
 
   // ---- De eindconclusie (ALVA-RULE-200) -----------------------------------

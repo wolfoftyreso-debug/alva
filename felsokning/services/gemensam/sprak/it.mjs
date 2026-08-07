@@ -53,6 +53,8 @@ export const IT = {
   "grind.arendetyp.krav": "Requisito per questo tipo di pratica: {krav}",
   "grind.sakerhet": "Livello di confidenza entro quanto sostiene l’evidenza",
   "grind.sakerhet.detalj": "La confidenza indicata ({niva}) supera quanto sostiene l’evidenza ({tak}). Integrare l’evidenza, oppure abbassare il livello — l’incertezza onesta è informazione.",
+  "grind.eskalering": "Escalation tecniche risolte",
+  "grind.eskalering.detalj": "Un’escalation è aperta ({referens}). Attendere la risposta e documentarla prima di chiudere la pratica.",
 
 
   // ---- La conclusione (ALVA-RULE-200) -------------------------------------

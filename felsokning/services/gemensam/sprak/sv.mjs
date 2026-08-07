@@ -52,6 +52,8 @@ export const SV = {
   "grind.arendetyp.krav": "Krav för ärendetypen: {krav}",
   "grind.sakerhet": "Konfidensnivån inom vad underlaget bär",
   "grind.sakerhet.detalj": "Angiven konfidens ({niva}) överstiger vad underlaget bär ({tak}). Komplettera underlaget, eller sänk nivån — ärlig osäkerhet är information.",
+  "grind.eskalering": "Tekniska eskaleringar besvarade",
+  "grind.eskalering.detalj": "En eskalering är öppen ({referens}). Invänta svaret och dokumentera det innan ärendet avslutas.",
 
 
   // ---- Slutsatsen (ALVA-RULE-200) -----------------------------------------

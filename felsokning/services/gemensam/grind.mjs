@@ -210,6 +210,24 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
     krav(`sparr_${frageId}`, nyckel, arJakande(svaret?.svar), "grind.sparr.ej_uppfyllt");
   }
 
+  // Teknisk eskalering (FGS-1.0 §8, DISS-mönstret): en öppnad förfrågan
+  // till tillverkare eller garantigivare utan dokumenterat svar spärrar
+  // avslutet. Bulletinerna kräver att svaret inväntas innan ytterligare
+  // åtgärder görs — ett ärende som stängs med öppen eskalering har inte
+  // hela orsakskedjan dokumenterad, och garantianspråket kan ogiltigas.
+  {
+    const oppna = new Map();
+    for (const h of av(handelser, "eskalering")) {
+      const nyckel = String(h.referens ?? "").trim();
+      if (h.status === "oppnad") oppna.set(nyckel, h);
+      else if (oppna.has(nyckel)) oppna.delete(nyckel);
+      else if (nyckel === "" && oppna.size === 1) oppna.clear();
+    }
+    krav("eskalering", "grind.eskalering", oppna.size === 0, "grind.eskalering.detalj", {
+      referens: [...oppna.keys()].map((r) => r || "—").join(", "),
+    });
+  }
+
   // Evidensnivån måste överstiga E0 — annars avslutas ett ärende utan
   // att någonting alls har dokumenterats.
   krav(
@@ -231,15 +249,33 @@ export function grindaArendetyp(handelser, regelpaket, sprak = STANDARD) {
   // när typerna hette "Garanti" ska få garantins extra krav även efter
   // att de bytt språk — se ARENDETYP_ARV.
   const typ = arendetypNu(av(handelser, "arendetyp_satt").at(-1)?.arendetyp);
-  const regler = regelpaket?.arendetyper?.[typ]?.krav ?? [];
+  // Paketet finns i två former: den distribuerade filens rika form
+  // (arendetypRegler med id/rubrik/detaljVidBrist) och den slimmade
+  // (arendetyper[typ].krav). Servern matade tidigare in den rika formen
+  // i en funktion som bara läste den slimmade — varje ärendetypskrav
+  // blev en tyst no-op på servern, och spärren fanns bara som råd i
+  // klienten. Det är exakt C-2-mönstret, återuppstått genom ett format.
+  const regler = [
+    ...(regelpaket?.arendetyper?.[typ]?.krav ?? []),
+    ...(regelpaket?.arendetypRegler?.[typ] ?? []).map((r) => ({ typ: r.krav, rubrik: r.rubrik, detalj: r.detaljVidBrist })),
+  ];
   const hinder = [];
 
+  const betalareReferens = () => av(handelser, "betalare").some((h) => String(h.referens ?? "").trim());
   const uppfyllt = {
     miltal: () => av(handelser, "matarstallning").length > 0,
     historik: () => av(handelser, "historik_kontrollerad").some((h) => h.kontrollerad),
     foto: () => av(handelser, "foto").length > 0,
-    claim: () => harReferens(handelser, ["ao_claim", "claim"]),
-    skadenummer: () => harReferens(handelser, ["ao_skadenummer", "skadenummer"]),
+    // Referensen kan komma ur den skannade arbetsordern ELLER ur en
+    // registrerad betalare — alla verkstäder skannar inte (FGS-1.0 §4).
+    claim: () => harReferens(handelser, ["ao_claim", "claim"]) || betalareReferens(),
+    skadenummer: () => harReferens(handelser, ["ao_skadenummer", "skadenummer"]) || betalareReferens(),
+    // FGS-1.0 §1/§18: betalaren fastställd — spår och namn — innan
+    // ärendet kan stängas i de spår där någon annan än kunden betalar.
+    betalare: () => av(handelser, "betalare").some((h) => String(h.namn ?? "").trim() && String(h.spar ?? "").trim()),
+    // Goodwill och externa garantigivare kräver godkännande/claim
+    // authorization INNAN reparationen ersätts (FGS-1.0 §12).
+    godkannande: () => av(handelser, "betalare").some((h) => String(h.godkannande ?? "").trim()),
   };
 
   for (const regel of regler) {
@@ -260,6 +296,7 @@ export function grindaArendetyp(handelser, regelpaket, sprak = STANDARD) {
         id: `arendetyp_${krav}`,
         nyckel: regel.rubrik ? undefined : "grind.arendetyp.krav",
         rubrik: regel.rubrik ?? t(sprak, "grind.arendetyp.krav", { krav }),
+        ...(regel.detalj ? { detalj: regel.detalj } : {}),
       });
     }
   }

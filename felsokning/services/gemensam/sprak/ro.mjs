@@ -59,6 +59,8 @@ export const RO = {
   "grind.arendetyp.krav": "Cerință pentru acest tip de caz: {krav}",
   "grind.sakerhet": "Nivel de încredere în limitele a ceea ce susțin dovezile",
   "grind.sakerhet.detalj": "Încrederea indicată ({niva}) depășește ceea ce susțin dovezile ({tak}). Completează dovezile sau coboară nivelul — incertitudinea onestă este informație.",
+  "grind.eskalering": "Escaladări tehnice cu răspuns",
+  "grind.eskalering.detalj": "O escaladare este deschisă ({referens}). Așteaptă răspunsul și documentează-l înainte de închiderea cazului.",
 
 
   // ---- Concluzia finală (ALVA-RULE-200) -----------------------------------

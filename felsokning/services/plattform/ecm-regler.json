@@ -1,5 +1,5 @@
 {
-  "version": "2.0",
+  "version": "2.1",
   "beskrivning": "ECM Knowledge Library — serverdistribuerat regelpaket. Uppdateras utan appändring: redigera filen (eller montera en ConfigMap över den i klustret) och starta om tjänsten. Klienten hämtar paketet vid inloggning och faller tillbaka till sitt inbyggda standardpaket offline.",
   "arendetypRegler": {
     "Warranty": [
@@ -19,7 +19,13 @@
         "id": "garanti_claim",
         "rubrik": "Claim or warranty number recorded",
         "krav": "claim",
-        "detaljVidBrist": "State the claim or warranty number (read from the work order)."
+        "detaljVidBrist": "State the claim or warranty number — from the scanned work order or the recorded payer."
+      },
+      {
+        "id": "garanti_betalare",
+        "rubrik": "Payer established",
+        "krav": "betalare",
+        "detaljVidBrist": "Record the payer — track, name and reference — before closing."
       }
     ],
     "Goodwill": [
@@ -34,6 +40,12 @@
         "rubrik": "Service history checked",
         "krav": "historik",
         "detaljVidBrist": "Goodwill cases require a checked service history."
+      },
+      {
+        "id": "goodwill_godkannande",
+        "rubrik": "Grantor's approval recorded",
+        "krav": "godkannande",
+        "detaljVidBrist": "Goodwill requires the grantor's documented approval before closing."
       }
     ],
     "Insurance": [
@@ -48,6 +60,12 @@
         "rubrik": "Photographic evidence present",
         "krav": "foto",
         "detaljVidBrist": "Insurance cases require photographic documentation."
+      },
+      {
+        "id": "forsakring_betalare",
+        "rubrik": "Payer established",
+        "krav": "betalare",
+        "detaljVidBrist": "Record the insurer — name and claim reference — before closing."
       }
     ],
     "Complaint": [
@@ -64,6 +82,66 @@
         "rubrik": "Mileage documented",
         "krav": "miltal",
         "detaljVidBrist": "Used-vehicle warranty cases require a documented odometer reading."
+      }
+    ],
+    "Body damage warranty": [
+      {
+        "id": "vagnskada_betalare",
+        "rubrik": "Payer established",
+        "krav": "betalare",
+        "detaljVidBrist": "Record the warranty administrator — name and reference — before closing."
+      },
+      {
+        "id": "vagnskada_miltal",
+        "rubrik": "Mileage documented",
+        "krav": "miltal",
+        "detaljVidBrist": "Body damage warranty cases require a documented odometer reading."
+      },
+      {
+        "id": "vagnskada_bildbevis",
+        "rubrik": "Photographic evidence present",
+        "krav": "foto",
+        "detaljVidBrist": "Body damage warranty cases require photographs of the damage."
+      }
+    ],
+    "Extended warranty": [
+      {
+        "id": "forlangd_betalare",
+        "rubrik": "Payer established",
+        "krav": "betalare",
+        "detaljVidBrist": "Record the warranty provider — name and reference — before closing."
+      },
+      {
+        "id": "forlangd_claim",
+        "rubrik": "Claim authorization recorded",
+        "krav": "claim",
+        "detaljVidBrist": "External warranties require a claim or authorization number before repair is reimbursed."
+      },
+      {
+        "id": "forlangd_miltal",
+        "rubrik": "Mileage documented",
+        "krav": "miltal",
+        "detaljVidBrist": "Extended warranty cases require a documented odometer reading."
+      },
+      {
+        "id": "forlangd_historik",
+        "rubrik": "Service history checked",
+        "krav": "historik",
+        "detaljVidBrist": "Extended warranty terms often condition cover on service history — check and document it."
+      }
+    ],
+    "Leasing or fleet": [
+      {
+        "id": "leasing_betalare",
+        "rubrik": "Payer established",
+        "krav": "betalare",
+        "detaljVidBrist": "Record the leasing or fleet company — name and reference — before closing."
+      },
+      {
+        "id": "leasing_miltal",
+        "rubrik": "Mileage documented",
+        "krav": "miltal",
+        "detaljVidBrist": "Leasing and fleet cases require a documented odometer reading."
       }
     ]
   },

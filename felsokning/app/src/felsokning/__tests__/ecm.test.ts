@@ -181,7 +181,7 @@ describe("Traceability Engine + ärendeidentitet", () => {
   it("spårbarhetspaketet innehåller version, grindstatus och evidensposter", () => {
     const arende = byggArende([OBJEKT, { typ: "foto", beskrivning: "x", dataUrl: "data:" }]);
     const paket = sparbarhetspaket(arende, VIBRATION_METODIK);
-    expect(paket.ecmVersion).toBe("2.0");
+    expect(paket.ecmVersion).toBe("2.1");
     expect(paket.arendetyp).toBe("Private customer");
     expect(paket.evidensposter).toHaveLength(1);
     expect(paket.kvalitetsgrind.some((r) => r.id === "objekt" && r.ok)).toBe(true);

@@ -54,6 +54,8 @@ export const FR = {
   "grind.arendetyp.krav": "Exigence pour ce type de dossier : {krav}",
   "grind.sakerhet": "Niveau de confiance dans les limites de ce que les preuves soutiennent",
   "grind.sakerhet.detalj": "La confiance indiquée ({niva}) dépasse ce que les preuves soutiennent ({tak}). Compléter les preuves, ou abaisser le niveau — une incertitude honnête est une information.",
+  "grind.eskalering": "Escalades techniques traitées",
+  "grind.eskalering.detalj": "Une escalade est ouverte ({referens}). Attendre la réponse et la documenter avant de clôturer le dossier.",
 
 
   // ---- La conclusion (ALVA-RULE-200) --------------------------------------

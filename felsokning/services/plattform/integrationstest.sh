@@ -214,8 +214,8 @@ kontroll "statistiken är organisationsknuten data" "$(echo "$STAT" | falt '.ors
 
 # 10b. ECM Knowledge Library: regelpaketet serveras till inloggade klienter
 REGLER=$(curl -s "$BAS/api/ecm/regler" -H "Authorization: Bearer $TOKEN_J")
-kontroll "regelpaketet serveras" "$(echo "$REGLER" | falt .version)" "2.0"
-kontroll "regelpaketet innehåller garantiregler" "$(echo "$REGLER" | falt '.arendetypRegler.Warranty.length')" "3"
+kontroll "regelpaketet serveras" "$(echo "$REGLER" | falt .version)" "2.1"
+kontroll "regelpaketet innehåller garantiregler" "$(echo "$REGLER" | falt '.arendetypRegler.Warranty.length')" "4"
 
 # 10c. Publikt kundgodkännande — den enda skrivande publika vägen
 # Ärendets ursprungliga delningskod saknar registrerad nivå och får

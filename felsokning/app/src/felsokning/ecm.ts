@@ -22,7 +22,7 @@ import type { Arende, LoggPost } from "./domain";
 import type { Metodik } from "./metodik";
 import { arendetypNu } from "../../../services/gemensam/sprak/index.mjs";
 
-export const ECM_VERSION = "2.0";
+export const ECM_VERSION = "2.1";
 
 // ---- 1. Evidence Engine -----------------------------------------------
 
@@ -345,6 +345,9 @@ export const ARENDETYPER = [
   "Insurance",
   "Complaint",
   "Used-vehicle warranty",
+  "Body damage warranty",
+  "Extended warranty",
+  "Leasing or fleet",
   "Internal quality check",
   "Technical investigation",
 ] as const;
@@ -372,7 +375,7 @@ export function arendetyp(arende: Arende): Arendetyp {
 // Klienten cachar senast hämtade paket och faller tillbaka till det
 // inbyggda standardpaketet offline/i lokalt läge.
 
-export type ComplianceKravTyp = "miltal" | "historik" | "claim" | "skadenummer" | "foto";
+export type ComplianceKravTyp = "miltal" | "historik" | "claim" | "skadenummer" | "foto" | "betalare" | "godkannande";
 
 export interface ComplianceRegel {
   id: string;
@@ -403,10 +406,20 @@ const KRAV_KONTROLLER: Record<ComplianceKravTyp, (arende: Arende) => boolean> = 
     a.handelser.some((p) => p.handelse.typ === "matarstallning" && !p.handelse.undantag) ||
     !!objektFalt(a, "miltal"),
   historik: (a) => a.handelser.some((p) => p.handelse.typ === "historik_kontrollerad" && p.handelse.kontrollerad),
-  claim: (a) => !!objektFalt(a, "claim"),
-  skadenummer: (a) => !!objektFalt(a, "skadenummer"),
+  // Referensen kan komma ur den skannade arbetsordern ELLER ur en
+  // registrerad betalare — alla verkstäder skannar inte (FGS-1.0 §4).
+  claim: (a) => !!objektFalt(a, "claim") || betalarReferens(a),
+  skadenummer: (a) => !!objektFalt(a, "skadenummer") || betalarReferens(a),
   foto: (a) => a.handelser.some((p) => p.handelse.typ === "foto"),
+  betalare: (a) =>
+    a.handelser.some((p) => p.handelse.typ === "betalare" && p.handelse.namn.trim() !== "" && p.handelse.spar.trim() !== ""),
+  godkannande: (a) =>
+    a.handelser.some((p) => p.handelse.typ === "betalare" && (p.handelse.godkannande ?? "").trim() !== ""),
 };
+
+function betalarReferens(a: Arende): boolean {
+  return a.handelser.some((p) => p.handelse.typ === "betalare" && (p.handelse.referens ?? "").trim() !== "");
+}
 
 // Inbyggt standardpaket = fallback när servern inte nåtts ännu.
 export const STANDARD_REGELPAKET: RegelPaket = {
@@ -415,21 +428,39 @@ export const STANDARD_REGELPAKET: RegelPaket = {
     "Warranty": [
       { id: "garanti_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Warranty cases require a documented odometer reading." },
       { id: "garanti_historik", rubrik: "Service history checked", krav: "historik", detaljVidBrist: "Warranty cases require a checked service history." },
-      { id: "garanti_claim", rubrik: "Claim or warranty number recorded", krav: "claim", detaljVidBrist: "State the claim or warranty number (read from the work order)." },
+      { id: "garanti_claim", rubrik: "Claim or warranty number recorded", krav: "claim", detaljVidBrist: "State the claim or warranty number — from the scanned work order or the recorded payer." },
+      { id: "garanti_betalare", rubrik: "Payer established", krav: "betalare", detaljVidBrist: "Record the payer — track, name and reference — before closing." },
     ],
     Goodwill: [
       { id: "goodwill_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Goodwill cases require a documented odometer reading." },
       { id: "goodwill_historik", rubrik: "Service history checked", krav: "historik", detaljVidBrist: "Goodwill cases require a checked service history." },
+      { id: "goodwill_godkannande", rubrik: "Grantor's approval recorded", krav: "godkannande", detaljVidBrist: "Goodwill requires the grantor's documented approval before closing." },
     ],
     "Insurance": [
       { id: "forsakring_skadenummer", rubrik: "Claim number recorded", krav: "skadenummer", detaljVidBrist: "Insurance cases require a claim number (read from the work order)." },
       { id: "forsakring_bildbevis", rubrik: "Photographic evidence present", krav: "foto", detaljVidBrist: "Insurance cases require photographic documentation." },
+      { id: "forsakring_betalare", rubrik: "Payer established", krav: "betalare", detaljVidBrist: "Record the insurer — name and claim reference — before closing." },
     ],
     "Complaint": [
       { id: "reklamation_historik", rubrik: "History and previous attempts checked", krav: "historik", detaljVidBrist: "Complaint cases require a checked history (previous repairs and attempts)." },
     ],
     "Used-vehicle warranty": [
       { id: "begagnat_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Used-vehicle warranty cases require a documented odometer reading." },
+    ],
+    "Body damage warranty": [
+      { id: "vagnskada_betalare", rubrik: "Payer established", krav: "betalare", detaljVidBrist: "Record the warranty administrator — name and reference — before closing." },
+      { id: "vagnskada_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Body damage warranty cases require a documented odometer reading." },
+      { id: "vagnskada_bildbevis", rubrik: "Photographic evidence present", krav: "foto", detaljVidBrist: "Body damage warranty cases require photographs of the damage." },
+    ],
+    "Extended warranty": [
+      { id: "forlangd_betalare", rubrik: "Payer established", krav: "betalare", detaljVidBrist: "Record the warranty provider — name and reference — before closing." },
+      { id: "forlangd_claim", rubrik: "Claim authorization recorded", krav: "claim", detaljVidBrist: "External warranties require a claim or authorization number before repair is reimbursed." },
+      { id: "forlangd_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Extended warranty cases require a documented odometer reading." },
+      { id: "forlangd_historik", rubrik: "Service history checked", krav: "historik", detaljVidBrist: "Extended warranty terms often condition cover on service history — check and document it." },
+    ],
+    "Leasing or fleet": [
+      { id: "leasing_betalare", rubrik: "Payer established", krav: "betalare", detaljVidBrist: "Record the leasing or fleet company — name and reference — before closing." },
+      { id: "leasing_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Leasing and fleet cases require a documented odometer reading." },
     ],
   },
   undantagsorsaker: UNDANTAGSORSAKER,

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { Arende, Handelse, TidKategori, Tillforlitlighet } from "@/felsokning/domain";
-import { KUNDBESLUT_LABEL, KVALITETSKONTROLL_LABEL, TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
+import type { Arende, Betalarspar, Handelse, TidKategori, Tillforlitlighet } from "@/felsokning/domain";
+import { BETALARSPAR_LABEL, KUNDBESLUT_LABEL, KVALITETSKONTROLL_LABEL, TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
 import type { Metodik, NastaSteg } from "@/felsokning/metodik";
 import { nastaSteg } from "@/felsokning/metodik";
 import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
@@ -1444,6 +1444,19 @@ function GuideFlik({
         </Panel>
       )}
 
+      {/* FGS-1.0: betalaren avgör beviskraven — grinden kräver spår, namn
+          och referens för de ärendetyper där någon annan än kunden
+          betalar. Panelen visas när ärendetypen kräver den eller när en
+          betalare redan registrerats. */}
+      {(BETALARTYPER.includes(arendetyp(arende)) ||
+        arende.handelser.some((p) => p.handelse.typ === "betalare")) && (
+        <BetalarePanel arende={arende} skicka={skicka} />
+      )}
+
+      {/* Teknisk eskalering (DISS-mönstret): en öppnad förfrågan utan
+          dokumenterat svar spärrar avslutet. */}
+      <EskaleringPanel arende={arende} skicka={skicka} />
+
       {!kanAvslutas && <Avslutshinder hinder={hinder} />}
       <div className="grid grid-cols-2 gap-2">
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
@@ -1458,6 +1471,125 @@ function GuideFlik({
         <OverlamningDialog arende={arende} metodik={metodik} nu={nu} skicka={skicka} stang={() => setVisaOverlamning(false)} />
       )}
     </>
+  );
+}
+
+// Ärendetyper där någon annan än kunden ersätter arbetet — betalaren ska
+// vara fastställd innan grinden släpper avslutet (FGS-1.0 §1/§18).
+const BETALARTYPER: readonly string[] = [
+  "Warranty",
+  "Goodwill",
+  "Insurance",
+  "Used-vehicle warranty",
+  "Body damage warranty",
+  "Extended warranty",
+  "Leasing or fleet",
+];
+
+function BetalarePanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
+  const [spar, setSpar] = useState<Betalarspar>("fabriksgaranti");
+  const [namn, setNamn] = useState("");
+  const [referens, setReferens] = useState("");
+  const [godkannande, setGodkannande] = useState("");
+  const senaste = [...arende.handelser].reverse().find((p) => p.handelse.typ === "betalare")?.handelse;
+  return (
+    <Panel rubrik="Payer and claim — who reimburses the work">
+      {senaste?.typ === "betalare" && (
+        <p className="mb-2 text-[13px]">
+          <span className="font-semibold text-[#4D5662]">Recorded:</span> {BETALARSPAR_LABEL[senaste.spar]} — {senaste.namn}
+          {senaste.referens ? ` (ref ${senaste.referens})` : ""}
+          {senaste.godkannande ? ` — approval ${senaste.godkannande}` : ""}
+        </p>
+      )}
+      <div className="mb-2 grid gap-2 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">Track</span>
+          <select
+            value={spar}
+            onChange={(e) => setSpar(e.target.value as Betalarspar)}
+            className="w-full border border-[#4D5662] bg-white px-2 py-2 text-[13px] focus:outline-none"
+          >
+            {(Object.keys(BETALARSPAR_LABEL) as Betalarspar[]).map((k) => (
+              <option key={k} value={k}>
+                {BETALARSPAR_LABEL[k]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <TextFalt label="Payer name" varde={namn} satt={setNamn} platshallare="e.g. the manufacturer, insurer or warranty provider" />
+        <TextFalt label="Claim / policy / damage number" varde={referens} satt={setReferens} platshallare="Claim, policy or damage reference" />
+        <TextFalt label="Approval reference" varde={godkannande} satt={setGodkannande} platshallare="Authorization — goodwill and external warranties" />
+      </div>
+      <StorKnapp
+        variant="sekundar"
+        disabled={!namn.trim()}
+        onClick={() => {
+          skicka({
+            typ: "betalare",
+            spar,
+            namn: namn.trim(),
+            ...(referens.trim() ? { referens: referens.trim() } : {}),
+            ...(godkannande.trim() ? { godkannande: godkannande.trim() } : {}),
+          });
+          setNamn("");
+          setReferens("");
+          setGodkannande("");
+        }}
+      >
+        Record payer
+      </StorKnapp>
+    </Panel>
+  );
+}
+
+function EskaleringPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse) => void }) {
+  const [text, setText] = useState("");
+  const [kanal, setKanal] = useState("");
+  const [referens, setReferens] = useState("");
+  // Samma matchning som grinden: öppnade per referens, besvarade tar bort.
+  const oppna = new Map<string, string>();
+  for (const post of arende.handelser) {
+    const h = post.handelse;
+    if (h.typ !== "eskalering") continue;
+    const nyckel = (h.referens ?? "").trim();
+    if (h.status === "oppnad") oppna.set(nyckel, h.beskrivning);
+    else if (oppna.has(nyckel)) oppna.delete(nyckel);
+    else if (nyckel === "" && oppna.size === 1) oppna.clear();
+  }
+  const skickaMed = (status: "oppnad" | "besvarad") => {
+    skicka({
+      typ: "eskalering",
+      status,
+      beskrivning: text.trim(),
+      ...(referens.trim() ? { referens: referens.trim() } : {}),
+      ...(kanal.trim() ? { kanal: kanal.trim() } : {}),
+    });
+    setText("");
+    setKanal("");
+    setReferens("");
+  };
+  return (
+    <Panel rubrik="Technical escalation — manufacturer or warranty provider">
+      {oppna.size > 0 && (
+        <p className="mb-2 border-l-2 border-[#8A5A00] pl-4 text-[13px]">
+          <span className="font-semibold text-[#8A5A00]">Open, awaiting answer:</span>{" "}
+          {[...oppna.entries()].map(([r, b]) => (r ? `${r} — ${b}` : b)).join(" · ")}
+        </p>
+      )}
+      <div className="mb-2 grid gap-2 sm:grid-cols-3">
+        <TextFalt label="Description" varde={text} satt={setText} platshallare="What was asked, or what the answer says" />
+        <TextFalt label="Channel" varde={kanal} satt={setKanal} platshallare="e.g. DISS, technical support" />
+        <TextFalt label="Reference" varde={referens} satt={setReferens} platshallare="Ticket or query number" />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <StorKnapp variant="sekundar" disabled={!text.trim()} onClick={() => skickaMed("oppnad")}>
+          Open escalation
+        </StorKnapp>
+        <StorKnapp variant="sekundar" disabled={!text.trim() || oppna.size === 0} onClick={() => skickaMed("besvarad")}>
+          Document the answer
+        </StorKnapp>
+      </div>
+    </Panel>
   );
 }
 

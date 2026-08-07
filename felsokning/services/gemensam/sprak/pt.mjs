@@ -53,6 +53,8 @@ export const PT = {
   "grind.arendetyp.krav": "Requisito para este tipo de processo: {krav}",
   "grind.sakerhet": "Nível de confiança dentro do que a evidência sustenta",
   "grind.sakerhet.detalj": "A confiança indicada ({niva}) excede o que a evidência sustenta ({tak}). Completar a evidência, ou baixar o nível — a incerteza honesta é informação.",
+  "grind.eskalering": "Escalonamentos técnicos respondidos",
+  "grind.eskalering.detalj": "Há um escalonamento em aberto ({referens}). Aguardar a resposta e documentá-la antes de encerrar o processo.",
 
 
   // ---- A conclusão (ALVA-RULE-200) ----------------------------------------

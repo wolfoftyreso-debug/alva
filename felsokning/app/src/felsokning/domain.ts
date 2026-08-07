@@ -87,6 +87,27 @@ export interface Bilaga {
   dataUrl?: string;
 }
 
+// FGS-1.0 §3: betalarspåren. Datavärdena är invarianta (svenska tokens i
+// loggen, precis som "godkant"/"ingaende"); etiketterna är gränssnitt.
+export type Betalarspar =
+  | "fabriksgaranti"
+  | "vagnskadegaranti"
+  | "forsakring"
+  | "extern_garanti"
+  | "leasing"
+  | "goodwill"
+  | "kund";
+
+export const BETALARSPAR_LABEL: Record<Betalarspar, string> = {
+  fabriksgaranti: "Factory warranty",
+  vagnskadegaranti: "Body damage warranty",
+  forsakring: "Insurance",
+  extern_garanti: "External warranty",
+  leasing: "Leasing or fleet",
+  goodwill: "Goodwill",
+  kund: "Customer pays",
+};
+
 export type Handelse =
   | { typ: "objekt_identifierat"; objekt: Objekt }
   | ({ typ: "arbetsorder_skannad"; falt: ArbetsorderFalt[] } & Bilaga)
@@ -137,6 +158,19 @@ export type Handelse =
   // Ärendetypen styr vilka dokumentationskrav ECM ställer (garanti,
   // försäkring, reklamation …).
   | { typ: "arendetyp_satt"; arendetyp: string }
+  // FGS-1.0: betalarspåret. Vem som ersätter arbetet avgör beviskraven —
+  // fabrik, vagnskadegaranti, försäkringsbolag, extern garantigivare,
+  // leasing/fleet, goodwill eller kunden själv. Referensen är claim-,
+  // skade- eller policynummer; godkännandet är betalarens klartecken.
+  | { typ: "betalare"; spar: Betalarspar; namn: string; referens?: string; godkannande?: string }
+  // Teknisk eskalering (DISS-mönstret): öppnad förfrågan till tillverkare
+  // eller garantigivare. En öppnad eskalering utan besvarad spärrar
+  // avslutet — svaret ska inväntas och dokumenteras.
+  | { typ: "eskalering"; status: "oppnad" | "besvarad"; beskrivning: string; referens?: string; kanal?: string }
+  // Reservdelsdokumentation: artikelnummer och spårbarhet för utbytt del.
+  // `sparad` betyder att den demonterade delen behålls i väntan på
+  // garantibeslut eller revision.
+  | { typ: "reservdel"; artikelnummer: string; beskrivning: string; serienummer?: string; batch?: string; sparad?: boolean }
   // Pre-diagnostik: fordonshistoriken kontrollerad — eller motiverat
   // varför inte (kvalitetsvarning).
   | { typ: "historik_kontrollerad"; kontrollerad: boolean; kommentar?: string }
@@ -312,6 +346,14 @@ export function handelseRubrik(post: LoggPost): string {
       return `Ansvarig tekniker: ${h.ansvarig}`;
     case "arendetyp_satt":
       return `Case type: ${h.arendetyp}`;
+    case "betalare":
+      return `Payer: ${BETALARSPAR_LABEL[h.spar]} — ${h.namn}${h.referens ? ` (ref ${h.referens})` : ""}${h.godkannande ? ` — approval ${h.godkannande}` : ""}`;
+    case "eskalering":
+      return h.status === "oppnad"
+        ? `Escalation opened${h.kanal ? ` via ${h.kanal}` : ""}${h.referens ? ` (${h.referens})` : ""}: ${h.beskrivning}`
+        : `Escalation answered${h.referens ? ` (${h.referens})` : ""}: ${h.beskrivning}`;
+    case "reservdel":
+      return `Part documented: ${h.artikelnummer} — ${h.beskrivning}${h.serienummer ? `, s/n ${h.serienummer}` : ""}${h.batch ? `, batch ${h.batch}` : ""}${h.sparad ? " — old part retained" : ""}`;
     case "historik_kontrollerad":
       return h.kontrollerad
         ? `Fordonshistorik kontrollerad${h.kommentar ? `: ${h.kommentar}` : ""}`

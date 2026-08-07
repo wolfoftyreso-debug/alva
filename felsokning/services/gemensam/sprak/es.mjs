@@ -53,6 +53,8 @@ export const ES = {
   "grind.arendetyp.krav": "Requisito para este tipo de expediente: {krav}",
   "grind.sakerhet": "Nivel de confianza dentro de lo que sustenta la evidencia",
   "grind.sakerhet.detalj": "La confianza indicada ({niva}) supera lo que sustenta la evidencia ({tak}). Añadir evidencia que la sustente, o bajar el nivel — la incertidumbre honesta es información.",
+  "grind.eskalering": "Escalaciones técnicas respondidas",
+  "grind.eskalering.detalj": "Hay una escalación abierta ({referens}). Esperar la respuesta y documentarla antes de cerrar el expediente.",
 
 
   // ---- La conclusión (ALVA-RULE-200) --------------------------------------

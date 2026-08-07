@@ -22,6 +22,20 @@
 
 export const UTGAVOR = [
   {
+    version: "3.6",
+    datum: "2026-08-06",
+    commit: "4dea6d2",
+    rubrik: "Betalarspåret: beviskraven följer den som betalar",
+    andringar: [
+      "FGS-1.0 (garantistandarden) inarbetad: betalaren är en händelse i loggen — spår, namn, claim-/skadereferens och godkännande — och grinden kräver den för de ärendetyper där någon annan än kunden betalar. Tre nya ärendetyper: vagnskadegaranti, förlängd garanti och leasing/fleet, med egna regelpaketskrav.",
+      "Eskaleringsspärren (DISS-mönstret): en öppnad teknisk förfrågan till tillverkare eller garantigivare utan dokumenterat svar spärrar avslutet, matchad per referens. Bulletinernas \"invänta svar\" är nu en grindregel, inte ett råd.",
+      "Ett verkligt fynd på vägen: serverns ärendetypskrav var en tyst no-op — servern matade in den distribuerade paketformen i en funktion som bara läste den slimmade, så garanti- och försäkringskraven fanns bara som råd i klienten. C-2-mönstret, återuppstånden genom ett format. Grinden läser nu båda formerna, med regressionstest.",
+      "Claim- och skadenummer kan komma ur den registrerade betalaren, inte bara ur skannad arbetsorder. Goodwill och externa garantigivare kräver dokumenterat godkännande före avslut.",
+      "Reservdelshändelsen: artikelnummer, serienummer, batch och markering att den demonterade delen sparas i väntan på garantibeslut. Betalare, eskalering och reservdel är interna i delningsfiltret — kunden ser åtgärden, inte förhandlingen.",
+      "Kartläggningen av hela FGS-1.0 mot plattformen bokförd i ALVA-DOC-0011, med ärlig gräns: ODIS/DISS/SAGA2 är tillverkarsystem — ALVA bär bevispaketet och eskaleringsspåret, den ersätter dem inte.",
+    ],
+  },
+  {
     version: "3.5",
     datum: "2026-08-06",
     commit: "8072ea6",

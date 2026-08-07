@@ -81,6 +81,8 @@ export const EN = {
   "grind.arendetyp.krav": "Requirement for this case type: {krav}",
   "grind.sakerhet": "Confidence level within what the evidence supports",
   "grind.sakerhet.detalj": "The stated confidence ({niva}) exceeds what the evidence supports ({tak}). Add supporting evidence, or lower the confidence — honest uncertainty is information.",
+  "grind.eskalering": "Technical escalations answered",
+  "grind.eskalering.detalj": "An escalation is open ({referens}). Await the answer and document it before the case is closed.",
 
 
   // ---- The closing statement (ALVA-RULE-200) ------------------------------

@@ -386,7 +386,10 @@ export const DELBART_PARTNER = [...DELBART_KUND, "hypotes"];
 
 // Aldrig utanför organisationen: arbetsledning, arbetsmaterial och
 // underlag som kan läsas som konstateranden.
-export const ENDAST_INTERNT = ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"];
+// Betalare, eskalering och reservdel är interna: claimreferenser,
+// fabrikskorrespondens och serienummer hör till garantiakten, inte till
+// kundens delningslänk — kunden ser åtgärden, inte förhandlingen (FGS-1.0).
+export const ENDAST_INTERNT = ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad", "betalare", "eskalering", "reservdel"];
 
 export function synligaTyper(niva) {
   if (niva === "intern") return null; // full insyn — ingen filtrering

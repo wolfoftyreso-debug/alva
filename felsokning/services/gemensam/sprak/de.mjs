@@ -54,6 +54,8 @@ export const DE = {
   "grind.arendetyp.krav": "Anforderung für diese Vorgangsart: {krav}",
   "grind.sakerhet": "Konfidenzniveau innerhalb dessen, was die Evidenz trägt",
   "grind.sakerhet.detalj": "Die angegebene Konfidenz ({niva}) übersteigt, was die Evidenz trägt ({tak}). Evidenz ergänzen oder das Niveau senken — ehrliche Unsicherheit ist Information.",
+  "grind.eskalering": "Technische Eskalationen beantwortet",
+  "grind.eskalering.detalj": "Eine Eskalation ist offen ({referens}). Die Antwort abwarten und dokumentieren, bevor der Vorgang abgeschlossen wird.",
 
 
   // ---- Abschlussfeststellung (ALVA-RULE-200) ------------------------------

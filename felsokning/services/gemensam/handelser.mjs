@@ -54,6 +54,14 @@ export const HÄNDELSESCHEMA = {
     resultat: ["symptomet_borta", "kvarstar", "delvis", "ej_verifierbar"],
     beskrivning: "text",
   },
+  // FGS-1.0: betalarspåret, eskaleringen och reservdelen är händelser i
+  // loggen — inte fritext i en kommentar — så att grinden kan räkna på dem.
+  betalare: {
+    spar: ["fabriksgaranti", "vagnskadegaranti", "forsakring", "extern_garanti", "leasing", "goodwill", "kund"],
+    namn: "text",
+  },
+  eskalering: { status: ["oppnad", "besvarad"], beskrivning: "text" },
+  reservdel: { artikelnummer: "text", beskrivning: "text" },
   kommentar: { text: "text" },
   kategori_byte: { kategori: "text" },
   inaktivitet_forklarad: { text: "text", minuter: "tal" },
@@ -91,6 +99,9 @@ export const VALFRIA_FÄLT = {
   matarstallning: ["undantag", "bilagaId", "bilagaHash", "dataUrl"],
 
   kontroll_utford: ["resultat", "undantag"],
+  betalare: ["referens", "godkannande"],
+  eskalering: ["referens", "kanal"],
+  reservdel: ["serienummer", "batch", "sparad"],
   // `kalla` bär härkomsten för värden som kommit in via ett
   // diagnosprotokoll (ALVA-SPEC-020). Fältet måste vara deklarerat:
   // integrationen fungerade tidigare bara därför att schemat var öppet.

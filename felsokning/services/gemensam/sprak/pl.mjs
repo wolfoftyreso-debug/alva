@@ -55,6 +55,8 @@ export const PL = {
   "grind.arendetyp.krav": "Wymóg dla tego rodzaju sprawy: {krav}",
   "grind.sakerhet": "Poziom pewności w granicach tego, co potwierdzają dowody",
   "grind.sakerhet.detalj": "Podany poziom pewności ({niva}) przekracza to, co potwierdzają dowody ({tak}). Uzupełnić dowody lub obniżyć poziom — uczciwa niepewność to informacja.",
+  "grind.eskalering": "Eskalacje techniczne z odpowiedzią",
+  "grind.eskalering.detalj": "Eskalacja jest otwarta ({referens}). Poczekać na odpowiedź i udokumentować ją przed zamknięciem sprawy.",
 
 
   // ---- Wniosek końcowy (ALVA-RULE-200) ------------------------------------

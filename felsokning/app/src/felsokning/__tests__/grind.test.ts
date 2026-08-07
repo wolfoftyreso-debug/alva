@@ -572,3 +572,74 @@ describe("mätarställningen ska vara fotograferad, inte bara inskriven", () => 
     expect(grinda(tomt, GENERISK).map((h) => h.id)).toContain("matarstallning_ingaende");
   });
 });
+
+// ---- FGS-1.0: betalarspåret och eskaleringen ----------------------------
+//
+// Betalaren avgör beviskraven, och en öppnad teknisk eskalering utan
+// dokumenterat svar spärrar avslutet — bulletinernas "invänta svar innan
+// ytterligare åtgärder" som grindregel, inte som råd.
+describe("FGS · betalare och eskalering", () => {
+  it("en öppnad eskalering spärrar avslutet, ett dokumenterat svar släpper", () => {
+    const oppen = [...komplettLogg(), { typ: "eskalering", status: "oppnad", beskrivning: "DISS query", referens: "D-1" }];
+    expect(grinda(oppen, GENERISK).map((h) => h.id)).toContain("eskalering");
+    const besvarad = [...oppen, { typ: "eskalering", status: "besvarad", beskrivning: "Factory answer", referens: "D-1" }];
+    expect(grinda(besvarad, GENERISK)).toEqual([]);
+  });
+
+  it("svaret matchas per referens — ett svar på fel förfrågan släpper inte", () => {
+    const logg = [
+      ...komplettLogg(),
+      { typ: "eskalering", status: "oppnad", beskrivning: "Battery query", referens: "D-1" },
+      { typ: "eskalering", status: "oppnad", beskrivning: "HV query", referens: "D-2" },
+      { typ: "eskalering", status: "besvarad", beskrivning: "Answer", referens: "D-1" },
+    ];
+    const hinder = grinda(logg, GENERISK).filter((h) => h.id === "eskalering");
+    expect(hinder).toHaveLength(1);
+    expect(hinder[0].detalj).toContain("D-2");
+  });
+
+  it("betalarkravet uppfylls av en registrerad betalare med spår och namn", () => {
+    const paket = { arendetypRegler: { Warranty: [{ id: "w_betalare", rubrik: "Payer established", krav: "betalare", detaljVidBrist: "Record the payer." }] } };
+    const utan = [{ typ: "arendetyp_satt", arendetyp: "Warranty" }];
+    expect(grindaArendetyp(utan, paket).map((h) => h.id)).toEqual(["arendetyp_betalare"]);
+    const med = [...utan, { typ: "betalare", spar: "fabriksgaranti", namn: "Volkswagen AG" }];
+    expect(grindaArendetyp(med, paket)).toEqual([]);
+  });
+
+  it("claim-referensen kan komma ur betalaren, inte bara ur skannad arbetsorder", () => {
+    const paket = { arendetyper: { Warranty: { krav: ["claim"] } } };
+    const utan = [{ typ: "arendetyp_satt", arendetyp: "Warranty" }];
+    expect(grindaArendetyp(utan, paket).map((h) => h.id)).toEqual(["arendetyp_claim"]);
+    const med = [...utan, { typ: "betalare", spar: "fabriksgaranti", namn: "VW", referens: "CL-4711" }];
+    expect(grindaArendetyp(med, paket)).toEqual([]);
+  });
+
+  it("goodwill kräver godkännande — en betalare utan klartecken räcker inte", () => {
+    const paket = { arendetypRegler: { Goodwill: [{ id: "g", rubrik: "Approval", krav: "godkannande", detaljVidBrist: "Approval required." }] } };
+    const utanKlartecken = [
+      { typ: "arendetyp_satt", arendetyp: "Goodwill" },
+      { typ: "betalare", spar: "goodwill", namn: "Importören" },
+    ];
+    expect(grindaArendetyp(utanKlartecken, paket).map((h) => h.id)).toEqual(["arendetyp_godkannande"]);
+    const med = [...utanKlartecken, { typ: "betalare", spar: "goodwill", namn: "Importören", godkannande: "GW-9" }];
+    expect(grindaArendetyp(med, paket)).toEqual([]);
+  });
+
+  it("den distribuerade paketformen (arendetypRegler) utvärderas på servern", () => {
+    // Regression: servern matade in filens rika form i en funktion som
+    // bara läste den slimmade — varje ärendetypskrav blev en tyst no-op
+    // och spärren fanns bara som råd i klienten. C-2, återuppstånden
+    // genom ett format.
+    const rikt = {
+      arendetypRegler: {
+        Warranty: [{ id: "garanti_miltal", rubrik: "Mileage documented", krav: "miltal", detaljVidBrist: "Odometer reading required." }],
+      },
+    };
+    const utan = [{ typ: "arendetyp_satt", arendetyp: "Warranty" }];
+    const hinder = grindaArendetyp(utan, rikt);
+    expect(hinder.map((h) => h.id)).toEqual(["arendetyp_miltal"]);
+    expect(hinder[0].rubrik).toBe("Mileage documented");
+    expect(hinder[0].detalj).toBe("Odometer reading required.");
+    expect(grindaArendetyp([...utan, { typ: "matarstallning", lage: "ingaende", varde: "12000" }], rikt)).toEqual([]);
+  });
+});
