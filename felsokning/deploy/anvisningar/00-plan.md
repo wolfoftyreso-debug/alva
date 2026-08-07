@@ -10,7 +10,7 @@ extern byggtjänst, inget externt register.
 | --- | --- | --- |
 | `01-aws-bas.zip` | AWS-basen: VPC, EKS, Aurora, S3, ECR, KMS, Secrets Manager, Route 53, larm | Agent med AWS-behörighet |
 | `02-tjanster.zip` | Backendbilderna (plattform, ai-orkester) byggs, testas och publiceras; databasschemat initieras | Agent med Docker + ECR-push |
-| `03-webb.zip` | Webbilden byggs med miljöns byggargument och publiceras | Agent med Docker + ECR-push |
+| `03-webb-kalla.zip` + `03-webb-resurser-*.zip` | Webbilden byggs med miljöns byggargument och publiceras — delarna är ETT steg, alla packas upp först | Agent med Docker + ECR-push |
 | `04-arbetslast.zip` | Arbetslasten i klustret: tjänster, ingress, DNS, nätverkspolicyer | Agent med kluster-behörighet |
 | `05-verifiering.zip` | Slutkontroll av den driftsatta miljön | Valfri agent, läsbehörighet räcker |
 

@@ -7,6 +7,26 @@ publiceras webbilden — en statisk SPA bakom oprivilegierad nginx.
 Kräver att paket 01 är klart. Oberoende av paket 02 — får köras
 parallellt, men med SAMMA bildtagg.
 
+## Delarna — packa upp allihop innan något byggs
+
+Paket 03 levereras i flera zip-filer: `03-webb-kalla` (källkoden) och
+`03-webb-resurser-1…N` (bildresurserna i `app/src/assets`, delade i
+storleksbegränsade delar för överföringens skull). Delningen är
+teknisk, inte logisk — de är ETT steg:
+
+1. Packa upp samtliga `03-webb-*`-filer i samma arbetsträd som övriga
+   paket. Vilka delar som finns framgår av `SHA256SUMS.txt` i paket 00.
+2. Kontrollera fullständigheten mot delarnas fillistor:
+   ```sh
+   cat paket/03-webb-*/INNEHALL.txt | grep '^app/src/assets/' | sort | while read -r f; do
+     [ -f "$f" ] || echo "SAKNAS: $f"
+   done   # ingen utskrift = komplett
+   ```
+
+Saknas en resursfil faller för övrigt bygget på importfel — men
+kontrollera FÖRE, så att felmeddelandet är "del saknas", inte en
+kryptisk byggutskrift.
+
 ## Steg 1 — testa före bygge
 
 ```sh

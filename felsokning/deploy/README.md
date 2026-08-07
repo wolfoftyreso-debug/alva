@@ -15,7 +15,8 @@ bash felsokning/deploy/paketera.sh <målkatalog>
 | `00-plan.zip` | Driftsättningsplanen + SHA256-summor för övriga paket | Läses först, verifierar leveransen |
 | `01-aws-bas.zip` | `infra/aws` + `infra/postgres-init.sql` | Terraform: VPC, EKS, Aurora, S3, ECR, KMS, hemligheter, domän, larm |
 | `02-tjanster.zip` | `services/` — plattform, ai-orkester, gemensam | Bygg och publicera backendbilderna till ECR, initiera schemat |
-| `03-webb.zip` | `app/` (utan `node_modules`/`dist`) + `supabase/` | Bygg och publicera webbilden |
+| `03-webb-kalla.zip` | `app/` (utan `node_modules`/`dist`/`src/assets`) + `supabase/` | Bygg och publicera webbilden |
+| `03-webb-resurser-*.zip` | `app/src/assets` i delar om högst `DELBUDGET` byte (standard 4 MB) | Hör till 03 — packas upp i samma träd före bygget |
 | `04-arbetslast.zip` | `infra/terraform` | Terraform: arbetslasten i klustret, ingress, DNS |
 | `05-verifiering.zip` | `docs/` | Slutkontroll av den driftsatta miljön, driftdokumentation |
 

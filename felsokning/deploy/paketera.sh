@@ -17,13 +17,20 @@ VERSION="$(node -e 'import(process.argv[1]).then(m => console.log(m.PLATTFORMSVE
 SHA="$(git -C "$ROT" rev-parse --short HEAD 2>/dev/null || echo "utan-git")"
 STAMPEL="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+# Största tillåtna innehåll per resursdel. Mottagarsidans kanal sätter
+# gränsen — 10 MB gick inte att ta emot; standarden ligger med marginal
+# under det och kan sänkas per körning: DELBUDGET=2000000 bash paketera.sh …
+DELBUDGET="${DELBUDGET:-4000000}"
+
 # paketera <namn> <anvisningsfil> <väg>...  — vägarna är relativa ROT.
+# EXKLUDERA (miljövariabel) läggs till tar-exkluderingarna för anropet.
 paketera() {
   local namn="$1" anvisning="$2"; shift 2
   local arbets; arbets="$(mktemp -d)"
 
   # node_modules återskapas ur package-lock; dist byggs i webbilden.
-  tar -C "$ROT" -cf - --exclude=node_modules --exclude=app/dist "$@" |
+  tar -C "$ROT" -cf - --exclude=node_modules --exclude=app/dist \
+    ${EXKLUDERA:+--exclude="$EXKLUDERA"} "$@" |
     tar -C "$arbets" -xf -
 
   # Metafilerna ligger under paket/<namn>/ så att alla paket kan packas
@@ -45,7 +52,25 @@ rm -f "$UT"/0[0-5]-*.zip
 
 paketera 01-aws-bas     01-aws-bas.md     infra/aws infra/postgres-init.sql
 paketera 02-tjanster    02-tjanster.md    services
-paketera 03-webb        03-webb.md        app supabase
+
+# Webbklienten delas: koden för sig och bildresurserna i delar om högst
+# DELBUDGET byte — helheten var större än mottagarkanalen tålde. Delarna
+# fylls i namnordning, så samma träd ger samma delar.
+EXKLUDERA="app/src/assets" paketera 03-webb-kalla 03-webb.md app supabase
+del=0 ack=0 resurser=()
+slut_resursdel() {
+  ((${#resurser[@]})) || return 0
+  del=$((del + 1))
+  paketera "03-webb-resurser-$del" 03-webb.md "${resurser[@]}"
+  ack=0 resurser=()
+}
+while IFS= read -r fil; do
+  storlek=$(stat -c%s "$ROT/$fil")
+  ((ack > 0 && ack + storlek > DELBUDGET)) && slut_resursdel
+  resurser+=("$fil"); ack=$((ack + storlek))
+done < <(cd "$ROT" && find app/src/assets -type f | sort)
+slut_resursdel
+
 paketera 04-arbetslast  04-arbetslast.md  infra/terraform
 paketera 05-verifiering 05-verifiering.md docs
 
