@@ -43,7 +43,7 @@ export const DE = {
   "grind.foton": "Fotos für die Prüfpunkte vorhanden, die sie erfordern",
   "grind.slutsats": "Abschlussfeststellung (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Hochvolt-Qualifikation bestätigt",
-  "grind.hogvolt.spanningslos": "Fahrzeug nach Herstellerverfahren spannungsfrei geschaltet",
+  "grind.hogvolt.spanningslos": "Fahrzeug nach Herstellerverfahren spannungsfrei geschaltet, Spannungsfreiheit durch Messung festgestellt",
   "grind.regelpaket": "Signatur des Regelpakets stimmt nicht — Abschluss gesperrt.",
   "grind.regelpaket.osignerat": "Ein externes Regelpaket wird ohne Signatur verwendet — Abschluss gesperrt.",
   "grind.evidens": "Evidenzgrad über E0",

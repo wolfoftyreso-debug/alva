@@ -47,7 +47,7 @@ export const RO = {
   "grind.foton": "Fotografii prezente pentru controalele care le impun",
   "grind.slutsats": "Concluzie finală (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Autorizarea pentru înaltă tensiune confirmată",
-  "grind.hogvolt.spanningslos": "Vehicul scos de sub tensiune conform procedurii producătorului",
+  "grind.hogvolt.spanningslos": "Vehicul scos de sub tensiune conform procedurii producătorului, absența tensiunii verificată prin măsurare",
   "grind.regelpaket": "Semnătura pachetului de reguli nu corespunde — închiderea este blocată.",
   "grind.regelpaket.osignerat":
     "Se utilizează un pachet de reguli extern fără semnătură — închiderea este blocată.",

@@ -42,7 +42,7 @@ export const IT = {
   "grind.foton": "Fotografie presenti per i punti di controllo che le richiedono",
   "grind.slutsats": "Conclusione (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Abilitazione alta tensione confermata",
-  "grind.hogvolt.spanningslos": "Veicolo messo fuori tensione secondo la procedura del costruttore",
+  "grind.hogvolt.spanningslos": "Veicolo messo fuori tensione secondo la procedura del costruttore, assenza di tensione verificata mediante misurazione",
   "grind.regelpaket": "La firma del pacchetto di regole non corrisponde — chiusura bloccata.",
   "grind.regelpaket.osignerat": "È in uso un pacchetto di regole esterno privo di firma — chiusura bloccata.",
   "grind.evidens": "Livello di evidenza superiore a E0",

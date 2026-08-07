@@ -18,7 +18,7 @@ describe("demoärendet", () => {
 
   it("lämnar kontroller kvar så att guiden kan fortsätta i demon", () => {
     const b = brief(arende, VIBRATION_METODIK);
-    expect(b.ejKontrollerat).toContain("Check radial and lateral runout");
+    expect(b.ejKontrollerat).toContain("Measure radial and lateral runout at the rim with a dial gauge; measure at the tyre if the rim is within limits");
     expect(b.ejKontrollerat).toContain("Change when cornering");
     expect(b.rekommenderatNastaSteg.length).toBeGreaterThan(0);
   });

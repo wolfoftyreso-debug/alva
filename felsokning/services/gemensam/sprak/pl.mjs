@@ -44,7 +44,7 @@ export const PL = {
   "grind.foton": "Fotografie obecne przy punktach kontrolnych, które ich wymagają",
   "grind.slutsats": "Wniosek końcowy (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Uprawnienia do prac przy wysokim napięciu potwierdzone",
-  "grind.hogvolt.spanningslos": "Pojazd pozbawiony napięcia zgodnie z procedurą producenta",
+  "grind.hogvolt.spanningslos": "Pojazd pozbawiony napięcia zgodnie z procedurą producenta, brak napięcia potwierdzony pomiarem",
   "grind.regelpaket": "Podpis pakietu reguł nie zgadza się — zamknięcie zablokowane.",
   "grind.regelpaket.osignerat": "Używany jest zewnętrzny pakiet reguł bez podpisu — zamknięcie zablokowane.",
   "grind.evidens": "Poziom dowodu powyżej E0",

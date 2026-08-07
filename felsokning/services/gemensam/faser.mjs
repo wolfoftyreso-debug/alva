@@ -44,6 +44,7 @@ export const STEGFAS = {
   batteri: "localization",
   glapp: "localization",
   metod: "localization",
+  reproduktion: "localization", // vägprovet som pekar ut hjulet — avgränsning, inte åtgärd
 
   // ---- Verification: fastställ orsaken --------------------------------
   matningar: "verification",

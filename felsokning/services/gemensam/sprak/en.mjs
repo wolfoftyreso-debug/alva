@@ -70,7 +70,7 @@ export const EN = {
   "grind.foton": "Photographs present for checks that require them",
   "grind.slutsats": "Closing statement (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "High-voltage authorization confirmed",
-  "grind.hogvolt.spanningslos": "Vehicle de-energized per the manufacturer’s procedure",
+  "grind.hogvolt.spanningslos": "Vehicle de-energized per the manufacturer’s procedure, absence of voltage verified by measurement",
   "grind.regelpaket": "Rule package signature does not match — closing blocked.",
   "grind.regelpaket.osignerat": "An external rule package is in use without a signature — closing blocked.",
   "grind.evidens": "Evidence above E0",

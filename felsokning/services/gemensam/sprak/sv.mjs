@@ -41,7 +41,7 @@ export const SV = {
   "grind.foton": "Foton finns för de kontrollpunkter som kräver det",
   "grind.slutsats": "Slutsats (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Högvoltsbehörighet bekräftad",
-  "grind.hogvolt.spanningslos": "Fordonet spänningslöst enligt tillverkarens procedur",
+  "grind.hogvolt.spanningslos": "Fordonet spänningslöst enligt tillverkarens procedur, spänningsfrihet verifierad genom mätning",
   "grind.regelpaket": "Regelpaketets signatur stämmer inte — avslut spärrat.",
   "grind.regelpaket.osignerat": "Ett externt regelpaket används utan signatur — avslut spärrat.",
   "grind.evidens": "Evidensnivå över E0",

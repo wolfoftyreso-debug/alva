@@ -42,7 +42,7 @@ export const NL = {
   "grind.foton": "Foto's aanwezig bij de controles die dat vereisen",
   "grind.slutsats": "Eindconclusie (ALVA-RULE-200)",
   "grind.hogvolt.behorighet": "Hoogvoltbevoegdheid bevestigd",
-  "grind.hogvolt.spanningslos": "Voertuig spanningsloos gemaakt volgens de procedure van de fabrikant",
+  "grind.hogvolt.spanningslos": "Voertuig spanningsloos gemaakt volgens de procedure van de fabrikant, spanningsloosheid door meting vastgesteld",
   "grind.regelpaket": "Handtekening van het regelpakket komt niet overeen — afsluiten geblokkeerd.",
   "grind.regelpaket.osignerat": "Er wordt een extern regelpakket zonder handtekening gebruikt — afsluiten geblokkeerd.",
   "grind.evidens": "Bewijsgraad boven E0",

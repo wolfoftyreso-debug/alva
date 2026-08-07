@@ -182,7 +182,7 @@ describe("brief", () => {
     expect(b.utfordaKontroller.map((k) => k.text)).toContain("Check tyre pressure");
     expect(b.observationer).toContain("Höger framdäck visar ojämnt slitage");
     expect(b.observationer).toContain("Matningsspänning: 13,9 V");
-    expect(b.ejKontrollerat).toContain("Check wheel balance");
+    expect(b.ejKontrollerat).toContain("Measure wheel balance on the balancer — residual imbalance in grams per plane (road force where available)");
     expect(b.ejKontrollerat).not.toContain("Check tyre pressure");
     expect(b.rekommenderatNastaSteg[0]).toContain("speed-dependent");
     expect(b.totalArbetstid).toBe("27 min");

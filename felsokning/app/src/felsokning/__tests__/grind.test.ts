@@ -44,6 +44,9 @@ function komplettLogg(extra: Record<string, unknown>[] = []) {
     { typ: "matvarde", beskrivning: "Lufttryck", varde: "2,4", matdonId: "m-1", kalibreradVidMatning: true },
     { typ: "foto", beskrivning: "Objektet" },
     { typ: "foto", beskrivning: "Typskylt" },
+    // Fackgranskningen gav skyddsnätet en felkodskontroll med fotokrav —
+    // fixturen följer regeln, inte tvärtom (jfr T-13).
+    { typ: "foto", beskrivning: "Felkoder" },
     ...GENERISK.steg.flatMap((s) =>
       (s.kontroller ?? []).map((k) => ({
         typ: "kontroll_utford",

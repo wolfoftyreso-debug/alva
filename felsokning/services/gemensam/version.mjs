@@ -22,6 +22,20 @@
 
 export const UTGAVOR = [
   {
+    version: "3.5",
+    datum: "2026-08-06",
+    commit: "8072ea6",
+    rubrik: "Fackgranskning av metodikinnehållet — säkerheten först, på riktigt",
+    andringar: [
+      "Sex domängranskningar av metodikbiblioteket. Tio kritiska fynd åtgärdade: högvoltens skyddsutrustning kom SIST i säkerhetssekvensen och står nu först, spänningsfrihetsmätningen kräver kategoriserat instrument med prova–mät–prova, frånskiljaren låses mot återinkoppling, och metodiken säger nu vad som är förbjudet utan behörighet.",
+      "Klimatmetodiken fick sin saknade behörighetsgrind (f-gascertifikat) — samma mönster som högvolt. ADAS-provkörningen instruerade bokstavligen att provocera nödbromsingrepp i trafik; nu tillverkarens testmetod.",
+      "Ett klistringsfel gjorde att engelska styrningsklagomål ('pulls', 'steering') matchade högvoltsmetodiken — styrningens nyckelord låg inklistrade i högvoltens lista. Borttaget.",
+      "Säkerhet före ingrepp överallt: öppna aldrig varmt kylsystem, trycksänk bränslesystemet och rör aldrig högtryckssidan, deaktivera tändning och insprutning före kompressionsprov, avgasutsug vid mätning med motorn igång, ingen provkörning vid bränsle- eller bromsvätskeläckage, prova aldrig SRS-kretsar med mätare.",
+      "23 nya kontroller där granskningen fann diagnostiska hål (bromsvätskenivå, brutna fjädrar, drivaxlar, emissionsmätning, HVIL, vattenprov), mätvärden med referensvärden och villkor i stället för nakna uppmaningar, och felkodsavläsning i det generiska skyddsnätet.",
+      "Grindtexten för spänningslöshet kräver nu uttryckligen verifiering genom mätning — på alla tio språken. Protokoll för mänsklig fackgranskning per marknad: ALVA-DOC-0010. Granskat-flaggorna är oförändrade — detta är en teknisk granskning, inte marknadens.",
+    ],
+  },
+  {
     version: "3.4",
     datum: "2026-08-06",
     commit: "c1c56e6",
