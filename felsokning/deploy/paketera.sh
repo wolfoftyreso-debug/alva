@@ -18,9 +18,10 @@ SHA="$(git -C "$ROT" rev-parse --short HEAD 2>/dev/null || echo "utan-git")"
 STAMPEL="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # Största tillåtna innehåll per resursdel. Mottagarsidans kanal sätter
-# gränsen — 10 MB gick inte att ta emot; standarden ligger med marginal
-# under det och kan sänkas per körning: DELBUDGET=2000000 bash paketera.sh …
-DELBUDGET="${DELBUDGET:-4000000}"
+# gränsen: högst 2,5 MB per paket, så standarden ligger med marginal
+# under den. Ändras per körning: DELBUDGET=2000000 bash paketera.sh …
+# Bilderna är redan komprimerade, så zip-storleken följer innehållet.
+DELBUDGET="${DELBUDGET:-2400000}"
 
 # paketera <namn> <anvisningsfil> <väg>...  — vägarna är relativa ROT.
 # EXKLUDERA (miljövariabel) läggs till tar-exkluderingarna för anropet.
