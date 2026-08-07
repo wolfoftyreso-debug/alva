@@ -22,6 +22,18 @@ teknisk, inte logisk — de är ETT steg:
      [ -f "$f" ] || echo "SAKNAS: $f"
    done   # ingen utskrift = komplett
    ```
+3. Sätt ihop styckade filer. En fil som ensam var större än delbudgeten
+   ligger som bitar (`<fil>.alva-del-00`, `-01`, …) och de ursprungliga
+   summorna i `app/src/assets/DELAT.sha256`:
+   ```sh
+   for f in app/src/assets/*.alva-del-00; do
+     bas="${f%.alva-del-00}"
+     cat "$bas".alva-del-* > "$bas" && rm "$bas".alva-del-*
+   done
+   sha256sum -c app/src/assets/DELAT.sha256 && rm app/src/assets/DELAT.sha256
+   ```
+   Stämmer inte en summa: en bit saknas eller är skadad — hämta om den
+   delen, gissa aldrig ihop en bild.
 
 Saknas en resursfil faller för övrigt bygget på importfel — men
 kontrollera FÖRE, så att felmeddelandet är "del saknas", inte en

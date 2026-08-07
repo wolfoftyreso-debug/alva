@@ -18,19 +18,22 @@ SHA="$(git -C "$ROT" rev-parse --short HEAD 2>/dev/null || echo "utan-git")"
 STAMPEL="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 # Största tillåtna innehåll per resursdel. Mottagarsidans kanal sätter
-# gränsen: högst 2,5 MB per paket, så standarden ligger med marginal
-# under den. Ändras per körning: DELBUDGET=2000000 bash paketera.sh …
+# gränsen: högst 2 MB per paket, så standarden ligger med marginal
+# under den. Ändras per körning: DELBUDGET=1000000 bash paketera.sh …
 # Bilderna är redan komprimerade, så zip-storleken följer innehållet.
-DELBUDGET="${DELBUDGET:-2400000}"
+# En enskild fil större än budgeten styckas i bitar (.alva-del-NN) som
+# mottagaren sätter ihop igen mot summorna i DELAT.sha256.
+DELBUDGET="${DELBUDGET:-1900000}"
 
-# paketera <namn> <anvisningsfil> <väg>...  — vägarna är relativa ROT.
-# EXKLUDERA (miljövariabel) läggs till tar-exkluderingarna för anropet.
+# paketera <namn> <anvisningsfil> <väg>...  — vägarna är relativa
+# KALLROT (standard ROT). EXKLUDERA (miljövariabel) läggs till
+# tar-exkluderingarna för anropet.
 paketera() {
   local namn="$1" anvisning="$2"; shift 2
   local arbets; arbets="$(mktemp -d)"
 
   # node_modules återskapas ur package-lock; dist byggs i webbilden.
-  tar -C "$ROT" -cf - --exclude=node_modules --exclude=app/dist \
+  tar -C "${KALLROT:-$ROT}" -cf - --exclude=node_modules --exclude=app/dist \
     ${EXKLUDERA:+--exclude="$EXKLUDERA"} "$@" |
     tar -C "$arbets" -xf -
 
@@ -58,19 +61,35 @@ paketera 02-tjanster    02-tjanster.md    services
 # DELBUDGET byte — helheten var större än mottagarkanalen tålde. Delarna
 # fylls i namnordning, så samma träd ger samma delar.
 EXKLUDERA="app/src/assets" paketera 03-webb-kalla 03-webb.md app supabase
+
+# Mellansteg: resurserna läggs i ett eget källträd där varje fil som
+# ensam överstiger budgeten styckas i bitar. DELAT.sha256 bär de
+# ursprungliga filernas summor — mottagarens kvitto på ihopsättningen.
+RESURSROT="$(mktemp -d)"
+while IFS= read -r fil; do
+  mkdir -p "$RESURSROT/$(dirname "$fil")"
+  if (($(stat -c%s "$ROT/$fil") > DELBUDGET)); then
+    split -b "$DELBUDGET" -d -a 2 "$ROT/$fil" "$RESURSROT/$fil.alva-del-"
+    (cd "$ROT" && sha256sum "$fil") >> "$RESURSROT/app/src/assets/DELAT.sha256"
+  else
+    cp "$ROT/$fil" "$RESURSROT/$fil"
+  fi
+done < <(cd "$ROT" && find app/src/assets -type f | sort)
+
 del=0 ack=0 resurser=()
 slut_resursdel() {
   ((${#resurser[@]})) || return 0
   del=$((del + 1))
-  paketera "03-webb-resurser-$del" 03-webb.md "${resurser[@]}"
+  KALLROT="$RESURSROT" paketera "03-webb-resurser-$del" 03-webb.md "${resurser[@]}"
   ack=0 resurser=()
 }
 while IFS= read -r fil; do
-  storlek=$(stat -c%s "$ROT/$fil")
+  storlek=$(stat -c%s "$RESURSROT/$fil")
   ((ack > 0 && ack + storlek > DELBUDGET)) && slut_resursdel
   resurser+=("$fil"); ack=$((ack + storlek))
-done < <(cd "$ROT" && find app/src/assets -type f | sort)
+done < <(cd "$RESURSROT" && find app/src/assets -type f | sort)
 slut_resursdel
+rm -rf "$RESURSROT"
 
 paketera 04-arbetslast  04-arbetslast.md  infra/terraform
 paketera 05-verifiering 05-verifiering.md docs
