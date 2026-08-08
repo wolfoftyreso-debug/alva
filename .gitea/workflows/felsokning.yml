@@ -9,9 +9,9 @@ name: Guidad Felsökning
 
 on:
   push:
-    paths: ['felsokning/**', '.gitea/workflows/felsokning.yml']
+    paths: ['**', '.gitea/workflows/felsokning.yml']
   pull_request:
-    paths: ['felsokning/**']
+    paths: ['**']
   workflow_dispatch:
     inputs:
       bildtagg:
@@ -24,7 +24,7 @@ jobs:
     runs-on: felsokning
     defaults:
       run:
-        working-directory: felsokning/app
+        working-directory: app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,22 +42,22 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
-        working-directory: felsokning/services/plattform
+        working-directory: services/plattform
       - run: npx eslint . --ext .mjs
-        working-directory: felsokning/services
+        working-directory: services
       # Hela flödet mot riktig Postgres: organisationer, roller,
       # append-only-triggern, isolering, delning, bilagor.
       - run: sudo apt-get update && sudo apt-get install -y postgresql
       - run: sudo bash integrationstest.sh
-        working-directory: felsokning/services/plattform
-      - run: npx swagger-cli validate felsokning/services/plattform/openapi.yaml
+        working-directory: services/plattform
+      - run: npx swagger-cli validate services/plattform/openapi.yaml
         working-directory: .
 
   terraform:
     runs-on: felsokning
     defaults:
       run:
-        working-directory: felsokning/infra/terraform
+        working-directory: infra/terraform
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -76,26 +76,26 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm ci --no-audit --no-fund
-        working-directory: felsokning/app
+        working-directory: app
       # Kända sårbarheter stoppar bygget från "high" och uppåt. Lägre
       # nivåer rapporteras men fäller inte — annars slutar folk läsa.
       - run: npm audit --audit-level=high
-        working-directory: felsokning/app
+        working-directory: app
       - run: npm audit
-        working-directory: felsokning/app
+        working-directory: app
         continue-on-error: true
       # SBOM i CycloneDX, arkiverad per bygge. Utan den går det inte att
       # svara på "påverkas vi av den här sårbarheten" utan att gissa.
       - run: npx --yes @cyclonedx/cyclonedx-npm@latest --output-file sbom-klient.json
-        working-directory: felsokning/app
+        working-directory: app
       - run: npm install --no-audit --no-fund && npx --yes @cyclonedx/cyclonedx-npm@latest --output-file ../sbom-plattform.json
-        working-directory: felsokning/services/plattform
+        working-directory: services/plattform
       - uses: actions/upload-artifact@v4
         with:
           name: sbom-${{ gitea.sha }}
           path: |
-            felsokning/app/sbom-klient.json
-            felsokning/services/sbom-plattform.json
+            app/sbom-klient.json
+            services/sbom-plattform.json
           retention-days: 400
 
   # M-5: en säkerhetskopia som aldrig återställts är en förhoppning.
@@ -106,7 +106,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y postgresql
       - run: sudo bash aterstallningstest.sh
-        working-directory: felsokning/services/plattform
+        working-directory: services/plattform
 
   # Bygger och publicerar till vårt eget ECR. Bara på main och bara när
   # kontrollerna ovan gått igenom.
@@ -135,13 +135,13 @@ jobs:
           docker build -t "$REGISTER/guidad-felsokning-web:$TAGG" \
             --build-arg VITE_PLATTFORM_URL="https://${{ vars.DOMAN }}" \
             --build-arg VITE_AI_ORKESTER_URL="https://${{ vars.DOMAN }}" \
-            felsokning/app
-          # Byggkontexten är felsokning/services så båda tjänsterna når
+            app
+          # Byggkontexten är services så båda tjänsterna når
           # den delade observationsmodulen utan att den dupliceras.
           docker build -t "$REGISTER/guidad-felsokning-plattform:$TAGG" \
-            -f felsokning/services/plattform/Dockerfile felsokning/services
+            -f services/plattform/Dockerfile services
           docker build -t "$REGISTER/guidad-felsokning-ai-orkester:$TAGG" \
-            -f felsokning/services/ai-orkester/Dockerfile felsokning/services
+            -f services/ai-orkester/Dockerfile services
           for bild in web plattform ai-orkester; do
             docker push "$REGISTER/guidad-felsokning-$bild:$TAGG"
           done
@@ -156,7 +156,7 @@ jobs:
       id-token: write
     defaults:
       run:
-        working-directory: felsokning/infra/terraform
+        working-directory: infra/terraform
     steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4

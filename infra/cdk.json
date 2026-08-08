@@ -1,8 +1,0 @@
-{
-  "app": "npx tsx bin/semantika.ts",
-  "context": {
-    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
-    "@aws-cdk/core:checkSecretUsage": true,
-    "@aws-cdk/aws-apigateway:disableCloudWatchRole": true
-  }
-}
