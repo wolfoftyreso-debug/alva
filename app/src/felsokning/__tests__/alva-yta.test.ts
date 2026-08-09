@@ -10,7 +10,7 @@
 // Det testar utseende genom att läsa kod, vilket är trubbigt. Men det
 // fångar exakt den sortens tillägg som faktiskt sker — en `animate-pulse`
 // här, en `bg-gradient-to-r` där — och som ingen enskilt tycker är fel.
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { FORBJUDNA_ORD } from "@/alva/sprak";
 
@@ -138,24 +138,24 @@ describe("ALVA-ytan följer designsystemet", () => {
   });
 });
 
-// ---- Andra produkters meddelanden får inte synas på ALVA-ytan ----------
+// ---- Det finns bara en produkt i det här repot -------------------------
 //
-// Bakgrund: butikens banner "Skarpa betalningar är inte konfigurerade"
-// renderades ovanför ALVA-huvudet, eftersom den satt i App och bara
-// undantog /felsokning. En verkstad som ser ett driftmeddelande från en
-// annan produkt läser det som att den tittar på något halvfärdigt — och
-// det är ett trovärdighetsproblem, inte ett kosmetiskt.
-describe("ALVA-ytan är fri från andra produkters meddelanden", () => {
-  const banner = readFileSync("src/components/PaymentTestModeBanner.tsx", "utf8");
+// Bakgrund: ALVA låg tidigare inbäddad i en värdapplikation, och en
+// driftsatt rot visade värdens butikssida i stället för ALVA. Regeln
+// efter utbrytningen: roten renderar ALVA:s startsida, och ingen av
+// värdens komponenter finns kvar att råka rendera. En verkstad som ser
+// en annan produkts innehåll läser det som att den tittar på något
+// halvfärdigt — och det är ett trovärdighetsproblem, inte ett kosmetiskt.
+describe("det finns bara en produkt i det här repot", () => {
+  const app = readFileSync("src/App.tsx", "utf8");
 
-  it("betalningsbannern undantar både /felsokning och /alva", () => {
-    expect(banner).toContain('"/felsokning"');
-    expect(banner).toContain('"/alva"');
+  it("roten renderar ALVA:s startsida", () => {
+    expect(app).toContain('path="/" element={<AlvaStart />}');
   });
 
-  it("undantaget matchar underliggande sökvägar, inte bara prefix på ordnivå", () => {
-    // "/alvarlig" ska inte räknas som ALVA. Regeln jämför hela segment.
-    expect(banner).toMatch(/pathname === p \|\| pathname\.startsWith\(`\$\{p\}\/`\)/);
+  it("värdapplikationens banner är borta, inte bara avstängd", () => {
+    expect(existsSync("src/components/PaymentTestModeBanner.tsx")).toBe(false);
+    expect(app).not.toContain("PaymentTestModeBanner");
   });
 });
 
@@ -379,16 +379,13 @@ describe("demonstrationsmärkningen är entydig", () => {
 // betalning — och bakom artefaktens CSP blockerades anropet och syntes
 // som ett fel i konsolen.
 //
-// `/pure` är samma modul utan sidoeffekten. Testet låser den, eftersom
-// en `import { loadStripe } from "@stripe/stripe-js"` någonstans räcker
-// för att skjuta upp skriptet igen.
+// Efter utbrytningen ur värdapplikationen är regeln starkare: det finns
+// ingen stripe-modul alls att importera. Testet låser frånvaron,
+// eftersom en enda `loadStripe`-import någonstans räcker för att
+// återinföra skriptladdningen på varje sidvisning.
 describe("ingen betalleverantör laddas", () => {
-  const stripe = readFileSync("src/lib/stripe.ts", "utf8");
-
-  it("stripe-modulen importeras utan sidoeffekt", () => {
-    expect(stripe).toContain('from "@stripe/stripe-js/pure"');
-    // Ett värdeimport från huvudmodulen skulle återinföra skriptladdningen.
-    expect(stripe).not.toMatch(/import \{[^}]*loadStripe[^}]*\} from "@stripe\/stripe-js"/);
+  it("betalleverantörens modul är borta, inte bara oanvänd", () => {
+    expect(existsSync("src/lib/stripe.ts")).toBe(false);
   });
 
   it("ingen ALVA-yta rör en betalleverantör", () => {

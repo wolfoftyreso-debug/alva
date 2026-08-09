@@ -65,16 +65,20 @@ EXKLUDERA="app/src/assets" paketera 03-webb-kalla 03-webb.md app supabase
 # Mellansteg: resurserna läggs i ett eget källträd där varje fil som
 # ensam överstiger budgeten styckas i bitar. DELAT.sha256 bär de
 # ursprungliga filernas summor — mottagarens kvitto på ihopsättningen.
+# Finns ingen resurskatalog blir det inga resursdelar — källpaketet är
+# då hela leveranssteget.
 RESURSROT="$(mktemp -d)"
-while IFS= read -r fil; do
-  mkdir -p "$RESURSROT/$(dirname "$fil")"
-  if (($(stat -c%s "$ROT/$fil") > DELBUDGET)); then
-    split -b "$DELBUDGET" -d -a 2 "$ROT/$fil" "$RESURSROT/$fil.alva-del-"
-    (cd "$ROT" && sha256sum "$fil") >> "$RESURSROT/app/src/assets/DELAT.sha256"
-  else
-    cp "$ROT/$fil" "$RESURSROT/$fil"
-  fi
-done < <(cd "$ROT" && find app/src/assets -type f | sort)
+if [ -d "$ROT/app/src/assets" ]; then
+  while IFS= read -r fil; do
+    mkdir -p "$RESURSROT/$(dirname "$fil")"
+    if (($(stat -c%s "$ROT/$fil") > DELBUDGET)); then
+      split -b "$DELBUDGET" -d -a 2 "$ROT/$fil" "$RESURSROT/$fil.alva-del-"
+      (cd "$ROT" && sha256sum "$fil") >> "$RESURSROT/app/src/assets/DELAT.sha256"
+    else
+      cp "$ROT/$fil" "$RESURSROT/$fil"
+    fi
+  done < <(cd "$ROT" && find app/src/assets -type f | sort)
+fi
 
 del=0 ack=0 resurser=()
 slut_resursdel() {
@@ -87,7 +91,7 @@ while IFS= read -r fil; do
   storlek=$(stat -c%s "$RESURSROT/$fil")
   ((ack > 0 && ack + storlek > DELBUDGET)) && slut_resursdel
   resurser+=("$fil"); ack=$((ack + storlek))
-done < <(cd "$RESURSROT" && find app/src/assets -type f | sort)
+done < <(cd "$RESURSROT" && find app/src/assets -type f 2>/dev/null | sort)
 slut_resursdel
 rm -rf "$RESURSROT"
 

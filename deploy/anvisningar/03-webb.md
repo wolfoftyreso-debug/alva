@@ -9,10 +9,12 @@ parallellt, men med SAMMA bildtagg.
 
 ## Delarna — packa upp allihop innan något byggs
 
-Paket 03 levereras i flera zip-filer: `03-webb-kalla` (källkoden) och
-`03-webb-resurser-1…N` (bildresurserna i `app/src/assets`, delade i
-storleksbegränsade delar för överföringens skull). Delningen är
-teknisk, inte logisk — de är ETT steg:
+Paket 03 levereras som `03-webb-kalla` (källkoden) och — om
+`app/src/assets` innehåller något — `03-webb-resurser-1…N`
+(bildresurser i storleksbegränsade delar för överföringens skull).
+Vilka delar leveransen innehåller framgår av `SHA256SUMS.txt`; finns
+inga resursdelar är källpaketet hela steget. Delningen är teknisk,
+inte logisk — allt `03-webb-*` är ETT steg:
 
 1. Packa upp samtliga `03-webb-*`-filer i samma arbetsträd som övriga
    paket. Vilka delar som finns framgår av `SHA256SUMS.txt` i paket 00.
