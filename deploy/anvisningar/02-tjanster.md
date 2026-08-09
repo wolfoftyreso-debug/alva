@@ -1,5 +1,12 @@
 # Paket 02 · Backendtjänsterna
 
+**Genväg:** paketet innehåller också `server/` och repo-rotens
+`Dockerfile` — hela produkten som EN container (webb på `/`, API under
+`/api`, AI under `/ai`). Är målet en enkel driftsättning: bygg den
+(`docker build -t alva .` från trädets rot, kräver även paket 03
+uppackat), kör, verifiera enligt `AGENTS.md`, och hoppa över resten av
+detta paket och paket 04. Stegen nedan gäller Kubernetes-formen.
+
 Detta paket innehåller `services/`: plattformstjänsten (auth,
 händelse-API, delning, fakturering), AI-orkestern och den delade koden
 i `gemensam/`. Här byggs och publiceras de två backendbilderna.

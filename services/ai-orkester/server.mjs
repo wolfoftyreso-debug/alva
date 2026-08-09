@@ -12,6 +12,7 @@
 //   PORT                 default 8080
 
 import { createServer } from "node:http";
+import { pathToFileURL } from "node:url";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { avsluta, logga, mätvärde, spårFrån, starta } from "./observation.mjs";
@@ -427,7 +428,12 @@ export function skapaServer() {
   });
 }
 
-if (process.env.NODE_ENV !== "test") {
+// Lyssna bara när filen är processens huvudmodul. Den sammansatta
+// servern (server/server.mjs) importerar handteraren och äger då
+// porten själv — en importerad tjänst som också lyssnar vore två
+// servrar i en process.
+const ärHuvudmodul = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (ärHuvudmodul && process.env.NODE_ENV !== "test") {
   skapaServer().listen(PORT, () => {
     console.log(`ai-orkester lyssnar på :${PORT}`);
   });

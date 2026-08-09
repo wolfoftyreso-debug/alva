@@ -26,6 +26,7 @@
 //   PORT                default 8080
 
 import { createServer } from "node:http";
+import { pathToFileURL } from "node:url";
 import crypto, { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { lookup } from "node:dns/promises";
@@ -2927,7 +2928,12 @@ if (process.argv.includes("--kedjesvep")) {
   process.exit(brott > 0 ? 1 : 0);
 }
 
-if (process.env.NODE_ENV !== "test") {
+// Lyssna bara när filen är processens huvudmodul. Den sammansatta
+// servern (server/server.mjs) importerar handteraren och äger då
+// porten själv — en importerad tjänst som också lyssnar vore två
+// servrar i en process.
+const ärHuvudmodul = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (ärHuvudmodul && process.env.NODE_ENV !== "test") {
   // Oförseglad drift ska synas VID START, inte upptäckas i en tvist.
   // Varje avslut varnar redan för sig, men en rad per avslut i en
   // loggström är brus; en rad vid start är ett beslut någon fattat

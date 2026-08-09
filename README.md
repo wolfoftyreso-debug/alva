@@ -28,6 +28,22 @@ Detta repo är hela projektet, inget annat:
   egna vägledningar: `infra/aws/README.md` och `infra/terraform/README.md`.
 - **Drift:** `docs/OPERATIONS.md`
 
+## Kör hela produkten — en server
+
+Landningssidan på `/`, plattformens API under `/api`, AI-orkestern
+under `/ai`. En container, en port, samma ursprung:
+
+```sh
+docker build -t alva . && docker run -p 8080:8080 alva
+```
+
+Utan Docker: bygg klienten (`cd app && npm ci && VITE_PLATTFORM_URL=/api
+VITE_AI_ORKESTER_URL=/ai npm run build`), installera tjänsternas
+beroenden (`npm ci` i `services/plattform` och `services/ai-orkester`)
+och kör `npm start`. Rökprovet `npm run rokprov` bevisar att allt
+svarar. Kubernetes-driften i `infra/` kör samma tjänstekod som egna
+poddar.
+
 ## Utveckling
 
 ```sh

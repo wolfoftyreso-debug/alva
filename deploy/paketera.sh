@@ -55,7 +55,7 @@ echo "paketerar $VERSION ($SHA) → $UT"
 rm -f "$UT"/0[0-5]-*.zip
 
 paketera 01-aws-bas     01-aws-bas.md     infra/aws infra/postgres-init.sql
-paketera 02-tjanster    02-tjanster.md    services
+paketera 02-tjanster    02-tjanster.md    services server Dockerfile AGENTS.md
 
 # Webbklienten delas: koden för sig och bildresurserna i delar om högst
 # DELBUDGET byte — helheten var större än mottagarkanalen tålde. Delarna

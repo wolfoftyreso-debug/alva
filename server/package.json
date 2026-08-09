@@ -1,0 +1,12 @@
+{
+  "name": "alva-server",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ALVA i en process: statisk klient, plattforms-API under /api, AI-orkester under /ai.",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "rokprov": "bash rokprov.sh"
+  }
+}

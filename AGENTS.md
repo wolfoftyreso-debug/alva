@@ -21,11 +21,36 @@ ALVA's public site; this is asserted by the test suite.
     deploy/               Zip packaging for staged agent-driven deployment
     docs/                 Documentation and audit history
 
-## How to build
+## How to deploy — one container (recommended)
 
-All three deployables are containers with Dockerfiles in the repo.
-Use ONE tag for all three (the git SHA). The registry has immutable
-tags — never reuse a tag.
+The whole product runs as ONE server: landing page and app on `/`,
+platform API on `/api`, AI orchestrator on `/ai`, health on `/halsa`.
+This is the simplest correct deployment and what you should do unless
+explicitly asked for the Kubernetes form:
+
+    docker build -t alva .
+    docker run -p 8080:8080 alva
+    curl -fsS http://127.0.0.1:8080/       | grep ALVA    # landing page
+    curl -fsS http://127.0.0.1:8080/api/halsa             # platform API
+    curl -fsS http://127.0.0.1:8080/ai/halsa              # orchestrator
+
+The client inside the image is built for same-origin (`/api`, `/ai`) —
+no CORS, no extra hosts, one port. Runtime configuration (database,
+Anthropic API key, JWT secret, …) is read from environment variables
+documented at the top of `services/plattform/server.mjs` and
+`services/ai-orkester/server.mjs`; without them the server starts in
+demonstration mode, which it states plainly in its startup log.
+
+Without Docker: `cd app && npm ci && VITE_PLATTFORM_URL=/api
+VITE_AI_ORKESTER_URL=/ai npm run build`, then `npm start` from the
+repo root (requires `npm ci` in `services/plattform` and
+`services/ai-orkester` first). Verify with `npm run rokprov`.
+
+## Scaled deployment (Kubernetes) — three images
+
+For the full AWS environment in `infra/`, the services run as separate
+pods with their own Dockerfiles. Use ONE tag for all three (the git
+SHA). The registry has immutable tags — never reuse a tag.
 
     # 1. Backend platform service        (context: services/)
     docker build -f services/plattform/Dockerfile   -t $REG/felsokning-plattform:$TAG   services/
@@ -43,13 +68,6 @@ tags — never reuse a tag.
       --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="<publishable key>" \
       --build-arg VITE_SUPABASE_PROJECT_ID="<project id>" \
       -t $REG/felsokning-web:$TAG app/
-
-For a quick static preview without backends (demo data, hash routing):
-
-    cd app && npm ci
-    VITE_HASH_ROUTER=1 VITE_SUPABASE_URL="https://preview.invalid" \
-      VITE_SUPABASE_PUBLISHABLE_KEY="preview" npm run build
-    # serve app/dist/ as a static site — any host, no rewrites needed
 
 ## Deployment order (AWS, full environment)
 

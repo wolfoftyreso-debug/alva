@@ -1,0 +1,13 @@
+{
+  "name": "alva",
+  "private": true,
+  "version": "3.6.0",
+  "description": "ALVA — guided vehicle diagnostics. One server: landing page on /, platform API on /api, AI orchestrator on /ai.",
+  "scripts": {
+    "start": "node server/server.mjs",
+    "bygg": "npm --prefix app run build",
+    "test": "npm --prefix app exec vitest run",
+    "typkontroll": "npm --prefix app run typkontroll",
+    "rokprov": "bash server/rokprov.sh"
+  }
+}
