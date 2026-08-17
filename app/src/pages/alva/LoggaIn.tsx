@@ -58,8 +58,11 @@ export default function LoggaIn() {
     setArbetar(true);
     setFel("");
     try {
-      await loggaInPlattform(epost, losenord);
-      navigera("/alva/portal");
+      const konto = await loggaInPlattform(epost, losenord);
+      // Teknikerns första vy är diagnosrutan — arbetet, ingenting annat.
+      // Arbetsledning och administration landar i portalen, där
+      // organisationens tillstånd bor.
+      navigera(konto.roll === "tekniker" ? "/felsokning" : "/alva/portal");
     } catch (orsak) {
       // Serverns egen text visas oförändrad. Den vet vad som hände —
       // avstängt konto, spärrat efter för många försök, fel uppgifter —

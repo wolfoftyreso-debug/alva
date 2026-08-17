@@ -4,29 +4,17 @@ import { useFelsokning, metodikForArende } from "@/felsokning/store";
 import { arAvslutat, felbeskrivning, objekt, sistaAktivitet, brief } from "@/felsokning/projektioner";
 import { byggDemoArende } from "@/felsokning/demo";
 import {
-  hamtaAnvandare,
   loggaInPlattform,
-  loggaUtPlattform,
   plattformAktiv,
   plattformKonto,
   registreraPlattform,
-  sattKontoAktiv,
-  skapaAnvandare,
-  type PlattformAnvandare,
   type PlattformKonto,
-  type PlattformRoll,
 } from "@/felsokning/plattform";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { IkonDiagram, IkonKugghjul } from "@/felsokning/ikoner";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
 
 type Filter = "alla" | "pagaende" | "klara";
-
-const ROLL_LABEL: Record<PlattformRoll, string> = {
-  tekniker: "Technician",
-  arbetsledare: "Supervisor",
-  admin: "System administrator",
-};
 
 // Självhostat läge: inloggning mot plattformstjänsten i klustret.
 // Registrering skapar en ny organisation (tenant) med användaren som
@@ -40,40 +28,10 @@ function PlattformInloggning() {
   const [organisation, setOrganisation] = useState("");
   const [fel, setFel] = useState("");
 
-  if (konto) {
-    return (
-      <>
-        <Panel rubrik="Platform account">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-[14px]">
-              <span className="font-semibold">{konto.namn}</span> · {ROLL_LABEL[konto.roll]} ·{" "}
-              {konto.organisation} — synchronization and decision support active.
-            </p>
-            <button
-              className="whitespace-nowrap border border-[#D7DCE2] px-4 py-2 font-semibold text-[#1B1E22] hover:border-[#4D5662]"
-              onClick={() => {
-                loggaUtPlattform();
-                setKonto(null);
-              }}
-            >
-              Sign out
-            </button>
-          </div>
-          {(konto.roll === "arbetsledare" || konto.roll === "admin") && (
-            <Link to="/felsokning/oversikt" className="mt-4 block">
-              <StorKnapp variant="sekundar"><IkonDiagram /> Organization overview</StorKnapp>
-            </Link>
-          )}
-          {konto.roll === "admin" && (
-            <Link to="/felsokning/installningar" className="mt-2 block">
-              <StorKnapp variant="sekundar"><IkonKugghjul /> Organization settings</StorKnapp>
-            </Link>
-          )}
-        </Panel>
-        {konto.roll === "admin" && <AnvandarAdmin />}
-      </>
-    );
-  }
+  // Inloggad: kontot och användaradministrationen hör hemma under
+  // Inställningar. Diagnosrutan är teknikerns startskärm och visar
+  // arbetet — inget annat.
+  if (konto) return null;
 
   return (
     <Panel rubrik="Platform account">
@@ -135,125 +93,6 @@ function PlattformInloggning() {
   );
 }
 
-// Användarhantering för systemadministratören: lista och skapa användare
-// i den egna organisationen (servern verifierar behörigheten).
-function AnvandarAdmin() {
-  const [oppen, setOppen] = useState(false);
-  const [lista, setLista] = useState<PlattformAnvandare[]>([]);
-  const [epost, setEpost] = useState("");
-  const [namn, setNamn] = useState("");
-  const [losenord, setLosenord] = useState("");
-  const [roll, setRoll] = useState<PlattformRoll>("tekniker");
-  const [fel, setFel] = useState("");
-
-  const uppdatera = async () => {
-    try {
-      setLista(await hamtaAnvandare());
-    } catch {
-      setFel("Could not retrieve users.");
-    }
-  };
-
-  if (!oppen) {
-    return (
-      <Panel rubrik="Users">
-        <StorKnapp
-          variant="sekundar"
-          onClick={() => {
-            setOppen(true);
-            uppdatera();
-          }}
-        >
-          Manage users in the organization
-        </StorKnapp>
-      </Panel>
-    );
-  }
-
-  return (
-    <Panel rubrik="Users">
-      {lista.map((anv) => (
-        <div
-          key={anv.id}
-          className="flex items-center justify-between gap-4 border-b border-[#D7DCE2] py-2 last:border-0"
-        >
-          <p className="min-w-0 text-[14px]">
-            <span className={`font-semibold ${anv.aktiv === false ? "text-[#4D5662] line-through" : ""}`}>
-              {anv.namn}
-            </span>{" "}
-            · {ROLL_LABEL[anv.roll]} <span className="text-[#4D5662]">{anv.epost}</span>
-            {anv.aktiv === false && (
-              <span className="ml-2 text-[12px] font-semibold text-[#8B1A1A]">Disabled</span>
-            )}
-          </p>
-          <button
-            type="button"
-            className={`shrink-0 border px-2 py-2 text-[12px] font-semibold ${
-              anv.aktiv === false
-                ? "border-[#005CA9] bg-white text-[#005CA9]"
-                : "border-[#8B1A1A] bg-white text-[#8B1A1A]"
-            }`}
-            onClick={async () => {
-              setFel("");
-              try {
-                await sattKontoAktiv(anv.id, anv.aktiv === false);
-                await uppdatera();
-              } catch (misslyckande) {
-                setFel(misslyckande instanceof Error ? misslyckande.message : "Something went wrong.");
-              }
-            }}
-          >
-            {anv.aktiv === false ? "Reopen" : "Disable"}
-          </button>
-        </div>
-      ))}
-      <p className="mt-2 text-[12px] text-[#4D5662]">
-        Disabling takes effect immediately — active sessions on that person's devices end at once.
-      </p>
-      <form
-        className="mt-4"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setFel("");
-          try {
-            await skapaAnvandare(epost, losenord, namn, roll);
-            setEpost("");
-            setNamn("");
-            setLosenord("");
-            await uppdatera();
-          } catch (misslyckande) {
-            setFel(misslyckande instanceof Error ? misslyckande.message : "Something went wrong.");
-          }
-        }}
-      >
-        <TextFalt label="Name" varde={namn} satt={setNamn} />
-        <TextFalt label="E-mail" varde={epost} satt={setEpost} />
-        <TextFalt label="Password (at least 8 characters)" varde={losenord} satt={setLosenord} losenord />
-        <div className="mb-4 grid grid-cols-3 gap-2">
-          {(Object.keys(ROLL_LABEL) as PlattformRoll[]).map((valbar) => (
-            <button
-              key={valbar}
-              type="button"
-              onClick={() => setRoll(valbar)}
-              className={`min-h-9 border text-[12px] font-semibold ${
-                roll === valbar
-                  ? "border-[#005CA9] bg-[#005CA9] text-white"
-                  : "border-[#D7DCE2] bg-[#F6F7F8] text-[#1B1E22]"
-              }`}
-            >
-              {ROLL_LABEL[valbar]}
-            </button>
-          ))}
-        </div>
-        {fel && <p className="mb-4 font-semibold text-[#8B1A1A]">{fel}</p>}
-        <StorKnapp type="submit" disabled={!epost.trim() || !namn.trim() || losenord.length < 8}>
-          Create user
-        </StorKnapp>
-      </form>
-    </Panel>
-  );
-}
-
 // Dashboard enligt direktivet: endast det viktigaste — mina ärenden,
 // pågående, klara och starta nytt ärende.
 export default function Arendelista() {
@@ -304,7 +143,31 @@ export default function Arendelista() {
   return (
     <FelsokningSkal
       rubrik="Guided Diagnostics"
-      hoger={<span className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">{anvandare}</span>}
+      hoger={
+        // Diagnosrutan är teknikerns startskärm. Härifrån når man
+        // statistiken och inställningarna — de ligger i sidhuvudet, inte
+        // som paneler i arbetsflödet. På smal skärm bär ikonen ensam;
+        // aria-label finns alltid.
+        <div className="flex items-center gap-4">
+          <span className="hidden text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4D5662] md:inline">
+            {anvandare}
+          </span>
+          <Link
+            to="/felsokning/oversikt"
+            aria-label="Statistics"
+            className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4D5662] hover:text-[#005CA9]"
+          >
+            <IkonDiagram /> <span className="hidden sm:inline">Statistics</span>
+          </Link>
+          <Link
+            to="/felsokning/installningar"
+            aria-label="Settings"
+            className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#4D5662] hover:text-[#005CA9]"
+          >
+            <IkonKugghjul /> <span className="hidden sm:inline">Settings</span>
+          </Link>
+        </div>
+      }
     >
       <Link to="/felsokning/nytt">
         <StorKnapp className="mb-4">+ New case</StorKnapp>
@@ -326,35 +189,13 @@ export default function Arendelista() {
         </div>
       )}
 
-      {alla.length === 0 && (
-        <Panel rubrik="Get started">
-          <p className="mb-4 text-[14px] text-[#1B1E22]">
-            No cases yet. Start by identifying an object — or explore a finished demo case with a complete work log, brief and customer report.
-          </p>
-          <StorKnapp variant="sekundar" onClick={() => laggInArende(byggDemoArende(nastaNummer, anvandare))}>
-            Create demo case (Volvo XC60, vibration)
-          </StorKnapp>
-        </Panel>
-      )}
-
       {lista.length === 0 && alla.length > 0 && (
         <p className="text-center text-[14px] text-[#4D5662]">No cases in this filter.</p>
       )}
 
-      {plattformAktiv() && <PlattformInloggning />}
-
-      {!plattformKonto() && (
-        <Link to="/felsokning/installningar" className="mb-4 block">
-          <StorKnapp variant="sekundar"><IkonKugghjul /> Settings</StorKnapp>
-        </Link>
-      )}
-
-      <Panel rubrik="Decision support">
-        <p className="text-[#1B1E22]">
-          When you are signed in the system helps while you work: it proposes the next step from what you document, reviews the whole case on request and drafts the handover. It always separates verified from hypothesis — and never states a root cause that is not confirmed. Nothing to install or configure; it is part of the service. Without sign-in the checklist guides you step by step.
-        </p>
-      </Panel>
-
+      {/* Ärendet öppnas i ett eget fönster — teknikern behåller
+          diagnosrutan som den är och kan ha flera ärenden uppe
+          samtidigt, ett per bil på golvet. */}
       {lista.map((arende) => {
         const o = objekt(arende);
         const fel = felbeskrivning(arende);
@@ -362,7 +203,13 @@ export default function Arendelista() {
         const avslutat = arAvslutat(arende);
         const b = brief(arende, metodikForArende(arende), new Date().toISOString());
         return (
-          <Link key={arende.id} to={`/felsokning/arende/${arende.id}`} className="block">
+          <Link
+            key={arende.id}
+            to={`/felsokning/arende/${arende.id}`}
+            target="_blank"
+            rel="noopener"
+            className="block"
+          >
             <div className="mb-4 border border-[#D7DCE2] bg-[#F6F7F8] p-4 hover:border-[#005CA9]">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[12px] font-semibold uppercase tracking-widest text-[#4D5662]">
@@ -388,6 +235,29 @@ export default function Arendelista() {
           </Link>
         );
       })}
+
+      {alla.length === 0 && (
+        <Panel rubrik="Get started">
+          <p className="mb-4 text-[14px] text-[#1B1E22]">
+            No cases yet. Start by identifying an object — or explore a finished demo case with a complete work log, brief and customer report.
+          </p>
+          <StorKnapp variant="sekundar" onClick={() => laggInArende(byggDemoArende(nastaNummer, anvandare))}>
+            Create demo case (Volvo XC60, vibration)
+          </StorKnapp>
+        </Panel>
+      )}
+
+      {plattformAktiv() && <PlattformInloggning />}
+
+      {/* Beslutsstödet förklaras för den som är ny — inte på varje
+          besök. Har listan ärenden är rutan brus framför arbetet. */}
+      {alla.length === 0 && (
+        <Panel rubrik="Decision support">
+          <p className="text-[#1B1E22]">
+            When you are signed in the system helps while you work: it proposes the next step from what you document, reviews the whole case on request and drafts the handover. It always separates verified from hypothesis — and never states a root cause that is not confirmed. Nothing to install or configure; it is part of the service. Without sign-in the checklist guides you step by step.
+          </p>
+        </Panel>
+      )}
     </FelsokningSkal>
   );
 }

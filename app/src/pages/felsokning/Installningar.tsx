@@ -12,15 +12,22 @@ import {
   sparaInstallningar,
   type Installningar as Inst,
 } from "@/felsokning/installningar";
+import { useNavigate } from "react-router-dom";
 import {
+  hamtaAnvandare,
   hamtaIntegrationer,
   hamtaLeverantorer,
+  loggaUtPlattform,
   plattformAktiv,
   plattformKonto,
+  sattKontoAktiv,
+  skapaAnvandare,
   sparaIntegration,
   taBortIntegration,
   type Integration,
   type Leverantor,
+  type PlattformAnvandare,
+  type PlattformRoll,
 } from "@/felsokning/plattform";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 
@@ -193,6 +200,164 @@ function Integrationer() {
   );
 }
 
+
+const ROLL_LABEL: Record<PlattformRoll, string> = {
+  tekniker: "Technician",
+  arbetsledare: "Supervisor",
+  admin: "System administrator",
+};
+
+// Kontot bor här, inte på startskärmen: diagnosrutan visar arbetet,
+// och den som vill se vem den är inloggad som, logga ut eller hantera
+// användare klickar sig hit. Panelen visas för ALLA inloggade roller —
+// utloggningen får aldrig kräva administratörsbehörighet.
+function Kontopanel() {
+  const navigera = useNavigate();
+  const konto = plattformKonto();
+  if (!plattformAktiv() || !konto) return null;
+  return (
+    <>
+      <Panel rubrik="Platform account">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-[14px]">
+            <span className="font-semibold">{konto.namn}</span> · {ROLL_LABEL[konto.roll]} ·{" "}
+            {konto.organisation} — synchronization and decision support active.
+          </p>
+          <button
+            className="whitespace-nowrap border border-[#D7DCE2] px-4 py-2 font-semibold text-[#1B1E22] hover:border-[#4D5662]"
+            onClick={() => {
+              loggaUtPlattform();
+              navigera("/felsokning");
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      </Panel>
+      {konto.roll === "admin" && <AnvandarAdmin />}
+    </>
+  );
+}
+
+// Användarhantering för systemadministratören: lista och skapa användare
+// i den egna organisationen (servern verifierar behörigheten).
+function AnvandarAdmin() {
+  const [oppen, setOppen] = useState(false);
+  const [lista, setLista] = useState<PlattformAnvandare[]>([]);
+  const [epost, setEpost] = useState("");
+  const [namn, setNamn] = useState("");
+  const [losenord, setLosenord] = useState("");
+  const [roll, setRoll] = useState<PlattformRoll>("tekniker");
+  const [fel, setFel] = useState("");
+
+  const uppdatera = async () => {
+    try {
+      setLista(await hamtaAnvandare());
+    } catch {
+      setFel("Could not retrieve users.");
+    }
+  };
+
+  if (!oppen) {
+    return (
+      <Panel rubrik="Users">
+        <StorKnapp
+          variant="sekundar"
+          onClick={() => {
+            setOppen(true);
+            uppdatera();
+          }}
+        >
+          Manage users in the organization
+        </StorKnapp>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel rubrik="Users">
+      {lista.map((anv) => (
+        <div
+          key={anv.id}
+          className="flex items-center justify-between gap-4 border-b border-[#D7DCE2] py-2 last:border-0"
+        >
+          <p className="min-w-0 text-[14px]">
+            <span className={`font-semibold ${anv.aktiv === false ? "text-[#4D5662] line-through" : ""}`}>
+              {anv.namn}
+            </span>{" "}
+            · {ROLL_LABEL[anv.roll]} <span className="text-[#4D5662]">{anv.epost}</span>
+            {anv.aktiv === false && (
+              <span className="ml-2 text-[12px] font-semibold text-[#8B1A1A]">Disabled</span>
+            )}
+          </p>
+          <button
+            type="button"
+            className={`shrink-0 border px-2 py-2 text-[12px] font-semibold ${
+              anv.aktiv === false
+                ? "border-[#005CA9] bg-white text-[#005CA9]"
+                : "border-[#8B1A1A] bg-white text-[#8B1A1A]"
+            }`}
+            onClick={async () => {
+              setFel("");
+              try {
+                await sattKontoAktiv(anv.id, anv.aktiv === false);
+                await uppdatera();
+              } catch (misslyckande) {
+                setFel(misslyckande instanceof Error ? misslyckande.message : "Something went wrong.");
+              }
+            }}
+          >
+            {anv.aktiv === false ? "Reopen" : "Disable"}
+          </button>
+        </div>
+      ))}
+      <p className="mt-2 text-[12px] text-[#4D5662]">
+        Disabling takes effect immediately — active sessions on that person's devices end at once.
+      </p>
+      <form
+        className="mt-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setFel("");
+          try {
+            await skapaAnvandare(epost, losenord, namn, roll);
+            setEpost("");
+            setNamn("");
+            setLosenord("");
+            await uppdatera();
+          } catch (misslyckande) {
+            setFel(misslyckande instanceof Error ? misslyckande.message : "Something went wrong.");
+          }
+        }}
+      >
+        <TextFalt label="Name" varde={namn} satt={setNamn} />
+        <TextFalt label="E-mail" varde={epost} satt={setEpost} />
+        <TextFalt label="Password (at least 8 characters)" varde={losenord} satt={setLosenord} losenord />
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          {(Object.keys(ROLL_LABEL) as PlattformRoll[]).map((valbar) => (
+            <button
+              key={valbar}
+              type="button"
+              onClick={() => setRoll(valbar)}
+              className={`min-h-9 border text-[12px] font-semibold ${
+                roll === valbar
+                  ? "border-[#005CA9] bg-[#005CA9] text-white"
+                  : "border-[#D7DCE2] bg-[#F6F7F8] text-[#1B1E22]"
+              }`}
+            >
+              {ROLL_LABEL[valbar]}
+            </button>
+          ))}
+        </div>
+        {fel && <p className="mb-4 font-semibold text-[#8B1A1A]">{fel}</p>}
+        <StorKnapp type="submit" disabled={!epost.trim() || !namn.trim() || losenord.length < 8}>
+          Create user
+        </StorKnapp>
+      </form>
+    </Panel>
+  );
+}
+
 export default function Installningar() {
   const konto = plattformKonto();
   const inloggad = plattformAktiv() && !!konto;
@@ -209,6 +374,7 @@ export default function Installningar() {
   if (!farAndra) {
     return (
       <FelsokningSkal rubrik="Settings" tillbaka={{ till: "/felsokning", text: "Cases" }}>
+        <Kontopanel />
         <Panel>
           <p className="text-[14px] text-[#1B1E22]">
             Organization settings are managed by your system administrator.
@@ -242,6 +408,7 @@ export default function Installningar() {
 
   return (
     <FelsokningSkal rubrik="Settings" tillbaka={{ till: "/felsokning", text: "Cases" }}>
+      <Kontopanel />
       <Panel>
         <p className="text-[#1B1E22]">
           Choose what is shown when a new case is started.{" "}
