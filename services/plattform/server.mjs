@@ -46,6 +46,7 @@ import { STATUSAR, granskaAnmalan, sammanhang as byggSammanhang, supportbeteckni
 import { NIVAER, abonnemangstillstand, behorighet, besked, forfallenFakturering, nivaFor } from "./abonnemang.mjs";
 import { fakturaPdf } from "./fakturapdf.mjs";
 import { STANDARD, valjSprak, t } from "./sprak/index.mjs";
+import { MINSTA_INSPELNINGAR, fordonsnyckel, jamforMotProfil, nyProfil, uppdateraProfil } from "./ljudprofil.mjs";
 import { forsegla, grund, lank, provaForsegling, verifiera as verifieraKedja } from "./kedja.mjs";
 import {
   MASKERAT,
@@ -1716,6 +1717,56 @@ export function skapaServer() {
           ...korsHuvuden(res),
         });
         return res.end(pdf);
+      }
+
+      // ---- Ljudreferensprofiler (ALVA-DOC-0012, lyft 5) --------------
+      //
+      // Servern jämför SÄRDRAG, aldrig ljud: klienten räknar spektrumet
+      // lokalt och skickar en handfull tal — inga ljudfiler, ingen
+      // uppladdningsinfrastruktur. Profilen är organisationens EGEN
+      // inlärda normalbild per fordonstyp och mätsekvens; det finns
+      // inga fabriksreferenser, och under MINSTA_INSPELNINGAR svarar
+      // jämförelsen att referensen inte räcker i stället för att gissa.
+      if (vag === "/api/ljudprofiler" && req.method === "GET") {
+        const rader = await pool.query(
+          `select fordonsnyckel, sekvens, (profil->>'antal')::int as antal, uppdaterad
+             from ljudprofiler where organisation_id = $1
+             order by fordonsnyckel, sekvens`,
+          [anspr.org],
+        );
+        return svara(res, 200, { profiler: rader.rows, minsta: MINSTA_INSPELNINGAR });
+      }
+
+      if (vag === "/api/ljudprofiler/traning" && req.method === "POST") {
+        const { fordon, sekvens, sardrag } = await lasKropp(req);
+        const nyckel = fordonsnyckel(fordon);
+        if (!nyckel || !sekvens || typeof sardrag !== "object" || sardrag === null || Array.isArray(sardrag)) {
+          return svara(res, 400, { error: "fordon, sekvens och sardrag krävs." });
+        }
+        const rad = await pool.query(
+          `select profil from ljudprofiler
+             where organisation_id = $1 and fordonsnyckel = $2 and sekvens = $3`,
+          [anspr.org, nyckel, sekvens],
+        );
+        const profil = uppdateraProfil(rad.rows[0]?.profil ?? nyProfil(), sardrag);
+        await pool.query(
+          `insert into ljudprofiler (organisation_id, fordonsnyckel, sekvens, profil, uppdaterad)
+             values ($1, $2, $3, $4, now())
+           on conflict (organisation_id, fordonsnyckel, sekvens)
+             do update set profil = excluded.profil, uppdaterad = now()`,
+          [anspr.org, nyckel, sekvens, JSON.stringify(profil)],
+        );
+        return svara(res, 200, { antal: profil.antal, anvandbar: profil.antal >= MINSTA_INSPELNINGAR });
+      }
+
+      if (vag === "/api/ljudprofiler/jamfor" && req.method === "POST") {
+        const { fordon, sekvens, sardrag } = await lasKropp(req);
+        const rad = await pool.query(
+          `select profil from ljudprofiler
+             where organisation_id = $1 and fordonsnyckel = $2 and sekvens = $3`,
+          [anspr.org, fordonsnyckel(fordon), sekvens ?? ""],
+        );
+        return svara(res, 200, jamforMotProfil(rad.rows[0]?.profil ?? null, sardrag ?? {}));
       }
 
       // ---- Support och felanmälan (ALVA-PROC-0050) -------------------

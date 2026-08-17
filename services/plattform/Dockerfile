@@ -7,7 +7,11 @@ RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
 # Byggkontexten är services, så den delade
 # observationsmodulen kan hämtas utan att dupliceras.
 COPY gemensam/observation.mjs ./
-COPY plattform/server.mjs plattform/bilagor.mjs plattform/openapi.yaml plattform/ecm-regler.json plattform/integrationer.json ./
+# Servern importerar hela sin modulflora från ./ — listan var tidigare
+# fem filer och containern hade kraschat på första importen av t.ex.
+# grind.mjs. Kopiera allt den faktiskt läser.
+COPY plattform/*.mjs plattform/openapi.yaml plattform/ecm-regler.json plattform/integrationer.json ./
+COPY plattform/sprak ./sprak
 
 ENV NODE_ENV=production PORT=8080
 USER node

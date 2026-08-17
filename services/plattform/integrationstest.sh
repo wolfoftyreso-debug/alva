@@ -1271,6 +1271,32 @@ DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
   node manadsfakturering.mjs > /tmp/mf2.json
 kontroll "andra korningen dubbelfakturerar inte" "$(cat /tmp/mf2.json | falt .antal)" "0"
 
+# 22b. Ljudreferensprofiler (ALVA-DOC-0012, lyft 5): särdrag, aldrig
+# ljud. Under tre inspelningar är referensen obrukbar; från tre jämförs
+# med z-poäng; org B ser aldrig org A:s profil.
+TRAN1=$(curl -s -X POST "$BAS/api/ljudprofiler/traning" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"fordon":"Volvo XC60","sekvens":"A","sardrag":{"centroid":400,"band0":0.5}}')
+kontroll "en inspelning ar ingen referens" "$(echo "$TRAN1" | falt .anvandbar)" "false"
+JFR=$(curl -s -X POST "$BAS/api/ljudprofiler/jamfor" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"fordon":"volvo xc60","sekvens":"A","sardrag":{"centroid":400,"band0":0.5}}')
+kontroll "jamforelse under minsta antal sager ifran" "$(echo "$JFR" | falt .anvandbar)" "false"
+curl -s -X POST "$BAS/api/ljudprofiler/traning" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"fordon":"VOLVO  XC60","sekvens":"A","sardrag":{"centroid":410,"band0":0.52}}' >/dev/null
+TRAN3=$(curl -s -X POST "$BAS/api/ljudprofiler/traning" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"fordon":"volvo xc60","sekvens":"A","sardrag":{"centroid":390,"band0":0.48}}')
+kontroll "tre inspelningar gor referensen brukbar" "$(echo "$TRAN3" | falt .antal)" "3"
+JFR_INOM=$(curl -s -X POST "$BAS/api/ljudprofiler/jamfor" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"fordon":"Volvo XC60","sekvens":"A","sardrag":{"centroid":405,"band0":0.5}}')
+kontroll "nara referensen bedoms inom" "$(echo "$JFR_INOM" | falt .bedomning)" "inom_referens"
+JFR_AVV=$(curl -s -X POST "$BAS/api/ljudprofiler/jamfor" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' -d '{"fordon":"Volvo XC60","sekvens":"A","sardrag":{"centroid":700,"band0":0.9}}')
+kontroll "langt ifran bedoms avvikande" "$(echo "$JFR_AVV" | falt .bedomning)" "avvikande"
+JFR_B=$(curl -s -X POST "$BAS/api/ljudprofiler/jamfor" -H "Authorization: Bearer $TOKEN_B" \
+  -H 'Content-Type: application/json' -d '{"fordon":"Volvo XC60","sekvens":"A","sardrag":{"centroid":405,"band0":0.5}}')
+kontroll "org B ser inte org A:s referens" "$(echo "$JFR_B" | falt .anvandbar)" "false"
+LISTA=$(curl -s "$BAS/api/ljudprofiler" -H "Authorization: Bearer $TOKEN_A")
+kontroll "profillistan visar antalet" "$(echo "$LISTA" | falt '.profiler[0].antal')" "3"
+
 # 23. Spärren: last abonnemang stoppar nya arenden men aldrig lasning
 # Fakturor ar oforanderliga, sa forfallet kan inte backas in i en
 # befintlig. Det utfardas i stallet en faktura med gammalt

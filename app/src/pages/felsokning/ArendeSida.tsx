@@ -1461,7 +1461,7 @@ function GuideFlik({
       {/* Akustisk diagnos (ALVA-DOC-0012, lyft 3): inspelning och
           spektralanalys i webbläsaren, dokumenterad som schemats egna
           händelser. Hopfälld tills den behövs. */}
-      <Ljudpanel skicka={skicka} />
+      <Ljudpanel skicka={skicka} fordon={objekt(arende)?.beskrivning} />
 
       {!kanAvslutas && <Avslutshinder hinder={hinder} />}
       <div className="grid grid-cols-2 gap-2">

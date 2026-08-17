@@ -116,6 +116,6 @@ describe("händelserna passerar serverns egen granskning", () => {
 describe("panelen är monterad i ärendevyn", () => {
   it("ArendeSida renderar Ljudpanel med skicka", () => {
     const sida = readFileSync("src/pages/felsokning/ArendeSida.tsx", "utf8");
-    expect(sida).toContain("<Ljudpanel skicka={skicka} />");
+    expect(sida).toContain("<Ljudpanel skicka={skicka} fordon={objekt(arende)?.beskrivning} />");
   });
 });

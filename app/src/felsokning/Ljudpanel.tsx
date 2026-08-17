@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { Panel, StorKnapp, TextFalt } from "./ui";
 import { IkonMik } from "./ikoner";
 import type { Handelse } from "./domain";
+import { type Ljudjamforelse, jamforLjudprofil, plattformAktiv, tranaLjudprofil } from "./plattform";
 import {
   MATSEKVENSER,
   type Sekvens,
@@ -22,6 +23,7 @@ import {
   hypoteshandelse,
   ljudforslag,
   ljudhandelser,
+  profilsardrag,
   stoppregler,
 } from "./ljuddiagnos";
 
@@ -30,7 +32,7 @@ const ALLVARSFARG: Record<Stoppregel["allvar"], string> = {
   varning: "#8A5A00",
 };
 
-export function Ljudpanel({ skicka }: { skicka: (h: Handelse) => void }) {
+export function Ljudpanel({ skicka, fordon }: { skicka: (h: Handelse) => void; fordon?: string }) {
   const [oppen, setOppen] = useState(false);
   const [sekvens, setSekvens] = useState<Sekvens>("A");
   const [rpmText, setRpmText] = useState("");
@@ -40,6 +42,8 @@ export function Ljudpanel({ skicka }: { skicka: (h: Handelse) => void }) {
   const [resultat, setResultat] = useState<Spektralresultat | null>(null);
   const [dokumenterat, setDokumenterat] = useState(false);
   const [fel, setFel] = useState("");
+  const [jamforelse, setJamforelse] = useState<Ljudjamforelse | null>(null);
+  const [referensSvar, setReferensSvar] = useState("");
   const inspelare = useRef<MediaRecorder | null>(null);
   const bitar = useRef<Blob[]>([]);
   const klocka = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -48,6 +52,8 @@ export function Ljudpanel({ skicka }: { skicka: (h: Handelse) => void }) {
   useEffect(() => {
     setResultat(null);
     setDokumenterat(false);
+    setJamforelse(null);
+    setReferensSvar("");
   }, [sekvens]);
 
   const stoppaKlocka = () => {
@@ -205,6 +211,92 @@ export function Ljudpanel({ skicka }: { skicka: (h: Handelse) => void }) {
                 </div>
               </div>
             ))}
+
+          {/* Referensprofilen — organisationens egen inlärda normalbild
+              för fordonstypen. Jämförelsen skickar särdrag, aldrig ljud,
+              och träning kräver ett aktivt val: bara en frisk bil får
+              lära referensen vad friskt låter som. */}
+          {plattformAktiv() && fordon && (
+            <div className="mt-4 border-t border-[#D7DCE2] pt-4">
+              <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">
+                Reference profile — {fordon}
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <StorKnapp
+                  variant="sekundar"
+                  onClick={async () => {
+                    setReferensSvar("");
+                    try {
+                      setJamforelse(await jamforLjudprofil(fordon, sekvens, profilsardrag(resultat)));
+                    } catch (misslyckande) {
+                      setReferensSvar(misslyckande instanceof Error ? misslyckande.message : "Failed.");
+                    }
+                  }}
+                >
+                  Compare against reference
+                </StorKnapp>
+                <StorKnapp
+                  variant="sekundar"
+                  onClick={async () => {
+                    setReferensSvar("");
+                    try {
+                      const svar = await tranaLjudprofil(fordon, sekvens, profilsardrag(resultat));
+                      setReferensSvar(
+                        `Added. The reference now holds ${svar.antal} recording(s)` +
+                          (svar.anvandbar ? "." : " — not yet usable."),
+                      );
+                    } catch (misslyckande) {
+                      setReferensSvar(misslyckande instanceof Error ? misslyckande.message : "Failed.");
+                    }
+                  }}
+                >
+                  Add as known-good
+                </StorKnapp>
+              </div>
+              <p className="mt-2 text-[12px] text-[#4D5662]">
+                Add a recording only when the vehicle is verified healthy — the reference learns what
+                healthy sounds like from your own documented recordings, nothing else.
+              </p>
+              {referensSvar && <p className="mt-2 text-[13px] font-semibold text-[#1B1E22]">{referensSvar}</p>}
+              {jamforelse && (
+                <div className="mt-2 text-[13px] text-[#1B1E22]">
+                  {jamforelse.anvandbar ? (
+                    <>
+                      <p className="font-semibold">
+                        {jamforelse.bedomning === "avvikande"
+                          ? `Deviates from the reference (mean z ${jamforelse.snittZ}, max ${jamforelse.maxZ})`
+                          : `Within the reference (mean z ${jamforelse.snittZ})`}
+                        {" · "}based on {jamforelse.antalIReferens} recording(s)
+                      </p>
+                      {(jamforelse.avvikande?.length ?? 0) > 0 && (
+                        <p className="mt-2 text-[#4D5662]">Deviating features: {jamforelse.avvikande?.join(", ")}</p>
+                      )}
+                      <div className="mt-2">
+                        <StorKnapp
+                          variant="sekundar"
+                          onClick={() =>
+                            skicka({
+                              typ: "observation",
+                              text:
+                                `Acoustic reference comparison, sequence ${sekvens}, vehicle type "${fordon}": ` +
+                                (jamforelse.bedomning === "avvikande"
+                                  ? `deviates from the organization's reference (mean z ${jamforelse.snittZ}, max ${jamforelse.maxZ}, features: ${jamforelse.avvikande?.join(", ") || "-"})`
+                                  : `within the organization's reference (mean z ${jamforelse.snittZ})`) +
+                                `, reference built from ${jamforelse.antalIReferens} documented recording(s).`,
+                            })
+                          }
+                        >
+                          Document the comparison
+                        </StorKnapp>
+                      </div>
+                    </>
+                  ) : (
+                    <p>{jamforelse.orsak}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Panel>

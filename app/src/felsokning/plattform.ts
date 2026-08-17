@@ -101,6 +101,44 @@ export async function skapaAnvandare(
 
 // Stänga av eller öppna ett konto. En avstängning återkallar samtidigt
 // pågående sessioner — annars vore den verkningslös tills token gick ut.
+// Ljudreferensprofiler (ALVA-DOC-0012, lyft 5): särdrag skickas,
+// aldrig ljud. Servern svarar ärligt när referensen inte räcker.
+export interface Ljudjamforelse {
+  anvandbar: boolean;
+  orsak?: string;
+  antalIReferens?: number;
+  snittZ?: number;
+  maxZ?: number;
+  avvikande?: string[];
+  bedomning?: "inom_referens" | "avvikande";
+}
+
+export async function tranaLjudprofil(
+  fordon: string,
+  sekvens: string,
+  sardrag: Record<string, number>,
+): Promise<{ antal: number; anvandbar: boolean }> {
+  const res = await plattformFetch("/api/ljudprofiler/traning", {
+    method: "POST",
+    body: JSON.stringify({ fordon, sekvens, sardrag }),
+  });
+  if (!res.ok) throw new Error("The reference profile could not be updated.");
+  return res.json();
+}
+
+export async function jamforLjudprofil(
+  fordon: string,
+  sekvens: string,
+  sardrag: Record<string, number>,
+): Promise<Ljudjamforelse> {
+  const res = await plattformFetch("/api/ljudprofiler/jamfor", {
+    method: "POST",
+    body: JSON.stringify({ fordon, sekvens, sardrag }),
+  });
+  if (!res.ok) throw new Error("The comparison could not be performed.");
+  return res.json();
+}
+
 export async function sattKontoAktiv(id: string, aktiv: boolean): Promise<void> {
   const res = await plattformFetch(`/api/anvandare/${id}/${aktiv ? "aktivera" : "avaktivera"}`, {
     method: "POST",

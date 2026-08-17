@@ -90,11 +90,33 @@ Tillstånden behöver ingen påminnelsekörning (de härleds), och en
 e-postkanal är ett eget beslut med egen infrastruktur — bokförs som
 kandidat, inte som smygberoende.
 
+## Lyft 5 · Ljudreferensprofiler — ramverkslöst, utan påhittade referenser (KLART)
+
+Mekanismen ur kopians ljudtjänst — profil per fordonstyp och
+mätsekvens med medel/spridning per särdrag, z-jämförelse — omkonstruerad
+enligt plattformens regler. Det viktigaste ärlighetsfyndet: kopians tre
+"tränade referensprofiler" för namngivna bilmodeller var SYNTETISKA
+(identiska toppvärden, "5 inspelningar" som aldrig gjorts). De följde
+inte med.
+
+| Kopians konstruktion | Lyftets |
+| --- | --- |
+| Express+SQLite+ML-paket, egen tjänst med ljuduppladdning | Delad ren modul (`ljudprofil.mjs`, identisk klient/server som spärrlistorna) + tre routes i plattformen med pg. Servern jämför SÄRDRAG (tyngdpunkt + åtta bandenergier) — ljudet lämnar aldrig webbläsaren |
+| Fabriksprofiler som såg tränade ut | Inga. En profil byggs enbart av organisationens egna inspelningar, märkta friska av teknikern — och under tre inspelningar svarar jämförelsen att referensen inte räcker |
+| Godtycklig std i syntetdata | Welford-uppdatering med spridningsgolv, låst mot naiva formler i test |
+
+Verifiering: 17 nya enhetstester (Welford, z-gränser, ärlighetsreglerna,
+modulparitet klient/server) och sju nya integrationskontroller mot
+riktig Postgres (obrukbar under tre, brukbar från tre, inom/avvikande,
+organisationsisolering). I förbifarten rättades plattformens Dockerfile:
+kopieringslistan saknade merparten av serverns moduler — containern
+hade kraschat på första importen.
+
 ## Kvar att lyfta
 
-1. **Referensprofiler för ljud (server)** — jämförelse mot inlärda
-   profiler per fordonstyp; kräver den ramverkslösa omkonstruktionen
-   av kopians ljudtjänst (Express+SQLite+ML ersätts med pg och egen
-   kod) innan den släpps in.
-2. **E-postkanal** (fakturor, påminnelser) — eget beslut om transport
+1. **E-postkanal** (fakturor, påminnelser) — eget beslut om transport
    (självhostad SMTP-relä kontra SES) innan något får skicka.
+
+Därmed är samtliga lyftbara spår ur serverkopian antingen inflätade
+eller avvisade med skäl. Flätningen är avslutad; e-postkanalen står
+kvar som öppet beslut.

@@ -105,9 +105,16 @@ export interface Spektralresultat {
   snrDb: number;
   /** Frekvens ÷ rotationsfrekvens — bara när varvtal angivits. */
   ordning?: number;
+  /** Spektral tyngdpunkt — var energin bor. */
+  centroidHz: number;
+  /** Relativ energi i åtta logaritmiska band 50 Hz–8 kHz, summa 1. */
+  band: number[];
   samplefrekvens: number;
   varaktighetS: number;
 }
+
+/** Bandgränserna: åtta logaritmiska band mellan 50 Hz och 8 kHz. */
+export const BANDGRANSER = Array.from({ length: 9 }, (_, i) => 50 * Math.pow(8000 / 50, i / 8));
 
 const FFT_STORLEK = 2048;
 const HOPP = 1024;
@@ -193,14 +200,47 @@ export function analyseraKanal(kanal: Float32Array, samplefrekvens: number, rpm?
   const median = sorterat[Math.floor(sorterat.length / 2)] || 1e-12;
   const snrDb = Number((20 * Math.log10((maxM || 1e-12) / median)).toFixed(1));
 
+  // Tyngdpunkt och bandenergier — särdragen referensprofilerna jämför.
+  let energiSumma = 0;
+  let viktadSumma = 0;
+  const band = new Array(BANDGRANSER.length - 1).fill(0);
+  for (let k = 1; k < spektrum.length; k++) {
+    const hz = k * binHz;
+    const energi = spektrum[k] * spektrum[k];
+    energiSumma += energi;
+    viktadSumma += hz * energi;
+    for (let b = 0; b < band.length; b++) {
+      if (hz >= BANDGRANSER[b] && hz < BANDGRANSER[b + 1]) {
+        band[b] += energi;
+        break;
+      }
+    }
+  }
+  const bandSumma = band.reduce((a, v) => a + v, 0) || 1e-12;
+
   return {
     dominantHz,
     toppar,
     snrDb,
     ordning: rpm ? Number((dominantHz / (rpm / 60)).toFixed(1)) : undefined,
+    centroidHz: Math.round(viktadSumma / (energiSumma || 1e-12)),
+    band: band.map((v) => Number((v / bandSumma).toFixed(4))),
     samplefrekvens,
     varaktighetS: Number((kanal.length / samplefrekvens).toFixed(1)),
   };
+}
+
+/**
+ * Särdragen som referensprofilerna byggs av och jämförs mot
+ * (services/gemensam/ljudprofil.mjs). En handfull tal — det är ALLT
+ * som lämnar webbläsaren; ljudet gör det aldrig.
+ */
+export function profilsardrag(resultat: Spektralresultat): Record<string, number> {
+  const ut: Record<string, number> = { centroid: resultat.centroidHz };
+  resultat.band.forEach((v, i) => {
+    ut[`band${i}`] = v;
+  });
+  return ut;
 }
 
 // ---- Stoppregler -------------------------------------------------------

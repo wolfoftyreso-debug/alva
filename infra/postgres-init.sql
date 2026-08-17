@@ -553,3 +553,18 @@ drop trigger if exists abonnemangshandelser_append_only on abonnemangshandelser;
 create trigger abonnemangshandelser_append_only
   before update or delete on abonnemangshandelser
   for each row execute function forbjud_andring();
+
+-- Ljudreferensprofiler (ALVA-DOC-0012, lyft 5). Aggregat, inte bevis:
+-- profilen är organisationens inlärda normalbild per fordonstyp och
+-- mätsekvens, byggd av dokumenterade inspelningars särdrag. Underlaget
+-- är ärendenas egna händelser i den append-only-skyddade loggen;
+-- profilen är en härledning och får därför uppdateras.
+create table if not exists ljudprofiler (
+  id uuid primary key default gen_random_uuid(),
+  organisation_id uuid not null references organisationer(id),
+  fordonsnyckel text not null,
+  sekvens text not null,
+  profil jsonb not null,
+  uppdaterad timestamptz not null default now(),
+  unique (organisation_id, fordonsnyckel, sekvens)
+);
