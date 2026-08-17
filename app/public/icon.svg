@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ALVA:s märke: vit yta, grafit ordbild, blått streck som enda
+       accent — samma regler som resten av designsystemet. -->
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <text x="256" y="284" text-anchor="middle" font-family="IBM Plex Sans, Inter, Helvetica, Arial, sans-serif" font-weight="700" font-size="128" letter-spacing="2" fill="#1B1E22">ALVA</text>
+  <rect x="138" y="332" width="236" height="20" fill="#005CA9"/>
+</svg>
