@@ -1,0 +1,14 @@
+# Daglig körning. Jobbet avgör självt om någon period förfallit —
+# timern är bara väckarklockan. Persistent=true: en missad körning
+# (maskinen avstängd) tas igen vid nästa start i stället för att
+# tyst utebli.
+
+[Unit]
+Description=ALVA monthly invoicing, daily trigger
+
+[Timer]
+OnCalendar=*-*-* 06:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

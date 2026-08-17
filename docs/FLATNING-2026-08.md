@@ -65,11 +65,36 @@ Rättat i lyftet, låst av 12 nya tester (`ljuddiagnos.test.ts`):
 | Kräver ljudserver (Express+SQLite+ML) för all analys | Analysen körs helt i webbläsaren; serverjämförelse mot referensprofiler bokförd som eget framtida lyft |
 | Panelen okopplad — död kod i kopians HEAD | Monterad i ärendevyn, hopfälld tills den behövs, verifierad i webbläsare vid 390 px |
 
+## Lyft 4 · Faktureringstimern — schemalagd drift av befintliga jobb (KLART)
+
+Kopians billing-arbete var till största delen en PARALLELL värld:
+eget databasschema, egen cron i frontendträdet körd med tsx, egen
+e-postmodul — ovanpå en plattform som redan hade idempotent
+månadsfakturering (`manadsfakturering.mjs`), PDF, betalregistrering
+och ett tillstånd (aktiv/varning/låst) som HÄRLEDS ur obetalda
+förfallna fakturor med respitdagar. Det riktiga behovet var
+schemaläggningen — kopians timeridé, riktad mot rätt lager:
+
+- `infra/systemd/alva-fakturering.service` + `.timer` (dagligen 06:00
+  UTC, Persistent) kör plattformens eget jobb.
+- `infra/systemd/alva-gallring.service` + `.timer` (05:00 UTC) — samma
+  fynd i förbifarten: gallringen var också oschemalagd, och utan den
+  är lagringsbegränsningen en avsikt, inte en kontroll (TÜV T-4).
+- Inga nycklar i enheterna: `EnvironmentFile=/etc/alva/miljo`.
+- Driftavsnitt i `docs/DRIFT-EC2.md` §8; enheterna testlåsta
+  (`drift.test.ts`): jobbfilerna finns, miljöfil i stället för
+  inbäddade hemligheter, Persistent på båda timerna.
+
+Avvisat ur kopians billing: parallellschemat och e-postpåminnelserna.
+Tillstånden behöver ingen påminnelsekörning (de härleds), och en
+e-postkanal är ett eget beslut med egen infrastruktur — bokförs som
+kandidat, inte som smygberoende.
+
 ## Kvar att lyfta
 
-1. **Faktureringstimern** — anpassas till månadsfaktureringens
-   befintliga modell i `services/plattform`.
-2. **Referensprofiler för ljud (server)** — jämförelse mot inlärda
+1. **Referensprofiler för ljud (server)** — jämförelse mot inlärda
    profiler per fordonstyp; kräver den ramverkslösa omkonstruktionen
    av kopians ljudtjänst (Express+SQLite+ML ersätts med pg och egen
    kod) innan den släpps in.
+2. **E-postkanal** (fakturor, påminnelser) — eget beslut om transport
+   (självhostad SMTP-relä kontra SES) innan något får skicka.

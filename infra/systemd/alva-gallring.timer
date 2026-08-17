@@ -1,0 +1,12 @@
+# Daglig körning före faktureringen — gallringen ska aldrig konkurrera
+# med den om anslutningarna. Persistent=true tar igen missade körningar.
+
+[Unit]
+Description=ALVA retention purge, daily trigger
+
+[Timer]
+OnCalendar=*-*-* 05:00:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

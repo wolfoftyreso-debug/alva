@@ -137,7 +137,28 @@ curl -fsS https://<din domän>/ai/halsa
 journalctl -u alva -n 20     # demonstrationsläge? saknade nycklar syns här, vid start
 ```
 
-## 8. Uppdatera
+## 8. Schemalagda jobb — fakturering och gallring
+
+Två jobb körs utanför webbtjänstens process, båda idempotenta och båda
+med utfallet i journalen. Enheterna ligger färdiga i `infra/systemd/`:
+
+```sh
+cp infra/systemd/alva-*.service infra/systemd/alva-*.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now alva-fakturering.timer alva-gallring.timer
+systemctl list-timers 'alva-*'          # båda ska stå med nästa körtid
+```
+
+Prova faktureringen för hand FÖRST, utan att fakturera:
+
+```sh
+cd /opt/alva/services/plattform && node manadsfakturering.mjs --torrkor
+```
+
+Gallringen är inte valfri drift: utan den är lagringsbegränsningen en
+nedskriven avsikt, inte en verkställd kontroll (TÜV T-4).
+
+## 9. Uppdatera
 
 ```sh
 cd /opt/alva && git fetch origin main && git checkout --detach origin/main

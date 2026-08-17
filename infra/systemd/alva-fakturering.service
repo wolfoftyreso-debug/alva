@@ -1,0 +1,26 @@
+# Månadsfaktureringen som schemalagt jobb (ALVA-PROC-0002).
+#
+# Jobbet är idempotent på perioden — en omkörning samma dygn fakturerar
+# ingenting en andra gång — och körs som EGEN process, inte i
+# webbtjänsten: en avbruten körning ska kunna köras om och synas som en
+# egen körning i journalen. Prova första gången med --torrkor.
+#
+# Inga nycklar här: allt hemligt bor i /etc/alva/miljo (läge 600).
+# Idén med timern kommer ur produktionskopians billing-cron
+# (ALVA-DOC-0012, lyft 4); riktad hit i stället för mot en parallell
+# faktureringsvärld.
+
+[Unit]
+Description=ALVA monthly invoicing
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+User=alva
+WorkingDirectory=/opt/alva/services/plattform
+EnvironmentFile=/etc/alva/miljo
+ExecStart=/usr/bin/node manadsfakturering.mjs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=alva-fakturering
