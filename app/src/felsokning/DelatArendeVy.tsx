@@ -212,15 +212,15 @@ export function DelatArendeVy({
               <div key={p.id} className="mb-2 last:mb-0">
                 <p className="text-[14px]">{h.beskrivning}</p>
                 {h.uppskattadKostnad && (
-                  <p className="text-[13px] text-[#4D5662]">Uppskattad kostnad: {h.uppskattadKostnad}</p>
+                  <p className="text-[13px] text-[#4D5662]">Estimated cost: {h.uppskattadKostnad}</p>
                 )}
               </div>
             );
           })}
           {beslut?.handelse.typ === "kundbeslut" ? (
             <p className="mt-2 border-t border-[#D7DCE2] pt-2 text-[13px] font-semibold">
-              Ditt besked: {KUNDBESLUT_LABEL[beslut.handelse.beslut]}{" "}
-              <span className="font-normal text-[#4D5662]">(registrerat via {beslut.handelse.kanal})</span>
+              Your decision: {KUNDBESLUT_LABEL[beslut.handelse.beslut]}{" "}
+              <span className="font-normal text-[#4D5662]">(recorded via {beslut.handelse.kanal})</span>
             </p>
           ) : vidBeslut ? (
             <BeslutsKnappar vidBeslut={vidBeslut} />

@@ -194,7 +194,7 @@ export default function NyttArende() {
           {skannar ? (
             <p className="py-2 text-center font-semibold text-[#005CA9]">Interpreting the document …</p>
           ) : (
-            <StorKnapp onClick={() => skanRef.current?.click()}><IkonKamera /> Skanna arbetsorder</StorKnapp>
+            <StorKnapp onClick={() => skanRef.current?.click()}><IkonKamera /> Scan the work order</StorKnapp>
           )}
           {skanningsFel && <p className="mt-2 font-semibold text-[#8B1A1A]">{skanningsFel}</p>}
         </Panel>

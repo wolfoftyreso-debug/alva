@@ -157,7 +157,7 @@ describe("sammanfattningen är härledd, inte genererad", () => {
     const s = sammanfatta(AVSLUTAT_MED_ORSAK);
     expect(s.text).toContain("Volvo XC60");
     expect(s.text).toContain("88 km/h");
-    expect(s.text).toContain("Symptomet reproducerades");
+    expect(s.text).toContain("The symptom was reproduced");
     expect(s.text).toContain("Obalans 38 g");
     expect(s.text).toContain("Balanserade hjulen");
     expect(s.fullstandig).toBe(true);
@@ -167,21 +167,21 @@ describe("sammanfattningen är härledd, inte genererad", () => {
     const tomt = arende("e1", "X", []);
     const s = sammanfatta(tomt);
     expect(s.fullstandig).toBe(false);
-    expect(s.saknas).toContain("felbeskrivning");
-    expect(s.text).toContain("Objektet är inte identifierat");
+    expect(s.saknas).toContain("fault description");
+    expect(s.text).toContain("The object is not identified");
   });
 
   it("skriver inte felet konstaterat när orsaken inte fastställts", () => {
     const s = sammanfatta(AVSLUTAT_UTAN_ORSAK);
-    expect(s.text).toContain("Orsaken kunde inte fastställas");
-    expect(s.text).toContain("kunde inte reproduceras under de förhållanden");
+    expect(s.text).toContain("The cause could not be established");
+    expect(s.text).toContain("could not be reproduced under the conditions");
     expect(s.text).not.toMatch(/konstaterat fel|felet konstaterat/i);
   });
 
   it("enradingen duger för en lista", () => {
     expect(enrading(AVSLUTAT_MED_ORSAK)).toContain("ABC123");
-    expect(enrading(AVSLUTAT_UTAN_ORSAK)).toContain("utan fastställd orsak");
-    expect(enrading(arende("f1", "X", []))).toContain("pågående");
+    expect(enrading(AVSLUTAT_UTAN_ORSAK)).toContain("without an established cause");
+    expect(enrading(arende("f1", "X", []))).toContain("in progress");
   });
 });
 

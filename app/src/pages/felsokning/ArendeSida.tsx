@@ -1398,7 +1398,7 @@ function GuideFlik({
         <Panel
           rubrik={
             senasteAiSvar?.handelse.typ === "ai_svar"
-              ? `Handledning (${senasteAiSvar.handelse.modell})`
+              ? `Guidance (${senasteAiSvar.handelse.modell})`
               : "Guidance"
           }
         >

@@ -148,7 +148,7 @@ describe("AI-orkestern", () => {
     );
     expect(prompt).toContain("Volvo XC60 D4 2019");
     expect(prompt).toContain("Fault description:");
-    expect(prompt).toContain("Kontrollera lufttryck");
+    expect(prompt).toContain("Check tyre pressure");
     expect(prompt).toContain("Ej kontrollerat enligt metodiken:");
     expect(prompt).toContain("Teknikerns nya inmatning: Reläet klickar inte.");
   });

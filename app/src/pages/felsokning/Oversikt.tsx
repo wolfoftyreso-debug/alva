@@ -19,7 +19,8 @@ import {
 import { nyLoggPost } from "@/felsokning/domain";
 import { flataIhop } from "@/felsokning/synk";
 import { useFelsokning } from "@/felsokning/store";
-import { formateraTid } from "@/felsokning/projektioner";
+import { arAvslutat, formateraTid, objekt, sistaAktivitet } from "@/felsokning/projektioner";
+import { oversikt as lokalOversikt } from "../../../../services/gemensam/statistik.mjs";
 import { FelsokningSkal, Panel, StorKnapp } from "@/felsokning/ui";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
 
@@ -97,12 +98,71 @@ export default function Oversikt() {
     hamtaFelorsaksstatistik().then(setFelorsaker).catch(() => setFelorsaker([]));
   }, [behorig]);
 
+  // Lokalt läge: statistiklänken från diagnosrutan ska aldrig vara en
+  // återvändsgränd. Utan plattform visas ENHETENS statistik — samma
+  // nyckeltal, ärligt märkta med sitt underlag.
+  if (!plattformAktiv()) {
+    const lokala = Object.values(arenden);
+    const tal = lokalOversikt(lokala) as {
+      antal: { totalt: number; avslutade: number };
+      verifiering: { andel: number | null };
+      reproduktion: { andel: number | null };
+    };
+    const procent = (andel: number | null) => (andel === null ? "—" : `${Math.round(andel * 100)}%`);
+    return (
+      <FelsokningSkal rubrik="Device statistics" tillbaka={{ till: "/felsokning", text: "Cases" }}>
+        <Panel>
+          <p className="text-[14px] text-[#1B1E22]">
+            Statistics for the cases on this device. Sign in to the platform to see the whole
+            organization&apos;s overview.
+          </p>
+        </Panel>
+        <Panel rubrik="Key figures">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              ["Cases", String(tal.antal.totalt)],
+              ["Closed", String(tal.antal.avslutade)],
+              ["Verified causes", procent(tal.verifiering.andel)],
+            ].map(([etikett, varde]) => (
+              <div key={etikett} className="border border-[#D7DCE2] bg-[#F6F7F8] p-2">
+                <p className="text-[18px] font-semibold text-[#1B1E22]">{varde}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">{etikett}</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+        {lokala.length > 0 && (
+          <Panel rubrik="Cases on this device">
+            {lokala
+              .sort((a, b) => b.skapad.localeCompare(a.skapad))
+              .map((a) => {
+                const o = objekt(a);
+                const sista = sistaAktivitet(a);
+                return (
+                  <div key={a.id} className="flex items-center justify-between gap-2 border-b border-[#D7DCE2] py-2 text-[13px] last:border-0">
+                    <span className="min-w-0 truncate">
+                      <span className="font-semibold">#{a.nummer}</span> {o?.beskrivning ?? "Unknown object"}
+                    </span>
+                    <span className="shrink-0 text-[#4D5662]">
+                      {arAvslutat(a) ? "Closed" : "In progress"}
+                      {sista ? ` · ${tidDatum(sista.tidpunkt)} ${tidKlockslag(sista.tidpunkt)}` : ""}
+                    </span>
+                  </div>
+                );
+              })}
+          </Panel>
+        )}
+      </FelsokningSkal>
+    );
+  }
+
   if (!behorig) {
     return (
       <FelsokningSkal rubrik="Organization overview" tillbaka={{ till: "/felsokning", text: "Cases" }}>
         <Panel>
           <p className="text-[14px] text-[#1B1E22]">
-            The overview requires supervisor or administrator rights on the platform.
+            The overview requires supervisor or administrator rights on the platform. Your own
+            device&apos;s cases are listed under Cases.
           </p>
         </Panel>
       </FelsokningSkal>

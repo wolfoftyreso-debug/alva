@@ -314,36 +314,36 @@ export function handelseRubrik(post: LoggPost): string {
   const h = post.handelse;
   switch (h.typ) {
     case "objekt_identifierat":
-      return `Objekt identifierat: ${h.objekt.beskrivning} (${h.objekt.identifierare})`;
+      return `Object identified: ${h.objekt.beskrivning} (${h.objekt.identifierare})`;
     case "arbetsorder_skannad":
       return `Work order scanned — ${h.falt.length} fields interpreted`;
     case "felbeskrivning":
-      return `Felbeskrivning registrerad`;
+      return `Fault description recorded`;
     case "fraga_besvarad":
       return `${h.fraga} — ${h.svar}`;
     case "kontroll_utford":
-      if (h.undantag) return `${h.text} — underlag kunde inte tas fram: ${h.undantag}`;
+      if (h.undantag) return `${h.text} — evidence could not be produced: ${h.undantag}`;
       return h.resultat ? `${h.text} — ${h.resultat}` : `${h.text} — performed`;
     case "observation":
       return `Observation: ${h.text}`;
     case "matvarde":
       return `Measurement: ${h.beskrivning} = ${h.varde}${h.enhet ? ` ${h.enhet}` : ""}`;
     case "hypotes":
-      return `Hypotes (${TILLFORLITLIGHET_LABEL[h.niva]}): ${h.text}`;
+      return `Hypothesis (${TILLFORLITLIGHET_LABEL[h.niva]}): ${h.text}`;
     case "foto":
-      return `Foto: ${h.beskrivning}`;
+      return `Photo: ${h.beskrivning}`;
     case "video":
       return `Video: ${h.beskrivning}`;
     case "kommentar":
       return h.text;
     case "kategori_byte":
-      return `Arbetskategori: ${TIDKATEGORI_LABEL[h.kategori]}`;
+      return `Work category: ${TIDKATEGORI_LABEL[h.kategori]}`;
     case "inaktivitet_forklarad":
-      return `Komplettering (${h.minuter} min utan aktivitet): ${h.text}`;
+      return `Addendum (${h.minuter} min without activity): ${h.text}`;
     case "overlamning":
       return h.till ? `Work handed over from ${h.fran} to ${h.till}` : `Work handed over by ${h.fran}`;
     case "ansvarig_satt":
-      return `Ansvarig tekniker: ${h.ansvarig}`;
+      return `Responsible technician: ${h.ansvarig}`;
     case "arendetyp_satt":
       return `Case type: ${h.arendetyp}`;
     case "betalare":
@@ -356,31 +356,31 @@ export function handelseRubrik(post: LoggPost): string {
       return `Part documented: ${h.artikelnummer} — ${h.beskrivning}${h.serienummer ? `, s/n ${h.serienummer}` : ""}${h.batch ? `, batch ${h.batch}` : ""}${h.sparad ? " — old part retained" : ""}`;
     case "historik_kontrollerad":
       return h.kontrollerad
-        ? `Fordonshistorik kontrollerad${h.kommentar ? `: ${h.kommentar}` : ""}`
-        : `Fordonshistorik EJ kontrollerad — orsak: ${h.kommentar ?? "saknas"}`;
+        ? `Vehicle history checked${h.kommentar ? `: ${h.kommentar}` : ""}`
+        : `Vehicle history NOT checked — reason: ${h.kommentar ?? "missing"}`;
     case "matarstallning":
       if (h.undantag) return `Odometer reading (${h.lage === "ingaende" ? "in" : "out"}) could not be documented: ${h.undantag}`;
       return `Odometer ${h.lage === "ingaende" ? "in" : "out"}: ${h.varde}`;
     case "reproducering":
       return h.status === "ja"
-        ? `Symptomet reproducerat: ${h.beskrivning}`
+        ? `Symptom reproduced: ${h.beskrivning}`
         : h.status === "delvis"
-          ? `Symptomet delvis reproducerat: ${h.beskrivning}`
-          : `Symptomet kunde inte reproduceras — ${h.beskrivning}`;
+          ? `Symptom partially reproduced: ${h.beskrivning}`
+          : `Symptom could not be reproduced — ${h.beskrivning}`;
     case "felorsak":
-      return `Felorsak (${TILLFORLITLIGHET_LABEL[h.sakerhet]}): ${h.avvikelse} — ${h.orsaker.join(", ")}`;
+      return `Root cause (${TILLFORLITLIGHET_LABEL[h.sakerhet]}): ${h.avvikelse} — ${h.orsaker.join(", ")}`;
     case "atgardsforslag":
-      return `Proposed action for the customer: ${h.beskrivning}${h.uppskattadKostnad ? ` — uppskattad kostnad ${h.uppskattadKostnad}` : ""}`;
+      return `Proposed action for the customer: ${h.beskrivning}${h.uppskattadKostnad ? ` — estimated cost ${h.uppskattadKostnad}` : ""}`;
     case "kundbeslut":
-      return `Kundens besked (${h.kanal}): ${KUNDBESLUT_LABEL[h.beslut]}${h.kommentar ? ` — ${h.kommentar}` : ""}`;
+      return `Customer decision (${h.kanal}): ${KUNDBESLUT_LABEL[h.beslut]}${h.kommentar ? ` — ${h.kommentar}` : ""}`;
     case "atgard_utford":
       return h.utford
-        ? `Action performed: ${h.beskrivning}${h.delar ? ` (delar: ${h.delar})` : ""}`
+        ? `Action performed: ${h.beskrivning}${h.delar ? ` (parts: ${h.delar})` : ""}`
         : `No action performed — ${h.motivering ?? "reason missing"}`;
     case "kvalitetskontroll":
-      return `Kvalitetskontroll: ${KVALITETSKONTROLL_LABEL[h.resultat]} — ${h.beskrivning}`;
+      return `Quality check: ${KVALITETSKONTROLL_LABEL[h.resultat]} — ${h.beskrivning}`;
     case "export_skapad":
-      return `Export skapad: ${h.format}, version ${h.version}`;
+      return `Export created: ${h.format}, version ${h.version}`;
     case "ai_svar": {
       const forsta = h.rader[0];
       return `AI: ${forsta ? `${forsta.text} ` : ""}— Next step: ${h.nastaSteg}`;

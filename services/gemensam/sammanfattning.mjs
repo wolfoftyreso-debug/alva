@@ -35,16 +35,16 @@ const av = (handelser, typ) => handelser.filter((h) => h?.typ === typ);
 const sista = (handelser, typ) => av(handelser, typ).at(-1);
 
 const REPRODUKTION = {
-  ja: "Symptomet reproducerades.",
-  delvis: "Symptomet kunde delvis reproduceras.",
-  nej: "Symptomet kunde inte reproduceras under de förhållanden som rådde vid undersökningen.",
+  ja: "The symptom was reproduced.",
+  delvis: "The symptom could be partially reproduced.",
+  nej: "The symptom could not be reproduced under the conditions present during the examination.",
 };
 
 const KVALITET = {
-  symptomet_borta: "Vid kvalitetskontrollen var symptomet borta.",
-  kvarstar: "Vid kvalitetskontrollen kvarstod symptomet.",
-  delvis: "Vid kvalitetskontrollen kvarstod symptomet delvis.",
-  ej_verifierbar: "Kvalitetskontrollen kunde inte verifiera resultatet.",
+  symptomet_borta: "At the quality check the symptom was gone.",
+  kvarstar: "At the quality check the symptom remained.",
+  delvis: "At the quality check the symptom partially remained.",
+  ej_verifierbar: "The quality check could not verify the outcome.",
 };
 
 /** Klipper en mening vid en rimlig gräns utan att kapa mitt i ett ord. */
@@ -74,33 +74,33 @@ export function sammanfatta(arende) {
   const objekt = sista(h, "objekt_identifierat")?.objekt;
   if (objekt) {
     const delar = [objekt.beskrivning, objekt.identifierare].filter(Boolean).join(", ");
-    meningar.push(`Ärendet gäller ${delar || "ett identifierat objekt"}.`);
+    meningar.push(`The case concerns ${delar || "an identified object"}.`);
   } else {
-    saknas.push("objektidentifiering");
-    meningar.push("Objektet är inte identifierat i loggen.");
+    saknas.push("object identification");
+    meningar.push("The object is not identified in the log.");
   }
 
   // 2 · Kundens ord, ordagrant men kortat.
   const fel = sista(h, "felbeskrivning")?.text;
-  if (fel) meningar.push(`Kunden beskrev: ”${korta(fel, 160)}”`);
-  else saknas.push("felbeskrivning");
+  if (fel) meningar.push(`The customer described: ”${korta(fel, 160)}”`);
+  else saknas.push("fault description");
 
   // 3 · Kunde vi se det? Detta är den mening en bedömare läser först.
   const repro = sista(h, "reproducering");
-  if (repro) meningar.push(REPRODUKTION[repro.status] ?? "Reproduktionen är dokumenterad.");
-  else saknas.push("symptomverifiering");
+  if (repro) meningar.push(REPRODUKTION[repro.status] ?? "The reproduction is documented.");
+  else saknas.push("symptom verification");
 
   // 4 · Orsaken, med teknikerns eget varför när det finns.
   const orsak = sista(h, "felorsak");
   const slutsats = sista(h, "slutsats");
   if (slutsats && slutsats.orsakFastställd === false) {
-    meningar.push(`Orsaken kunde inte fastställas: ${korta(slutsats.motivering, 200)}`);
+    meningar.push(`The cause could not be established: ${korta(slutsats.motivering, 200)}`);
   } else if (orsak) {
     const kategori = (orsak.orsaker ?? []).join(", ");
-    meningar.push(`Konstaterad avvikelse: ${korta(orsak.avvikelse, 180)}${kategori ? ` Bedömd orsak: ${kategori}.` : ""}`);
-    if (slutsats?.motivering) meningar.push(`Motivering: ${korta(slutsats.motivering, 220)}`);
+    meningar.push(`Established deviation: ${korta(orsak.avvikelse, 180)}${kategori ? ` Assessed cause: ${kategori}.` : ""}`);
+    if (slutsats?.motivering) meningar.push(`Rationale: ${korta(slutsats.motivering, 220)}`);
   } else {
-    saknas.push("felorsaksanalys");
+    saknas.push("root cause analysis");
   }
 
   // 5 · Vad som gjordes.
@@ -108,18 +108,18 @@ export function sammanfatta(arende) {
   if (atgard) {
     meningar.push(
       atgard.utford
-        ? `Utförd åtgärd: ${korta(atgard.beskrivning, 160)}`
-        : `Ingen åtgärd utfördes: ${korta(atgard.motivering || atgard.beskrivning, 160)}`,
+        ? `Action performed: ${korta(atgard.beskrivning, 160)}`
+        : `No action was performed: ${korta(atgard.motivering || atgard.beskrivning, 160)}`,
     );
-  } else saknas.push("åtgärd");
+  } else saknas.push("action");
 
   // 6 · Höll det?
   const kvalitet = sista(h, "kvalitetskontroll");
-  if (kvalitet) meningar.push(KVALITET[kvalitet.resultat] ?? "Kvalitetskontrollen är dokumenterad.");
+  if (kvalitet) meningar.push(KVALITET[kvalitet.resultat] ?? "The quality check is documented.");
 
   // 7 · Vad som är kvar. Utelämnas aldrig när den finns — det är den
   // enda meningen som talar om vad läsaren själv behöver göra.
-  if (slutsats?.kvarstaende) meningar.push(`Kvarstående: ${korta(slutsats.kvarstaende, 160)}`);
+  if (slutsats?.kvarstaende) meningar.push(`Remaining: ${korta(slutsats.kvarstaende, 160)}`);
 
   return {
     version: "ALVA-PROC-0030",
@@ -142,9 +142,9 @@ export function enrading(arende) {
   const orsak = sista(h, "felorsak");
   const avslutat = h.some((x) => x?.typ === "arende_avslutat");
 
-  const vad = objekt?.identifierare ?? "Oidentifierat objekt";
-  if (!avslutat) return `${vad} — pågående.`;
-  if (slutsats?.orsakFastställd === false) return `${vad} — avslutat utan fastställd orsak.`;
+  const vad = objekt?.identifierare ?? "Unidentified object";
+  if (!avslutat) return `${vad} — in progress.`;
+  if (slutsats?.orsakFastställd === false) return `${vad} — closed without an established cause.`;
   if (orsak) return `${vad} — ${korta(orsak.avvikelse, 90)}`;
-  return `${vad} — avslutat.`;
+  return `${vad} — closed.`;
 }
