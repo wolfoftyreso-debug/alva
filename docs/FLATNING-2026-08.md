@@ -42,12 +42,34 @@ versioner når ut.
 | Mörkt läge / "Premium dark mode UI" | Strider mot designsystemet (ALVA-SPEC-001); ogjort i kopian själv av samma skäl ("Ljus, professionell UI for OEM") |
 | PM2-konfig parallellt med systemd | En driftmekanism. Enservern under systemd är den dokumenterade formen |
 
+## Lyft 2 · EC2-driftformen som dokument (KLART)
+
+`docs/DRIFT-EC2.md` (ALVA-DOC-0013): kopians fungerande
+nginx+systemd-deploy i allmängiltig form. Rättat i lyftet: nycklar i
+miljöfil i stället för i systemd-enheten (kopians enhet bar skarpa
+nycklar i klartext — rotationskrav dokumenterat), en driftmekanism
+(PM2 struken), CSP utan externa typsnittstjänster, DNS-utmaning för
+certbot bakom proxy, maskinen som konsument av main.
+
+## Lyft 3 · Ljuddiagnosen — lokal akustisk analys (KLART)
+
+Ur kopians missljudsarbete (`49f0544` m.fl.). Substansen behållen:
+mätsekvenserna A–F, spektralanalysen, stoppreglerna, hypotesflödet.
+Rättat i lyftet, låst av 12 nya tester (`ljuddiagnos.test.ts`):
+
+| Kopians defekt | Rättelse |
+| --- | --- |
+| Egen händelsetyp "ljudanalys" intvingad med typcast — serverns slutna schema hade avvisat varje sådan händelse | Mätningen dokumenteras som schemats egna typer (`matvarde`, `observation`, `hypotes`); varje händelse prövas i test mot serverns `granskaHändelse` |
+| Naiv DFT, O(N²) per ram — miljardtals operationer för tio sekunder ljud | Radix-2-FFT; Parsevalkontroll i test, ren ton återfinns inom en bins upplösning |
+| Hypoteser med "sannolikhet per komponent" presenterade som diagnos | Förslag formulerade ur ordningstalet (den ärliga akustiska grunden), alltid nivå medel/lag, dokumenteras bara på teknikerns eget klick |
+| Kräver ljudserver (Express+SQLite+ML) för all analys | Analysen körs helt i webbläsaren; serverjämförelse mot referensprofiler bokförd som eget framtida lyft |
+| Panelen okopplad — död kod i kopians HEAD | Monterad i ärendevyn, hopfälld tills den behövs, verifierad i webbläsare vid 390 px |
+
 ## Kvar att lyfta
 
-1. **Ljuddiagnosen** — störst värde, kräver omkonstruktion:
-   backend är Express+SQLite+ML-paket, plattformens regler säger
-   ramverkslöst + Postgres. Frontenden (1 948 rader) återanvänds.
-2. **Faktureringstimern** — anpassas till månadsfaktureringens
+1. **Faktureringstimern** — anpassas till månadsfaktureringens
    befintliga modell i `services/plattform`.
-3. **EC2-driftformen som dokument** — kopians fungerande
-   nginx+systemd-deploy, städad till `docs/DRIFT-EC2.md`.
+2. **Referensprofiler för ljud (server)** — jämförelse mot inlärda
+   profiler per fordonstyp; kräver den ramverkslösa omkonstruktionen
+   av kopians ljudtjänst (Express+SQLite+ML ersätts med pg och egen
+   kod) innan den släpps in.

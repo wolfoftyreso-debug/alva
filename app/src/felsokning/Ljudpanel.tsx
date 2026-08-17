@@ -1,0 +1,212 @@
+// Ljudpanelen — akustisk diagnos i ärendet.
+//
+// Ur serverkopians arbete (ALVA-DOC-0012, lyft 3), omsatt i ALVA:s
+// komponentspråk. Flödet är metodikens: välj sekvens, följ
+// instruktionerna, spela in, läs resultatet MED dess begränsningar,
+// dokumentera. Hypoteser dokumenteras bara på teknikerns eget klick
+// och alltid som hypotes med nivå — aldrig som konstaterande.
+//
+// Panelen är hopfälld tills den behövs: diagnosrutan och ärendevyn
+// visar arbetet, inte verktygslådan.
+
+import { useEffect, useRef, useState } from "react";
+import { Panel, StorKnapp, TextFalt } from "./ui";
+import { IkonMik } from "./ikoner";
+import type { Handelse } from "./domain";
+import {
+  MATSEKVENSER,
+  type Sekvens,
+  type Spektralresultat,
+  type Stoppregel,
+  analyseraKanal,
+  hypoteshandelse,
+  ljudforslag,
+  ljudhandelser,
+  stoppregler,
+} from "./ljuddiagnos";
+
+const ALLVARSFARG: Record<Stoppregel["allvar"], string> = {
+  kritisk: "#8B1A1A",
+  varning: "#8A5A00",
+};
+
+export function Ljudpanel({ skicka }: { skicka: (h: Handelse) => void }) {
+  const [oppen, setOppen] = useState(false);
+  const [sekvens, setSekvens] = useState<Sekvens>("A");
+  const [rpmText, setRpmText] = useState("");
+  const [reproducerad, setReproducerad] = useState(false);
+  const [spelarIn, setSpelarIn] = useState(false);
+  const [sekunder, setSekunder] = useState(0);
+  const [resultat, setResultat] = useState<Spektralresultat | null>(null);
+  const [dokumenterat, setDokumenterat] = useState(false);
+  const [fel, setFel] = useState("");
+  const inspelare = useRef<MediaRecorder | null>(null);
+  const bitar = useRef<Blob[]>([]);
+  const klocka = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Ett byte av sekvens gör föregående resultat inaktuellt.
+  useEffect(() => {
+    setResultat(null);
+    setDokumenterat(false);
+  }, [sekvens]);
+
+  const stoppaKlocka = () => {
+    if (klocka.current) clearInterval(klocka.current);
+    klocka.current = null;
+  };
+
+  const starta = async () => {
+    setFel("");
+    setResultat(null);
+    setDokumenterat(false);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setFel("Microphone access is not available in this environment.");
+      return;
+    }
+    try {
+      const strom = await navigator.mediaDevices.getUserMedia({ audio: true });
+      bitar.current = [];
+      const r = new MediaRecorder(strom);
+      r.ondataavailable = (h) => bitar.current.push(h.data);
+      r.onstop = async () => {
+        strom.getTracks().forEach((sp) => sp.stop());
+        stoppaKlocka();
+        setSpelarIn(false);
+        try {
+          const buf = await new Blob(bitar.current).arrayBuffer();
+          const ctx = new AudioContext();
+          const ljud = await ctx.decodeAudioData(buf);
+          void ctx.close();
+          const rpm = rpmText.trim() ? Number(rpmText) : MATSEKVENSER[sekvens].rpm;
+          setResultat(analyseraKanal(ljud.getChannelData(0), ljud.sampleRate, rpm));
+        } catch {
+          setFel("The recording could not be decoded. Try again.");
+        }
+      };
+      inspelare.current = r;
+      r.start();
+      setSpelarIn(true);
+      setSekunder(0);
+      klocka.current = setInterval(() => setSekunder((s) => s + 1), 1000);
+    } catch {
+      setFel("Microphone access was denied. Allow the microphone and try again.");
+    }
+  };
+
+  const stoppa = () => inspelare.current?.stop();
+
+  if (!oppen) {
+    return (
+      <Panel rubrik="Acoustic diagnosis">
+        <StorKnapp variant="sekundar" onClick={() => setOppen(true)}>
+          <IkonMik /> Record and analyze a noise
+        </StorKnapp>
+      </Panel>
+    );
+  }
+
+  const rpm = rpmText.trim() ? Number(rpmText) : MATSEKVENSER[sekvens].rpm;
+  const stopp = resultat ? stoppregler(sekvens, resultat, rpm, reproducerad) : [];
+  const forslag = resultat ? ljudforslag(resultat, reproducerad) : [];
+  const s = MATSEKVENSER[sekvens];
+
+  return (
+    <Panel rubrik="Acoustic diagnosis">
+      <p className="mb-4 text-[14px] text-[#1B1E22]">
+        The analysis runs entirely in the browser: averaged spectrum, dominant frequency and — with a
+        stated engine speed — the order, which says what rotates in time with the sound. It points at
+        where to measure; it never states a cause.
+      </p>
+
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        {(Object.keys(MATSEKVENSER) as Sekvens[]).map((valbar) => (
+          <button
+            key={valbar}
+            type="button"
+            onClick={() => setSekvens(valbar)}
+            className={`min-h-9 border px-2 text-[12px] font-semibold ${
+              sekvens === valbar
+                ? "border-[#005CA9] bg-[#005CA9] text-white"
+                : "border-[#D7DCE2] bg-[#F6F7F8] text-[#1B1E22]"
+            }`}
+          >
+            {valbar} · {MATSEKVENSER[valbar].namn}
+          </button>
+        ))}
+      </div>
+
+      <p className="mb-2 text-[13px] font-semibold text-[#1B1E22]">{s.beskrivning}</p>
+      <ol className="mb-4 list-decimal pl-6 text-[13px] text-[#4D5662]">
+        {s.instruktioner.map((rad) => (
+          <li key={rad}>{rad}</li>
+        ))}
+      </ol>
+
+      <TextFalt
+        label={`Engine speed during the recording (rpm)${s.rpm ? ` — sequence target ${s.rpm}` : ", if known"}`}
+        varde={rpmText}
+        satt={setRpmText}
+        platshallare={s.rpm ? String(s.rpm) : "e.g. 850"}
+      />
+      <label className="mb-4 flex items-center gap-2 text-[13px] text-[#1B1E22]">
+        <input type="checkbox" checked={reproducerad} onChange={(h) => setReproducerad(h.target.checked)} />
+        The reported noise was audible during the recording
+      </label>
+
+      {!spelarIn ? (
+        <StorKnapp onClick={starta}>
+          <IkonMik /> Record ({s.varaktighetS} s)
+        </StorKnapp>
+      ) : (
+        <StorKnapp onClick={stoppa}>Stop — {sekunder} s recorded</StorKnapp>
+      )}
+      {fel && <p className="mt-2 font-semibold text-[#8B1A1A]">{fel}</p>}
+
+      {resultat && (
+        <div className="mt-4 border border-[#D7DCE2] bg-[#F6F7F8] p-4">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">Result</p>
+          <p className="mt-2 text-[15px] font-semibold text-[#1B1E22]">
+            Dominant {resultat.dominantHz} Hz
+            {resultat.ordning !== undefined ? ` · order ${resultat.ordning}` : ""} · SNR {resultat.snrDb} dB
+          </p>
+          <p className="mt-2 text-[13px] text-[#4D5662]">
+            Peaks: {resultat.toppar.map((t) => `${t.hz} Hz (${Math.round(t.rel * 100)}%)`).join(" · ") || "none"}
+          </p>
+
+          {stopp.map((regel) => (
+            <p key={regel.regel} className="mt-2 text-[13px] font-semibold" style={{ color: ALLVARSFARG[regel.allvar] }}>
+              {regel.meddelande} {regel.atgard}
+            </p>
+          ))}
+
+          {!dokumenterat ? (
+            <div className="mt-4">
+              <StorKnapp
+                onClick={() => {
+                  for (const h of ljudhandelser(sekvens, resultat, stopp)) skicka(h);
+                  setDokumenterat(true);
+                }}
+              >
+                Document the measurement
+              </StorKnapp>
+            </div>
+          ) : (
+            <p className="mt-4 text-[13px] font-semibold text-[#1B1E22]">✓ Documented in the work log.</p>
+          )}
+
+          {dokumenterat &&
+            forslag.map((f) => (
+              <div key={f.text} className="mt-4 border-t border-[#D7DCE2] pt-4">
+                <p className="text-[13px] text-[#1B1E22]">{f.text}</p>
+                <div className="mt-2">
+                  <StorKnapp variant="sekundar" onClick={() => skicka(hypoteshandelse(f))}>
+                    Document as hypothesis ({f.niva === "medel" ? "medium" : "low"} confidence)
+                  </StorKnapp>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+    </Panel>
+  );
+}

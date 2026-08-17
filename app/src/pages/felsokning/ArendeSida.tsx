@@ -76,6 +76,7 @@ import {
 import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { lasVideo, skalaNerFoto, tidDatum, tidKlockslag } from "@/felsokning/format";
 import { IkonCheck, IkonKamera, IkonKryss, IkonLank, IkonPunkt, IkonSok, IkonVarning } from "@/felsokning/ikoner";
+import { Ljudpanel } from "@/felsokning/Ljudpanel";
 import { Bild, Klipp } from "@/felsokning/Bilagevisning";
 import { bilageFalt } from "@/felsokning/bilagor";
 
@@ -1456,6 +1457,11 @@ function GuideFlik({
       {/* Teknisk eskalering (DISS-mönstret): en öppnad förfrågan utan
           dokumenterat svar spärrar avslutet. */}
       <EskaleringPanel arende={arende} skicka={skicka} />
+
+      {/* Akustisk diagnos (ALVA-DOC-0012, lyft 3): inspelning och
+          spektralanalys i webbläsaren, dokumenterad som schemats egna
+          händelser. Hopfälld tills den behövs. */}
+      <Ljudpanel skicka={skicka} />
 
       {!kanAvslutas && <Avslutshinder hinder={hinder} />}
       <div className="grid grid-cols-2 gap-2">
