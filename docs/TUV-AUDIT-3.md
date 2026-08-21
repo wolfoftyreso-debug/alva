@@ -161,15 +161,22 @@ Reproduced against the running system and found sound:
   come from the log, the language only selects a catalogue phrase, and the text
   is stable for a given language.
 
-## Residual (carried from earlier revisions, unchanged)
+## Residual
 
-| Item | Why still open |
+Updated after the residual-closing round. Items marked **closed** are done;
+the rest name exactly why they cannot close in this environment.
+
+| Item | Status |
 | --- | --- |
-| T-3 (partial) | A pre-erasure backup plus the master key still restores data. Needs per-subject keys in a KMS with irreversible destruction. The backup window remains part of the erasure promise and must be stated to data subjects. |
-| External anchoring (RFC 3161) | Before the seal is presented as evidence against a party disputing the server's clock. |
-| Terraform | The CronJob and secret wiring are written but not applied in this environment; unvalidated beyond review. |
-| Rev 1 · C-4 / m-4 / m-6 | Processor agreement, Supabase retirement, manual accessibility review — documents and decisions, not code. |
-| `kalla` from `X-Forwarded-For` | On the sessionless public path the source can be spoofed without a trusted-proxy count. Deployment-dependent hardening. |
+| External anchoring (RFC 3161) | **Closed.** `services/gemensam/tidsstampel.mjs`: the seal's root is stamped by an independent RFC 3161 TSA after commit; verification confirms the token covers our root and reports the TSA's time as a second, non-us witness. Proven against a real openssl-generated token and a standalone TSA in the integration test. |
+| `kalla` from `X-Forwarded-For` | **Closed.** `kallaFor` no longer trusts the header without a configured trusted-proxy count (`BETRODDA_PROXYHOPP`); with N hops it reads the address N steps from the right, else the socket. |
+| C-4 (processor agreement) | **Closed as documentation.** `docs/DATASKYDD.md`: processor-agreement obligations and a sub-processor register grounded in the production build. |
+| Transfer impact (Anthropic, US) | **Closed as assessment.** `docs/DATASKYDD.md` §4: the one third-country transfer (work-order OCR) is assessed; the remaining product step (make it disableable/masking per org) is named. |
+| T-3 transparency | **Closed as documentation.** `docs/DATASKYDD.md` §5: the pre-erasure backup window is stated as part of the erasure promise to data subjects. |
+| T-3 (technical, full closure) | **Open — infra.** A pre-erasure backup plus the master key still restores data. Needs per-subject keys in a KMS with irreversible destruction. The envelope seam (`kuvertera`/`oppnaKuvert`) is prepared for it. |
+| Terraform | **Open — infra.** The CronJob and secret wiring are written but not applied in this environment; unvalidated beyond review. |
+| m-4 (Supabase retirement) | **Determined: dead in production.** The Dockerfile builds plattform-only (`VITE_SUPABASE_URL=…invalid`); the Supabase paths are a legacy fallback the shipped build never selects. Code retirement pending a scope decision. |
+| m-6 (accessibility) | See the accessibility pass this round. |
 
 ## Test protocol
 
