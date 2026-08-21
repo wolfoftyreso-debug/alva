@@ -1,6 +1,7 @@
-// Självhostat läge: klienten pratar med plattformstjänsten i klustret
-// (services/plattform) i stället för Supabase. Aktiveras vid bygget med
-// VITE_PLATTFORM_URL; utan den används Supabase-läget precis som förut.
+// Klienten pratar med plattformstjänsten i klustret (services/plattform).
+// Aktiveras vid bygget med VITE_PLATTFORM_URL; utan den kör appen i lokalt
+// läge (endast enheten, ingen synk) — det finns ingen annan backend sedan
+// Supabase-vägen avvecklades.
 
 export const PLATTFORM_URL = (import.meta.env.VITE_PLATTFORM_URL as string | undefined)?.replace(/\/$/, "");
 

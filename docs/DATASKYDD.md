@@ -206,8 +206,12 @@ Förvaringen av personnycklarna är nu ett utbytbart **valv**
 
 **Vad som är bevisat här:** SigV4-signeringen mot KMS är bitidentisk mot AWS egen
 (botocore-referens, `kms-sigv4-referens.json`), och valvets anrop och tolkning är
-provade mot en injicerad hämtare (en förstörd nyckel ger raderad post, inte ett
-undantag). **Vad som återstår:** en riktig KMS i andra änden — den lata
+provade mot en injicerad hämtare. Särskilt: ett SLUTGILTIGT tillstånd (nyckeln
+schemalagd för radering eller borta) skiljs från ett ÖVERGÅENDE fel (strypning,
+500, behörighet) — en förstörd nyckel ger raderad post, medan ett övergående fel
+kastar i stället för att tyst se ut som en radering. Därför kan varken en
+misslyckad `forstor` lämna en pekarlös men levande nyckel, eller en tillfälligt
+otillgänglig KMS maskera levande uppgifter som förstörda. **Vad som återstår:** en riktig KMS i andra änden — den lata
 nyckelskapelsen (CreateKey/CreateAlias vid första användning) och en verklig
 Encrypt/Decrypt/ScheduleKeyDeletion-rundtur går inte att prova i utvecklingsmiljön.
 Terraform för CronJob och secret-koppling finns skrivet men är inte applicerat i

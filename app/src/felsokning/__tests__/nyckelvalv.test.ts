@@ -134,10 +134,29 @@ describe("KMS-valv — rätt anrop, rätt tolkning", () => {
     expect(anrop[0].kropp.CiphertextBlob).toBe("QkxPQg==");
   });
 
-  it("en förstörd nyckel ger raderad post (null), inte ett undantag", async () => {
-    const { hamtare } = fångare(() => ({ ok: false, status: 400, json: async () => ({}) }));
+  it("en förstörd (schemalagd) nyckel ger raderad post (null), inte ett undantag", async () => {
+    const { hamtare } = fångare(() => ({
+      ok: false,
+      status: 400,
+      json: async () => ({ __type: "KMSInvalidStateException" }),
+    }));
     const valv = kmsValv({ ...KONFIG, hamtare });
     expect(await valv.oppna("arende-9", Buffer.from("k1.QkxPQg==", "utf8"))).toBeNull();
+  });
+
+  it("ett ÖVERGÅENDE KMS-fel maskerar INTE levande data som raderad — det kastar", async () => {
+    // Finding 2: strypning eller 500 fick tidigare oppna att returnera null,
+    // vilket lästes som "raderad". En levande post får inte försvinna för att
+    // KMS är tillfälligt otillgänglig.
+    for (const fel of [
+      { ok: false, status: 400, json: async () => ({ __type: "ThrottlingException" }) },
+      { ok: false, status: 500, json: async () => ({ __type: "KMSInternalException" }) },
+      { ok: false, status: 400, json: async () => ({ __type: "AccessDeniedException" }) },
+    ]) {
+      const { hamtare } = fångare(() => fel);
+      const valv = kmsValv({ ...KONFIG, hamtare });
+      await expect(valv.oppna("arende-9", Buffer.from("k1.QkxPQg==", "utf8"))).rejects.toThrow();
+    }
   });
 
   it("ett omslag från ett annat valv öppnas inte tyst", async () => {
@@ -154,10 +173,29 @@ describe("KMS-valv — rätt anrop, rätt tolkning", () => {
     expect(anrop[0].kropp.KeyId).toMatch(/^alias\/alva-subjekt-[0-9a-f]{32}$/);
   });
 
-  it("forstor är idempotent — en redan borta nyckel räknas som förstörd", async () => {
-    const { hamtare } = fångare(() => ({ ok: false, status: 404, json: async () => ({}) }));
-    const valv = kmsValv({ ...KONFIG, hamtare });
-    expect(await valv.forstor("arende-9")).toBe(true);
+  it("forstor är idempotent — en redan schemalagd/borta nyckel räknas som förstörd", async () => {
+    for (const typ of ["KMSInvalidStateException", "NotFoundException"]) {
+      const { hamtare } = fångare(() => ({ ok: false, status: 400, json: async () => ({ __type: typ }) }));
+      const valv = kmsValv({ ...KONFIG, hamtare });
+      expect(await valv.forstor("arende-9"), typ).toBe(true);
+    }
+  });
+
+  it("forstor kastar på ett ÖVERGÅENDE fel — raderingen får inte se förstörd ut när nyckeln lever", async () => {
+    // Finding 1: forstor konverterade tidigare varje KMS-svar till en
+    // ignorerad boolean, så ett 500/strypnings-/behörighetsfel lät
+    // pekarraderingen fortsätta medan nyckeln levde vidare — en falsk
+    // "raderad"-post. Nu kastar den, och anroparen avbryter.
+    for (const fel of [
+      { ok: false, status: 500, json: async () => ({ __type: "KMSInternalException" }) },
+      { ok: false, status: 400, json: async () => ({ __type: "ThrottlingException" }) },
+      { ok: false, status: 400, json: async () => ({ __type: "AccessDeniedException" }) },
+      { ok: false, status: 400, json: async () => ({}) },
+    ]) {
+      const { hamtare } = fångare(() => fel);
+      const valv = kmsValv({ ...KONFIG, hamtare });
+      await expect(valv.forstor("arende-9")).rejects.toThrow();
+    }
   });
 });
 

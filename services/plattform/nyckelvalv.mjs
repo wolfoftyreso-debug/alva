@@ -146,6 +146,25 @@ export function kmsBegaran(operation, kropp, uppgifter, tidsstampel) {
 
 const AWS_TID = () => new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 
+// KMS lägger feltypen i svarskroppens __type, inte i HTTP-statusen — nästan
+// allt är 400. Att skilja ett slutgiltigt tillstånd (nyckeln schemalagd för
+// radering eller borta) från ett övergående fel (strypning, 500, behörighet)
+// kräver därför att kroppen läses, inte bara statuskoden.
+async function feltyp(res) {
+  try {
+    const kropp = await res.json();
+    return String(kropp?.__type ?? kropp?.message ?? kropp?.Message ?? "");
+  } catch {
+    return "";
+  }
+}
+
+// De enda tillstånd som räknas som "nyckeln finns inte längre som öppnare":
+// schemalagd för radering (KMSInvalidStateException efter ScheduleKeyDeletion)
+// eller obefintlig (NotFoundException). Övergående fel matchar INTE, och
+// behandlas därför aldrig som en genomförd radering.
+const SLUTGILTIGT_BORTA = /KMSInvalidStateException|NotFoundException/;
+
 /**
  * Ett valv med en KMS-nyckel per subjekt, adresserad via alias. Nyckeln
  * provisioneras i drift (Terraform eller lat skapelse — sista integrations-
@@ -201,20 +220,34 @@ export function kmsValv(k) {
         CiphertextBlob: text.slice(3),
         EncryptionContext: { subjekt: String(subjekt) },
       });
-      // En förstörd (schemalagd) nyckel ger ett fel — då är posten raderad,
-      // och det är rätt utfall, inte ett undantag att kasta vidare.
-      if (!res.ok) return null;
-      const svar = await res.json();
-      return Buffer.from(svar.Plaintext, "base64");
+      if (res.ok) {
+        const svar = await res.json();
+        return Buffer.from(svar.Plaintext, "base64");
+      }
+      const typ = await feltyp(res);
+      // En nyckel som är schemalagd för radering (eller borta) ger ett
+      // SLUTGILTIGT fel — då ÄR posten raderad, och null är rätt utfall.
+      if (SLUTGILTIGT_BORTA.test(typ)) return null;
+      // Ett ÖVERGÅENDE fel (strypning, 500, behörighet) får inte misstas
+      // för radering — annars maskeras levande uppgifter som förstörda.
+      // Kasta, så läsvägen loggar och maskerar just den här läsningen utan
+      // att slå fast att posten är raderad.
+      throw new Error(`KMS Decrypt ${res.status} ${typ}`);
     },
     async forstor(subjekt) {
       const res = await anropa("ScheduleKeyDeletion", {
         KeyId: alias(subjekt),
         PendingWindowInDays: raderingsdagar,
       });
-      // Idempotent: en nyckel som redan är schemalagd (eller borta) räknas
-      // som förstörd — raderingen ska inte gå att "ångra" genom att fela.
-      return res.ok || res.status === 400 || res.status === 404;
+      if (res.ok) return true;
+      const typ = await feltyp(res);
+      // Idempotent, men BARA för de slutgiltiga tillstånden: nyckeln är
+      // redan schemalagd (KMSInvalidStateException) eller finns inte
+      // (NotFound) — målet är uppfyllt. Allt annat (strypning, behörighet,
+      // 500) är INTE en bekräftad förstörelse; kasta, så anroparen avbryter
+      // radraderingen i stället för att lämna en pekarlös men levande nyckel.
+      if (SLUTGILTIGT_BORTA.test(typ)) return true;
+      throw new Error(`KMS ScheduleKeyDeletion ${res.status} ${typ}`);
     },
   };
 }
