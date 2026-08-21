@@ -29,13 +29,40 @@
 // ärendets tillstånd utan att bläddra.
 
 import { Link } from "react-router-dom";
-import { useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { lagringsfel, paLagringsfel } from "./lagring";
 import type { Tillforlitlighet } from "./domain";
 import { TILLFORLITLIGHET_LABEL } from "./domain";
 import { MikrofonKnapp } from "./Mikrofon";
 import { IkonPunkt } from "./ikoner";
 import { Etikett, FARG } from "@/alva/komponenter";
 import { ALVA } from "@/alva/system";
+
+/**
+ * Säger ifrån när lagringen inte tar emot.
+ *
+ * Tyst dataförlust är det värsta utfallet i en append-only-logg: appen
+ * fungerar, arbetet syns på skärmen, och vid nästa omladdning är allt
+ * sedan senaste lyckade skrivning borta. Bilagor bäddas in som data-URL
+ * i lokalt läge, så en video plus några foton räcker för att fylla
+ * kvoten. Raden nedan är därför inte en artighet utan en varning: allt
+ * som står på skärmen finns fortfarande, men det är inte sparat.
+ */
+function Lagringsvarning() {
+  const fel = useSyncExternalStore(paLagringsfel, lagringsfel, () => null);
+  if (!fel) return null;
+  return (
+    <p
+      className="mx-auto max-w-3xl border-b px-4 py-2 text-[12px] font-semibold print:hidden"
+      style={{ background: FARG.background, borderColor: FARG.varning, color: FARG.varning }}
+      role="status"
+    >
+      {fel === "full"
+        ? "Local storage is full — the work on screen is NOT saved. Export or sync the case, then free up space before continuing."
+        : "Local storage is unavailable — the work on screen is NOT saved. Sign in to sync, or export the case before closing this window."}
+    </p>
+  );
+}
 
 export function FelsokningSkal({
   rubrik,
@@ -107,7 +134,106 @@ export function FelsokningSkal({
           {hoger}
         </div>
       </header>
+      <Lagringsvarning />
       <main className={`mx-auto ${maxBredd} px-4 py-4 pb-20`}>{children}</main>
+    </div>
+  );
+}
+
+/**
+ * Modal dialog — tillgänglig på riktigt.
+ *
+ * Överlämningsdialogen var tidigare ett `fixed inset-0`-lager utan
+ * `role="dialog"`, utan `aria-modal`, utan fokusfälla och utan Escape.
+ * Bakgrunden förblev alltså tangentbords- och skärmläsarnåbar: en
+ * användare kunde tabba ut ur dialogen och arbeta vidare i en vy som
+ * visuellt låg bakom ett mörkt lager. Komponenttestet renderade aldrig
+ * dialogen, så axe-kontrollen gick grön ändå.
+ *
+ * Den här komponenten gör det EN gång, rätt:
+ *   - role="dialog" + aria-modal + aria-labelledby mot rubriken
+ *   - Escape stänger
+ *   - fokus flyttas in vid öppning och tillbaka till utlösaren vid stängning
+ *   - Tab cirkulerar inom dialogen (fokusfälla)
+ *   - klick på bakgrunden stänger, klick i panelen gör det inte
+ */
+export function Dialog({
+  rubrik,
+  stang,
+  children,
+}: {
+  rubrik: string;
+  stang: () => void;
+  children: ReactNode;
+}) {
+  const panel = useRef<HTMLDivElement>(null);
+  const rubrikId = useId();
+
+  useEffect(() => {
+    const tidigareFokus = document.activeElement as HTMLElement | null;
+    const fokuserbara = () => {
+      const alla = [
+        ...(panel.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+        ) ?? []),
+      ];
+      // offsetParent är alltid null i en testmiljö utan layout, så ett
+      // filter på synlighet får aldrig tömma listan helt — då hade
+      // fokusfällan tystnat just där den prövas.
+      const synliga = alla.filter((e) => e.offsetParent !== null);
+      return synliga.length > 0 ? synliga : alla;
+    };
+
+    fokuserbara()[0]?.focus();
+
+    const vidTangent = (h: KeyboardEvent) => {
+      if (h.key === "Escape") {
+        h.preventDefault();
+        stang();
+        return;
+      }
+      if (h.key !== "Tab") return;
+      const element = fokuserbara();
+      if (element.length === 0) return;
+      const forsta = element[0];
+      const sista = element[element.length - 1];
+      if (h.shiftKey && document.activeElement === forsta) {
+        h.preventDefault();
+        sista.focus();
+      } else if (!h.shiftKey && document.activeElement === sista) {
+        h.preventDefault();
+        forsta.focus();
+      }
+    };
+
+    document.addEventListener("keydown", vidTangent);
+    return () => {
+      document.removeEventListener("keydown", vidTangent);
+      // Fokus tillbaka dit det kom ifrån — annars hamnar tangentbords-
+      // användaren överst på sidan efter varje dialog.
+      tidigareFokus?.focus?.();
+    };
+  }, [stang]);
+
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center"
+      onClick={stang}
+    >
+      <div
+        ref={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={rubrikId}
+        onClick={(h) => h.stopPropagation()}
+        className="max-h-full w-full max-w-2xl overflow-y-auto border p-4"
+        style={{ borderColor: FARG.lightSteel, background: FARG.background }}
+      >
+        <h2 id={rubrikId} className="mb-4 text-[15px] font-semibold">
+          {rubrik}
+        </h2>
+        {children}
+      </div>
     </div>
   );
 }

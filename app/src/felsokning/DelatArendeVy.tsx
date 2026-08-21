@@ -18,6 +18,12 @@
 import { useState } from "react";
 import type { Arende } from "./domain";
 import { handelseRubrik } from "./domain";
+// Samma lista som servern filtrerar mot. Klientens förhandsvisning hade
+// en egen, kortare kopia och visade därför betalare, eskaleringar och
+// reservdelar för teknikern under rubriken "det här är vad kunden ser" —
+// vilket kunden inte gör. Två uttryck för samma regel driver isär; det
+// här är ETT uttryck.
+import { ENDAST_INTERNT } from "./delningsniva";
 import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader, videor } from "./projektioner";
 import { metodikForArende } from "./store";
 import { Bild, Klipp } from "./Bilagevisning";
@@ -156,7 +162,7 @@ export function DelatArendeVy({
   const matvarden = arende.handelser.filter((p) => p.handelse.typ === "matvarde");
   const kundposter = redanFiltrerad
     ? arende.handelser
-    : arende.handelser.filter((p) => !["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad"].includes(p.handelse.typ));
+    : arende.handelser.filter((p) => !ENDAST_INTERNT.includes(p.handelse.typ));
   const pagaende = b.rekommenderatNastaSteg[0];
 
   return (
@@ -282,7 +288,15 @@ export function DelatArendeVy({
           <p key={`u${i}`} className="py-0 text-[14px]"><span className="text-[#005CA9]"><IkonCheck /></span> {k.text}</p>
         ))}
         {!avslutat && pagaende && <p className="py-0 text-[14px] text-[#005CA9]"><IkonUppdatera /> {pagaende}</p>}
-        {b.ejKontrollerat.slice(avslutat ? 0 : 1).map((e, i) => (
+        {/* Undvik att visa samma rad två gånger: det pågående steget står
+            redan ovanför. Ett blint slice(1) tappade däremot en verklig
+            kontroll varje gång nästa steg var en FRÅGA — frågor finns inte
+            i ejKontrollerat, så raden som ströks var en annan än den som
+            visades. Mottagaren fick då en för kort lista över vad som
+            återstår. */}
+        {b.ejKontrollerat
+          .filter((e) => avslutat || e !== pagaende)
+          .map((e, i) => (
           <p key={`e${i}`} className="py-0 text-[14px] text-[#4D5662]"><IkonKlocka /> {e}</p>
         ))}
       </Panel>

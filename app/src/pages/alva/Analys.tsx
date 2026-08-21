@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Block, Etikett, FARG, Rubrik, Statusmärke, Tabell } from "@/alva/komponenter";
 import { FASER } from "@/alva/system";
-import { plattformAktiv } from "@/felsokning/plattform";
+import { hamtaOrganisationsstatistik, plattformAktiv } from "@/felsokning/plattform";
 import { useFelsokning } from "@/felsokning/store";
 import { oversikt } from "../../../../services/gemensam/statistik.mjs";
 import { Ram } from "./Ram";
@@ -53,7 +53,7 @@ function Tal({ tal }: { tal: Nyckeltal }) {
         )}
       </div>
       <div className="mt-2 text-[11px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
-        {tal.riktning === "hogre" ? "↑ bättre" : "↓ bättre"} · {tal.underlag}
+        {tal.riktning === "hogre" ? "↑ better" : "↓ better"} · {tal.underlag}
       </div>
       <p className="mt-4 border-t pt-4 text-[12px] leading-[18px]" style={{ borderColor: FARG.lightSteel, color: FARG.steel }}>
         {tal.tolkning}
@@ -89,16 +89,31 @@ function Staplar({ rader }: { rader: { etikett: string; antal: number; extra?: s
 export default function Analys() {
   const arenden = useFelsokning((s) => s.arenden);
   const [fran, setFran] = useState<Record<string, unknown> | null>(null);
+  const [hamtningsfel, setHamtningsfel] = useState("");
+  const skarpt = plattformAktiv();
 
   // I inloggat läge äger servern siffrorna — samma modul, samma resultat.
   // Utan inloggning räknas de lokalt så vyn går att visa i demo.
+  //
+  // Anropet gick tidigare med ett bart fetch mot en relativ väg, utan
+  // Authorization och utan plattformens bas. Det kunde alltså aldrig
+  // lyckas: vyn föll tyst tillbaka på den HÄR ENHETENS ärenden och visade
+  // dem som organisationens analys. Nu går det genom plattformslagret, och
+  // ett misslyckande syns i stället för att bli lokal data i förklädnad.
   useEffect(() => {
-    if (!plattformAktiv()) return;
-    void fetch("/api/statistik/oversikt")
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setFran)
-      .catch(() => setFran(null));
-  }, []);
+    if (!skarpt) return;
+    let avbruten = false;
+    hamtaOrganisationsstatistik()
+      .then((d) => {
+        if (!avbruten) setFran(d);
+      })
+      .catch((orsak) => {
+        if (!avbruten) setHamtningsfel(orsak instanceof Error ? orsak.message : String(orsak));
+      });
+    return () => {
+      avbruten = true;
+    };
+  }, [skarpt]);
 
   const data = useMemo(
     () => fran ?? (oversikt(Object.values(arenden)) as Record<string, never>),
@@ -110,28 +125,28 @@ export default function Analys() {
       etikett: "Verification rate",
       varde: data.verifiering.andel,
       enhet: "%",
-      underlag: `${data.verifiering.fastställda} av ${data.verifiering.antal} avslut`,
+      underlag: `${data.verifiering.fastställda} of ${data.verifiering.antal} closures`,
       riktning: "hogre",
       tolkning:
-        "Andel avslut med fastställd orsak. Att den inte är 100 % är friskt — en organisation som aldrig skriver “orsaken kunde inte fastställas” får antingen bara enkla fel, eller skriver inte sanningen.",
+        "Share of closures with an established cause. Anything below 100% is healthy — an organization that never writes “the cause could not be established” either only sees easy faults, or is not writing the truth.",
     },
     {
       etikett: "Reproduction rate",
       varde: data.reproduktion.andel,
       enhet: "%",
-      underlag: `${data.reproduktion.ja} av ${data.reproduktion.antal} symptom`,
+      underlag: `${data.reproduktion.ja} of ${data.reproduktion.antal} symptoms`,
       riktning: "hogre",
       tolkning:
-        "Andel symptom som återskapats. Låg siffra förutsäger återkommande fordon: man kan inte åtgärda det man inte sett.",
+        "Share of symptoms reproduced. A low figure predicts returning vehicles: you cannot fix what you have not seen.",
     },
     {
       etikett: "Rework",
       varde: data.omarbetning.andel,
       enhet: "%",
-      underlag: `${data.omarbetning.antal} fall inom 90 dagar`,
+      underlag: `${data.omarbetning.antal} cases within 90 days`,
       riktning: "lagre",
       tolkning:
-        "Samma fordon tillbaka med samma orsakskategori. Det dyraste felet i en verkstad, och det enda ingen mäter — det kräver att två ärenden kopplas ihop.",
+        "The same vehicle back with the same cause category. The most expensive fault in a workshop, and the one nobody measures — it requires linking two cases.",
     },
   ];
 
@@ -150,6 +165,16 @@ export default function Analys() {
           </span>
         </div>
 
+        {hamtningsfel && (
+          <p
+            className="mb-6 border p-4 text-[13px] leading-[20px]"
+            style={{ borderColor: FARG.lightSteel, background: FARG.white, color: FARG.varning }}
+          >
+            The organization&rsquo;s figures could not be retrieved ({hamtningsfel}). The numbers below are
+            calculated from the cases on this device only — they are not the organization&rsquo;s.
+          </p>
+        )}
+
         <div className="mb-6 grid gap-px md:grid-cols-3" style={{ background: FARG.lightSteel, border: `1px solid ${FARG.lightSteel}` }}>
           {tal.map((t) => (
             <Tal key={t.etikett} tal={t} />
@@ -159,7 +184,7 @@ export default function Analys() {
         <div className="grid gap-6 md:grid-cols-2">
           <Block rubrik="Evidence profile" beteckning="ALVA-SPEC-004">
             <p className="mb-2 text-[12px] leading-[18px]" style={{ color: FARG.steel }}>
-              Starkaste evidenstyp per ärende. Ett mätvärde räknas som E4 endast med spårbart mätdon.
+              Strongest evidence grade per case. A measurement counts as E4 only with a traceable instrument.
             </p>
             <Staplar
               rader={Object.entries(data.evidens as Record<string, number>)
@@ -170,7 +195,7 @@ export default function Analys() {
 
           <Block rubrik="Phase distribution" beteckning="ALVA-ES-0001">
             <p className="mb-2 text-[12px] leading-[18px]" style={{ color: FARG.steel }}>
-              Var arbetet ligger, i ALVA-termer. Övervikt i Localization betyder att fel hittas men inte fastställs.
+              Where the work sits, in ALVA terms. A weight towards Localization means faults are found but not established.
             </p>
             <Staplar
               rader={FASER.map((f) => ({
@@ -184,9 +209,9 @@ export default function Analys() {
 
         <Block rubrik="Procedure friction" beteckning="ALVA-RULE-120">
           <p className="mb-4 text-[13px] leading-[20px]" style={{ color: FARG.steel }}>
-            Kontroller som oftast hoppas över, med dokumenterat undantag. Ett steg högt upp i listan är antingen
-            felskrivet eller kräver utrustning verkstaden inte har. Bägge går att åtgärda — men bara om man vet
-            vilket steg det gäller.
+            Checks most often skipped with a documented exception. A step high in this list is either badly
+            worded or requires equipment the workshop does not have. Both are fixable — but only if you know
+            which step it is.
           </p>
           {data.undantag.length === 0 ? (
             <Statusmärke status="not_applicable" />

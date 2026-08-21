@@ -17,7 +17,7 @@
 // att spärra mot.
 
 import { type FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loggaInPlattform, plattformAktiv } from "@/felsokning/plattform";
 import { Demonstration, Block, Etikett, FARG, Knapp, Rubrik } from "@/alva/komponenter";
 import { useWebbSprak } from "@/alva/webbsprak";
@@ -31,6 +31,7 @@ const FALT = [
 
 export default function LoggaIn() {
   const navigera = useNavigate();
+  const plats = useLocation();
   const sprak = useWebbSprak();
   const t = oversattare(sprak) as (nyckel: string) => string;
   const [fel, setFel] = useState("");
@@ -62,7 +63,14 @@ export default function LoggaIn() {
       // Teknikerns första vy är diagnosrutan — arbetet, ingenting annat.
       // Arbetsledning och administration landar i portalen, där
       // organisationens tillstånd bor.
-      navigera(konto.roll === "tekniker" ? "/felsokning" : "/alva/portal");
+      // Portalvakten skickar med vart användaren var på väg. Utan det
+      // hamnade den som skrev /alva/portal/fakturor och tvingades logga
+      // in alltid på Dashboard, och fick leta sig tillbaka själv.
+      const fran = (plats.state as { fran?: string } | null)?.fran;
+      const standard = konto.roll === "tekniker" ? "/felsokning" : "/alva/portal";
+      // En tekniker skickas aldrig in i portalen även om vägen kom
+      // därifrån — rollen avgör, inte historiken.
+      navigera(fran && konto.roll !== "tekniker" ? fran : standard);
     } catch (orsak) {
       // Serverns egen text visas oförändrad. Den vet vad som hände —
       // avstängt konto, spärrat efter för många försök, fel uppgifter —
@@ -115,9 +123,11 @@ export default function LoggaIn() {
             <Knapp type="submit" disabled={arbetar}>
               {arbetar ? t("webb.login.loggar_in") : t("webb.login.logga_in")}
             </Knapp>
-            <a href="/alva/ansokan" className="text-[12px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
+            {/* Link, inte <a>: ett rått href laddar om hela appen och
+                bryter helt i hash-routerläge. */}
+            <Link to="/alva/ansokan" className="text-[12px] uppercase tracking-[0.08em]" style={{ color: FARG.steel }}>
               {t("webb.login.glomt")}
-            </a>
+            </Link>
           </div>
         </form>
       </div>

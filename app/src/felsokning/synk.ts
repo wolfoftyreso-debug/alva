@@ -86,6 +86,12 @@ async function synkroniseraMotPlattform(arende: Arende): Promise<SynkResultat> {
 }
 
 export async function synkroniseraArende(arende: Arende): Promise<SynkResultat> {
+  // Demonstrationsärendet stannar på enheten — i BÅDA driftlägena. Utan
+  // den här raden hamnade fejkbilen i organisationens ärendelista,
+  // statistik och evidensunderlag vid första inloggningen, omöjlig för
+  // servern att skilja från ett riktigt ärende eftersom ingenting i
+  // loggen sade att den var påhittad.
+  if (arende.demo) return { status: "lokal" };
   const { plattformAktiv } = await import("./plattform");
   if (plattformAktiv()) return synkroniseraMotPlattform(arende);
 

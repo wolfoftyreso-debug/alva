@@ -320,7 +320,7 @@ export default function NyttArende() {
           <p className="mt-2 text-[20px] font-semibold">{objektet.beskrivning}</p>
           <p className="mt-2 text-[15px] font-semibold text-[#005CA9]">{objektet.identifierare}</p>
           <p className="mt-2 text-[12px] text-[#4D5662]">Identifierad via: {objektet.identifieringsmetod}</p>
-          {objektet.kund && <p className="mt-2 text-[14px] text-[#1B1E22]">Kund: {objektet.kund}</p>}
+          {objektet.kund && <p className="mt-2 text-[14px] text-[#1B1E22]">Customer: {objektet.kund}</p>}
         </Panel>
         <div className="grid grid-cols-2 gap-2">
           <StorKnapp variant="sekundar" onClick={() => setSteg("identifiera")}>

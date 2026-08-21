@@ -63,6 +63,22 @@ describe("spektralanalysen hittar det som finns i signalen", () => {
   });
 });
 
+describe("tystnad läses som tystnad", () => {
+  // En mutad mikrofon är vanlig på telefon. Tidigare gav en helt tyst
+  // kanal SNR ~240 dB (topp-fallbacket var 1 mot en golvad median), så
+  // stoppregeln "för lågt SNR" — som finns just för det här fallet —
+  // passerade, och 0 Hz dokumenterades som mätvärde med E4-anspråk.
+  it("en tyst kanal ger SNR 0 och fångas av stoppregeln", () => {
+    const tyst = analyseraKanal(new Float32Array(FS * 8), FS, 1500);
+    expect(tyst.snrDb).toBe(0);
+    expect(stoppregler("A", tyst, 1500, true).some((r) => r.regel === "for_lagt_snr")).toBe(true);
+  });
+
+  it("SNR taklistas så en ren ton inte ger ett orimligt värde", () => {
+    expect(analyseraKanal(sinus(1000, 6), FS).snrDb).toBeLessThanOrEqual(90);
+  });
+});
+
 describe("stoppreglerna säger ifrån", () => {
   const bra = analyseraKanal(sinus(500, 8), FS, 1500);
 
@@ -110,6 +126,32 @@ describe("händelserna passerar serverns egen granskning", () => {
     for (const f of ljudforslag(resultat, true)) {
       expect(granskaHändelse(hypoteshandelse(f))).toBeNull();
     }
+  });
+});
+
+describe("panelen städar efter sig och tolkar varvtalet", () => {
+  const PANEL = readFileSync("src/felsokning/Ljudpanel.tsx", "utf8");
+
+  it("mikrofonen stoppas när panelen lämnas", () => {
+    // Utan städning fortsatte inspelningen när teknikern bytte flik:
+    // mikrofonlampan lyste och ingenting stoppade den.
+    expect(PANEL).toContain("getTracks?.().forEach((sp) => sp.stop())");
+    expect(PANEL).toContain('inspelare.current?.state === "recording"');
+  });
+
+  it("inspelningen har ett tak så en glömd inspelning inte spränger fliken", () => {
+    expect(PANEL).toContain("MAX_INSPELNING_S");
+  });
+
+  it("ett varvtal med enhet tolkas, och skräp blir inget värde alls", () => {
+    // "1500 rpm" blev NaN: ordningen tystnade OCH varningen om saknat
+    // varvtal tystnade, så teknikern trodde att ordningen räknats.
+    expect(PANEL).toContain("tolkaRpm");
+    expect(PANEL).toContain('replace(/[^\\d.,]/g, "")');
+  });
+
+  it("dubbeltryck kan inte starta två inspelare", () => {
+    expect(PANEL).toContain("if (spelarIn || inspelare.current) return;");
   });
 });
 

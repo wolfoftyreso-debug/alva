@@ -213,10 +213,13 @@ describe("arbetsorderskanning", () => {
   it("händelsetypen arbetsorder_skannad är organisationsintern i alla delningsvägar", () => {
     const server = readFileSync("../services/plattform/server.mjs", "utf8");
     const migration = readFileSync("../supabase/migrations/20260802230000_guidad_felsokning.sql", "utf8");
-    const delatVy = readFileSync("src/felsokning/DelatArendeVy.tsx", "utf8");
-    for (const innehall of [server, migration, delatVy]) {
+    // Klientens lista bor numera i delningsniva.ts — ETT uttryck delat av
+    // vyn och paritetstestat mot serverns ENDAST_INTERNT.
+    const klientlista = readFileSync("src/felsokning/delningsniva.ts", "utf8");
+    for (const innehall of [server, migration, klientlista]) {
       expect(innehall).toContain("arbetsorder_skannad");
     }
+    expect(readFileSync("src/felsokning/DelatArendeVy.tsx", "utf8")).toContain("ENDAST_INTERNT");
   });
 });
 

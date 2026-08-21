@@ -73,7 +73,7 @@ import {
   underlagFinns,
   UNDANTAGSORSAKER,
 } from "@/felsokning/ecm";
-import { FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
+import { Dialog, FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
 import { lasVideo, skalaNerFoto, tidDatum, tidKlockslag } from "@/felsokning/format";
 import { IkonCheck, IkonKamera, IkonKryss, IkonLank, IkonPunkt, IkonSok, IkonVarning } from "@/felsokning/ikoner";
 import { Ljudpanel } from "@/felsokning/Ljudpanel";
@@ -1262,6 +1262,9 @@ function GuideFlik({
   const steg = useMemo(() => nastaSteg(arende, metodik), [arende, metodik]);
   const anvandare = useFelsokning((s) => s.anvandare);
   const [visaOverlamning, setVisaOverlamning] = useState(false);
+  const [visaAvslut, setVisaAvslut] = useState(false);
+  const avsluta = () =>
+    skicka({ typ: "arende_avslutat", signatur: anvandare, plattformsversion: PLATTFORMSVERSION });
   const [aiStatus, setAiStatus] = useState<"vilar" | "arbetar" | "fel">("vilar");
 
   // AI-orkestern drivs av plattformen: handledningen (Sonnet 5) svarar på
@@ -1369,7 +1372,7 @@ function GuideFlik({
               If the root cause is not verified: document a hypothesis and extend the diagnosis, or close the case
               with recommended next steps.
             </p>
-            <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare, plattformsversion: PLATTFORMSVERSION })}>
+            <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => setVisaAvslut(true)}>
               Close diagnosis
             </StorKnapp>
             {!kanAvslutas && <Avslutshinder hinder={hinder} />}
@@ -1384,7 +1387,7 @@ function GuideFlik({
             <p className="mb-4 font-semibold text-[#1B1E22]">{steg.sparr.atgard}</p>
             <p className="text-[12px] text-[#4D5662]">
               The answer is documented in the log. The methodology opens when the precondition is met and the question is answered
-              jakande.
+              in the affirmative.
             </p>
           </div>
         ) : steg.fraga ? (
@@ -1468,7 +1471,7 @@ function GuideFlik({
         <StorKnapp variant="sekundar" onClick={() => setVisaOverlamning(true)}>
           Hand over the work
         </StorKnapp>
-        <StorKnapp variant="sekundar" disabled={!kanAvslutas} onClick={() => skicka({ typ: "arende_avslutat", signatur: anvandare, plattformsversion: PLATTFORMSVERSION })}>
+        <StorKnapp variant="sekundar" disabled={!kanAvslutas} onClick={() => setVisaAvslut(true)}>
           Close diagnosis
         </StorKnapp>
       </div>
@@ -1476,7 +1479,50 @@ function GuideFlik({
       {visaOverlamning && (
         <OverlamningDialog arende={arende} metodik={metodik} nu={nu} skicka={skicka} stang={() => setVisaOverlamning(false)} />
       )}
+      {visaAvslut && (
+        <AvslutsBekraftelse signatur={anvandare} stang={() => setVisaAvslut(false)} avsluta={avsluta} />
+      )}
     </>
+  );
+}
+
+/**
+ * Bekräftelse innan diagnosen låses.
+ *
+ * Avslutet är oåterkalleligt: ärendet blir skrivskyddat, förseglas och
+ * kan därefter bara kompletteras med en ny post som pekar tillbaka. Det
+ * var samtidigt ETT klick, i ett gränssnitt som används med handskar på
+ * en telefon i en verkstad. En feltryckning kostade alltså ett ärende.
+ *
+ * Rutan säger vad som händer, inte "är du säker?" — den som läser ska
+ * kunna avgöra saken utan att veta hur systemet fungerar inuti.
+ */
+function AvslutsBekraftelse({ signatur, stang, avsluta }: { signatur: string; stang: () => void; avsluta: () => void }) {
+  return (
+    <Dialog rubrik="Close the diagnosis?" stang={stang}>
+      <p className="mb-4 text-[14px] leading-[22px] text-[#1B1E22]">
+        The case is closed and signed by <span className="font-semibold">{signatur || "you"}</span>. It becomes
+        read-only and is sealed: after this, nothing can be edited or removed — a correction is a new entry that
+        refers back.
+      </p>
+      <p className="mb-4 text-[13px] text-[#4D5662]">
+        The record stays readable and exportable, and the customer&rsquo;s share link keeps working.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <StorKnapp variant="sekundar" onClick={stang}>
+          Keep working
+        </StorKnapp>
+        <StorKnapp
+          variant="fara"
+          onClick={() => {
+            avsluta();
+            stang();
+          }}
+        >
+          Close and sign
+        </StorKnapp>
+      </div>
+    </Dialog>
   );
 }
 
@@ -2129,9 +2175,7 @@ function OverlamningDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-      <div className="max-h-full w-full max-w-2xl overflow-y-auto border border-[#D7DCE2] bg-[#F6F7F8] p-4">
-        <h2 className="mb-4 text-[15px] font-semibold">Handover report</h2>
+    <Dialog rubrik="Handover report" stang={stang}>
         <pre className="mb-4 overflow-x-auto whitespace-pre-wrap bg-white p-4 text-[12px] text-[#1B1E22]">
           {text}
         </pre>
@@ -2167,8 +2211,7 @@ function OverlamningDialog({
             Confirm handover
           </StorKnapp>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -2344,11 +2387,11 @@ function BriefFlik({
               <p className="mt-2 text-[14px]">
                 <span className="font-semibold text-[#005CA9]">Next step:</span> {senasteAi.handelse.nastaSteg}
               </p>
-              <p className="mt-2 text-[11px] text-[#4D5662]">Senaste analys ({senasteAi.handelse.modell})</p>
+              <p className="mt-2 text-[11px] text-[#4D5662]">Latest analysis ({senasteAi.handelse.modell})</p>
             </div>
           )}
           <StorKnapp variant="sekundar" disabled={granskning === "arbetar"} onClick={granska}>
-            <IkonSok /> Granska underlaget
+            <IkonSok /> Review the evidence
           </StorKnapp>
         </Panel>
       )}
@@ -2357,7 +2400,7 @@ function BriefFlik({
           <>
             <p className="text-[15px] font-semibold">{b.objekt.beskrivning}</p>
             <p className="font-semibold text-[#005CA9]">{b.objekt.identifierare}</p>
-            {b.objekt.kund && <p className="text-[#1B1E22]">Kund: {b.objekt.kund}</p>}
+            {b.objekt.kund && <p className="text-[#1B1E22]">Customer: {b.objekt.kund}</p>}
             {b.ansvarig && <p className="text-[#1B1E22]">Ansvarig tekniker: {b.ansvarig}</p>}
           </>
         ) : (
@@ -2372,7 +2415,7 @@ function BriefFlik({
         {b.utfordaKontroller.map((k, i) =>
           k.undantag ? (
             <p key={i} className="py-0 text-[14px] text-[#8A5A00]">
-              <IkonVarning /> {k.text} — underlag saknas: {k.undantag}
+              <IkonVarning /> {k.text} — evidence missing: {k.undantag}
             </p>
           ) : (
             <p key={i} className="py-0 text-[14px]">

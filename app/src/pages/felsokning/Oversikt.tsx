@@ -279,9 +279,9 @@ export default function Oversikt() {
               <p className="mt-2 text-[15px] font-semibold">{rad.objekt ?? "Unknown object"}</p>
               {rad.felbeskrivning && <p className="text-[14px] text-[#1B1E22]">”{rad.felbeskrivning}”</p>}
               <p className="mt-2 text-[12px] text-[#4D5662]">
-                Ansvarig: <span className="font-semibold text-[#1B1E22]">{rad.ansvarig ?? rad.skapare ?? "—"}</span>
+                Responsible: <span className="font-semibold text-[#1B1E22]">{rad.ansvarig ?? rad.skapare ?? "—"}</span>
                 {` · ${rad.antal_handelser} events`}
-                {rad.senaste ? ` · senast ${tidDatum(rad.senaste)} ${tidKlockslag(rad.senaste)}` : ""}
+                {rad.senaste ? ` · latest ${tidDatum(rad.senaste)} ${tidKlockslag(rad.senaste)}` : ""}
               </p>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <StorKnapp variant="sekundar" onClick={() => oppna(rad)}>

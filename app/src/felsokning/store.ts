@@ -4,7 +4,8 @@
 // synkronisering (inkl. offline-läge) konfliktfri.
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { LAGRINGSNYCKEL, flikSakerLagring } from "./lagring";
 import type { Arende, Handelse, LoggPost, Objekt } from "./domain";
 import { nyLoggPost } from "./domain";
 import { felbeskrivning } from "./projektioner";
@@ -94,9 +95,30 @@ export const useFelsokning = create<FelsokningState>()(
         }));
       },
     }),
-    { name: "guidad-felsokning" },
+    {
+      // Flikssäker lagring: flätar mot det som redan står i localStorage i
+      // stället för att skriva över det, fångar kvotfel i stället för att
+      // kasta genom store-aktionen, och lämnar en trasig post orörd i
+      // stället för att nollställa allt. Se lagring.ts.
+      name: LAGRINGSNYCKEL,
+      version: 1,
+      storage: createJSONStorage(() => flikSakerLagring),
+    },
   ),
 );
+
+// Ett annat fönster skrev — läs om och fläta in.
+//
+// Utan det här levde varje flik i sin egen bild: den som senast skrev
+// vann, och den andres händelser fanns bara i ett minne som snart var
+// borta. Rehydreringen är säker eftersom lagringen redan flätat ihop
+// bägge bilderna (se lagring.ts) — det som läses tillbaka innehåller
+// alltså både fönstrens arbete, aldrig mindre än det egna.
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (h) => {
+    if (h.key === LAGRINGSNYCKEL) void useFelsokning.persist.rehydrate();
+  });
+}
 
 export function metodikForArende(arende: Arende | undefined): Metodik {
   if (!arende) return GENERISK_METODIK;

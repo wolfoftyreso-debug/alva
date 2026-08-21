@@ -179,6 +179,9 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
     nummer,
     skapad: vid(0),
     delningskod: `demo-${start.toString(36)}`,
+    // Märkt som demonstration: synken skickar aldrig upp det, så
+    // fejkbilen hamnar inte i organisationens statistik eller underlag.
+    demo: true,
     handelser,
   };
 }

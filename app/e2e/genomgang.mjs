@@ -357,6 +357,11 @@ async function kor(sida, fall) {
     const avsluta = btn(/^Close diagnosis$/i);
     if ((await finns(avsluta)) && !(await avsluta.last().isDisabled())) {
       await klicka(avsluta.last());
+      // Avslutet är oåterkalleligt och kräver därför en bekräftelse:
+      // ärendet blir skrivskyddat och förseglas. Genomgången måste följa
+      // samma väg som en tekniker.
+      const bekrafta = btn(/^Close and sign$/i);
+      if (await finns(bekrafta)) await klicka(bekrafta.last());
       continue;
     }
 

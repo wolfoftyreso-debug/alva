@@ -226,6 +226,18 @@ export async function hamtaFordonshistorik(identifierare: string): Promise<Fordo
   return ((await res.json()) as { arenden: FordonshistorikRad[] }).arenden;
 }
 
+// Organisationens nyckeltal, räknade av servern ur HELA organisationens
+// logg (arbetsledare/admin). Analysvyn gjorde tidigare ett bart fetch mot
+// en relativ väg utan Authorization — anropet kunde aldrig lyckas, och
+// vyn föll tyst tillbaka på den här enhetens lokala ärenden och visade
+// dem som organisationens. En tystnad som ser ut som data är värre än ett
+// fel som syns, så den här kastar i stället.
+export async function hamtaOrganisationsstatistik(): Promise<Record<string, unknown>> {
+  const res = await plattformFetch("/api/statistik/oversikt");
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  return (await res.json()) as Record<string, unknown>;
+}
+
 // Flottdata: felorsaksstatistik per orsakskategori (arbetsledare/admin).
 export async function hamtaFelorsaksstatistik(): Promise<{ orsak: string; antal: number }[]> {
   const res = await plattformFetch("/api/statistik/felorsaker");

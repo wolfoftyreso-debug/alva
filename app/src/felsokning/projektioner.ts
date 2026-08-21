@@ -300,7 +300,7 @@ export function brief(arende: Arende, metodik: Metodik, nu?: string): Brief {
   const nasta = nastaSteg(arende, metodik);
   const rekommenderat: string[] = [];
   if (!arAvslutat(arende)) {
-    if (nasta.fraga) rekommenderat.push(`Besvara: ${nasta.fraga.text}`);
+    if (nasta.fraga) rekommenderat.push(`Answer: ${nasta.fraga.text}`);
     else if (nasta.kontroll) rekommenderat.push(nasta.kontroll.text);
     for (const text of kvar.slice(0, 3)) {
       if (!rekommenderat.includes(text)) rekommenderat.push(text);
@@ -335,7 +335,7 @@ export function overlamningstext(arende: Arende, metodik: Metodik, nu?: string):
   rader.push("Checks performed:");
   if (b.utfordaKontroller.length === 0) rader.push("  (none yet)");
   for (const k of b.utfordaKontroller)
-    rader.push(k.undantag ? `  ! ${k.text} — underlag saknas: ${k.undantag}` : `  ✓ ${k.text}${k.resultat ? ` — ${k.resultat}` : ""}`);
+    rader.push(k.undantag ? `  ! ${k.text} — evidence missing: ${k.undantag}` : `  ✓ ${k.text}${k.resultat ? ` — ${k.resultat}` : ""}`);
   rader.push("");
   rader.push("Observations:");
   if (b.observationer.length === 0) rader.push("  (none yet)");
@@ -353,7 +353,7 @@ export function overlamningstext(arende: Arende, metodik: Metodik, nu?: string):
   rader.push("Recommended next step:");
   b.rekommenderatNastaSteg.forEach((s, i) => rader.push(`  ${i + 1}. ${s}`));
   rader.push("");
-  rader.push(`Total arbetstid: ${b.totalArbetstid}`);
+  rader.push(`Total labour time: ${b.totalArbetstid}`);
   return rader.join("\n");
 }
 

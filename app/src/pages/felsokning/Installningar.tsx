@@ -114,7 +114,7 @@ function Integrationer() {
                     {Object.entries(finns.uppgifter)
                       .map(([nyckel, varde]) => `${nyckel}: ${varde || "—"}`)
                       .join(" · ")}
-                    {finns.senaste_status && ` · senaste uppslag: ${finns.senaste_status}`}
+                    {finns.senaste_status && ` · latest lookup: ${finns.senaste_status}`}
                   </p>
                 )}
               </div>

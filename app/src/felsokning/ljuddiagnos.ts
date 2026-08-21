@@ -190,7 +190,12 @@ export function analyseraKanal(kanal: Float32Array, samplefrekvens: number, rpm?
     if (valda.length >= 5) break;
     if (valda.every((v) => Math.abs(v.k - kand.k) > 3)) valda.push(kand);
   }
-  const maxM = valda[0]?.m ?? 1;
+  // Ingen topp = ingen signal. Fallbacket var tidigare 1, vilket gav en
+  // TYST kanal ett SNR på ~240 dB: nämnaren (medianen) golvas till 1e-12,
+  // täljaren låtsades vara 1, och stoppregeln "för lågt SNR" — som finns
+  // just för att fånga en mutad mikrofon — passerade i stället. Noll är
+  // det ärliga värdet: fanns ingen topp fanns ingen ton.
+  const maxM = valda[0]?.m ?? 0;
   const toppar: Topp[] = valda.map((v) => ({ hz: Math.round(v.k * binHz), rel: Number((v.m / maxM).toFixed(2)) }));
   const dominantHz = toppar[0]?.hz ?? 0;
 
@@ -198,7 +203,12 @@ export function analyseraKanal(kanal: Float32Array, samplefrekvens: number, rpm?
   // om något alls sticker upp ur mattan.
   const sorterat = Array.from(spektrum).sort((a, b) => a - b);
   const median = sorterat[Math.floor(sorterat.length / 2)] || 1e-12;
-  const snrDb = Number((20 * Math.log10((maxM || 1e-12) / median)).toFixed(1));
+  // Ett rent spektrum har halva binsen nära noll, så medianen golvas till
+  // 1e-12 — utan tak blir kvoten då astronomisk och säger ingenting om
+  // signalen. SNR:t taklistas därför vid 90 dB, vilket är långt över
+  // allt en verkstadsmikrofon kan mäta, och blir 0 när ingen topp finns.
+  const snrDb =
+    maxM <= 0 ? 0 : Number(Math.min(90, 20 * Math.log10(maxM / median)).toFixed(1));
 
   // Tyngdpunkt och bandenergier — särdragen referensprofilerna jämför.
   let energiSumma = 0;

@@ -16,7 +16,8 @@
 import { render } from "@testing-library/react";
 import { axe } from "vitest-axe";
 import { describe, expect, it } from "vitest";
-import { Panel, StorKnapp, TextFalt } from "../ui";
+import { Dialog, Panel, StorKnapp, TextFalt } from "../ui";
+import { fireEvent, screen } from "@testing-library/react";
 import { Bild } from "../Bilagevisning";
 
 async function utanFel(ui: React.ReactElement) {
@@ -68,5 +69,66 @@ describe("färg är aldrig enda informationsbäraren", () => {
     );
     expect(container.textContent).toMatch(/Hypotes/);
     expect(container.textContent).toMatch(/verifiering/);
+  });
+});
+
+// Dialogen — den yta som fattades helt i den här sviten, och därför
+// kunde sakna role, aria-modal, fokusfälla och Escape utan att något
+// slog larm. En dialog utan modalitet är värre än ingen dialog: den
+// SER ut som en spärr och släpper igenom tangentbordet bakom sig.
+describe("dialogen är modal på riktigt", () => {
+  const oppna = () =>
+    render(
+      <Dialog rubrik="Handover report" stang={() => {}}>
+        <TextFalt label="Handed to" varde="" satt={() => {}} />
+        <StorKnapp onClick={() => {}}>Confirm handover</StorKnapp>
+      </Dialog>,
+    );
+
+  it("har inga maskinellt upptäckbara fel", async () => {
+    expect(
+      await utanFel(
+        <Dialog rubrik="Handover report" stang={() => {}}>
+          <StorKnapp onClick={() => {}}>Confirm handover</StorKnapp>
+        </Dialog>,
+      ),
+    ).toEqual([]);
+  });
+
+  it("är märkt som dialog, modal, och namngiven av sin rubrik", () => {
+    oppna();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    // Namnet kommer ur rubriken, inte ur en gissning.
+    expect(dialog.getAttribute("aria-labelledby")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Handover report" })).toBeTruthy();
+  });
+
+  it("flyttar fokus in i dialogen när den öppnas", () => {
+    oppna();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+
+  it("Escape stänger — utan att man måste hitta avbryt-knappen", () => {
+    let stangd = false;
+    render(
+      <Dialog rubrik="Handover report" stang={() => { stangd = true; }}>
+        <StorKnapp onClick={() => {}}>Confirm handover</StorKnapp>
+      </Dialog>,
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(stangd).toBe(true);
+  });
+
+  it("Tab cirkulerar inom dialogen i stället för att lämna den", () => {
+    oppna();
+    const dialog = screen.getByRole("dialog");
+    const fokuserbara = dialog.querySelectorAll("input, button");
+    const sista = fokuserbara[fokuserbara.length - 1] as HTMLElement;
+    sista.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    // Fokus stannar kvar i dialogen — den lämnar aldrig till bakgrunden.
+    expect(dialog.contains(document.activeElement)).toBe(true);
   });
 });

@@ -28,6 +28,9 @@ import AlvaIntegration from "./pages/alva/Integration";
 import AlvaAbonnemang from "./pages/alva/Abonnemang";
 import AlvaGarantier from "./pages/alva/Garantier";
 import AlvaImpressum from "./pages/alva/Impressum";
+import AlvaDataskydd from "./pages/alva/Dataskydd";
+import AlvaVillkor from "./pages/alva/Villkor";
+import AlvaTillganglighet from "./pages/alva/Tillganglighet";
 import AlvaUtgavor from "./pages/alva/Utgavor";
 import AlvaSprak from "./pages/alva/Sprak";
 import AlvaForsakring from "./pages/alva/Forsakring";
@@ -36,7 +39,13 @@ import AlvaInstallningar from "./pages/alva/Installningar";
 import { Portalvakt } from "./pages/alva/Portalvakt";
 import { Felgrans } from "./Felgrans";
 
-const Router = import.meta.env.VITE_HASH_ROUTER ? HashRouter : BrowserRouter;
+// Vite-envvärden är STRÄNGAR: "false", "0" och "off" är alla sanna i JS,
+// så en flagga satt till "false" slog tidigare PÅ hash-routern — och i
+// hash-läge bryter varje rått href. Läses därför som ett uttryckligt ja.
+const HASH_ROUTER = ["1", "true", "yes", "on"].includes(
+  String(import.meta.env.VITE_HASH_ROUTER ?? "").toLowerCase(),
+);
+const Router = HASH_ROUTER ? HashRouter : BrowserRouter;
 
 const App = () => (
   <Felgrans>
@@ -50,6 +59,9 @@ const App = () => (
       {/* Lagstadgad information. Nås från foten på varje sida — det är
           en del av kravet, inte en placering. */}
       <Route path="/alva/impressum" element={<AlvaImpressum />} />
+      <Route path="/alva/dataskydd" element={<AlvaDataskydd />} />
+      <Route path="/alva/villkor" element={<AlvaVillkor />} />
+      <Route path="/alva/tillganglighet" element={<AlvaTillganglighet />} />
       <Route path="/alva/utgavor" element={<AlvaUtgavor />} />
       <Route path="/alva/sprak" element={<AlvaSprak />} />
       {/* Portalen är stängd utan giltig plattformssession — se

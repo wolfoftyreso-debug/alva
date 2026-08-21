@@ -295,6 +295,17 @@ export interface Arende {
   // Explicit vald metodik (t.ex. via AI-klassificering vid skapandet).
   // Saknas den härleds metodiken ur felbeskrivningen.
   metodikId?: string;
+  /**
+   * Sant för det inbyggda demonstrationsärendet.
+   *
+   * Demoärendet låg tidigare i samma store som riktiga ärenden utan att
+   * vara märkt, och synkades därför upp till organisationen vid
+   * inloggning: fejkbilen hamnade i arbetsledarens statistik och bland
+   * organisationens "bevismaterial", där servern omöjligt kunde skilja
+   * den från ett riktigt ärende. Flaggan stannar lokalt — synken hoppar
+   * över ärendet i stället för att skicka det.
+   */
+  demo?: boolean;
   handelser: LoggPost[];
 }
 

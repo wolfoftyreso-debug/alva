@@ -32,6 +32,9 @@ const ALLVARSFARG: Record<Stoppregel["allvar"], string> = {
   varning: "#8A5A00",
 };
 
+/** Längsta inspelning innan den stoppas automatiskt. */
+const MAX_INSPELNING_S = 120;
+
 export function Ljudpanel({ skicka, fordon }: { skicka: (h: Handelse) => void; fordon?: string }) {
   const [oppen, setOppen] = useState(false);
   const [sekvens, setSekvens] = useState<Sekvens>("A");
@@ -61,7 +64,43 @@ export function Ljudpanel({ skicka, fordon }: { skicka: (h: Handelse) => void; f
     klocka.current = null;
   };
 
+  /**
+   * Varvtalet ur fältet, eller sekvensens fasta värde.
+   *
+   * Fältet är fritext ("e.g. 850"), så "1500 rpm" eller "~1500" blev
+   * NaN. NaN är falskt, så ordningsanalysen tystnade — men NaN är inte
+   * undefined, så stoppregeln "varvtal saknas" tystnade OCKSÅ. Teknikern
+   * såg varningen slockna och trodde att ordningen räknats. Siffrorna
+   * plockas därför ut, och allt som inte blir ett positivt tal räknas
+   * som inget värde alls.
+   */
+  const tolkaRpm = (): number | undefined => {
+    const rått = rpmText.trim();
+    if (!rått) return MATSEKVENSER[sekvens].rpm;
+    const tal = Number(rått.replace(/[^\d.,]/g, "").replace(",", "."));
+    return Number.isFinite(tal) && tal > 0 ? tal : undefined;
+  };
+
+  // Mikrofonen får aldrig bli kvar på. Utan städningen fortsatte
+  // inspelningen (och sekundklockan) när teknikern bytte flik eller
+  // lämnade ärendet — lampan lyste och ingenting stoppade den.
+  useEffect(() => {
+    return () => {
+      stoppaKlocka();
+      try {
+        inspelare.current?.stream?.getTracks?.().forEach((sp) => sp.stop());
+        if (inspelare.current?.state === "recording") inspelare.current.stop();
+      } catch {
+        // Redan stoppad — inget att göra.
+      }
+      inspelare.current = null;
+    };
+  }, []);
+
   const starta = async () => {
+    // Dubbeltryck innan omritning startade två inspelare; den första
+    // refen skrevs över och gick sedan inte att stoppa.
+    if (spelarIn || inspelare.current) return;
     setFel("");
     setResultat(null);
     setDokumenterat(false);
@@ -78,13 +117,13 @@ export function Ljudpanel({ skicka, fordon }: { skicka: (h: Handelse) => void; f
         strom.getTracks().forEach((sp) => sp.stop());
         stoppaKlocka();
         setSpelarIn(false);
+        inspelare.current = null;
         try {
           const buf = await new Blob(bitar.current).arrayBuffer();
           const ctx = new AudioContext();
           const ljud = await ctx.decodeAudioData(buf);
           void ctx.close();
-          const rpm = rpmText.trim() ? Number(rpmText) : MATSEKVENSER[sekvens].rpm;
-          setResultat(analyseraKanal(ljud.getChannelData(0), ljud.sampleRate, rpm));
+          setResultat(analyseraKanal(ljud.getChannelData(0), ljud.sampleRate, tolkaRpm()));
         } catch {
           setFel("The recording could not be decoded. Try again.");
         }
@@ -93,9 +132,35 @@ export function Ljudpanel({ skicka, fordon }: { skicka: (h: Handelse) => void; f
       r.start();
       setSpelarIn(true);
       setSekunder(0);
-      klocka.current = setInterval(() => setSekunder((s) => s + 1), 1000);
-    } catch {
-      setFel("Microphone access was denied. Allow the microphone and try again.");
+      // Tak på längden: rå PCM är ~690 MB per timme, och en bortglömd
+      // inspelning kraschade fliken vid avkodningen. Sekvenserna är
+      // tiotals sekunder långa — två minuter räcker med marginal.
+      klocka.current = setInterval(
+        () =>
+          setSekunder((s) => {
+            if (s + 1 >= MAX_INSPELNING_S) {
+              try {
+                r.stop();
+              } catch {
+                // Redan stoppad.
+              }
+            }
+            return s + 1;
+          }),
+        1000,
+      );
+    } catch (orsak) {
+      // Skilj på nekad mikrofon och en inspelare som inte gick att skapa —
+      // bägge gav förr samma (felaktiga) besked om nekad åtkomst.
+      const nekad = (orsak as { name?: string })?.name === "NotAllowedError";
+      setFel(
+        nekad
+          ? "Microphone access was denied. Allow the microphone and try again."
+          : "The recording could not be started in this browser.",
+      );
+      setSpelarIn(false);
+      stoppaKlocka();
+      inspelare.current = null;
     }
   };
 
@@ -111,7 +176,7 @@ export function Ljudpanel({ skicka, fordon }: { skicka: (h: Handelse) => void; f
     );
   }
 
-  const rpm = rpmText.trim() ? Number(rpmText) : MATSEKVENSER[sekvens].rpm;
+  const rpm = tolkaRpm();
   const stopp = resultat ? stoppregler(sekvens, resultat, rpm, reproducerad) : [];
   const forslag = resultat ? ljudforslag(resultat, reproducerad) : [];
   const s = MATSEKVENSER[sekvens];

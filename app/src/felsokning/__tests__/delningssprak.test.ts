@@ -73,6 +73,25 @@ describe("inga hårdkodade mottagartexter återuppstår", () => {
   });
 });
 
+describe("förhandsvisningen visar samma sak som kundens länk", () => {
+  it("klientens interna lista är IDENTISK med serverns ENDAST_INTERNT", () => {
+    // Två uttryck för samma regel driver isär tyst: klienten filtrerade
+    // bort fem typer, servern åtta, och teknikerns förhandsvisning visade
+    // därför betalare, eskaleringar och reservdelar som "det kunden ser".
+    const klient = readFileSync("src/felsokning/delningsniva.ts", "utf8");
+    const server = readFileSync("../services/plattform/server.mjs", "utf8");
+    const rad = server.match(/export const ENDAST_INTERNT = \[(.*?)\];/s)?.[1] ?? "";
+    const serverTyper = [...rad.matchAll(/"([a-z_]+)"/g)].map((m) => m[1]).sort();
+    const klientTyper = [...klient.matchAll(/"([a-z_]+)",/g)].map((m) => m[1]).sort();
+    expect(serverTyper.length).toBeGreaterThan(5);
+    expect(klientTyper).toEqual(serverTyper);
+  });
+
+  it("vyn filtrerar mot den delade listan, inte mot en egen kopia", () => {
+    expect(VYN).toContain("ENDAST_INTERNT.includes(p.handelse.typ)");
+  });
+});
+
 describe("mottagarens språk, teknikerns ord", () => {
   it("sammanfattningen följer språkvalet i vyn", () => {
     expect(VYN).toContain("sammanfatta(arende, sprak)");
