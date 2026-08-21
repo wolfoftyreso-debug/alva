@@ -173,10 +173,10 @@ the rest name exactly why they cannot close in this environment.
 | C-4 (processor agreement) | **Closed as documentation.** `docs/DATASKYDD.md`: processor-agreement obligations and a sub-processor register grounded in the production build. |
 | Transfer impact (Anthropic, US) | **Closed as assessment.** `docs/DATASKYDD.md` §4: the one third-country transfer (work-order OCR) is assessed; the remaining product step (make it disableable/masking per org) is named. |
 | T-3 transparency | **Closed as documentation.** `docs/DATASKYDD.md` §5: the pre-erasure backup window is stated as part of the erasure promise to data subjects. |
-| T-3 (technical, full closure) | **Open — infra.** A pre-erasure backup plus the master key still restores data. Needs per-subject keys in a KMS with irreversible destruction. The envelope seam (`kuvertera`/`oppnaKuvert`) is prepared for it. |
+| T-3 (technical, full closure) | **Built, awaiting a live KMS.** The envelope is now a pluggable vault (`services/plattform/nyckelvalv.mjs`): local (unchanged) or a KMS vault with a per-subject key, wired into both erasure paths (`gallra`, `/api/radering`) so destruction schedules the subject's KMS key for deletion before the pointer is removed. The KMS SigV4 signing is proven bit-identical to botocore; the vault's calls are proven against an injected fetcher. Only a real KMS round-trip and lazy key creation remain — unvalidatable in this environment. |
 | Terraform | **Open — infra.** The CronJob and secret wiring are written but not applied in this environment; unvalidated beyond review. |
-| m-4 (Supabase retirement) | **Determined: dead in production.** The Dockerfile builds plattform-only (`VITE_SUPABASE_URL=…invalid`); the Supabase paths are a legacy fallback the shipped build never selects. Code retirement pending a scope decision. |
-| m-6 (accessibility) | See the accessibility pass this round. |
+| m-4 (Supabase retirement) | **Closed.** The legacy Supabase path is removed entirely — client integration, the `supabase/` edge functions and migrations, the `@supabase/supabase-js` dependency, and the `VITE_SUPABASE_*` build args. The client now runs plattform-only (or local/device-only without a platform URL); the fragile import-time Supabase client (which crashed the whole app without placeholder env) is gone. Suite green, bundle carries no Supabase reference. |
+| m-6 (accessibility) | **Closed this round.** Palette contrast measured AA on every pair; `<html lang>` now follows the selected language (WCAG 3.1.1) and voice input follows the UI language. |
 
 ## Test protocol
 

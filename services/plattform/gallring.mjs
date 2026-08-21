@@ -32,6 +32,7 @@
 
 import pg from "pg";
 import { createHash } from "node:crypto";
+import { valjValv } from "./nyckelvalv.mjs";
 
 /**
  * Hittar och förstör nycklar vars samtliga ärenden har passerat sin tid.
@@ -48,6 +49,7 @@ export async function gallra(pool, { nu = new Date(), torrkor = false } = {}) {
   const kandidater = await pool.query(
     `with nyckelns_arenden as (
        select n.id as nyckel_id,
+              n.subjekt,
               n.organisation_id,
               a.gallras_efter,
               coalesce(a.identifierare_index, a.id) as grupp
@@ -56,13 +58,13 @@ export async function gallra(pool, { nu = new Date(), torrkor = false } = {}) {
          on a.organisation_id = n.organisation_id and a.id = n.subjekt
      ),
      samma_fordon as (
-       select k.nyckel_id, k.organisation_id, b.gallras_efter
+       select k.nyckel_id, k.subjekt, k.organisation_id, b.gallras_efter
        from nyckelns_arenden k
        join felsokning_arenden b
          on b.organisation_id = k.organisation_id
         and coalesce(b.identifierare_index, b.id) = k.grupp
      )
-     select nyckel_id, organisation_id, count(*)::int as antal_arenden
+     select nyckel_id, min(subjekt) as subjekt, organisation_id, count(*)::int as antal_arenden
      from samma_fordon
      group by nyckel_id, organisation_id
      having bool_and(gallras_efter is not null and gallras_efter <= $1)`,
@@ -73,9 +75,25 @@ export async function gallra(pool, { nu = new Date(), torrkor = false } = {}) {
     return { forstorda: 0, arenden: 0, kandidater: kandidater.rowCount, torrkor };
   }
 
+  // Valvet avgör vad förstörelse betyder. Lokalt är radraderingen nedan
+  // hela förstörelsen (durabel=false, forstor är en nej). Med KMS-valvet
+  // måste subjektets nyckel schemaläggas för radering FÖRST — annars är
+  // radraderingen bara en borttagen pekare medan nyckeln lever kvar och en
+  // backup fortfarande går att öppna. Går den durabla förstörelsen inte
+  // igenom lämnas nyckeln orörd till nästa körning i stället för att en
+  // pekare tas bort utan att nyckeln faktiskt förstördes.
+  const valv = valjValv(process.env);
+
   let forstorda = 0;
   let arenden = 0;
   for (const rad of kandidater.rows) {
+    if (valv.durabel) {
+      try {
+        await valv.forstor(rad.subjekt);
+      } catch {
+        continue;
+      }
+    }
     const klient = await pool.connect();
     try {
       await klient.query("begin");

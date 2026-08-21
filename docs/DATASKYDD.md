@@ -190,13 +190,28 @@ förbehandla bilden så identifierande fält maskeras innan den lämnar EU. Stä
 den enda reella tredjelandsöverföringen för den ansvarige som inte accepterar den.
 
 ### 7.2 Per-subjektsnyckel i KMS (T-3, full stängning)
-Kuverteringen under `PERSONNYCKEL_HUVUD` är förberedelsen: in- och uppackningen
-ligger i egna funktioner (`kuvertera`/`oppnaKuvert`) just för att kunna bytas mot
-en KMS där varje subjekts nyckel förstörs oåterkalleligt. När nyckelmaterialet
-lever i en KMS utanför databasen — och förstörelsen där är slutgiltig — bär inte
-längre en återställd backup uppgiften, och fönstret i avsnitt 5 stängs. Terraform
-för CronJob och secret-koppling finns skrivet men är inte applicerat i denna
-miljö.
+Förvaringen av personnycklarna är nu ett utbytbart **valv**
+(`services/plattform/nyckelvalv.mjs`) med två implementationer:
+
+- **Lokalt valv** (standard, oförändrat): nyckeln kuverteras under
+  `PERSONNYCKEL_HUVUD`. Stänger "backup + nyckel i databasen", men inte
+  backupfönstret i avsnitt 5 — `durabel = false`, och det säger valvet ärligt.
+- **KMS-valv** (`PERSONNYCKEL_KMS_*`): en KMS-nyckel per subjekt, adresserad via
+  ett hashat alias. `omslut`/`oppna` krypterar mot subjektets egen nyckel med
+  subjektet som `EncryptionContext`; **raderingen** (`gallra` och `/api/radering`)
+  schemalägger den nyckeln för radering innan pekaren tas bort. Efter KMS
+  väntefönster (7–30 dagar, angivet mot den registrerade som avsnitt 5:s "utan
+  onödigt dröjsmål") går varken den levande databasen eller någon backup att
+  öppna. `durabel = true` — det är så backupfönstret stängs per subjekt.
+
+**Vad som är bevisat här:** SigV4-signeringen mot KMS är bitidentisk mot AWS egen
+(botocore-referens, `kms-sigv4-referens.json`), och valvets anrop och tolkning är
+provade mot en injicerad hämtare (en förstörd nyckel ger raderad post, inte ett
+undantag). **Vad som återstår:** en riktig KMS i andra änden — den lata
+nyckelskapelsen (CreateKey/CreateAlias vid första användning) och en verklig
+Encrypt/Decrypt/ScheduleKeyDeletion-rundtur går inte att prova i utvecklingsmiljön.
+Terraform för CronJob och secret-koppling finns skrivet men är inte applicerat i
+denna miljö.
 
 ---
 

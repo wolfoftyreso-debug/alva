@@ -1,0 +1,26 @@
+[
+  {
+    "namn": "Encrypt",
+    "target": "TrentService.Encrypt",
+    "kropp_json": "{\"KeyId\":\"alias/alva-subjekt\",\"Plaintext\":\"aGVtbGlndA==\",\"EncryptionContext\":{\"subjekt\":\"arende-1\"}}",
+    "region": "eu-north-1",
+    "tid": "20260821T213612Z",
+    "authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20260821/eu-north-1/kms/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=18fc5989674d2064ebab4ee6a8167a8e53f93050d2c77944bd13ef0e90248bd7"
+  },
+  {
+    "namn": "Decrypt",
+    "target": "TrentService.Decrypt",
+    "kropp_json": "{\"CiphertextBlob\":\"Y2lwaGVy\",\"EncryptionContext\":{\"subjekt\":\"arende-1\"}}",
+    "region": "eu-north-1",
+    "tid": "20260821T213612Z",
+    "authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20260821/eu-north-1/kms/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=101478722a33fc43ad5d3f97502f982a991786e5dd01651fc8e54cce84494234"
+  },
+  {
+    "namn": "ScheduleKeyDeletion",
+    "target": "TrentService.ScheduleKeyDeletion",
+    "kropp_json": "{\"KeyId\":\"alias/alva-subjekt\",\"PendingWindowInDays\":7}",
+    "region": "eu-west-1",
+    "tid": "20260821T213612Z",
+    "authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20260821/eu-west-1/kms/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=5c52b1cb4d2bb02d8f05082f9739453bc12440ed30326541c3806f1da772efa0"
+  }
+]

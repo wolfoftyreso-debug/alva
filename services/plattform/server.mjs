@@ -28,8 +28,14 @@
 //   ECM_REGLER_FIL / INTEGRATIONER_FIL  sökvägar till utbytbar konfiguration
 //   FAKTURERING_NYCKEL  utfärdarens nyckel; utan den kan ingen faktura utfärdas
 //   SUPPORT_NYCKEL      vår egen supports nyckel; krävs för att svara och sätta status
-//   PERSONNYCKEL_HUVUD  32 byte (hex/base64) — kuverterar personnycklarna så att
-//                       en återställd databasdump inte innehåller läsbara nycklar
+//   PERSONNYCKEL_HUVUD  32 byte (hex/base64) — kuverterar personnycklarna i det
+//                       lokala valvet så att en återställd databasdump inte
+//                       innehåller läsbara nycklar
+//   PERSONNYCKEL_KMS_*  väljer i stället KMS-valvet: en nyckel per subjekt i AWS
+//                       KMS där raderingen är oåterkallelig (stänger backupfönstret
+//                       som det lokala valvet lämnar öppet). Krävs tillsammans:
+//                       _REGION, _NYCKEL_ID, _HEMLIGHET. Valfria: _ALIAS, _DAGAR.
+//                       Se services/plattform/nyckelvalv.mjs
 //   FORSEGLING_NYCKEL   HMAC-nyckel för kedjeförseglingen vid avslut; hålls utanför
 //                       databasen. Utan den skrivs kedjan men avslut förseglas inte —
 //                       varnas vid start OCH per avslut, aldrig tyst (TÜV-2 T-15)
@@ -59,6 +65,7 @@ import { STANDARD, valjSprak, t } from "./sprak/index.mjs";
 import { MINSTA_INSPELNINGAR, fordonsnyckel, jamforMotProfil, nyProfil, uppdateraProfil } from "./ljudprofil.mjs";
 import { forsegla, grund, lank, provaForsegling, verifiera as verifieraKedja } from "./kedja.mjs";
 import { hamtaTidsstampel, lasToken } from "./tidsstampel.mjs";
+import { valjValv } from "./nyckelvalv.mjs";
 import {
   MASKERAT,
   gallringsdatum,
@@ -816,7 +823,7 @@ function blindaIdentifierare(ident) {
     .digest("hex");
 }
 
-// ---- Kuvertkryptering av personnycklarna (TÜV T-3) --------------------
+// ---- Personnycklarnas valv (TÜV T-3) ----------------------------------
 //
 // Nycklarna låg i klartext i samma databas, samma kluster och samma
 // backuper som den chiffertext de skyddade. Krypto-shredding blev då att
@@ -825,66 +832,34 @@ function blindaIdentifierare(ident) {
 // återställning. Testet har rätt för katastrofåterställning; det är samma
 // faktum läst åt andra hållet som bröt raderingslöftet.
 //
-// Nycklarna lagras nu KUVERTERADE under en huvudnyckel som inte finns i
-// databasen. En återställd dump ger nycklar som inte går att öppna utan
-// den, vilket flyttar raderingsgarantin från "en rad är borta" till "en
-// nyckel utanför databasen krävs".
+// Förvaringen är nu ett utbytbart VALV (services/plattform/nyckelvalv.mjs).
+// Standard är det lokala valvet: nycklarna kuverteras under en huvudnyckel
+// (PERSONNYCKEL_HUVUD) som inte finns i databasen, exakt som förut, samma
+// v1-format och samma genomsläpp av rå nyckel lagrad före kuverteringen.
 //
-// VAD SOM ÅTERSTÅR, uttryckligen: en backup tagen FÖRE en radering, plus
-// huvudnyckeln, återställer fortfarande uppgifterna. Att stänga det helt
-// kräver en nyckel per subjekt i en KMS där förstörelsen är
-// oåterkallelig. Kuverteringen är förberedelsen för det — därför ligger
-// in- och uppackningen i egna funktioner och inte inline.
-const PERSONNYCKEL_HUVUD = (() => {
-  const rå = process.env.PERSONNYCKEL_HUVUD ?? "";
-  if (!rå) return null;
-  const b = /^[0-9a-fA-F]{64}$/.test(rå) ? Buffer.from(rå, "hex") : Buffer.from(rå, "base64");
-  if (b.length !== 32) throw new Error("PERSONNYCKEL_HUVUD måste vara 32 byte (hex eller base64).");
-  return b;
-})();
-
-/** Kuvertformat: v1.<iv>.<tagg>.<chiffertext>, allt base64url. */
-function kuvertera(nyckel) {
-  if (!PERSONNYCKEL_HUVUD) return nyckel;
-  const iv = randomBytes(12);
-  const c = createCipheriv("aes-256-gcm", PERSONNYCKEL_HUVUD, iv);
-  const ut = Buffer.concat([c.update(nyckel), c.final()]);
-  return Buffer.from(
-    `v1.${iv.toString("base64url")}.${c.getAuthTag().toString("base64url")}.${ut.toString("base64url")}`,
-    "utf8",
-  );
-}
-
-function oppnaKuvert(lagrad) {
-  const text = Buffer.from(lagrad).toString("utf8");
-  // En nyckel som lagrades före kuverteringen är råa byte. Den läses som
-  // förut — annars hade uppgraderingen gjort all befintlig historik
-  // oläsbar, vilket är samma skada som en felaktig radering.
-  if (!text.startsWith("v1.")) return Buffer.from(lagrad);
-  if (!PERSONNYCKEL_HUVUD) {
-    throw new Error("Personnycklarna är kuverterade men PERSONNYCKEL_HUVUD saknas.");
-  }
-  const [, iv, tagg, data] = text.split(".");
-  const d = createDecipheriv("aes-256-gcm", PERSONNYCKEL_HUVUD, Buffer.from(iv, "base64url"));
-  d.setAuthTag(Buffer.from(tagg, "base64url"));
-  return Buffer.concat([d.update(Buffer.from(data, "base64url")), d.final()]);
-}
+// VAD SOM ÅTERSTÅR för det lokala valvet, uttryckligen: en backup tagen
+// FÖRE en radering, plus huvudnyckeln, återställer fortfarande uppgifterna.
+// Att stänga det helt kräver KMS-valvet — en nyckel per subjekt i en KMS
+// där förstörelsen är oåterkallelig — som väljs med PERSONNYCKEL_KMS_*.
+const personvalv = valjValv(process.env);
 
 async function personnyckel(orgId, subjekt) {
+  const omslutet = await personvalv.omslut(subjekt, randomBytes(32));
   const rad = await pool.query(
     `insert into personnycklar (organisation_id, subjekt, nyckel)
      values ($1, $2, $3)
      on conflict (organisation_id, subjekt) do update set subjekt = excluded.subjekt
-     returning id, nyckel, radering_begard`,
-    [orgId, subjekt, kuvertera(randomBytes(32))],
+     returning id, subjekt, nyckel, radering_begard`,
+    [orgId, subjekt, omslutet],
   );
-  return { ...rad.rows[0], nyckel: oppnaKuvert(rad.rows[0].nyckel) };
+  const r = rad.rows[0];
+  return { ...r, nyckel: await personvalv.oppna(r.subjekt, r.nyckel) };
 }
 
 /** Nycklar som fortfarande finns, för att öppna en logg vid läsning. */
 async function nycklarFor(orgId) {
   const rader = await pool.query(
-    `select id, nyckel from personnycklar where organisation_id = $1`,
+    `select id, subjekt, nyckel from personnycklar where organisation_id = $1`,
     [orgId],
   );
   // En nyckel som inte går att öppna hoppas över — den fäller inte de
@@ -906,7 +881,9 @@ async function nycklarFor(orgId) {
   let ejOppnade = 0;
   for (const r of rader.rows) {
     try {
-      nycklar.set(r.id, oppnaKuvert(r.nyckel));
+      const öppnad = await personvalv.oppna(r.subjekt, r.nyckel);
+      if (öppnad) nycklar.set(r.id, öppnad);
+      else ejOppnade += 1;
     } catch {
       ejOppnade += 1;
     }
@@ -915,7 +892,7 @@ async function nycklarFor(orgId) {
     logga("varning", "personnycklar kunde inte öppnas", {
       organisation: orgId,
       antal: ejOppnade,
-      konsekvens: "Berörda fält maskeras. Kontrollera PERSONNYCKEL_HUVUD.",
+      konsekvens: "Berörda fält maskeras. Kontrollera PERSONNYCKEL_HUVUD eller PERSONNYCKEL_KMS_*.",
     });
   }
   return nycklar;
@@ -2824,6 +2801,21 @@ export function skapaServer() {
           [anspr.org, blindaIdentifierare(subjekt), subjekt],
         );
         const berorda = { rows: [{ antal: arenden.rowCount }] };
+        // Med ett durabelt valv (KMS) schemaläggs varje subjekts nyckel för
+        // radering INNAN pekaren tas bort — annars lever nyckeln kvar och en
+        // backup går fortfarande att öppna. Går den durabla förstörelsen inte
+        // igenom avbryts raderingen hellre än att lämna en pekarlös men
+        // levande nyckel; den kan köras om. Lokalt (durabel=false) är
+        // radraderingen nedan hela förstörelsen, precis som förut.
+        if (personvalv.durabel) {
+          try {
+            for (const r of arenden.rows) await personvalv.forstor(r.id);
+          } catch {
+            return svara(res, 502, {
+              error: "Nyckelvalvet kunde inte förstöra nyckeln. Raderingen avbröts och kan köras om.",
+            });
+          }
+        }
         const bort = await pool.query(
           `delete from personnycklar
            where organisation_id = $1 and subjekt = any($2::text[]) returning id`,
