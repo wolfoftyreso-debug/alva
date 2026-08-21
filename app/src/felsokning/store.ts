@@ -52,6 +52,9 @@ export const useFelsokning = create<FelsokningState>()(
           handelser: [
             nyLoggPost(anvandare, { typ: "objekt_identifierat", objekt }),
             nyLoggPost(anvandare, { typ: "felbeskrivning", text: felbeskrivningText }),
+            // Metodikvalet registreras i loggen, inte bara i metodikId, så
+            // grindens grund kan bevisas ur den förseglade loggen.
+            ...(metodikId ? [nyLoggPost(anvandare, { typ: "metodik_vald" as const, metodikId })] : []),
           ],
         };
         set((s) => ({
@@ -122,11 +125,15 @@ if (typeof window !== "undefined") {
 
 export function metodikForArende(arende: Arende | undefined): Metodik {
   if (!arende) return GENERISK_METODIK;
-  // Ett loggat metodikbyte väger tyngst — det är ett aktivt beslut av en
-  // tekniker, till skillnad från valet vid ärendestart som härleddes ur
-  // felbeskrivningens ordval. Senaste bytet gäller.
-  const bytt = [...arende.handelser].reverse().find((p) => p.handelse.typ === "metodik_byte");
-  if (bytt && bytt.handelse.typ === "metodik_byte") return metodikForId(bytt.handelse.metodikId);
+  // Metodiken härleds ur den förseglade loggen: senaste bytet väger
+  // tyngst (ett aktivt beslut), därefter det loggade initialvalet.
+  // metodikId-kolumnen är en reserv för ärenden skapade före metodik_vald
+  // fanns, och nyckelordsvalet en sista utväg.
+  for (const post of [...arende.handelser].reverse()) {
+    if (post.handelse.typ === "metodik_byte" || post.handelse.typ === "metodik_vald") {
+      return metodikForId(post.handelse.metodikId);
+    }
+  }
   if (arende.metodikId) return metodikForId(arende.metodikId);
   const text = felbeskrivning(arende);
   return text ? valjMetodik(text) : GENERISK_METODIK;

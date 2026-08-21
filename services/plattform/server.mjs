@@ -402,7 +402,7 @@ export const DELBART_PARTNER = [...DELBART_KUND, "hypotes"];
 // Betalare, eskalering och reservdel är interna: claimreferenser,
 // fabrikskorrespondens och serienummer hör till garantiakten, inte till
 // kundens delningslänk — kunden ser åtgärden, inte förhandlingen (FGS-1.0).
-export const ENDAST_INTERNT = ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad", "betalare", "eskalering", "reservdel", "metodik_byte"];
+export const ENDAST_INTERNT = ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad", "betalare", "eskalering", "reservdel", "metodik_byte", "metodik_vald"];
 
 export function synligaTyper(niva) {
   if (niva === "intern") return null; // full insyn — ingen filtrering
@@ -679,8 +679,18 @@ async function grindHinder(pool, arendeId, nya, sprak = STANDARD) {
     [arendeId],
   );
   const handelser = [...rader.rows.map((r) => r.handelse), ...nya.map((p) => p.handelse)];
+  // Metodiken härleds ur den FÖRSEGLADE loggen, inte ur metodik_id-
+  // kolumnen. Kolumnen är triggerskyddad men inte hashkedjad, och den
+  // ignorerade dessutom ett metodikbyte helt: en tekniker som bytte till
+  // rätt procedur såg den i guiden men bedömdes ändå mot den gamla här.
+  // Senaste bytet väger tyngst, därefter det loggade initialvalet;
+  // kolumnen är en reserv för ärenden skapade före metodik_vald fanns.
+  const metodikFrånLogg = [...handelser]
+    .reverse()
+    .find((h) => h?.typ === "metodik_byte" || h?.typ === "metodik_vald")?.metodikId;
   const metodik =
-    ALLA_METODIKER.find((m) => m.id === rader.rows[0]?.metodik_id) ?? ALLA_METODIKER.at(-1);
+    ALLA_METODIKER.find((m) => m.id === (metodikFrånLogg ?? rader.rows[0]?.metodik_id)) ??
+    ALLA_METODIKER.at(-1);
 
   let regelpaket;
   if (REGELPAKET_STATUS === "ogiltig signatur") {
@@ -1517,6 +1527,19 @@ export function skapaServer() {
           [delatBilaga[2], delning.rows[0].arende_id, synliga],
         );
         if (rad.rowCount === 0) return svara(res, 404, { error: "Bilagan är inte tillgänglig." });
+        // Även bilageläsningen loggas. JSON-läsningen loggades men bilden
+        // inte, så åtkomstloggen kunde inte svara på vem som sett en
+        // kunds FOTON — bara vem som läst texten. Organisationen härleds
+        // ur ärendet; den publika vägen har ingen session.
+        const bilageAgare = await pool.query(
+          `select organisation_id from felsokning_arenden where id = $1`,
+          [delning.rows[0].arende_id],
+        );
+        loggaAtkomst(req, res, {
+          org: bilageAgare.rows[0]?.organisation_id,
+          arende: delning.rows[0].arende_id,
+          delningskod: delatBilaga[1],
+        });
         return skickaBilaga(res, rad.rows[0]);
       }
 
@@ -1629,6 +1652,30 @@ export function skapaServer() {
         );
         const installningar = org.rows[0].installningar ?? {};
 
+        // Redan fakturerad? Kontrollen exkluderar krediterade fakturor,
+        // så en rättelse (kreditnota + ny faktura för samma period) inte
+        // blockeras. Ett unikt periodindex kunde inte skilja de två — det
+        // såg både originalet och rättelsen som "samma period" — och
+        // blockerade därför just den korrigering modulen utfäster.
+        const befintlig = await pool.query(
+          `select 1 from fakturor f
+           where f.organisation_id = $1
+             and f.dokument->'period'->>'fran' = $2
+             and f.dokument->'period'->>'till' = $3
+             and f.krediterar is null
+             and not exists (
+               select 1 from fakturahandelser h
+               where h.faktura_id = f.id and h.typ = 'krediterad'
+             )
+           limit 1`,
+          [organisation_id, period.fran, period.till],
+        );
+        if (befintlig.rowCount > 0) {
+          return svara(res, 409, {
+            error: "Perioden är redan fakturerad för den här organisationen. Kreditera den befintliga fakturan innan en ny utfärdas för samma period.",
+          });
+        }
+
         const faktura = await medFakturanummer(async (klient, nummer) => {
           const dokument = fakturera({
             nummer,
@@ -1652,19 +1699,7 @@ export function skapaServer() {
             ],
           );
           return { id: rad.rows[0].id, ...dokument };
-        }).catch((fel) => {
-          // 23505 = unik nyckel. Perioden är redan fakturerad. Utan den
-          // här grenen blev dubbletten ett 500 med ett rått databasfel,
-          // vilket ser ut som ett systemhaveri i stället för det det är:
-          // ett svar på att arbetet redan är gjort.
-          if (fel?.code === "23505") return { redanFakturerad: true };
-          throw fel;
         });
-        if (faktura?.redanFakturerad) {
-          return svara(res, 409, {
-            error: "Perioden är redan fakturerad för den här organisationen.",
-          });
-        }
         logga("info", "faktura utfärdad", { beteckning: faktura.beteckning, organisation: organisation_id });
         return svara(res, 201, faktura);
       }
@@ -1758,6 +1793,16 @@ export function skapaServer() {
       if (req.method === "GET" && vag === "/api/abonnemang") {
         const a = await abonnemanget(anspr.org);
         if (!a) return svara(res, 404, { error: "Inget abonnemang är registrerat." });
+        // Tillståndet (aktiv/varning/last) och nedräkningen är alla
+        // användares — de avgör om nya ärenden får öppnas. Men vilken
+        // faktura som är förfallen och hur mycket är kommersiella
+        // uppgifter, och de hörde till administratören precis som
+        // fakturalistan. En tekniker fick tidigare fakturabeteckning,
+        // förfallet belopp och en beskedstext som namnger fakturan.
+        if (anspr.roll !== "admin") {
+          const { aldsta, belopp, besked, fakturaepost, ...utan } = a;
+          return svara(res, 200, { ...utan, nivaer: NIVAER });
+        }
         return svara(res, 200, { ...a, nivaer: NIVAER });
       }
 
@@ -1800,18 +1845,19 @@ export function skapaServer() {
         // organisationstillhörighet, så en tekniker med ett fakturaid
         // kom förbi spärren listan satte upp.
         if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
-        const rad = await pool.query(
-          `select organisation_id, beteckning, dokument from fakturor where id = $1`,
-          [pdfVag[1]],
-        );
-        if (rad.rowCount === 0 || rad.rows[0].organisation_id !== anspr.org) {
+        const rad = await fakturamedStatus(pdfVag[1]);
+        if (!rad || rad.organisation_id !== anspr.org) {
           return svara(res, 404, { error: "Fakturan är inte tillgänglig." });
         }
-        const pdf = fakturaPdf(rad.rows[0].dokument);
+        // Statusen HÄRLEDS ur händelserna och skrivs på PDF:en. Utan den
+        // var en helt krediterad fakturas PDF identisk med en levande —
+        // den som förlitade sig på pappret kunde inte se att kravet inte
+        // längre gällde.
+        const pdf = fakturaPdf({ ...rad.dokument, status: rad.status });
         res.writeHead(200, {
           "Content-Type": "application/pdf",
           "Content-Length": pdf.length,
-          "Content-Disposition": `attachment; filename="${rad.rows[0].beteckning}.pdf"`,
+          "Content-Disposition": `attachment; filename="${rad.beteckning}.pdf"`,
           ...korsHuvuden(res),
         });
         return res.end(pdf);
@@ -2928,6 +2974,18 @@ export function skapaServer() {
           for (const post of handelser) {
             const { post: giltig, fel } = tillPost(post, anspr);
             if (fel) return svara(res, 400, { error: `Ogiltig händelse: ${fel}` });
+
+            // Metodik-id valideras mot biblioteket VID GRÄNSEN. Schemat
+            // prövar bara att det är text, så ett påhittat id passerade —
+            // och grinden föll då till den svagaste metodiken (generisk),
+            // så ett högvoltsärende kunde avslutas utan säkerhetskontroller
+            // genom ett metodikbyte till ett id som inte finns.
+            if (
+              (giltig.handelse.typ === "metodik_byte" || giltig.handelse.typ === "metodik_vald") &&
+              !ALLA_METODIKER.some((m) => m.id === giltig.handelse.metodikId)
+            ) {
+              return svara(res, 400, { error: `Okänd metodik: ${giltig.handelse.metodikId}` });
+            }
 
             // Mätdonet slås upp i registret i stället för att tros på
             // (TÜV T-2). Beteckning och kalibrering HÄRLEDS därifrån —

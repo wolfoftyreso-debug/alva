@@ -50,6 +50,7 @@ export const FR = {
   "grind.evidens.saknas": "Aucune preuve d’aucune sorte ne figure dans le journal.",
   "grind.foton.detalj": "{kontroller} points de contrôle exigent une photographie, {foton} photographies dans le journal.",
   "grind.sparr.ej_uppfyllt": "L’exigence de sécurité n’est pas satisfaite.",
+  "grind.sparr.kringgangen": "Une condition de sécurité a été renseignée et non satisfaite. Elle ne peut pas être écartée en changeant de méthodologie — satisfaites-la, ou si la méthodologie était erronée, la question de sécurité n'aurait pas dû y être renseignée.",
   "grind.arendetyp.okant": "Exigence inconnue dans le paquet de règles : {krav}",
   "grind.arendetyp.krav": "Exigence pour ce type de dossier : {krav}",
   "grind.sakerhet": "Niveau de confiance dans les limites de ce que les preuves soutiennent",

@@ -30,10 +30,15 @@ export const HÄNDELSESCHEMA = {
   arbetsorder_skannad: { falt: "lista" },
   felbeskrivning: { text: "text" },
   arendetyp_satt: { arendetyp: "text" },
-  // Metodikbyte. Metodiken avgör vilka krav grinden ställer, så ett byte
-  // är ingen inställning utan en händelse med ett varför: ärendet
-  // bedöms från och med nu mot en annan uppsättning steg och kontroller,
-  // och den som läser loggen i efterhand ska se när och varför.
+  // Vald metodik vid ärendestart. Metodiken avgör vilka krav grinden
+  // ställer, och den måste därför vara HÄRLEDBAR UR DEN FÖRSEGLADE
+  // LOGGEN — inte bara ur en kolumn som en databasadministratör kan ändra
+  // utan att bryta kedjan. Den registreras som en händelse så att den som
+  // verifierar förseglingen kan bevisa vilken metodiks krav som gällde.
+  metodik_vald: { metodikId: "text" },
+  // Metodikbyte. Ett byte är ingen inställning utan en händelse med ett
+  // varför: ärendet bedöms från och med nu mot en annan uppsättning steg
+  // och kontroller, och den som läser loggen ska se när och varför.
   metodik_byte: { metodikId: "text", motivering: "text" },
   fraga_besvarad: { stegId: "text", frageId: "text", fraga: "text", svar: "text" },
   kontroll_utford: { stegId: "text", kontrollId: "text", text: "text" },

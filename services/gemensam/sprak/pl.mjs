@@ -51,6 +51,7 @@ export const PL = {
   "grind.evidens.saknas": "W dzienniku nie ma żadnego dowodu.",
   "grind.foton.detalj": "Punktów kontrolnych wymagających fotografii: {kontroller}; fotografii w dzienniku: {foton}.",
   "grind.sparr.ej_uppfyllt": "Wymóg bezpieczeństwa nie jest spełniony.",
+  "grind.sparr.kringgangen": "Warunek bezpieczeństwa został udzielony i niespełniony. Nie można go pominąć przez zmianę metodyki — spełnij go, a jeśli metodyka była błędna, pytanie o bezpieczeństwo nie powinno było zostać udzielone w jej ramach.",
   "grind.arendetyp.okant": "Nieznany wymóg w pakiecie reguł: {krav}",
   "grind.arendetyp.krav": "Wymóg dla tego rodzaju sprawy: {krav}",
   "grind.sakerhet": "Poziom pewności w granicach tego, co potwierdzają dowody",

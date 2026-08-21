@@ -20,4 +20,5 @@ export const ENDAST_INTERNT: string[] = [
   "eskalering",
   "reservdel",
   "metodik_byte",
+  "metodik_vald",
 ];

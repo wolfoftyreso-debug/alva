@@ -234,6 +234,72 @@ describe("säkerhetsspärren känner igen ett ja oavsett språk", () => {
   });
 });
 
+// TÜV-runda 3. Säkerhetsspärren hörde till metodiken där den hittades,
+// inte till fordonet den skyddar: ett metodikbyte hogvolt→generisk
+// avförde de två högvoltsspärrarna, och ärendet kunde stängas med färre
+// krav än det öppnades med. Ett högvoltsfordon är högvolt oavsett metodik.
+describe("säkerhetsspärren kan inte kringgås med ett metodikbyte", () => {
+  const GENERISK = ALLA_METODIKER.find((m) => m.id === "generisk")!;
+  const identifierad = {
+    typ: "objekt_identifierat",
+    objekt: { typ: "Personbil", identifierare: "EL1", identifieringsmetod: "Regnr", beskrivning: "EV" },
+  };
+
+  it("ett nej besvarat under hogvolt spärrar även efter byte till generisk", () => {
+    const logg = [
+      identifierad,
+      { typ: "metodik_vald", metodikId: "hogvolt" },
+      { typ: "fraga_besvarad", stegId: "sakerhet", frageId: "behorighet", fraga: "?", svar: "Yes" },
+      { typ: "fraga_besvarad", stegId: "sakerhet", frageId: "avstangt", fraga: "?", svar: "No" },
+      { typ: "metodik_byte", metodikId: "generisk", motivering: "försöker slippa spärren" },
+    ];
+    const ids = grinda(logg, GENERISK).map((h) => h.id);
+    expect(ids).toContain("sparr_avstangt");
+  });
+
+  it("en felvald metodik som byts INNAN säkerhetsfrågan besvarats ger inget falsklarm", () => {
+    // Den legitima korrigeringen: teknikern inser fel metodik och byter
+    // innan säkerhetsfrågan besvarats. Då finns inget svar att döma på.
+    const logg = [
+      identifierad,
+      { typ: "metodik_byte", metodikId: "generisk", motivering: "vibration only under braking, not a HV job" },
+    ];
+    expect(grinda(logg, GENERISK).map((h) => h.id).some((id) => id.startsWith("sparr_"))).toBe(false);
+  });
+
+  it("ett högvoltsärende kan inte avslutas utan säkerhet genom att bytas till generisk UTAN att svara", () => {
+    // TÜV-runda 3, HÖG. metodikId validerades bara som text, och grinden
+    // föll öppet till generisk vid okänt/svagare id: ett byte lät ett
+    // högvoltsärende avslutas utan spänningsfrihetskontroll även när
+    // säkerhetsfrågan aldrig besvarats. Spärren hör till fordonet nu.
+    const logg = [
+      identifierad,
+      { typ: "metodik_vald", metodikId: "hogvolt" },
+      { typ: "metodik_byte", metodikId: "generisk", motivering: "slippa säkerheten" },
+    ];
+    const ids = grinda(logg, GENERISK).map((h) => h.id);
+    expect(ids).toContain("sparr_behorighet");
+    expect(ids).toContain("sparr_avstangt");
+  });
+
+  it("ett ärende som ALDRIG stått under hogvolt spärras inte av dess säkerhetsfrågor", () => {
+    const logg = [identifierad, { typ: "metodik_vald", metodikId: "generisk" }];
+    expect(grinda(logg, GENERISK).map((h) => h.id).some((id) => id.startsWith("sparr_"))).toBe(false);
+  });
+
+  it("spärrfrågornas id:n är unika över metodikbiblioteket — annars kopplar loggmatchningen fel", () => {
+    const träffar: string[] = [];
+    for (const m of ALLA_METODIKER) {
+      for (const steg of m.steg) {
+        for (const fraga of steg.fragor ?? []) {
+          if (["behorighet", "avstangt"].includes(fraga.id)) träffar.push(`${m.id}/${steg.id}/${fraga.id}`);
+        }
+      }
+    }
+    expect(träffar).toEqual(["hogvolt/sakerhet/behorighet", "hogvolt/sakerhet/avstangt"]);
+  });
+});
+
 describe("ärendetypens regelpaket", () => {
   const paket = { arendetyper: { Warranty: { krav: [{ typ: "miltal" }, { typ: "historik" }] } } };
 

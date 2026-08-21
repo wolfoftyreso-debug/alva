@@ -49,6 +49,7 @@ export const ES = {
   "grind.evidens.saknas": "No hay ninguna evidencia de ningún tipo en el registro.",
   "grind.foton.detalj": "{kontroller} puntos de control exigen fotografía, {foton} fotografías en el registro.",
   "grind.sparr.ej_uppfyllt": "El requisito de seguridad no se cumple.",
+  "grind.sparr.kringgangen": "Una condición de seguridad se respondió y no se cumplió. No puede omitirse cambiando de metodología — cúmplala, o si la metodología era errónea, la pregunta de seguridad no debería haberse respondido bajo ella.",
   "grind.arendetyp.okant": "Requisito desconocido en el paquete de reglas: {krav}",
   "grind.arendetyp.krav": "Requisito para este tipo de expediente: {krav}",
   "grind.sakerhet": "Nivel de confianza dentro de lo que sustenta la evidencia",

@@ -943,6 +943,35 @@ kontroll "hindret foljer organisationens sprak" \
 kontroll "nyckeln ar densamma pa bada spraken" \
   "$(echo "$SVAR" | falt '.hinder.find(h=>h.id==="objekt").nyckel')" "grind.objekt"
 
+# 23c. TÜV-runda 3: metodikbytet får inte försvaga grinden
+#
+# Metodiken avgor vilka krav grinden staller. metodikId validerades bara
+# som text och grinden foll oppet till generisk vid okant id — ett
+# hogvoltsarende kunde avslutas utan sakerhetskontroller genom ett byte.
+echo "--- 23c. metodikbytet och grinden ---"
+
+# Okant metodik-id avvisas vid gransen.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/arenden/arende-test1/handelser" \
+  -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"mv-fejk","tidpunkt":"2026-08-06T10:00:00Z","anvandare":"Anna","handelse":{"typ":"metodik_byte","metodikId":"finns-inte-xyz","motivering":"exploit"}}]}')
+kontroll "okant metodik-id avvisas (400)" "$KOD" "400"
+
+# Hogvoltsarende: valj hogvolt, byt till generisk, forsok stanga utan att
+# svara pa sakerhetsfragorna. Servern ska anda krava HV-sakerheten.
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-hv","nummer":97,"skapad":"2026-08-06T10:00:00Z","metodikId":"hogvolt"}' >/dev/null
+curl -s -X POST "$BAS/api/arenden/arende-hv/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[
+    {"id":"hv-obj","tidpunkt":"2026-08-06T10:01:00Z","anvandare":"Anna","handelse":{"typ":"objekt_identifierat","objekt":{"typ":"Personbil","identifierare":"EV77","identifieringsmetod":"Regnr","beskrivning":"EV"}}},
+    {"id":"hv-vald","tidpunkt":"2026-08-06T10:02:00Z","anvandare":"Anna","handelse":{"typ":"metodik_vald","metodikId":"hogvolt"}},
+    {"id":"hv-byte","tidpunkt":"2026-08-06T10:03:00Z","anvandare":"Anna","handelse":{"typ":"metodik_byte","metodikId":"generisk","motivering":"forsoker slippa sakerheten"}}
+  ]}' >/dev/null
+SVAR=$(curl -s -X POST "$BAS/api/arenden/arende-hv/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"hv-avslut","tidpunkt":"2026-08-06T10:10:00Z","anvandare":"Anna","handelse":{"typ":"arende_avslutat"}}]}')
+kontroll "byte till generisk river inte hogvoltssakerheten" \
+  "$(echo "$SVAR" | falt '.hinder.some(h=>h.id==="sparr_avstangt")')" "true"
+
+
 # En felstavad sprakkod far inte hindra nagon fran att spara sina
 # objekttyper — sprakinstallningen ar en etikett, inte ett krav.
 KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/organisation/installningar" \
@@ -1427,5 +1456,31 @@ case "$(head -c 4 /tmp/faktura.pdf)" in
 esac
 TEK_KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/fakturor/$PDF_ID/pdf" -H "Authorization: Bearer $TOKEN_J")
 kontroll "tekniker nekas fakturans PDF (samma grind som listan)" "$TEK_KOD" "403"
+
+# 23d. Faktureringens rattelse-arbetsflode far inte blockeras
+echo "--- 23d. kreditera och utfarda ny for samma period ---"
+PERIOD_R='{"fran":"2027-05-01","till":"2027-05-31"}'
+INV_R=$(curl -s -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' -H 'X-Fakturering: utfardarnyckel' \
+  -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD_R,\"utfardad\":\"2027-05-01\"}")
+INV_R_ID=$(echo "$INV_R" | falt .id)
+# Andra utfardandet for samma period (ej krediterad) nekas.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: utfardarnyckel' -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD_R,\"utfardad\":\"2027-05-01\"}")
+kontroll "dubblett for oforandrad period nekas (409)" "$KOD" "409"
+# Kreditera, sedan utfarda den rattade fakturan for SAMMA period — ska lyckas.
+curl -s -X POST "$BAS/api/fakturor/$INV_R_ID/kreditera" -H 'Content-Type: application/json' -H 'X-Fakturering: utfardarnyckel' \
+  -d '{"orsak":"Antalet aktiva konton var felaktigt vid utfardandet."}' >/dev/null
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: utfardarnyckel' -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD_R,\"utfardad\":\"2027-05-02\"}")
+kontroll "rattad faktura for samma period gar att utfarda efter kreditering (201)" "$KOD" "201"
+
+# Obefintligt kalenderdatum i perioden avvisas.
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: utfardarnyckel' -d "{\"organisation_id\":\"$ORG_A\",\"period\":{\"fran\":\"2027-02-30\",\"till\":\"2027-03-29\"},\"utfardad\":\"2027-02-27\"}")
+kontroll "obefintligt kalenderdatum (2027-02-30) avvisas (400)" "$KOD" "400"
+
+# Krediterad fakturas PDF bar CREDITED-stampeln.
+curl -s -o /tmp/kredit.pdf "$BAS/api/fakturor/$INV_R_ID/pdf" -H "Authorization: Bearer $TOKEN_A"
+if grep -qa "CREDITED" /tmp/kredit.pdf; then echo "✓ krediterad fakturas PDF bar CREDITED-stampeln"; else echo "✗ PDF saknar CREDITED-stampel"; exit 1; fi
 
 echo "Integrationstest: allt grönt"

@@ -171,6 +171,12 @@ export type Handelse =
    * Bytet kräver ett varför, eftersom det ändrar vilka krav grinden
    * ställer. Kontroller från den gamla metodiken står kvar i loggen.
    */
+  /**
+   * Vald metodik vid ärendestart, registrerad som händelse så att
+   * grindens grund kan bevisas ur den förseglade loggen och inte
+   * bara ur en kolumn en databasadministratör kan ändra.
+   */
+  | { typ: "metodik_vald"; metodikId: string }
   | { typ: "metodik_byte"; metodikId: string; motivering: string }
   // FGS-1.0: betalarspåret. Vem som ersätter arbetet avgör beviskraven —
   // fabrik, vagnskadegaranti, försäkringsbolag, extern garantigivare,
@@ -371,6 +377,8 @@ export function handelseRubrik(post: LoggPost): string {
       return h.till ? `Work handed over from ${h.fran} to ${h.till}` : `Work handed over by ${h.fran}`;
     case "ansvarig_satt":
       return `Responsible technician: ${h.ansvarig}`;
+    case "metodik_vald":
+      return `Methodology selected: ${h.metodikId}`;
     case "metodik_byte":
       return `Methodology changed to ${h.metodikId}: ${h.motivering}`;
     case "arendetyp_satt":

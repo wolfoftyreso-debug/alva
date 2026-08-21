@@ -48,6 +48,7 @@ export const SV = {
   "grind.evidens.saknas": "Ingen evidens av något slag finns i loggen.",
   "grind.foton.detalj": "{kontroller} kontrollpunkter kräver foto, {foton} foton i loggen.",
   "grind.sparr.ej_uppfyllt": "Säkerhetskravet är inte uppfyllt.",
+  "grind.sparr.kringgangen": "En säkerhetsförutsättning besvarades och uppfylldes inte. Den kan inte avföras genom ett metodikbyte — uppfyll den, eller om metodiken var fel skulle säkerhetsfrågan inte ha besvarats under den.",
   "grind.arendetyp.okant": "Okänt krav i regelpaketet: {krav}",
   "grind.arendetyp.krav": "Krav för ärendetypen: {krav}",
   "grind.sakerhet": "Konfidensnivån inom vad underlaget bär",

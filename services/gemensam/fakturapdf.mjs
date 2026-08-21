@@ -79,6 +79,15 @@ export function fakturaPdf(faktura, avsandare = {}) {
 
   skriv(15, `Invoice ${faktura.beteckning}`, "F2", 22);
 
+  // Status på pappret. En krediterad eller betald faktura ska INTE gå att
+  // förväxla med en levande — den som åberopar PDF:en måste kunna se att
+  // kravet inte längre gäller. Utfärdad är grundtillståndet och behöver
+  // ingen stämpel.
+  const STATUSTEXT = { krediterad: "CREDITED — this invoice has been reversed", betald: "PAID" };
+  if (faktura.status && STATUSTEXT[faktura.status]) {
+    skriv(12, STATUSTEXT[faktura.status], "F2", 20);
+  }
+
   // ---- Parter och datum -------------------------------------------------
   const uppgifter = [
     ["Organization", faktura.organisation],

@@ -55,6 +55,7 @@ export const RO = {
   "grind.evidens.saknas": "În jurnal nu există nicio dovadă.",
   "grind.foton.detalj": "Controale care necesită fotografie: {kontroller}; fotografii în jurnal: {foton}.",
   "grind.sparr.ej_uppfyllt": "Cerința de siguranță nu este îndeplinită.",
+  "grind.sparr.kringgangen": "O precondiție de siguranță a fost completată și neîndeplinită. Nu poate fi ocolită prin schimbarea metodologiei — îndepliniți-o, sau dacă metodologia a fost greșită, întrebarea de siguranță nu ar fi trebuit completată sub ea.",
   "grind.arendetyp.okant": "Cerință necunoscută în pachetul de reguli: {krav}",
   "grind.arendetyp.krav": "Cerință pentru acest tip de caz: {krav}",
   "grind.sakerhet": "Nivel de încredere în limitele a ceea ce susțin dovezile",

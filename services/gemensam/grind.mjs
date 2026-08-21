@@ -208,13 +208,52 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
   // Säkerhetsspärrar. Ett nekande svar på en spärrfråga får aldrig
   // passera som "besvarad" — se SPARRFRAGOR i klientens metodik.ts.
   // Klientens spärr är vägledning; den här är hindret (QUALITET M-2).
+  //
+  // Spärren utvärderas ur LOGGEN, inte ur den aktiva metodiken. Den låg
+  // tidigare bakom `if (metodik?.id !== metodikId) continue`, så ett
+  // metodikbyte AVFÖRDE säkerhetsspärren: öppna som högvolt, svara nej på
+  // spänningsfrihet, byt till en metodik utan spärren, stäng med färre
+  // krav än ärendet öppnades med. Ett högvoltsfordon är högvolt oavsett
+  // vilken metodik som är aktiv — kontrollen hör till fordonet, inte till
+  // grinden där den råkade hittas (samma rotorsak som T-13/T-14).
+  //
+  // Är den ägande metodiken aktiv KRÄVS ett jakande svar (frågan ska
+  // ställas och besvaras). Har metodiken bytts bort men loggen bär ett
+  // besvarat ICKE-jakande svar, blockeras avslutet ändå. Finns inget svar
+  // alls blockeras inget: den som byter en FELVALD metodik innan
+  // säkerhetsfrågan besvarats drabbas inte.
+  //
+  // Matchningen sker på stegId/frageId eftersom loggposten inte bär
+  // metodikId. Spärrfrågornas id:n är unika över metodikbiblioteket (ett
+  // test låser det), så ingen annan metodik kan råka utlösa en spärr.
+  //
+  // "Har ärendet någon gång stått under" utläses ur de metodikval som
+  // finns i loggen (metodik_vald vid start, metodik_byte vid byte). Ett
+  // metodikbyte kräver den händelsen, så varje bytbart ärende bär sin
+  // metodikhärkomst i loggen — och därmed går den inte att dölja.
+  const metodikerILoggen = new Set([
+    ...av(handelser, "metodik_vald").map((h) => h.metodikId),
+    ...av(handelser, "metodik_byte").map((h) => h.metodikId),
+  ]);
   for (const [fraga, nyckel] of Object.entries(SPARRFRAGOR)) {
     const [metodikId, stegId, frageId] = fraga.split("/");
-    if (metodik?.id !== metodikId) continue;
+    const ägandeAktiv = metodik?.id === metodikId;
+    const varUnderMetodiken = metodikerILoggen.has(metodikId);
     const svaret = av(handelser, "fraga_besvarad").findLast(
       (h) => h.stegId === stegId && h.frageId === frageId,
     );
-    krav(`sparr_${frageId}`, nyckel, arJakande(svaret?.svar), "grind.sparr.ej_uppfyllt");
+    // Kravet gäller om metodiken är aktiv, om ärendet NÅGON GÅNG stått
+    // under den (metodikval i loggen), eller om spärrfrågan redan
+    // BESVARATS — svaret är i sig bevis att ärendet var under metodiken,
+    // eftersom spärrfrågorna är unika för den. Den som aldrig varit i
+    // närheten av metodiken drabbas inte.
+    if (!ägandeAktiv && !varUnderMetodiken && !svaret) continue;
+    // Tystnad är inte ett ja: ett obesvarat säkerhetskrav spärrar också,
+    // både när metodiken är aktiv och när den bytts bort. Annars kunde ett
+    // högvoltsärende avslutas utan spänningsfrihetskontroll genom ett byte
+    // till en svagare metodik utan att säkerhetsfrågan ens besvarats.
+    const detaljNyckel = ägandeAktiv ? "grind.sparr.ej_uppfyllt" : "grind.sparr.kringgangen";
+    krav(`sparr_${frageId}`, nyckel, arJakande(svaret?.svar), detaljNyckel);
   }
 
   // Teknisk eskalering (FGS-1.0 §8, DISS-mönstret): en öppnad förfrågan

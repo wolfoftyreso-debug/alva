@@ -49,6 +49,7 @@ export const IT = {
   "grind.evidens.saknas": "Nel registro non è presente alcuna evidenza.",
   "grind.foton.detalj": "{kontroller} punti di controllo richiedono una fotografia, {foton} fotografie nel registro.",
   "grind.sparr.ej_uppfyllt": "Il requisito di sicurezza non è soddisfatto.",
+  "grind.sparr.kringgangen": "Una precondizione di sicurezza è stata risposta e non soddisfatta. Non può essere aggirata cambiando metodologia — soddisfatela, o se la metodologia era errata, la domanda di sicurezza non avrebbe dovuto essere risposta sotto di essa.",
   "grind.arendetyp.okant": "Requisito sconosciuto nel pacchetto di regole: {krav}",
   "grind.arendetyp.krav": "Requisito per questo tipo di pratica: {krav}",
   "grind.sakerhet": "Livello di confidenza entro quanto sostiene l’evidenza",

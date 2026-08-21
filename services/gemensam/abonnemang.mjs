@@ -200,7 +200,7 @@ export function nastaPeriod(registrerad, senastFakturerad = null) {
   // org registrerad den 29-31.
   const fran = senastFakturerad ? laggTillManad(start) : new Date(start);
   const till = laggTillManad(fran);
-  till.setDate(till.getDate() - 1);
+  till.setUTCDate(till.getUTCDate() - 1); // UTC — perioden ska vara tidszonsinvariant
   return { fran: fran.toISOString().slice(0, 10), till: till.toISOString().slice(0, 10) };
 }
 

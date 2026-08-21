@@ -49,6 +49,7 @@ export const PT = {
   "grind.evidens.saknas": "Não existe qualquer evidência no registo.",
   "grind.foton.detalj": "{kontroller} pontos de controlo exigem fotografia, {foton} fotografias no registo.",
   "grind.sparr.ej_uppfyllt": "O requisito de segurança não está cumprido.",
+  "grind.sparr.kringgangen": "Uma precondição de segurança foi respondida e não cumprida. Não pode ser contornada mudando de metodologia — cumpra-a, ou se a metodologia estava errada, a pergunta de segurança não deveria ter sido respondida sob ela.",
   "grind.arendetyp.okant": "Requisito desconhecido no pacote de regras: {krav}",
   "grind.arendetyp.krav": "Requisito para este tipo de processo: {krav}",
   "grind.sakerhet": "Nível de confiança dentro do que a evidência sustenta",

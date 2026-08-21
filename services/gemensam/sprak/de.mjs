@@ -50,6 +50,7 @@ export const DE = {
   "grind.evidens.saknas": "Es liegt keinerlei Evidenz im Protokoll vor.",
   "grind.foton.detalj": "{kontroller} Prüfpunkte erfordern ein Foto, {foton} Fotos im Protokoll.",
   "grind.sparr.ej_uppfyllt": "Die Sicherheitsanforderung ist nicht erfüllt.",
+  "grind.sparr.kringgangen": "Eine Sicherheitsvoraussetzung wurde beantwortet und nicht erfüllt. Sie lässt sich nicht durch einen Methodikwechsel übergehen — erfüllen Sie sie, oder falls die Methodik falsch war, hätte die Sicherheitsfrage darunter nicht beantwortet werden dürfen.",
   "grind.arendetyp.okant": "Unbekannte Anforderung im Regelpaket: {krav}",
   "grind.arendetyp.krav": "Anforderung für diese Vorgangsart: {krav}",
   "grind.sakerhet": "Konfidenzniveau innerhalb dessen, was die Evidenz trägt",

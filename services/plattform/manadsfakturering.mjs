@@ -91,21 +91,28 @@ export async function fakturerManaden(pool, { nu = new Date(), torrkor = false }
           JSON.stringify(dokument),
         ],
       );
-      await klient.query(`update abonnemang set senast_fakturerad = $2 where organisation_id = $1`, [
-        rad.organisation_id,
-        period.fran,
-      ]);
+      // Idempotensen ligger HÄR, i transaktionen, inte i ett unikt
+      // periodindex. Villkoret `senast_fakturerad is not distinct from`
+      // det värde vi läste utanför transaktionen gör att bara EN av två
+      // samtidiga körningar avancerar; den andra får rowCount 0, rullar
+      // tillbaka och hoppar över. Ett periodindex kunde inte skilja en
+      // dubblettkörning från en LEGITIM omutfärdning efter en kreditering,
+      // och blockerade därför rättelser (fakturering.mjs lovar en ny
+      // faktura efter kreditnotan — den gick inte att skapa).
+      const avancerad = await klient.query(
+        `update abonnemang set senast_fakturerad = $2
+         where organisation_id = $1 and senast_fakturerad is not distinct from $3`,
+        [rad.organisation_id, period.fran, rad.senast_fakturerad],
+      );
+      if (avancerad.rowCount === 0) {
+        await klient.query("rollback");
+        hoppade.push({ organisation: rad.namn, period, skal: "redan fakturerad av en parallell körning" });
+        continue;
+      }
       await klient.query("commit");
       utfardade.push({ organisation: rad.namn, beteckning: dokument.beteckning, totalt: dokument.totalt, niva: niva.id });
     } catch (fel) {
       await klient.query("rollback").catch(() => {});
-      // 23505 = unik nyckel. Perioden är redan fakturerad av en parallell
-      // körning; det är själva poängen med villkoret, inte ett fel att
-      // avbryta hela jobbet för. Övriga organisationer ska faktureras.
-      if (fel?.code === "23505") {
-        hoppade.push({ organisation: rad.namn, period, skal: "redan fakturerad" });
-        continue;
-      }
       throw fel;
     } finally {
       klient.release();

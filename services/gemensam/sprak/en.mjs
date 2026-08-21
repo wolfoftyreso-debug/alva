@@ -77,6 +77,7 @@ export const EN = {
   "grind.evidens.saknas": "No evidence of any kind is present in the log.",
   "grind.foton.detalj": "{kontroller} checks require a photograph; {foton} photographs are in the log.",
   "grind.sparr.ej_uppfyllt": "The safety requirement is not met.",
+  "grind.sparr.kringgangen": "A safety precondition was answered and not met. It cannot be set aside by changing methodology — satisfy it, or if the methodology was wrong, the safety question should not have been answered under it.",
   "grind.arendetyp.okant": "Unknown requirement in the rule package: {krav}",
   "grind.arendetyp.krav": "Requirement for this case type: {krav}",
   "grind.sakerhet": "Confidence level within what the evidence supports",

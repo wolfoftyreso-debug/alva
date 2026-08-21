@@ -91,16 +91,33 @@ export function fakturastatus(poster = []) {
  * Returnerar en felsträng, eller null när perioden duger.
  */
 export function granskaPeriod(period) {
-  const datum = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+  // Formen räcker inte: 2026-02-30 passerar en ren regexkontroll, och
+  // Date.parse RULLAR ÖVER den till 2 mars i stället för att förkasta
+  // den. Ett datum som aldrig funnits hamnade då i det frusna dokumentet
+  // och på PDF:en. Kontrollen kräver därför att strängen återbildas exakt
+  // när den tolkas som ett UTC-datum.
+  const datum = (v) => {
+    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const [år, mån, dag] = v.split("-").map(Number);
+    const d = new Date(Date.UTC(år, mån - 1, dag));
+    return d.getUTCFullYear() === år && d.getUTCMonth() === mån - 1 && d.getUTCDate() === dag;
+  };
   if (!period || !datum(period.fran) || !datum(period.till)) {
-    return "Perioden kräver fran och till som datum (ÅÅÅÅ-MM-DD).";
+    return "Perioden kräver fran och till som giltiga datum (ÅÅÅÅ-MM-DD).";
   }
   if (new Date(period.till) < new Date(period.fran)) {
     return "Perioden slutar före den börjar.";
   }
+  // En period som inte rymmer en hel månad ger en faktura utan rader —
+  // en nollfaktura som ser rimlig ut. Den tystnaden är precis vad den här
+  // kontrollen finns för att stoppa.
+  const månader = manaderMellan(period.fran, period.till);
+  if (månader < 1) {
+    return "Perioden är kortare än en månad.";
+  }
   // Ett tak finns för att ett skrivfel i årtalet inte ska bli en faktura
   // på nittio år. Fem år rymmer varje rimlig licensperiod.
-  if (manaderMellan(period.fran, period.till) > 60) {
+  if (månader > 60) {
     return "Perioden är längre än fem år — kontrollera datumen.";
   }
   return null;
@@ -236,13 +253,17 @@ export const fakturabeteckning = (nummer) => `ALVA-INV-${String(nummer).padStart
  * tredje kalendermånad. Klampat blir det 28 (eller 29) februari.
  */
 export function laggTillManad(datum) {
+  // Allt datumräknande sker i UTC. getDate()/setDate() använder nodens
+  // lokala tidszon, så en Jan-31-ankrad period gav till=27 feb under UTC
+  // men 28 feb under US Pacific — samma verkliga period, olika strängar.
+  // Idempotensnyckeln byggde på den strängen: två noder i olika tidszoner
+  // (eller en container-UTC mot en värd i lokal tid) hade sett samma
+  // period som två och dubbelfakturerat.
   const d = new Date(datum);
-  const dag = d.getDate();
-  const r = new Date(d);
-  r.setDate(1);
-  r.setMonth(r.getMonth() + 1);
-  const sistaIManaden = new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate();
-  r.setDate(Math.min(dag, sistaIManaden));
+  const dag = d.getUTCDate();
+  const r = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+  const sistaIManaden = new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 0)).getUTCDate();
+  r.setUTCDate(Math.min(dag, sistaIManaden));
   return r;
 }
 
@@ -262,7 +283,7 @@ export function manaderMellan(fran, till) {
   const b = new Date(till);
   if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return 0;
   const slut = new Date(b);
-  slut.setDate(slut.getDate() + 1); // exklusivt slut
+  slut.setUTCDate(slut.getUTCDate() + 1); // exklusivt slut (UTC — se laggTillManad)
   let m = 0;
   let kurs = new Date(a);
   while (m <= 720) {

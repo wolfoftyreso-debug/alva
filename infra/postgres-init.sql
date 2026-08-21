@@ -363,16 +363,14 @@ create table if not exists fakturor (
   skapad timestamptz not null default now()
 );
 
--- Månadsjobbets idempotens vilade helt på senast_fakturerad, som läses
--- UTANFÖR transaktionen: två samtidiga körningar (cron plus en manuell)
--- läste samma värde, räknade fram samma period och skrev två fakturor
--- för den. Låset på fakturor serialiserade bara nummertilldelningen.
--- Villkoret nedan gör dubbletten omöjlig i stället för osannolik.
--- Krediteringar undantas: en kreditfaktura avser med avsikt samma period
--- som den faktura den rättar.
-create unique index if not exists fakturor_org_period_unikt
-  on fakturor (organisation_id, (dokument->'period'->>'fran'), (dokument->'period'->>'till'))
-  where krediterar is null;
+-- Månadsjobbets idempotens ligger i transaktionen (manadsfakturering.mjs:
+-- ett villkorat avancemang av senast_fakturerad), inte i ett unikt
+-- periodindex. Ett sådant index kunde inte skilja en dubblettkörning från
+-- en LEGITIM omutfärdning efter en kreditering, och blockerade därför den
+-- rättelse modulen utfäster (kreditnota + ny faktura för samma period).
+-- Den manuella utfärdarvägen kontrollerar i stället i applikationslagret
+-- att ingen ICKE-krediterad faktura redan täcker perioden.
+drop index if exists fakturor_org_period_unikt;
 create index if not exists fakturor_org_idx on fakturor (organisation_id, nummer desc);
 
 drop trigger if exists fakturor_append_only on fakturor;

@@ -49,6 +49,7 @@ export const NL = {
   "grind.evidens.saknas": "Er is geen enkel bewijs in het logboek aanwezig.",
   "grind.foton.detalj": "{kontroller} controles vereisen een foto, {foton} foto's in het logboek.",
   "grind.sparr.ej_uppfyllt": "Aan de veiligheidseis is niet voldaan.",
+  "grind.sparr.kringgangen": "Aan een veiligheidsvoorwaarde is geantwoord en niet voldaan. Ze kan niet worden omzeild door van methodologie te wisselen — voldoe eraan, of als de methodologie verkeerd was, had de veiligheidsvraag daaronder niet beantwoord mogen worden.",
   "grind.arendetyp.okant": "Onbekende eis in het regelpakket: {krav}",
   "grind.arendetyp.krav": "Eis voor dit zaaktype: {krav}",
   "grind.sakerhet": "Betrouwbaarheidsniveau binnen wat het bewijs draagt",
