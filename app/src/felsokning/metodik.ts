@@ -15,6 +15,19 @@ export interface Fraga {
   text: string;
   svarstyp: "janej" | "text" | "val";
   val?: string[];
+  /**
+   * Ställs efter stegets kontroller i stället för före dem.
+   *
+   * Finns för frågor vars sanna svar SKAPAS av kontrollerna i samma
+   * steg. Högvoltsmetodikens "är fordonet spänningslöst?" är exemplet:
+   * den låg först, medan de tre kontroller som gör fordonet
+   * spänningslöst låg efter. En tekniker som svarade sanningsenligt Nej
+   * låste hela ärendet, och den enda vägen vidare var att svara Ja innan
+   * det var sant — i ett system där ett felaktigt påstående om
+   * spänningsfrihet kan döda någon. Ett gränssnitt får aldrig göra
+   * lögnen till den bekväma vägen.
+   */
+  efterKontroller?: boolean;
 }
 
 // Minimikrav enligt modulen Verifierade checklistor: en kontrollpunkt är
@@ -192,18 +205,31 @@ export function nastaSteg(arende: Arende, metodik: Metodik): NastaSteg {
     }
     if (h.typ === "kontroll_utford") utforda.add(`${h.stegId}/${h.kontrollId}`);
   }
+  // Ordningen inom ett steg: frågor → kontroller → efterfrågor. Den
+  // sista gruppen finns för frågor vars sanna svar skapas av stegets
+  // egna kontroller (se Fraga.efterKontroller).
+  const provaFraga = (steg: MetodikSteg, fraga: Fraga): NastaSteg | null => {
+    if (!besvarade.has(`${steg.id}/${fraga.id}`)) return { steg, fraga, klart: false };
+    // Säkerhetsspärr: ett nekande svar stoppar metodiken här i stället
+    // för att räknas som besvarat och släppa fram nästa steg.
+    const sparr = SPARRFRAGOR[`${metodik.id}/${steg.id}/${fraga.id}`];
+    if (sparr && !arJakande(svar.get(`${steg.id}/${fraga.id}`))) {
+      return { steg, fraga, klart: false, sparr };
+    }
+    return null;
+  };
+
   for (const steg of metodik.steg) {
-    for (const fraga of steg.fragor ?? []) {
-      if (!besvarade.has(`${steg.id}/${fraga.id}`)) return { steg, fraga, klart: false };
-      // Säkerhetsspärr: ett nekande svar stoppar metodiken här i stället
-      // för att räknas som besvarat och släppa fram nästa steg.
-      const sparr = SPARRFRAGOR[`${metodik.id}/${steg.id}/${fraga.id}`];
-      if (sparr && !arJakande(svar.get(`${steg.id}/${fraga.id}`))) {
-        return { steg, fraga, klart: false, sparr };
-      }
+    for (const fraga of (steg.fragor ?? []).filter((f) => !f.efterKontroller)) {
+      const traff = provaFraga(steg, fraga);
+      if (traff) return traff;
     }
     for (const kontroll of steg.kontroller ?? []) {
       if (!utforda.has(`${steg.id}/${kontroll.id}`)) return { steg, kontroll, klart: false };
+    }
+    for (const fraga of (steg.fragor ?? []).filter((f) => f.efterKontroller)) {
+      const traff = provaFraga(steg, fraga);
+      if (traff) return traff;
     }
   }
   const sista = metodik.steg[metodik.steg.length - 1];

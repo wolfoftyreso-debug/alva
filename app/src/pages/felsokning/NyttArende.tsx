@@ -319,7 +319,7 @@ export default function NyttArende() {
           <p className="text-[12px] font-semibold uppercase tracking-widest text-[#4D5662]">{objektet.typ}</p>
           <p className="mt-2 text-[20px] font-semibold">{objektet.beskrivning}</p>
           <p className="mt-2 text-[15px] font-semibold text-[#005CA9]">{objektet.identifierare}</p>
-          <p className="mt-2 text-[12px] text-[#4D5662]">Identifierad via: {objektet.identifieringsmetod}</p>
+          <p className="mt-2 text-[12px] text-[#4D5662]">Identified via: {objektet.identifieringsmetod}</p>
           {objektet.kund && <p className="mt-2 text-[14px] text-[#1B1E22]">Customer: {objektet.kund}</p>}
         </Panel>
         <div className="grid grid-cols-2 gap-2">
@@ -347,7 +347,7 @@ export default function NyttArende() {
         />
         {metodik && (
           <p className="mb-4 text-[12px] font-semibold text-[#4D5662]">
-            Vald metodik: <span className="text-[#005CA9]">{metodik.namn}</span>
+            Selected methodology: <span className="text-[#005CA9]">{metodik.namn}</span>
           </p>
         )}
         <StorKnapp

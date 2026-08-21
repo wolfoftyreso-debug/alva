@@ -140,10 +140,17 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
     krav("kundbeslut", "grind.kundbeslut", beslut.length > 0);
 
     // Hårt fel, inte en varning: arbete utfört trots att kunden avböjt.
+    //
+    // SENASTE beskedet gäller, inte "någonsin avböjt". Kunden som avböjer,
+    // ringer tillbaka och godkänner är ett vanligt förlopp — och med den
+    // gamla regeln blev ärendet permanent omöjligt att stänga så fort ett
+    // avböjande någonsin registrerats, utan att hindret kunde åtgärdas.
+    // Loggen är append-only, så det första beskedet står kvar och är
+    // synligt; det är vilket som GÄLLER som avgörs här.
     krav(
       "avbojt_men_utfort",
       "grind.kundbeslut.avbojt",
-      !beslut.some((h) => h.beslut === "avbojt"),
+      beslut.at(-1)?.beslut !== "avbojt",
       "grind.kundbeslut.avbojt.detalj",
     );
 

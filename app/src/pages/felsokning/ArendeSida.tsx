@@ -566,7 +566,7 @@ function ReproduceringPanel({ skicka }: { skicka: (h: Handelse) => void }) {
   return (
     <Panel rubrik="Symptom verification — reproduction">
       <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
-        Har kundens fel kunnat reproduceras?
+        Has the customer's fault been reproduced?
       </p>
       <div className="mb-2 grid grid-cols-3 gap-2">
         {(["ja", "delvis", "nej"] as const).map((val) => (
@@ -777,6 +777,10 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
   const [forslagText, setForslagText] = useState("");
   const [kostnad, setKostnad] = useState("");
   const [beslutsVal, setBeslutsVal] = useState<"" | "godkant" | "avbojt" | "delvis">("");
+  // Kunden ändrar sig: avböjer, ringer tillbaka, godkänner. Formuläret
+  // visades bara när INGET besked fanns, så det andra beskedet kunde
+  // aldrig registreras — och grinden låste ärendet för alltid.
+  const [nyttBesked, setNyttBesked] = useState(false);
   const [kanal, setKanal] = useState("");
   const [beslutsKommentar, setBeslutsKommentar] = useState("");
 
@@ -797,7 +801,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
             {h.utford ? (
               <>
                 <span className="font-semibold">Action performed:</span> {h.beskrivning}
-                {h.delar && <span className="text-[#4D5662]"> · Delar: {h.delar}</span>}
+                {h.delar && <span className="text-[#4D5662]"> · Parts: {h.delar}</span>}
               </>
             ) : (
               <span className="text-[#8A5A00]">No action performed — {h.motivering}</span>
@@ -807,7 +811,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
       })}
       {kk && (
         <p className={`py-2 text-[13px] font-semibold ${kk.resultat === "symptomet_borta" ? "text-[#005CA9]" : "text-[#8A5A00]"}`}>
-          Kvalitetskontroll: {KVALITETSKONTROLL_LABEL[kk.resultat]} — <span className="font-normal">{kk.beskrivning}</span>
+          Quality check: {KVALITETSKONTROLL_LABEL[kk.resultat]} — <span className="font-normal">{kk.beskrivning}</span>
         </p>
       )}
 
@@ -819,15 +823,25 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
         return (
           <p key={p.id} className="border-b border-[#D7DCE2] py-2 text-[13px] last:border-0">
             <span className="font-semibold">Proposed action for the customer:</span> {h.beskrivning}
-            {h.uppskattadKostnad && <span className="text-[#4D5662]"> · Uppskattad kostnad: {h.uppskattadKostnad}</span>}
+            {h.uppskattadKostnad && <span className="text-[#4D5662]"> · Estimated cost: {h.uppskattadKostnad}</span>}
           </p>
         );
       })}
       {beslut && (
-        <p className={`py-2 text-[13px] font-semibold ${beslut.beslut === "godkant" ? "text-[#005CA9]" : beslut.beslut === "avbojt" ? "text-[#8B1A1A]" : "text-[#8A5A00]"}`}>
-          Kundens besked ({beslut.kanal}): {KUNDBESLUT_LABEL[beslut.beslut]}
-          {beslut.kommentar && <span className="font-normal"> — {beslut.kommentar}</span>}
-        </p>
+        <>
+          <p className={`py-2 text-[13px] font-semibold ${beslut.beslut === "godkant" ? "text-[#005CA9]" : beslut.beslut === "avbojt" ? "text-[#8B1A1A]" : "text-[#8A5A00]"}`}>
+            Customer's decision ({beslut.kanal}): {KUNDBESLUT_LABEL[beslut.beslut]}
+            {beslut.kommentar && <span className="font-normal"> — {beslut.kommentar}</span>}
+          </p>
+          {/* Kunden ändrar sig. Utan den här vägen kunde ett avböjande
+              aldrig följas av ett godkännande, och grinden låste ärendet
+              permanent med ett hinder som inte gick att åtgärda. */}
+          {!nyttBesked && (
+            <StorKnapp variant="sekundar" onClick={() => setNyttBesked(true)}>
+              Register a new decision from the customer
+            </StorKnapp>
+          )}
+        </>
       )}
 
       {/* Förslaget hör före arbetet, och knappen står därför först. Men
@@ -884,7 +898,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
         </div>
       )}
 
-      {forslag.length > 0 && !beslut && (
+      {forslag.length > 0 && (!beslut || nyttBesked) && (
         <div className="mb-4 border border-[#8A5A00] bg-[#FFFFFF] p-2">
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#8A5A00]">
             Record the customer's decision before the work begins
@@ -935,6 +949,7 @@ function AtgardsPanel({ arende, skicka }: { arende: Arende; skicka: (h: Handelse
                   });
                   setBeslutsVal("");
                   setKanal("");
+                  setNyttBesked(false);
                   setBeslutsKommentar("");
                 }}
               >
@@ -1229,7 +1244,7 @@ function InaktivitetsBanner({
   return (
     <div className="mb-4 border border-[#005CA9] bg-[#F6F7F8] p-4">
       <p className="mb-2 text-[14px] font-semibold text-[#005CA9]">
-        Ingen aktivitet har registrerats de senaste {minuter} minuterna.
+        No activity has been recorded for the last {minuter} minutes.
       </p>
       <p className="mb-4 text-[#1B1E22]">Briefly describe what was done during this period.</p>
       <TextFalt label="What has been done?" varde={text} satt={setText} platshallare="e.g. Removed the instrument panel to reach the wiring harness." rost />
@@ -1333,9 +1348,23 @@ function GuideFlik({
     );
   }
 
+  const b = brief(arende, metodik, nu);
+
   return (
     <>
       <KategoriRad arende={arende} skicka={skicka} />
+
+      {/* Nästa steg på telefonen. Stegträdet och kontextpanelen är dolda
+          under lg/xl, så på den enhet produkten uttryckligen är byggd för
+          — en telefon i en verkstad — fanns varken överblick eller
+          rekommendation i guiden. Raden är kompakt och försvinner när
+          panelen till höger tar över. */}
+      {!avslutat && b.rekommenderatNastaSteg[0] && (
+        <p className="mb-4 border-l-2 border-[#005CA9] bg-white py-2 pl-4 text-[13px] text-[#1B1E22] xl:hidden">
+          <span className="mr-2 text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">Next</span>
+          {b.rekommenderatNastaSteg[0]}
+        </p>
+      )}
 
       {/* ALVA-modellen som tillstånd, inte som illustration. Den svarar
           på den enda fråga en tekniker som återupptar ett ärende har:
@@ -1375,7 +1404,6 @@ function GuideFlik({
             <StorKnapp variant="fara" disabled={!kanAvslutas} onClick={() => setVisaAvslut(true)}>
               Close diagnosis
             </StorKnapp>
-            {!kanAvslutas && <Avslutshinder hinder={hinder} />}
           </>
         ) : steg.sparr ? (
           // Säkerhetsspärr. Metodiken går inte vidare — svaret är ett
@@ -1385,10 +1413,22 @@ function GuideFlik({
             <p className="mb-2 text-[15px] font-semibold text-[#8B1A1A]">Work must not continue</p>
             <p className="mb-2 text-[#1B1E22]">{steg.sparr.orsak}</p>
             <p className="mb-4 font-semibold text-[#1B1E22]">{steg.sparr.atgard}</p>
-            <p className="text-[12px] text-[#4D5662]">
+            <p className="mb-4 text-[12px] text-[#4D5662]">
               The answer is documented in the log. The methodology opens when the precondition is met and the question is answered
               in the affirmative.
             </p>
+            {/* Vägen ut. Panelen sade att metodiken öppnas när
+                förutsättningen uppfyllts — men frågan gick inte att
+                besvara igen, eftersom spärrgrenen kom före frågegrenen.
+                Ärendet var därmed permanent låst av ett sanningsenligt
+                svar. Loggen är append-only: det nya svaret läggs till,
+                det gamla står kvar, och grinden läser det senaste. */}
+            <div className="border-t border-[#D7DCE2] pt-4">
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
+                When the precondition is met
+              </p>
+              <FrageKort key={`${steg.steg.id}/${steg.fraga?.id}-om`} steg={steg} skicka={skicka} />
+            </div>
           </div>
         ) : steg.fraga ? (
           <FrageKort key={`${steg.steg.id}/${steg.fraga.id}`} steg={steg} skicka={skicka} />
@@ -1623,10 +1663,27 @@ function EskaleringPanel({ arende, skicka }: { arende: Arende; skicka: (h: Hande
   return (
     <Panel rubrik="Technical escalation — manufacturer or warranty provider">
       {oppna.size > 0 && (
-        <p className="mb-2 border-l-2 border-[#8A5A00] pl-4 text-[13px]">
-          <span className="font-semibold text-[#8A5A00]">Open, awaiting answer:</span>{" "}
-          {[...oppna.entries()].map(([r, b]) => (r ? `${r} — ${b}` : b)).join(" · ")}
-        </p>
+        <div className="mb-2 border-l-2 border-[#8A5A00] pl-4">
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-[#8A5A00]">Open, awaiting answer</p>
+          {/* Klickbara: referensen matchas TECKEN FÖR TECKEN mot grinden,
+              och fältet var fritext utan förifyllning. "DISS-2231" vid
+              öppning och "DISS 2231" vid svar stängde ingenting — och
+              eftersom loggen är append-only gick det inte att rätta. */}
+          {[...oppna.entries()].map(([r, b]) => (
+            <button
+              key={r || b}
+              type="button"
+              onClick={() => {
+                setReferens(r);
+                setText(b);
+              }}
+              className="mt-2 block w-full border border-[#D7DCE2] bg-white p-2 text-left text-[13px]"
+            >
+              {r ? <span className="font-mono font-semibold">{r}</span> : null} {b}
+              <span className="block text-[11px] text-[#4D5662]">Use this reference for the answer</span>
+            </button>
+          ))}
+        </div>
       )}
       <div className="mb-2 grid gap-2 sm:grid-cols-3">
         <TextFalt label="Description" varde={text} satt={setText} platshallare="What was asked, or what the answer says" />
@@ -1704,6 +1761,14 @@ function FrageKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse) =>
 
   return (
     <>
+      {/* Stegets förklaring visades bara i KontrollKort — alltså aldrig
+          medan säkerhetsfrågorna besvarades, där den behövs mest.
+          Högvoltsstegets "systemen kan vara dödliga … avläsningen är
+          icke-ingripande" var osynlig i exakt det ögonblick teknikern
+          skulle svara på om arbetet får börja. */}
+      {steg.steg.beskrivning && (
+        <p className="mb-4 text-[13px] leading-[20px] text-[#4D5662]">{steg.steg.beskrivning}</p>
+      )}
       <p className="mb-4 text-[17px] font-semibold leading-snug">{fraga.text}</p>
       {fraga.svarstyp === "janej" && (
         <div className="grid grid-cols-2 gap-2">
@@ -1850,7 +1915,7 @@ function Undantag({ vidUndantag }: { vidUndantag: (orsak: string) => void }) {
   return (
     <div className="mt-4 border border-[#8A5A00] bg-[#FFFFFF] p-2">
       <p className="mb-2 text-[12px] font-semibold text-[#8A5A00]">
-        Kontrollen dokumenteras utan underlag — ange orsak (obligatoriskt). Detta flaggas i brief och rapport.
+        The check is documented without evidence — state the reason (required). This is flagged in the brief and the report.
       </p>
       <div className="mb-2 grid grid-cols-1 gap-2">
         {aktivtRegelpaket().undantagsorsaker.map((val) => (
@@ -2401,7 +2466,7 @@ function BriefFlik({
             <p className="text-[15px] font-semibold">{b.objekt.beskrivning}</p>
             <p className="font-semibold text-[#005CA9]">{b.objekt.identifierare}</p>
             {b.objekt.kund && <p className="text-[#1B1E22]">Customer: {b.objekt.kund}</p>}
-            {b.ansvarig && <p className="text-[#1B1E22]">Ansvarig tekniker: {b.ansvarig}</p>}
+            {b.ansvarig && <p className="text-[#1B1E22]">Responsible technician: {b.ansvarig}</p>}
           </>
         ) : (
           <p className="text-[#4D5662]">Not identified</p>
@@ -2536,7 +2601,7 @@ function RapportFlik({
       {/* ECM-kvalitetsgrinden: slutrapporten kan inte genereras förrän
           varje obligatoriskt påstående har evidens eller dokumenterat
           undantag i händelseloggen. */}
-      <Panel rubrik={`Kvalitetsgrind — ECM v${ECM_VERSION}`}>
+      <Panel rubrik={`Quality gate — ECM v${ECM_VERSION}`}>
         {grind.map((rad) => (
           <div key={rad.id} className="border-b border-[#D7DCE2] py-2 last:border-0">
             <p className="text-[13px]">
@@ -2552,7 +2617,7 @@ function RapportFlik({
         {!godkand && (
           <p className="mt-2 text-[12px] font-semibold text-[#8B1A1A]">
             The report cannot be generated until every failing row has evidence or a documented exemption
-            (”Underlag kan inte tas fram” i guiden).
+            (“Evidence cannot be produced …” in the guide).
           </p>
         )}
       </Panel>

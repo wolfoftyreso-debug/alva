@@ -322,7 +322,24 @@ describe("kundbeskedet går att registrera även när åtgärden skrevs först",
   });
 
   it("beskedsrutan öppnas av att ett förslag finns", () => {
-    expect(kod).toContain("{forslag.length > 0 && !beslut && (");
+    expect(kod).toContain("{forslag.length > 0 && (!beslut || nyttBesked) && (");
+  });
+
+  it("ett nytt besked går att registrera när kunden ändrar sig", () => {
+    // Kunden avböjer, ringer tillbaka och godkänner — ett vanligt
+    // förlopp. Rutan visades bara när INGET besked fanns, och grinden
+    // blockerade på "någonsin avböjt", så ärendet blev permanent omöjligt
+    // att stänga med ett hinder som inte gick att åtgärda.
+    expect(kod).toContain("Register a new decision from the customer");
+    expect(kod).toContain("setNyttBesked(false)");
+  });
+});
+
+describe("grinden dömer på det SENASTE kundbeskedet", () => {
+  it("ett avböjande som följts av ett godkännande blockerar inte", () => {
+    const grind = readFileSync("../services/gemensam/grind.mjs", "utf8");
+    expect(grind).toContain('beslut.at(-1)?.beslut !== "avbojt"');
+    expect(grind).not.toContain('!beslut.some((h) => h.beslut === "avbojt")');
   });
 });
 

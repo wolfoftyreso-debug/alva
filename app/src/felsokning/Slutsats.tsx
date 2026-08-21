@@ -202,7 +202,7 @@ export function Slutsatspanel({ arende, skicka }: { arende: Arende; skicka: (h: 
           </Knapp>
           {!klar && (
             <span className="text-[12px]" style={{ color: FARG.steel }}>
-              {brister.length} {brister.length === 1 ? "brist" : "brister"} kvar.
+              {brister.length} {brister.length === 1 ? "item" : "items"} remaining.
             </span>
           )}
         </div>

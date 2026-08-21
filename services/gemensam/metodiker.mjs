@@ -647,7 +647,13 @@ export const HOGVOLT = {
         "High-voltage systems can be lethal. No work on the system begins until the steps below are documented. Requires authorization for work on high-voltage systems — without it, stop after non-intrusive readout: no removal of covers or connectors, no insulation testing with applied test voltage, and never any work on an energized system. The readout and charging steps are non-intrusive; de-energization is completed and documented before any physical intervention.",
       fragor: [
         { id: "behorighet", text: "Are you authorized to work on high-voltage systems?", svarstyp: "janej" },
-        { id: "avstangt", text: "Is the vehicle de-energized per the manufacturer's procedure, with absence of voltage verified by measurement?", svarstyp: "janej" },
+        // efterKontroller: frågan ställs EFTER de tre kontroller som gör
+        // fordonet spänningslöst (service disconnect, väntetid,
+        // spänningsfrihetsmätning). Den låg tidigare först, vilket
+        // tvingade teknikern att antingen svara Ja innan det var sant
+        // eller låsa ärendet permanent — i den metodik där ett felaktigt
+        // påstående är farligast.
+        { id: "avstangt", text: "Is the vehicle de-energized per the manufacturer's procedure, with absence of voltage verified by measurement?", svarstyp: "janej", efterKontroller: true },
       ],
       kontroller: [
         { id: "skyddsutrustning", text: "Document before starting: the work area cordoned off and signed, and the protective equipment in use — insulated gloves (EN 60903, within retest date), face shield, insulated tools (EN 60900)", krav: "foto" },

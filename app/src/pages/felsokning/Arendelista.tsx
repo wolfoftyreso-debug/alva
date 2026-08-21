@@ -11,7 +11,7 @@ import {
   type PlattformKonto,
 } from "@/felsokning/plattform";
 import { FelsokningSkal, Panel, StorKnapp, TextFalt } from "@/felsokning/ui";
-import { IkonDiagram, IkonKugghjul } from "@/felsokning/ikoner";
+import { IkonDiagram, IkonKugghjul, IkonUppdatera } from "@/felsokning/ikoner";
 import { tidDatum, tidKlockslag } from "@/felsokning/format";
 
 type Filter = "alla" | "pagaende" | "klara";
@@ -226,6 +226,15 @@ export default function Arendelista() {
               <p className="mt-2 text-[15px] font-semibold">{o ? o.beskrivning : "Unknown object"}</p>
               {o && <p className="text-[12px] font-semibold text-[#4D5662]">{o.identifierare}{o.kund ? ` · ${o.kund}` : ""}</p>}
               {fel && <p className="mt-2 text-[14px] text-[#1B1E22]">”{fel}”</p>}
+              {/* Nästa steg på kortet: värdet räknades redan fram för
+                  arbetstiden och kastades bort. En tekniker med fem öppna
+                  ärenden på golvet fick öppna vart och ett för att se vad
+                  som väntade. */}
+              {!avslutat && b.rekommenderatNastaSteg[0] && (
+                <p className="mt-2 text-[13px] text-[#005CA9]">
+                  <IkonUppdatera /> {b.rekommenderatNastaSteg[0]}
+                </p>
+              )}
               <p className="mt-2 text-[12px] text-[#4D5662]">
                 {sista ? `Last activity ${tidDatum(sista.tidpunkt)} ${tidKlockslag(sista.tidpunkt)}` : ""}
                 {" · "}

@@ -6,6 +6,10 @@ import type { Arende, Bilaga, LoggPost, Objekt, TidKategori, Tillforlitlighet } 
 import { TIDKATEGORI_LABEL } from "./domain";
 import type { Metodik } from "./metodik";
 import { nastaSteg } from "./metodik";
+// Grinden är samma modul som servern kör — briefen ska peka på det som
+// FAKTISKT hindrar avslutet, inte på en allmän uppmaning.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+import { grinda } from "../../../services/gemensam/grind.mjs";
 
 export function objekt(arende: Arende): Objekt | undefined {
   for (const post of arende.handelser) {
@@ -306,7 +310,17 @@ export function brief(arende: Arende, metodik: Metodik, nu?: string): Brief {
       if (!rekommenderat.includes(text)) rekommenderat.push(text);
     }
     if (rekommenderat.length === 0) {
-      rekommenderat.push("Every check in the methodology is complete. Verify the conclusion or extend the diagnosis.");
+      // Metodiken är klar — men grinden kan fortfarande neka avslut på
+      // konkreta punkter. Panelen som heter "Recommended next step"
+      // svarade då "verifiera slutsatsen", vilket inte var det som
+      // faktiskt stod i vägen. Hindren är det verkliga nästa steget.
+      const kvarstaende = grinda(arende.handelser.map((post) => post.handelse), metodik as never) as { rubrik: string; detalj?: string }[];
+      for (const h of kvarstaende.slice(0, 3)) {
+        rekommenderat.push(h.detalj ? `${h.rubrik} — ${h.detalj}` : h.rubrik);
+      }
+      if (rekommenderat.length === 0) {
+        rekommenderat.push("Every check in the methodology is complete. Verify the conclusion or extend the diagnosis.");
+      }
     }
   }
   return {
