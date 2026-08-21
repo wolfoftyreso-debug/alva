@@ -121,15 +121,21 @@ export function granskaPeriod(period) {
 export function fakturarader(org, aktiva, period, prislista = PRISLISTA) {
   const rader = [];
   const månader = manaderMellan(period.fran, period.till);
+  // Plattformsavgiften debiteras per månad; en årsfaktura blir tolv
+  // månader. Tidigare låg hela årsavgiften på VARJE faktura, vilket
+  // gav en tolvdubbel debitering på månadsjobbet.
+  const plattformManad = Math.round(prislista.plattform_ar / 12);
 
-  rader.push({
-    benamning: "Platform license",
-    underlag: `${org?.namn ?? "Organization"} · ${period.fran} – ${period.till}`,
-    antal: 1,
-    enhet: "organization/year",
-    apris: prislista.plattform_ar,
-    belopp: prislista.plattform_ar,
-  });
+  if (månader > 0) {
+    rader.push({
+      benamning: "Platform license",
+      underlag: `${org?.namn ?? "Organization"} · ${period.fran} – ${period.till} · ${månader} ${månader === 1 ? "month" : "months"}`,
+      antal: månader,
+      enhet: "platform/month",
+      apris: plattformManad,
+      belopp: månader * plattformManad,
+    });
+  }
 
   if (aktiva > 0 && månader > 0) {
     rader.push({
@@ -222,12 +228,50 @@ export function kreditera(faktura, { nummer, utfardad, orsak }) {
 /** ALVA-INV-0001 */
 export const fakturabeteckning = (nummer) => `ALVA-INV-${String(nummer).padStart(4, "0")}`;
 
-/** Hela månader mellan två datum, inklusive startmånaden. */
+/**
+ * Lägger till en månad och klampar mot måldagens sista dag.
+ *
+ * Utan klampning rullar den 31 januari + 1 månad till 3 mars (JS
+ * "31 februari"), vilket gav faktureringsperioder som spillde in i en
+ * tredje kalendermånad. Klampat blir det 28 (eller 29) februari.
+ */
+export function laggTillManad(datum) {
+  const d = new Date(datum);
+  const dag = d.getDate();
+  const r = new Date(d);
+  r.setDate(1);
+  r.setMonth(r.getMonth() + 1);
+  const sistaIManaden = new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate();
+  r.setDate(Math.min(dag, sistaIManaden));
+  return r;
+}
+
+/**
+ * Hela månader i en period [fran, till] (bägge inklusive).
+ *
+ * Räknas genom att stega en månad i taget (månadsslut-klampat) från
+ * fran tills periodens EXKLUSIVA slut (till + 1 dag) passeras — inte
+ * genom att räkna berörda kalendermånader. En kalenderårsperiod
+ * (01-01..12-31) är tolv månader; en dygnsankrad månadsperiod
+ * (20 jan..19 feb, eller 31 jan..27 feb) är EN, inte två. Den gamla
+ * kalendermånadsräkningen gav 2 för varje period som inte startade den
+ * 1:a och dubbeldebiterade då varje org som inte registrerats den 1:a.
+ */
 export function manaderMellan(fran, till) {
   const a = new Date(fran);
   const b = new Date(till);
   if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return 0;
-  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) + 1;
+  const slut = new Date(b);
+  slut.setDate(slut.getDate() + 1); // exklusivt slut
+  let m = 0;
+  let kurs = new Date(a);
+  while (m <= 720) {
+    const nasta = laggTillManad(kurs);
+    if (nasta > slut) break;
+    kurs = nasta;
+    m += 1;
+  }
+  return m;
 }
 
 function adderaDagar(datum, dagar) {

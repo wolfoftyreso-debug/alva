@@ -71,7 +71,7 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
   krav(
     "historik",
     "grind.historik",
-    Boolean(historik) && (historik.kontrollerad || (historik.kommentar ?? "").trim().length > 0),
+    Boolean(historik) && (historik.kontrollerad || String(historik.kommentar ?? "").trim().length > 0),
     historik ? "grind.historik.nekad" : "grind.historik.saknas",
   );
 
@@ -100,7 +100,7 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
     const poster = av(handelser, "matarstallning").filter((h) => h.lage === lage);
     const dokumenterad = poster.length > 0;
     const fotograferad = poster.some((h) => h.bilagaId || h.dataUrl);
-    const motiverat = poster.some((h) => (h.undantag ?? "").trim().length > 0);
+    const motiverat = poster.some((h) => String(h.undantag ?? "").trim().length > 0);
     krav(
       `matarstallning_${lage}`,
       nyckel,
@@ -176,7 +176,7 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
         fotokravande.push(kontroll.text);
         continue;
       }
-      if (!(h.resultat ?? "").trim()) saknade.push(`${steg.rubrik} · ${kontroll.text} (utan resultat)`);
+      if (!String(h.resultat ?? "").trim()) saknade.push(`${steg.rubrik} · ${kontroll.text} (utan resultat)`);
     }
   }
   kravMedData("metodik_kontroller", "grind.kontroller", saknade.length === 0, saknade.slice(0, 5).join(" · "));

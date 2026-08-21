@@ -181,6 +181,21 @@ export function granskaHändelse(handelse) {
   if (okända.length > 0) {
     return `${handelse.typ}: okända fält avvisas (${okända.join(", ")})`;
   }
+
+  // Valfria fält typkontrollerades tidigare inte alls — bara deras namn
+  // stod i tillåtelselistan. Ett objekt eller en funktion i ett valfritt
+  // fält passerade då granskningen och kunde krascha kvalitetsgrinden vid
+  // varje anrop (t.ex. `kommentar`.trim()); eftersom loggen är append-only
+  // gick ärendet då aldrig att avsluta. Alla valfria fält i domänmodellen
+  // är primitiver (sträng/tal/boolean), så icke-primitiver avvisas här.
+  const valfria = VALFRIA_FÄLT[handelse.typ] ?? [];
+  for (const nyckel of valfria) {
+    if (!(nyckel in handelse) || handelse[nyckel] === undefined || handelse[nyckel] === null) continue;
+    const t = typeof handelse[nyckel];
+    if (t !== "string" && t !== "number" && t !== "boolean") {
+      return `${handelse.typ}.${nyckel} har fel form (valfria fält måste vara sträng, tal eller boolean)`;
+    }
+  }
   return null;
 }
 

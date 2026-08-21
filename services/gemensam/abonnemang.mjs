@@ -31,7 +31,7 @@
 // noll kronor — därför att den etablerar serien och visar kunden exakt
 // vad den inte betalar för.
 
-import { PRISLISTA } from "./fakturering.mjs";
+import { PRISLISTA, laggTillManad } from "./fakturering.mjs";
 
 /** Dagar efter förfallodagen innan låsning. Synlig nedräkning hela tiden. */
 export const RESPITDAGAR = 14;
@@ -195,10 +195,11 @@ export function besked(status) {
 export function nastaPeriod(registrerad, senastFakturerad = null) {
   const start = new Date(senastFakturerad ?? registrerad);
   if (Number.isNaN(start.getTime())) return null;
-  const fran = new Date(start);
-  if (senastFakturerad) fran.setMonth(fran.getMonth() + 1);
-  const till = new Date(fran);
-  till.setMonth(till.getMonth() + 1);
+  // Månadsslut-klampat: 31 jan + 1 månad blir 28 feb, inte 3 mars. Utan
+  // klampningen spillde perioden in i en tredje kalendermånad för varje
+  // org registrerad den 29-31.
+  const fran = senastFakturerad ? laggTillManad(start) : new Date(start);
+  const till = laggTillManad(fran);
   till.setDate(till.getDate() - 1);
   return { fran: fran.toISOString().slice(0, 10), till: till.toISOString().slice(0, 10) };
 }

@@ -34,10 +34,12 @@ import AlvaForsakring from "./pages/alva/Forsakring";
 import AlvaSupport from "./pages/alva/Support";
 import AlvaInstallningar from "./pages/alva/Installningar";
 import { Portalvakt } from "./pages/alva/Portalvakt";
+import { Felgrans } from "./Felgrans";
 
 const Router = import.meta.env.VITE_HASH_ROUTER ? HashRouter : BrowserRouter;
 
 const App = () => (
+  <Felgrans>
   <Router>
     <Routes>
       {/* Publika webbplatsen. Roten är startsidan — inget annat. */}
@@ -74,6 +76,7 @@ const App = () => (
       <Route path="*" element={<NotFound />} />
     </Routes>
   </Router>
+  </Felgrans>
 );
 
 export default App;

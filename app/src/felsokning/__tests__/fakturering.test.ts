@@ -5,6 +5,7 @@
 // avgör om en faktura går att granska två år senare: att varje rad bär
 // sitt underlag, och att en utfärdad faktura aldrig ändras.
 import { describe, expect, it } from "vitest";
+import { nastaPeriod } from "../../../../services/gemensam/abonnemang.mjs";
 import {
   PRISLISTA,
   fakturabeteckning,
@@ -32,6 +33,45 @@ describe("perioden räknas i hela månader", () => {
   it("en bakvänd eller trasig period ger noll i stället för ett negativt belopp", () => {
     expect(manaderMellan("2026-12-31", "2026-01-01")).toBe(0);
     expect(manaderMellan("inte ett datum", "2026-01-01")).toBe(0);
+  });
+});
+
+describe("en månadsperiod debiterar en månad — inte tolv, inte två", () => {
+  // Regression: månadsjobbet återanvänder fakturarader för en dygnsankrad
+  // enmånadsperiod. Plattformsavgiften låg tidigare som hela ÅRSbeloppet på
+  // varje faktura (12×) och användarraden räknade två kalendermånader (2×) —
+  // tillsammans ~7× överdebitering. Här låses en månad = en månad.
+  const MÅNAD = { fran: "2026-01-20", till: "2026-02-19" };
+  const PL = { valuta: "SEK", plattform_ar: 2400000, anvandare_manad: 39000, moduler: {}, momssats: 0.25, betalningsvillkor: 30 };
+
+  it("plattformsraden är en tolftedel av årsavgiften, inte hela", () => {
+    const rad = fakturarader({ namn: "V", moduler: [] }, 5, MÅNAD, PL).find((r) => r.benamning === "Platform license");
+    expect(rad.belopp).toBe(200000); // 2400000 / 12
+    expect(rad.antal).toBe(1);
+  });
+
+  it("användarraden räknar en månad, inte två", () => {
+    const rad = fakturarader({ namn: "V", moduler: [] }, 5, MÅNAD, PL).find((r) => r.benamning === "User licenses");
+    expect(rad.antal).toBe(5); // 5 användare × 1 månad
+    expect(rad.underlag).toContain("1 month");
+  });
+
+  it("hela månadsnettot är en månad plattform + en månad användare", () => {
+    const f = fakturera({ nummer: 1, org: { namn: "V", moduler: [] }, aktiva: 5, period: MÅNAD, utfardad: "2026-01-20", prislista: PL });
+    expect(f.netto).toBe(200000 + 5 * 39000); // 395000, inte 2790000
+  });
+
+  it("en årsperiod ger fortfarande hela årsavgiften på plattformsraden", () => {
+    const rad = fakturarader({ namn: "V", moduler: [] }, 12, PERIOD, PL).find((r) => r.benamning === "Platform license");
+    expect(rad.belopp).toBe(2400000);
+    expect(rad.antal).toBe(12);
+  });
+
+  it("registrering vilken dag som helst i månaden debiterar en månad", () => {
+    for (const reg of ["2026-01-01", "2026-01-20", "2026-01-31"]) {
+      const p = nastaPeriod(reg, null);
+      expect(manaderMellan(p.fran, p.till), reg).toBe(1);
+    }
   });
 });
 

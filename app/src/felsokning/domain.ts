@@ -311,12 +311,14 @@ export function nyLoggPost(anvandare: string, handelse: Handelse, tidpunkt?: str
 }
 
 export function handelseRubrik(post: LoggPost): string {
-  const h = post.handelse;
+  const h = post?.handelse;
+  // En post utan händelse (skadad lagring/serverdata) får aldrig kasta.
+  if (!h || typeof h !== "object") return "Log entry could not be rendered";
   switch (h.typ) {
     case "objekt_identifierat":
-      return `Object identified: ${h.objekt.beskrivning} (${h.objekt.identifierare})`;
+      return `Object identified: ${h.objekt?.beskrivning ?? "—"} (${h.objekt?.identifierare ?? "?"})`;
     case "arbetsorder_skannad":
-      return `Work order scanned — ${h.falt.length} fields interpreted`;
+      return `Work order scanned — ${h.falt?.length ?? 0} fields interpreted`;
     case "felbeskrivning":
       return `Fault description recorded`;
     case "fraga_besvarad":
@@ -368,7 +370,7 @@ export function handelseRubrik(post: LoggPost): string {
           ? `Symptom partially reproduced: ${h.beskrivning}`
           : `Symptom could not be reproduced — ${h.beskrivning}`;
     case "felorsak":
-      return `Root cause (${TILLFORLITLIGHET_LABEL[h.sakerhet]}): ${h.avvikelse} — ${h.orsaker.join(", ")}`;
+      return `Root cause (${TILLFORLITLIGHET_LABEL[h.sakerhet]}): ${h.avvikelse} — ${(h.orsaker ?? []).join(", ")}`;
     case "atgardsforslag":
       return `Proposed action for the customer: ${h.beskrivning}${h.uppskattadKostnad ? ` — estimated cost ${h.uppskattadKostnad}` : ""}`;
     case "kundbeslut":
@@ -382,10 +384,17 @@ export function handelseRubrik(post: LoggPost): string {
     case "export_skapad":
       return `Export created: ${h.format}, version ${h.version}`;
     case "ai_svar": {
-      const forsta = h.rader[0];
+      const forsta = h.rader?.[0];
       return `AI: ${forsta ? `${forsta.text} ` : ""}— Next step: ${h.nastaSteg}`;
     }
+    case "slutsats":
+      return `Conclusion${h.orsakFastställd === false ? " (cause not established)" : ""}: ${h.motivering ?? "—"}`;
     case "arende_avslutat":
       return h.signatur ? `Diagnosis closed — signed by ${h.signatur}` : "Diagnosis closed";
+    default:
+      // Okänd/framtida händelsetyp får en märkt rad i stället för att
+      // returnera undefined (som förr blev en tom rad i loggen och
+      // "anna: undefined" i AI-prompten).
+      return `Log entry: ${(h as { typ?: string }).typ ?? "unknown"}`;
   }
 }
