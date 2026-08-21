@@ -27,10 +27,32 @@ filerna läser därifrån i stället för att upprepa portar och namn.
 ```sh
 cp terraform.tfvars.exempel terraform.tfvars   # fyll i domän, register, nycklar
 terraform init
+
+# FÖRSTA gången mot ett tomt kluster: CRD:erna måste finnas innan
+# manifesten kan planeras — se nedan.
+terraform apply -target=helm_release.external_secrets
+
 terraform plan
 terraform apply
 terraform output karta                         # hela systemet i klartext
 ```
+
+### Varför två steg första gången
+
+`SecretStore` och `ExternalSecret` i `10-namnrymd.tf` är
+`kubernetes_manifest`, och den resurstypen **validerar mot klustrets API
+redan vid `terraform plan`**. CRD:erna installeras av `helm_release`
+i samma konfiguration, så mot ett tomt kluster faller planen med
+`no matches for kind "SecretStore" in group "external-secrets.io"`.
+`depends_on` hjälper inte: planvalideringen sker före allt apply-arbete.
+
+Det här är en känd begränsning i Kubernetes-leverantören, inte ett fel i
+konfigurationen. Den riktade apply:n ovan installerar CRD:erna först;
+därefter fungerar `plan` och `apply` normalt, även vid senare ändringar.
+
+**Det värsta tillfället att upptäcka det är en katastrofåterställning**,
+när någon bygger upp allt från noll under tidspress — därför står det
+här, i första kommandot, i stället för i ett felsökningsavsnitt.
 
 `terraform output karta` svarar på frågorna "vad kör var", "vem ser
 vilken hemlighet", "vad pratar med vad" och "vad ingår inte" — utan att

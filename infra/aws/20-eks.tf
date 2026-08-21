@@ -96,8 +96,12 @@ resource "aws_eks_cluster" "denna" {
     subnet_ids              = concat(aws_subnet.privat[*].id, aws_subnet.publikt[*].id)
     security_group_ids      = [aws_security_group.kluster.id]
     endpoint_private_access = true
-    endpoint_public_access  = true
-    public_access_cidrs     = var.tillatna_api_cidr
+    # Publik endpoint bara när någon uttryckligen angett varifrån.
+    # Tom lista (defaulten) stänger den; privat åtkomst via VPC gäller
+    # oavsett, så ett kluster utan publik endpoint är fullt användbart
+    # från en bastion eller en runner inne i nätet.
+    endpoint_public_access  = length(var.tillatna_api_cidr) > 0
+    public_access_cidrs     = length(var.tillatna_api_cidr) > 0 ? var.tillatna_api_cidr : null
   }
 
   # Hemligheter i etcd krypteras med vår egen nyckel, inte AWS delade.

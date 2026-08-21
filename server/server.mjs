@@ -22,7 +22,7 @@
 
 import { createServer } from "node:http";
 import { createReadStream, existsSync, statSync } from "node:fs";
-import { extname, join, normalize, resolve } from "node:path";
+import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { skapaServer as skapaPlattform } from "../services/plattform/server.mjs";
@@ -62,7 +62,7 @@ const TYPER = {
   ".webmanifest": "application/manifest+json",
 };
 
-function serveraFil(res, fil, status = 200) {
+function serveraFil(res, fil, { status = 200, hashad = false } = {}) {
   const andelse = extname(fil);
   res.writeHead(status, {
     "Content-Type": TYPER[andelse] ?? "application/octet-stream",
@@ -70,7 +70,12 @@ function serveraFil(res, fil, status = 200) {
     "X-Content-Type-Options": "nosniff",
     // Vites filnamn under assets/ bär innehållshash — de kan cachas för
     // alltid. index.html får aldrig cachas: den pekar ut nästa version.
-    "Cache-Control": fil.includes("/assets/") ? "public, max-age=31536000, immutable" : "no-cache",
+    //
+    // Beslutet tas på REQUEST-vägen, inte på den absoluta sökvägen: en
+    // APP_DIST som råkar ligga under en katalog med "assets" i namnet
+    // hade annars gjort även index.html odödlig, och klienterna fastnat
+    // på en gammal build utan att någon förstod varför.
+    "Cache-Control": hashad ? "public, max-age=31536000, immutable" : "no-cache",
   });
   createReadStream(fil).pipe(res);
 }
@@ -79,12 +84,14 @@ function serveraStatiskt(req, res) {
   const vag = decodeURIComponent((req.url ?? "/").split("?")[0]);
   // normalize + prefixkontroll stänger ../-vägar utan specialfall.
   const fil = normalize(join(DIST, vag === "/" ? "index.html" : vag));
-  if (!fil.startsWith(DIST)) {
+  // Avslutande separator i jämförelsen: utan den passerar en grannkatalog
+  // vars namn BÖRJAR med dist-katalogens (t.ex. app/dist-backup).
+  if (fil !== DIST && !fil.startsWith(DIST + sep)) {
     res.writeHead(400).end();
     return;
   }
   if (existsSync(fil) && statSync(fil).isFile()) {
-    serveraFil(res, fil);
+    serveraFil(res, fil, { hashad: vag.startsWith("/assets/") });
     return;
   }
   // SPA-reserv: vägar utan filändelse är klientens rutter (/, /alva/…,

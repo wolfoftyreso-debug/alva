@@ -89,12 +89,18 @@ variable "noder" {
 
 variable "tillatna_api_cidr" {
   description = <<-TEXT
-    Varifrån EKS API-server får nås. Standard är öppet eftersom det
-    annars inte går att komma åt klustret alls från en ny miljö —
-    begränsa till kontorets och byggrunnernas adresser i produktion.
+    Varifrån EKS API-server får nås. TOM lista stänger den publika
+    endpointen helt (privat åtkomst via VPC gäller fortfarande).
+
+    Standard var tidigare 0.0.0.0/0 med motiveringen att man annars inte
+    kommer åt ett nytt kluster — men eftersom miljödefaulten är
+    "produktion" innebar det att en apply utan uttryckligt val
+    exponerade produktionsklustrets kontrollplan mot hela internet.
+    Defaulten läcker nu åt rätt håll: den som behöver publik åtkomst
+    anger varifrån, i stället för att den som glömmer råkar öppna.
   TEXT
   type        = list(string)
-  default     = ["0.0.0.0/0"]
+  default     = []
 }
 
 # ---- Databas -----------------------------------------------------------
