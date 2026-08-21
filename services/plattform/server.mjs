@@ -14,6 +14,11 @@
 //   REGISTRERING_OPPEN  "false" stänger nya organisationer (default öppen, beta)
 //   INTEGRATION_NYCKEL  32 byte (hex/base64) — krypterar kundernas leverantörsuppgifter
 //                       och prenumerationernas signaturhemligheter
+//   TIDSSTAMPEL_URL     RFC 3161-TSA att förankra förseglingen mot (valfri);
+//                       utan den är serverns klocka enda tidsvittnet
+//   BETRODDA_PROXYHOPP  antal betrodda proxyer (ingress/ALB) framför tjänsten;
+//                       styr hur klientadressen härleds ur X-Forwarded-For.
+//                       0 (default) = lita inte på headern alls
 //   BLINDNINGSNYCKEL    blindar fordonsindexet så en raderingsbegäran kan nå hela
 //                       historiken utan att identifieraren lagras i klartext. Utan
 //                       den skrivs inget index (och radering kräver ärende-id) —
@@ -53,6 +58,7 @@ import { fakturaPdf } from "./fakturapdf.mjs";
 import { STANDARD, valjSprak, t } from "./sprak/index.mjs";
 import { MINSTA_INSPELNINGAR, fordonsnyckel, jamforMotProfil, nyProfil, uppdateraProfil } from "./ljudprofil.mjs";
 import { forsegla, grund, lank, provaForsegling, verifiera as verifieraKedja } from "./kedja.mjs";
+import { hamtaTidsstampel, lasToken } from "./tidsstampel.mjs";
 import {
   MASKERAT,
   gallringsdatum,
@@ -245,11 +251,24 @@ const INLOGG_FONSTER = "15 minutes";
 const INLOGG_TAK_KONTO = 10;
 const INLOGG_TAK_KALLA = 30;
 
-function kallaFor(req) {
-  // Bakom ingressen står klientens adress först i X-Forwarded-For.
-  const vidarebefordrad = req.headers["x-forwarded-for"];
-  const forsta = typeof vidarebefordrad === "string" ? vidarebefordrad.split(",")[0].trim() : "";
-  return (forsta || req.socket?.remoteAddress || "").slice(0, 64);
+export function kallaFor(req) {
+  // Antal betrodda proxyhopp framför tjänsten (ingress/ALB), läst vid
+  // anropet. 0 = ingen, och då litar vi INTE på X-Forwarded-For alls.
+  const hopp = Math.max(0, Number.parseInt(process.env.BETRODDA_PROXYHOPP ?? "0", 10) || 0);
+  const motpart = req.socket?.remoteAddress || "";
+  // X-Forwarded-For byggs uppifrån: en klient kan PREPENDA falska värden
+  // till vänster, så det första värdet är klientstyrt och opålitligt. På
+  // den publika sessionslösa vägen lät det vem som helst förfalska "vem
+  // som läste" i åtkomstloggen. Utan en konfigurerad betrodd proxy litar
+  // vi därför bara på den direkta motparten (socket), som inte går att
+  // förfalska. Med N betrodda hopp är den äkta adressen N steg från HÖGER
+  // — de värdena skrevs av proxyer vi litar på.
+  if (hopp <= 0) return motpart.slice(0, 64);
+  const kedja = String(req.headers["x-forwarded-for"] ?? "")
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean);
+  return (kedja[kedja.length - hopp] ?? motpart).slice(0, 64);
 }
 
 async function inloggningSparrad(epost, kalla) {
@@ -596,7 +615,28 @@ async function skrivKedjat(arendeId, poster) {
       }
     }
 
+    const förseglad = poster.some((p) => p.handelse?.typ === "arende_avslutat") && Boolean(FORSEGLING_NYCKEL);
     await db.query("commit");
+    // Extern tidsförankring EFTER commit: förseglingen är redan satt och
+    // får inte hänga på att en TSA svarar (nätverksanropet skulle annars
+    // hålla transaktionen och dess lås öppna i upp till tio sekunder).
+    // Förankringen är ett tillägg till förseglingen, inte ett villkor för
+    // den, och tidsstämpelkolumnen sätts en gång av en egen uppdatering.
+    if (förseglad && process.env.TIDSSTAMPEL_URL) {
+      const stämpel = await hamtaTidsstampel(process.env.TIDSSTAMPEL_URL, h);
+      if (stämpel) {
+        await pool.query(
+          `update felsokning_arenden set tidsstampel = $2, tidsstampel_tid = $3
+           where id = $1 and tidsstampel is null`,
+          [arendeId, stämpel.token, stämpel.tid],
+        );
+      } else {
+        logga("varning", "tidsstämpel uteblev", {
+          arende: arendeId,
+          konsekvens: "Förseglingen är satt men inte externt förankrad — serverns klocka är enda tidsvittnet.",
+        });
+      }
+    }
     return { rot: h, skrivna, dubbletter: poster.length - skrivna };
   } catch (fel) {
     await db.query("rollback").catch(() => {});
@@ -634,7 +674,7 @@ async function kedjestatus(arendeId) {
   const okedjade = rader.rows.length - kedjade.length;
 
   const arende = await pool.query(
-    `select kedjerot, forsegling, forseglad from felsokning_arenden where id = $1`,
+    `select kedjerot, forsegling, forseglad, tidsstampel, tidsstampel_tid from felsokning_arenden where id = $1`,
     [arendeId],
   );
   const a = arende.rows[0] ?? {};
@@ -660,6 +700,20 @@ async function kedjestatus(arendeId) {
     }
   }
 
+  // Extern tidsförankring (RFC 3161). Bekräfta att den lagrade token
+  // faktiskt täcker VÅR rot innan den redovisas som ett tidsvittne — en
+  // token som inte gör det är inget bevis, och verifieringen får inte
+  // presentera den som om den vore.
+  let forankring = a.tidsstampel ? "OGILTIG" : "saknas";
+  let forankradTid = null;
+  if (a.tidsstampel) {
+    const läst = lasToken(Buffer.from(a.tidsstampel, "base64"));
+    if (läst && läst.avtryckHex.toLowerCase() === String(a.kedjerot).toLowerCase()) {
+      forankring = "giltig";
+      forankradTid = läst.tid;
+    }
+  }
+
   return {
     ok: kedja.ok,
     rot: kedja.rot,
@@ -668,6 +722,11 @@ async function kedjestatus(arendeId) {
     okedjade,
     forsegling,
     efterForsegling,
+    // Serverns egen förseglingstid, och — om den finns — den oberoende
+    // TSA:ns tid över samma rot. Två tidsvittnen, varav ett inte är vi.
+    forseglad: a.forseglad ? new Date(a.forseglad).toISOString() : null,
+    forankring,
+    forankradTid,
   };
 }
 

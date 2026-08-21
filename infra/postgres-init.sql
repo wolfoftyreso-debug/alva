@@ -194,6 +194,14 @@ begin
      is distinct from (old.forsegling, old.kedjerot, old.forseglad) then
     raise exception 'Förseglingen är satt och kan inte ändras';
   end if;
+  -- Tidsstämpeln sätts en gång (när den var null) och kan sedan inte
+  -- ändras. Ett externt tidsvittne som gick att skriva om vore inget
+  -- vittne.
+  if old.tidsstampel is not null and
+     (new.tidsstampel, new.tidsstampel_tid)
+     is distinct from (old.tidsstampel, old.tidsstampel_tid) then
+    raise exception 'Tidsstämpeln är satt och kan inte ändras';
+  end if;
   return new;
 end $$;
 
@@ -474,6 +482,11 @@ create index if not exists felsokning_handelser_sekvens_idx
 alter table felsokning_arenden add column if not exists kedjerot text;
 alter table felsokning_arenden add column if not exists forsegling text;
 alter table felsokning_arenden add column if not exists forseglad timestamptz;
+-- Extern tidsförankring (RFC 3161): TSA-token (base64) och den tid TSA:n
+-- stämplade. Satt en gång efter förseglingen, sedan låst — samma
+-- append-once-regel som förseglingen själv.
+alter table felsokning_arenden add column if not exists tidsstampel text;
+alter table felsokning_arenden add column if not exists tidsstampel_tid timestamptz;
 
 -- ---- Support och felanmälan (ALVA-PROC-0050) ---------------------------
 --

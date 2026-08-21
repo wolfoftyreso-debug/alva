@@ -1098,6 +1098,76 @@ OMSKRIVNING=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform
   "update felsokning_arenden set forsegling = 'ffff' where id = 'arende-forseglat'" 2>&1 || true)
 kontroll "förseglingen kan inte skrivas om" "$(echo "$OMSKRIVNING" | grep -c 'kan inte ändras')" "1"
 
+# 18f. Extern tidsforankring (ALVA-SPEC-071 · RFC 3161)
+#
+# En riktig openssl-TSA stampar rotens avtryck. Hela vagen provas: avslut
+# -> forankring efter commit -> verifieringen redovisar TSA:ns tid.
+# Hoppas med besked om openssl saknas (inga tysta hopp).
+if ! command -v openssl >/dev/null 2>&1; then
+  echo "⚠ tidsforankringstestet hoppat: openssl saknas"
+else
+  ANKDIR=$(mktemp -d)
+  ( cd "$ANKDIR"
+    openssl genrsa -out ca.key 2048 2>/dev/null
+    openssl req -new -x509 -key ca.key -out ca.pem -days 2 -subj "/CN=IT TSA CA" 2>/dev/null
+    openssl genrsa -out tsa.key 2048 2>/dev/null
+    printf '[e]\nbasicConstraints=critical,CA:FALSE\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=critical,timeStamping\n' > ext.cnf
+    openssl req -new -key tsa.key -out tsa.csr -subj "/CN=IT TSA" 2>/dev/null
+    openssl x509 -req -in tsa.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out tsa.pem -days 2 -extfile ext.cnf -extensions e 2>/dev/null
+    printf '[tsa]\ndefault_tsa=c\n[c]\nserial=serial\ncrypto_device=builtin\nsigner_cert=tsa.pem\ncerts=ca.pem\nsigner_key=tsa.key\nsigner_digest=sha256\ndefault_policy=1.2.3.4.1\ndigests=sha256\naccuracy=secs:1\nclock_precision_digits=0\nordering=yes\ntsa_name=yes\ness_cert_id_alg=sha256\n' > tsa.cnf
+    echo 01 > serial )
+  ANKTSAPORT=$((APPPORT + 17))
+  ANKDIR="$ANKDIR" ANKTSAPORT="$ANKTSAPORT" node -e '
+    const http=require("http"),{execFileSync}=require("child_process"),fs=require("fs"),os=require("os");
+    const dir=process.env.ANKDIR;
+    http.createServer((q,r)=>{const b=[];q.on("data",d=>b.push(d));q.on("end",()=>{try{
+      const f=os.tmpdir()+"/q"+Date.now()+".der",t=f+".tsr";fs.writeFileSync(f,Buffer.concat(b));
+      execFileSync("openssl",["ts","-reply","-config",dir+"/tsa.cnf","-queryfile",f,"-out",t],{cwd:dir});
+      r.writeHead(200);r.end(fs.readFileSync(t));
+    }catch(e){r.writeHead(500);r.end(String(e));}});}).listen(Number(process.env.ANKTSAPORT));
+  ' >/dev/null 2>&1 &
+  ANKTSA_PID=$!
+  ANKSRVPORT=$((APPPORT + 18))
+  DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
+    JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel BLINDNINGSNYCKEL=blindningsnyckel \
+    TIDSSTAMPEL_URL="http://127.0.0.1:$ANKTSAPORT/" PORT=$ANKSRVPORT node server.mjs >/dev/null 2>&1 &
+  ANKSRV_PID=$!
+  sleep 2
+  ANKBAS="http://127.0.0.1:$ANKSRVPORT"
+  curl -s -X POST "$ANKBAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+    -d '{"id":"arende-ankrad","nummer":98,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
+  BATCH_ANK=$(MATDON_ID="$MATDON_ID" node --input-type=module -e '
+    import { ALLA_METODIKER } from "./metodiker.mjs";
+    const G=ALLA_METODIKER.at(-1);const h=[];let n=0;
+    const add=(x)=>h.push({id:"an-"+ ++n,tidpunkt:"2026-08-06T11:00:00Z",anvandare:"Anna",handelse:x});
+    add({typ:"objekt_identifierat",objekt:{identifierare:"ANK1"}});
+    add({typ:"historik_kontrollerad",kontrollerad:true});
+    add({typ:"matarstallning",lage:"ingaende",varde:"1",dataUrl:"data:image/png;base64,AA"});
+    add({typ:"reproducering",status:"ja",beskrivning:"Reproducerad."});
+    for (const s of G.steg) for (const k of s.kontroller??[]){add({typ:"kontroll_utford",stegId:s.id,kontrollId:k.id,text:k.text,...(k.krav==="foto"?{}:{resultat:"U.a."})});if(k.krav==="foto")add({typ:"foto",beskrivning:k.text});}
+    add({typ:"matvarde",beskrivning:"Obalans",varde:"38",enhet:"g",matdonId:process.env.MATDON_ID});
+    add({typ:"felorsak",avvikelse:"38 g obalans mot 5 g.",orsaker:["Normal wear"],underlag:["Measurement result"],sakerhet:"hog",atgard:"Balansera."});
+    add({typ:"atgardsforslag",beskrivning:"Balansera."});
+    add({typ:"kundbeslut",beslut:"godkant",kanal:"Telephone"});
+    add({typ:"atgard_utford",beskrivning:"Balanserade.",utford:true});
+    add({typ:"kvalitetskontroll",resultat:"symptomet_borta",beskrivning:"Borta."});
+    add({typ:"matarstallning",lage:"utgaende",varde:"2",dataUrl:"data:image/png;base64,AA"});
+    add({typ:"slutsats",motivering:"Obalans 38 g mot toleransen 5 g forklarar den hastighetsberoende vibrationen.",uteslutet:"Kast och bussningar kontrollerades utan anmarkning och uteslots.",kvarstaende:"Inget kvarstaende efter atgard.",atgardsval:"Balansering valdes framfor dackbyte eftersom dacket ar oskadat."});
+    add({typ:"arende_avslutat",signatur:"Anna",plattformsversion:"ALVA"});
+    console.log(JSON.stringify({handelser:h}));')
+  curl -s -o /dev/null -X POST "$ANKBAS/api/arenden/arende-ankrad/handelser" \
+    -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' -d "$BATCH_ANK"
+  sleep 1
+  ANKRAD=$(curl -s "$ANKBAS/api/arenden/arende-ankrad/kedja" -H "Authorization: Bearer $TOKEN_A")
+  kontroll "avslutet ar externt tidsforankrat mot en oberoende TSA" "$(echo "$ANKRAD" | falt .forankring)" "giltig"
+  ANKTID=$(echo "$ANKRAD" | falt .forankradTid)
+  kontroll "forankringen bar TSA:ns tid" "$(node -pe '/^\d{4}-\d{2}-\d{2}T/.test(process.argv[1])' "$ANKTID")" "true"
+  kill "$ANKSRV_PID" 2>/dev/null || true
+  kill "$ANKTSA_PID" 2>/dev/null || true
+  rm -rf "$ANKDIR"
+fi
+
+
 # 18e. Skrivning efter avslut får inte ogiltigförklara förseglingen
 #
 # Offline-synk är en kärnfunktion: en annan enhet kan lämna in händelser
