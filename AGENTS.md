@@ -39,7 +39,17 @@ no CORS, no extra hosts, one port. Runtime configuration (database,
 Anthropic API key, JWT secret, …) is read from environment variables
 documented at the top of `services/plattform/server.mjs` and
 `services/ai-orkester/server.mjs`; without them the server starts in
-demonstration mode, which it states plainly in its startup log.
+demonstration mode, which it states plainly in its startup log and in
+the health endpoint:
+
+    curl -fsS http://127.0.0.1:8080/api/halsa
+    # {"status":"ok","lage":"drift"}                        configured
+    # {"status":"ok","lage":"demonstration","saknar":[...]}  not configured
+
+In demonstration mode every authenticated path answers 503. Check `lage`
+after a deploy — a container without `JWT_SECRET` looks healthy and still
+refuses every sign-in, which is the most expensive kind of fault to
+diagnose in production.
 
 Without Docker: `cd app && npm ci && VITE_PLATTFORM_URL=/api
 VITE_AI_ORKESTER_URL=/ai npm run build`, then `npm start` from the

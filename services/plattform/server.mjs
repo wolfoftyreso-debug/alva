@@ -1331,7 +1331,18 @@ export function skapaServer() {
 
     try {
       if (req.method === "GET" && vag === "/halsa") {
-        return svara(res, 200, { status: "ok" });
+        // Hälsokollen sade tidigare bara "ok", vilket är sant men
+        // otillräckligt: en container utan sessionshemlighet ser frisk ut
+        // och avvisar ändå varje inloggning. Läget står nu i svaret, så
+        // en driftkontroll kan skilja demonstration från drift utan att
+        // gissa. `status` förblir "ok" — tjänsten SVARAR, och en
+        // hälsokoll som börjar fela skulle bara ta ned demoläget.
+        const saknas = ["JWT_SECRET", "DATABASE_URL"].filter((n) => !process.env[n]);
+        return svara(res, 200, {
+          status: "ok",
+          lage: saknas.length === 0 ? "drift" : "demonstration",
+          ...(saknas.length > 0 ? { saknar: saknas } : {}),
+        });
       }
       if (req.method === "GET" && vag === "/api/openapi.yaml") {
         res.writeHead(200, {
@@ -3100,16 +3111,16 @@ if (ärHuvudmodul && process.env.NODE_ENV !== "test") {
   // Varje avslut varnar redan för sig, men en rad per avslut i en
   // loggström är brus; en rad vid start är ett beslut någon fattat
   // (TÜV-2 T-15).
-  // JWT_SECRET är inte valfri: utan den kastar HMAC-beräkningen och VARJE
-  // autentiserad begäran svarar 500 — medan /halsa (som inte autentiserar)
-  // fortsätter rapportera frisk. En container som ser frisk ut men inte
-  // går att logga in i är det dyraste felet att felsöka i drift, så den
-  // vägrar starta i stället.
+  // Demonstrationsläget är avsiktligt (se AGENTS.md): produkten ska gå
+  // att starta och titta på utan konfiguration. Men det får inte se ut
+  // som drift. Utan JWT_SECRET svarar varje autentiserad väg 503, och
+  // det ska synas VID START och i /halsa — inte upptäckas av den första
+  // användare som försöker logga in.
   if (!process.env.JWT_SECRET) {
-    logga("fel", "JWT_SECRET saknas", {
-      konsekvens: "Ingen begäran kan autentiseras. Servern startar inte utan sessionshemlighet.",
+    logga("varning", "JWT_SECRET saknas — demonstrationsläge", {
+      konsekvens:
+        "Ingen begäran kan autentiseras; inloggning och alla skyddade vägar svarar 503. /halsa rapporterar läget som 'demonstration'.",
     });
-    process.exit(1);
   }
   if (!blindningsnyckel()) {
     logga("varning", "BLINDNINGSNYCKEL saknas", {

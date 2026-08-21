@@ -1378,6 +1378,12 @@ kontroll "fakturorna gar att lasa i last lage" "$KOD" "200"
 # Manadsjobbet aterANVANDER arsformade funktioner, sa varje regression har
 # kostar pengar hos kunden. Blocket provar hela kedjan: manadsbelopp,
 # idempotens vid samtidig korning, PDF-vagen och admin-grinden.
+# Halsokollen skiljer drift fran demonstration. En container utan
+# sessionshemlighet sag tidigare frisk ut och avvisade anda varje
+# inloggning — det ar den dyraste sortens fel att felsoka.
+kontroll "halsokollen rapporterar driftlage nar allt ar satt" \
+  "$(curl -s "$BAS/halsa" | falt .lage)" "drift"
+
 echo "--- 23b. faktureringsmodulen ---"
 
 # Manadsbeloppet: en manad ska kosta en manad.
