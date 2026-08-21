@@ -34,9 +34,8 @@ flowchart LR
 
 **The client has two operating modes**, chosen at build time: with
 `VITE_PLATTFORM_URL`, login, sync, Live Share and the model calls go to the
-cluster (fully self-hosted); without it the Supabase mode is used (edge function
-plus managed Postgres/Auth) as before. Same event model, same orchestrator —
-locked by parity tests.
+cluster (fully self-hosted); without it the client runs in local mode
+(device-only, no backend and no sync). There is no longer a Supabase fallback.
 
 ## Infrastructure as code
 

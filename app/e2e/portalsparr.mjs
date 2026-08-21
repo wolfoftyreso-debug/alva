@@ -65,8 +65,6 @@ if (!process.env.GENOMGANG_HOPPA_BYGG) {
       ...process.env,
       VITE_HASH_ROUTER: "1",
       VITE_PLATTFORM_URL: "https://plattform.invalid",
-      VITE_SUPABASE_URL: "https://portalsparr.invalid",
-      VITE_SUPABASE_PUBLISHABLE_KEY: "portalsparr",
     },
   });
 }

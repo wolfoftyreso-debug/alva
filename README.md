@@ -17,7 +17,6 @@ Detta repo är hela projektet, inget annat:
 | `infra/terraform/` | Terraform: arbetslasten i klustret |
 | `deploy/` | Paketering för agentdriven driftsättning — läs `deploy/README.md` |
 | `docs/` | All dokumentation och revisionshistorik |
-| `supabase/` | Värdapplikationens migrationsunderlag |
 
 ## Börja här
 

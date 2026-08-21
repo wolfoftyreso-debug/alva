@@ -815,14 +815,12 @@ separate per tree** — not by weakening anyone's rules.
     │   ├── aws/              the base, 91 resources
     │   ├── terraform/        the workload, 35 resources
     │   └── postgres-init.sql
-    ├── docs/
-    └── supabase/             migrations + edge function (older path)
+    └── docs/
 ```
 
-**Two operational paths exist in parallel:** the self-hosted AWS stack (the one
-that counts) and an older Supabase-based one (the edge function
-`felsokning-ai`, migrations). The orchestrator therefore exists in **two
-copies**, kept in sync by tests.
+**A single self-hosted stack:** the AWS stack (plattform + ai-orkester). The
+older Supabase-based path has been retired, so the orchestrator now exists in
+**one place**.
 
 ---
 
@@ -886,9 +884,8 @@ Collected because the motive is often more important than the decision.
 
 Explicitly not finished:
 
-- **Two orchestrator copies** (Supabase edge function + K8s service) are kept in
-  sync by tests, not by shared code. The Supabase path is the older one and
-  should be retired.
+- **The orchestrator is now a single service** (K8s). The older Supabase edge
+  copy has been retired, so there is no longer a second copy to keep in sync.
 - **`ArendeSida.tsx` is 2433 lines.** It works, but it is the file that costs
   the most to change.
 - **`terraform validate` cannot be run locally** in the development environment

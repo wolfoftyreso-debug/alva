@@ -840,14 +840,12 @@ Seite aufgeweicht wurden.
     │   ├── aws/              die Basis, 91 Ressourcen
     │   ├── terraform/        die Arbeitslast, 35 Ressourcen
     │   └── postgres-init.sql
-    ├── docs/
-    └── supabase/             Migrationen + Edge-Funktion (älterer Weg)
+    └── docs/
 ```
 
-**Zwei Betriebswege bestehen parallel:** der selbst gehostete AWS-Stack (der
-gilt) und ein älterer Supabase-basierter (die Edge-Funktion `felsokning-ai`,
-Migrationen). Das Orchester existiert daher in **zwei Kopien**, durch Tests
-synchron gehalten.
+**Ein einziger selbst gehosteter Stack:** der AWS-Stack (plattform +
+ai-orkester). Der ältere Supabase-basierte Weg wurde abgelöst, das Orchester
+existiert daher nur noch an **einer Stelle**.
 
 ---
 
@@ -911,9 +909,9 @@ Zusammengestellt, weil der Beweggrund oft wichtiger ist als die Entscheidung.
 
 Ausdrücklich nicht fertig:
 
-- **Zwei Orchester-Kopien** (Supabase-Edge-Funktion + K8s-Dienst) werden durch
-  Tests synchron gehalten, nicht durch gemeinsamen Code. Der Supabase-Weg ist
-  der ältere und sollte abgelöst werden.
+- **Das Orchester ist jetzt ein einziger Dienst** (K8s). Die ältere
+  Supabase-Edge-Kopie wurde abgelöst, es gibt daher keine zweite Kopie mehr, die
+  synchron gehalten werden müsste.
 - **`ArendeSida.tsx` hat 2433 Zeilen.** Es funktioniert, ist aber die Datei, die
   am meisten kostet, wenn man sie ändert.
 - **`terraform validate` lässt sich lokal nicht ausführen** (die ausgehende

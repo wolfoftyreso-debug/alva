@@ -5,36 +5,21 @@ import { VIBRATION_METODIK } from "../metodik";
 import { brief } from "../projektioner";
 import { byggDemoArende } from "../demo";
 
-const ENDPOINT = readFileSync("../supabase/functions/felsokning-ai/index.ts", "utf8");
+const ORKESTER = readFileSync("../services/ai-orkester/server.mjs", "utf8");
 
 describe("AI-orkestern", () => {
-  it("plattformens endpoint routar uppgifter till olika modeller", () => {
+  it("orkestertjänsten (services/ai-orkester) routar uppgifter till modeller", () => {
     // Servern äger orkestern: modellval, effort, systemprompt och schema.
+    // Efter att Supabase-vägen avvecklats finns bara EN orkester kvar —
+    // den här tjänsten — och det är den som provas.
     for (const uppgift of ["handledning:", "granskning:", "sammanfattning:", "metodikval:", "dokumenttolkning:"]) {
-      expect(ENDPOINT).toContain(uppgift);
+      expect(ORKESTER).toContain(uppgift);
     }
-    expect(ENDPOINT).toContain('"claude-sonnet-5"');
-    expect(ENDPOINT).toContain('"claude-opus-5"');
-    expect(ENDPOINT).toContain('"claude-haiku-4-5"');
-    expect(ENDPOINT).toContain("ANTHROPIC_API_KEY");
-  });
-
-  it("K8s-tjänsten (services/ai-orkester) kör samma orkester som edge-funktionen", () => {
-    const tjanst = readFileSync("../services/ai-orkester/server.mjs", "utf8");
-    for (const bit of [
-      '"claude-sonnet-5"',
-      '"claude-opus-5"',
-      '"claude-haiku-4-5"',
-      "handledning:",
-      "granskning:",
-      "sammanfattning:",
-      "metodikval:",
-      "dokumenttolkning:",
-      "Hitta aldrig på fakta",
-      "SUPABASE_JWT_SECRET",
-    ]) {
-      expect(tjanst).toContain(bit);
-    }
+    expect(ORKESTER).toContain('"claude-sonnet-5"');
+    expect(ORKESTER).toContain('"claude-opus-5"');
+    expect(ORKESTER).toContain('"claude-haiku-4-5"');
+    expect(ORKESTER).toContain("ANTHROPIC_API_KEY");
+    expect(ORKESTER).toContain("Hitta aldrig på fakta");
   });
 
   it("självhostade stacken: plattformstjänst + append-only i databasen", () => {
@@ -132,11 +117,11 @@ describe("AI-orkestern", () => {
     }
   });
 
-  it("endpointen kodar AI-reglerna i grundprompten", () => {
-    expect(ENDPOINT).toContain("Hitta aldrig på fakta");
-    expect(ENDPOINT).toContain("aldrig en hypotes som ett konstaterat fel");
-    expect(ENDPOINT).toContain("KRÄVER verifiering");
-    expect(ENDPOINT).toContain('"json_schema"');
+  it("orkestern kodar AI-reglerna i grundprompten", () => {
+    expect(ORKESTER).toContain("Hitta aldrig på fakta");
+    expect(ORKESTER).toContain("aldrig en hypotes som ett konstaterat fel");
+    expect(ORKESTER).toContain("KRÄVER verifiering");
+    expect(ORKESTER).toContain('"json_schema"');
   });
 
   it("användarprompten byggs ur ärendebriefen och den nya inmatningen", () => {
@@ -212,25 +197,24 @@ describe("arbetsorderskanning", () => {
 
   it("händelsetypen arbetsorder_skannad är organisationsintern i alla delningsvägar", () => {
     const server = readFileSync("../services/plattform/server.mjs", "utf8");
-    const migration = readFileSync("../supabase/migrations/20260802230000_guidad_felsokning.sql", "utf8");
     // Klientens lista bor numera i delningsniva.ts — ETT uttryck delat av
     // vyn och paritetstestat mot serverns ENDAST_INTERNT.
     const klientlista = readFileSync("src/felsokning/delningsniva.ts", "utf8");
-    for (const innehall of [server, migration, klientlista]) {
+    for (const innehall of [server, klientlista]) {
       expect(innehall).toContain("arbetsorder_skannad");
     }
     expect(readFileSync("src/felsokning/DelatArendeVy.tsx", "utf8")).toContain("ENDAST_INTERNT");
   });
 });
 
-// m-4: de två orkesterkopiorna hålls i synk av test, inte av delad kod.
-// Den riktiga åtgärden är att avveckla Supabase-vägen; tills dess måste
-// paritetstestet jämföra *innehåll*, inte bara att en sträng finns
-// någonstans i filen. Ett substrängtest hade inte fångat att en
-// grundregel ändrats i ena kopian.
-describe("orkesterkopiorna är semantiskt identiska", () => {
-  const edge = readFileSync("../supabase/functions/felsokning-ai/index.ts", "utf8");
-  const tjanst = readFileSync("../services/ai-orkester/server.mjs", "utf8");
+// Tidigare fanns två orkesterkopior (edge-funktionen och tjänsten) som
+// paritetstestades mot varandra. Supabase-vägen är avvecklad — det finns
+// bara EN orkester kvar. Testet låser nu tjänstens egna invarianter i
+// stället: att katalogen har alla metodiker och att varje uppgift har ett
+// modellval. En regression syns här även utan en andra kopia att jämföra
+// mot.
+describe("AI-orkesterns katalog och modellval", () => {
+  const tjanst = ORKESTER;
 
   /** Plockar ut ett block mellan två markörer och normaliserar blanksteg. */
   const block = (kalla: string, start: string, slut: string) => {
@@ -240,26 +224,22 @@ describe("orkesterkopiorna är semantiskt identiska", () => {
     return kalla.slice(i, j < 0 ? undefined : j).replace(/\s+/g, " ").trim();
   };
 
-  it("grundreglerna är ord för ord desamma", () => {
-    const a = block(edge, "Absoluta regler:", "`;");
-    const b = block(tjanst, "Absoluta regler:", "`;");
-    expect(a).not.toBeNull();
-    expect(a).toBe(b);
+  it("grundreglerna finns och är avgränsade", () => {
+    const regler = block(tjanst, "Absoluta regler:", "`;");
+    expect(regler).not.toBeNull();
+    expect(regler).toContain("Hitta aldrig på fakta");
   });
 
-  it("metodikkatalogen har samma id i samma ordning", () => {
-    const idn = (kalla: string) => {
-      const k = block(kalla, "const METODIK_KATALOG", "];");
-      return [...(k ?? "").matchAll(/\["([a-z_]+)",/g)].map((m) => m[1]);
-    };
-    expect(idn(edge)).toEqual(idn(tjanst));
-    expect(idn(edge).length).toBe(16);
+  it("metodikkatalogen har alla sexton metodiker", () => {
+    const k = block(tjanst, "const METODIK_KATALOG", "];");
+    const idn = [...(k ?? "").matchAll(/\["([a-z_]+)",/g)].map((m) => m[1]);
+    expect(idn.length).toBe(16);
   });
 
-  it("modellvalet per uppgift är detsamma", () => {
-    const routing = (kalla: string) =>
-      [...kalla.matchAll(/^\s{2}(\w+): \{\n\s+modell: "([^"]+)"/gm)].map((m) => `${m[1]}=${m[2]}`);
-    expect(routing(edge).sort()).toEqual(routing(tjanst).sort());
-    expect(routing(tjanst).length).toBeGreaterThanOrEqual(6);
+  it("varje uppgift har ett modellval", () => {
+    const routing = [...tjanst.matchAll(/^\s{2}(\w+): \{\n\s+modell: "([^"]+)"/gm)].map(
+      (m) => `${m[1]}=${m[2]}`,
+    );
+    expect(routing.length).toBeGreaterThanOrEqual(6);
   });
 });

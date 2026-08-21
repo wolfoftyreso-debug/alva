@@ -252,7 +252,7 @@ portalspärren), `plattform` (157 integrationskontroller mot riktig Postgres).
 | **T-12** | Ingen react-router-version är fri från bägge avvikelserna; den som bärs gäller RSC-läge som inte används. |
 | **Terraform** | CronJob och hemlighetskoppling skrivna men **ej applicerade** — ingen terraform-binär i miljön. |
 | **Rev 1 · C-4** | Personuppgiftsbiträdesavtal och DPIA — dokument att skriva och skriva under. |
-| **Rev 1 · m-4** | Avveckla Supabase-orkestratorn — driftbeslut. |
+| **Rev 1 · m-4** | Supabase-orkestratorn är **avvecklad** — driftbeslutet genomfört. |
 | **Rev 1 · m-6** | Manuell tillgänglighetsgranskning. |
 | **Impressum** | Strukturen finns; driftens uppgifter är **inte satta** och redovisas som åtgärdslista. |
 | **Försäkringsregistret** | Sex svenska bolag. Inte en marknadsundersökning. |

@@ -777,13 +777,12 @@ träd** — inte genom att försvaga någons regler.
     │   ├── aws/              basen, 91 resurser
     │   ├── terraform/        arbetslasten, 35 resurser
     │   └── postgres-init.sql
-    ├── docs/
-    └── supabase/             migrationer + edge-funktion (äldre driftväg)
+    └── docs/
 ```
 
-**Två driftvägar finns parallellt:** den självhostade AWS-stacken (den som
-gäller) och en äldre Supabase-baserad (edge-funktionen `felsokning-ai`,
-migrationer). Orkestern finns därför i **två kopior** som hålls i synk av test.
+**En enda självhostad stack:** AWS-stacken (plattform + ai-orkester). Den äldre
+Supabase-baserade driftvägen är avvecklad, så orkestern finns nu på **ett enda
+ställe**.
 
 ---
 
@@ -855,8 +854,8 @@ Sammanställda därför att motivet ofta är viktigare än beslutet.
 
 Uttryckligen inte färdigt:
 
-- **Två orkesterkopior** (Supabase edge-funktion + K8s-tjänst) hålls i synk av
-  test, inte av delad kod. Supabase-vägen är den äldre och bör avvecklas.
+- **Orkestern är nu en enda tjänst** (K8s). Den äldre Supabase-edge-kopian är
+  avvecklad, så det finns inte längre någon andra kopia att hålla i synk.
 - **`ArendeSida.tsx` är 2433 rader.** Fungerar, men är den fil som kostar mest
   att ändra i.
 - **`terraform validate` kan inte köras lokalt** i utvecklingsmiljön

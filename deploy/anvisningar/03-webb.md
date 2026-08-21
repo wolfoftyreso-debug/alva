@@ -1,8 +1,8 @@
 # Paket 03 · Webbklienten
 
-Detta paket innehåller `app/` (källkod, utan `node_modules` och `dist`)
-och `supabase/` (värdapplikationens migrationsunderlag). Här byggs och
-publiceras webbilden — en statisk SPA bakom oprivilegierad nginx.
+Detta paket innehåller `app/` (källkod, utan `node_modules` och `dist`).
+Här byggs och publiceras webbilden — en statisk SPA bakom oprivilegierad
+nginx.
 
 Kräver att paket 01 är klart. Oberoende av paket 02 — får köras
 parallellt, men med SAMMA bildtagg.
@@ -67,15 +67,12 @@ TAGG=<git-SHA ur PAKET.txt>       # samma tagg som paket 02
 docker build \
   --build-arg VITE_PLATTFORM_URL="https://<plattformens adress>" \
   --build-arg VITE_AI_ORKESTER_URL="https://<orkesterns adress>" \
-  --build-arg VITE_SUPABASE_URL="<supabase-url>" \
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="<publicerbar nyckel>" \
-  --build-arg VITE_SUPABASE_PROJECT_ID="<projekt-id>" \
   -t "$REG/felsokning-web:$TAGG" .
 ```
 
-Den publicerbara Supabase-nyckeln är publik per definition — men den
-är det ENDA nyckelvärde som får förekomma i ett byggargument. Allt
-hemligt bor i Secrets Manager och når bara backendtjänsterna.
+Inga nyckelvärden förekommer i byggargumenten — adresserna är de enda
+byggtidsvärdena. Allt hemligt bor i Secrets Manager och når bara
+backendtjänsterna.
 
 ## Steg 3 — publicera
 
@@ -101,5 +98,6 @@ Rapportera taggen och bildens digest.
 ## Stoppvillkor
 
 Röda tester, typfel eller lintfel utöver den kända baslinjen: bygg
-ingenting. Saknade byggargument ger en bild som kraschar vid start
-("supabaseUrl is required") — en sådan bild publiceras inte.
+ingenting. Utan byggargument bygger klienten sitt lokala läge (samma
+ursprung, /api och /ai) — publicera bara en bild vars adresser stämmer
+med driftens.

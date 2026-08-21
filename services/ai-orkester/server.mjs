@@ -1,14 +1,13 @@
 // AI-orkestern som fristående tjänst — plattformens K8s-native AI-endpoint.
 //
-// Samma orkester som edge-funktionen (supabase/functions/felsokning-ai),
-// men körbar som pod i Kubernetes: Claude API-nyckeln och Supabase
-// JWT-hemligheten kommer från secrets, hälsokontroll på /halsa, och
-// tjänsten verifierar användarens JWT själv (HS256) eftersom den inte
-// står bakom Supabase-gatewayen.
+// Körbar som pod i Kubernetes: Claude API-nyckeln och JWT-hemligheten
+// kommer från secrets, hälsokontroll på /halsa, och tjänsten verifierar
+// användarens JWT själv (HS256) med samma hemlighet som plattformen.
 //
 // Miljövariabler:
 //   ANTHROPIC_API_KEY    Claude-nyckel (plattformshemlighet, krävs)
-//   SUPABASE_JWT_SECRET  JWT-hemlighet för verifiering (krävs — fail closed)
+//   JWT_SECRET           JWT-hemlighet för verifiering (krävs — fail closed).
+//                        SUPABASE_JWT_SECRET godtas som legacy-alias.
 //   PORT                 default 8080
 
 import { createServer } from "node:http";
@@ -309,8 +308,8 @@ export function skapaServer() {
     }
 
     const apiNyckel = process.env.ANTHROPIC_API_KEY;
-    // JWT_SECRET i självhostat läge (delas med plattformstjänsten);
-    // SUPABASE_JWT_SECRET när auth ligger hos Supabase.
+    // JWT_SECRET delas med plattformstjänsten. SUPABASE_JWT_SECRET godtas
+    // som legacy-alias så en äldre secret-koppling inte slutar verifiera.
     const jwtHemlighet = process.env.JWT_SECRET ?? process.env.SUPABASE_JWT_SECRET;
     if (!apiNyckel || !jwtHemlighet) {
       return svara(res, 503, { error: "AI-tjänsten är inte konfigurerad." });

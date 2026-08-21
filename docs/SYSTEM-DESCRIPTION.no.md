@@ -804,14 +804,12 @@ de to produktene ble slått sammen, ble begge beholdt, med verktøykjedene
     │   ├── aws/              basen, 91 ressurser
     │   ├── terraform/        arbeidslasten, 35 ressurser
     │   └── postgres-init.sql
-    ├── docs/
-    └── supabase/             migrasjoner + edge-funksjon (eldre vei)
+    └── docs/
 ```
 
-**To driftsveier finnes parallelt:** den selvhostede AWS-stakken (den som
-gjelder) og en eldre Supabase-basert (edge-funksjonen `felsokning-ai`,
-migrasjoner). Orkesteret finnes derfor i **to kopier**, holdt synkrone av
-tester.
+**En enkelt selvhostet stakk:** AWS-stakken (plattform + ai-orkester). Den eldre
+Supabase-baserte veien er faset ut, så orkesteret finnes nå på **ett enkelt
+sted**.
 
 ---
 
@@ -875,9 +873,8 @@ Samlet fordi begrunnelsen ofte er viktigere enn beslutningen.
 
 Uttrykkelig ikke ferdig:
 
-- **To orkesterkopier** (Supabase-edge-funksjon + K8s-tjeneste) holdes
-  synkrone av tester, ikke av felles kode. Supabase-veien er den eldre og bør
-  fases ut.
+- **Orkesteret er nå én enkelt tjeneste** (K8s). Den eldre Supabase-edge-kopien
+  er faset ut, så det finnes ikke lenger en andre kopi som må holdes synkron.
 - **`ArendeSida.tsx` er på 2433 linjer.** Den virker, men er filen som koster
   mest å endre i.
 - **`terraform validate` kan ikke kjøres lokalt** i utviklingsmiljøet (den

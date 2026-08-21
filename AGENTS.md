@@ -70,13 +70,11 @@ SHA). The registry has immutable tags — never reuse a tag.
 
     # 3. Web client                      (context: app/)
     #    Vite variables are baked at BUILD time — pass them as build args.
-    #    Missing args produce a build that crashes at startup. Never ship it.
+    #    Both default to /api and /ai (same-origin, behind the combined
+    #    server); pass explicit hosts only for a split deployment.
     docker build \
       --build-arg VITE_PLATTFORM_URL="https://<platform host>" \
       --build-arg VITE_AI_ORKESTER_URL="https://<orchestrator host>" \
-      --build-arg VITE_SUPABASE_URL="<supabase url>" \
-      --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="<publishable key>" \
-      --build-arg VITE_SUPABASE_PROJECT_ID="<project id>" \
       -t $REG/felsokning-web:$TAG app/
 
 ## Deployment order (AWS, full environment)

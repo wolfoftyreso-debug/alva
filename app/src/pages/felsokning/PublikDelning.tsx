@@ -1,7 +1,7 @@
 // Publik Live Share-sida: nås via delningskoden utan inloggning.
-// Läser genom backend-funktionen hamta_delat_arende (security definer) —
-// tabellerna exponeras aldrig, och interna poster är redan bortfiltrerade
-// på serversidan. Pollar för liveuppdatering.
+// Läser genom plattformens /api/delad-endpoint — tabellerna exponeras
+// aldrig, och interna poster är redan bortfiltrerade på serversidan.
+// Pollar för liveuppdatering.
 
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -28,20 +28,13 @@ const fel = (nyckel: string) => (oversattare(webbSprak()) as (n: string) => stri
 
 async function hamtaDelat(kod: string): Promise<{ arende: Arende; niva: string } | undefined> {
   const { plattformAktiv, PLATTFORM_URL } = await import("@/felsokning/plattform");
-  let data: unknown;
-  if (plattformAktiv()) {
-    // Självhostat: publik delningsendpoint i plattformstjänsten.
-    const res = await fetch(`${PLATTFORM_URL}/api/delad/${kod}`);
-    if (!res.ok) return undefined;
-    data = await res.json();
-  } else {
-    const { supabase } = await import("@/integrations/supabase/client");
-    const { data: rpcData, error } = await (supabase as unknown as {
-      rpc: (fn: string, args: object) => Promise<{ data: unknown; error: unknown }>;
-    }).rpc("hamta_delat_arende", { kod });
-    if (error || !rpcData) return undefined;
-    data = rpcData;
-  }
+  if (!plattformAktiv()) return undefined;
+  // Publik delningsendpoint i plattformstjänsten (security definer på
+  // serversidan — tabellerna exponeras aldrig, interna poster är redan
+  // bortfiltrerade).
+  const res = await fetch(`${PLATTFORM_URL}/api/delad/${kod}`);
+  if (!res.ok) return undefined;
+  const data: unknown = await res.json();
   const svar = data as DelatSvar;
   return {
     niva: svar.niva ?? "kund",

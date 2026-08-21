@@ -60,7 +60,7 @@ paketera 02-tjanster    02-tjanster.md    services server Dockerfile AGENTS.md
 # Webbklienten delas: koden för sig och bildresurserna i delar om högst
 # DELBUDGET byte — helheten var större än mottagarkanalen tålde. Delarna
 # fylls i namnordning, så samma träd ger samma delar.
-EXKLUDERA="app/src/assets" paketera 03-webb-kalla 03-webb.md app supabase
+EXKLUDERA="app/src/assets" paketera 03-webb-kalla 03-webb.md app
 
 # Mellansteg: resurserna läggs i ett eget källträd där varje fil som
 # ensam överstiger budgeten styckas i bitar. DELAT.sha256 bär de

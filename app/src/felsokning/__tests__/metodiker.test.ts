@@ -139,7 +139,7 @@ describe("orkestern och klienten känner till samma metodiker", () => {
   // känner igen, och valet faller tyst tillbaka på generisk.
   const idn = ALLA_METODIKER.map((m) => m.id).sort();
 
-  for (const fil of ["../services/ai-orkester/server.mjs", "../supabase/functions/felsokning-ai/index.ts"]) {
+  for (const fil of ["../services/ai-orkester/server.mjs"]) {
     it(fil, () => {
       const kalla = readFileSync(fil, "utf8");
       const katalog = kalla.match(/const METODIK_KATALOG = \[([\s\S]*?)\n\];/);

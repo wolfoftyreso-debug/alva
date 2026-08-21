@@ -215,7 +215,7 @@ export async function lasAvInstrument(
 }
 
 // I Kubernetes-driften pekar VITE_AI_ORKESTER_URL på orkestertjänsten
-// (services/ai-orkester); utan den används Supabase-edge-funktionen.
+// (services/ai-orkester); annars nås orkestern via plattformens /api/ai.
 const ORKESTER_URL = (import.meta.env.VITE_AI_ORKESTER_URL as string | undefined)?.replace(/\/$/, "");
 
 // Returnerar null i lokalt läge (ej inloggad) — orkestern nås via
@@ -227,43 +227,26 @@ async function anropa(
 ): Promise<{ modell: string; svar: unknown } | null> {
   const { plattformAktiv, plattformToken, PLATTFORM_URL } = await import("./plattform");
 
-  let token: string | null = null;
-  if (plattformAktiv()) {
-    // Självhostat: plattformens egen JWT — samma hemlighet verifieras
-    // av AI-orkestern i klustret.
-    token = plattformToken();
-    if (!token) return null;
-  } else {
-    const { supabase } = await import("@/integrations/supabase/client");
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) return null;
-    token = data.session.access_token;
-  }
+  // Plattformens egen JWT — samma hemlighet verifieras av AI-orkestern.
+  // Utan konfigurerad plattform eller token finns ingen backend att nå.
+  if (!plattformAktiv()) return null;
+  const token = plattformToken();
+  if (!token) return null;
 
-  let resultat: unknown;
-  const bas = ORKESTER_URL ?? (plattformAktiv() ? PLATTFORM_URL : undefined);
-  if (bas) {
-    const res = await fetch(`${bas}/api/ai`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Samma spårformat som plattformen: ett långsamt modellsvar går
-        // att hitta i loggen utifrån teknikerns anrop.
-        traceparent: (await import("./plattform")).nyttSpar(),
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ uppgift, prompt, ...extra }),
-    });
-    if (!res.ok) throw new Error(`AI-orkestern svarade ${res.status}`);
-    resultat = await res.json();
-  } else {
-    const { supabase } = await import("@/integrations/supabase/client");
-    const { data: svar, error } = await supabase.functions.invoke("felsokning-ai", {
-      body: { uppgift, prompt, ...extra },
-    });
-    if (error) throw error;
-    resultat = svar;
-  }
+  const bas = ORKESTER_URL ?? PLATTFORM_URL;
+  const res = await fetch(`${bas}/api/ai`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // Samma spårformat som plattformen: ett långsamt modellsvar går
+      // att hitta i loggen utifrån teknikerns anrop.
+      traceparent: (await import("./plattform")).nyttSpar(),
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ uppgift, prompt, ...extra }),
+  });
+  if (!res.ok) throw new Error(`AI-orkestern svarade ${res.status}`);
+  const resultat: unknown = await res.json();
   const { modell, svar } = resultat as { modell?: string; svar?: unknown };
   if (typeof modell !== "string") throw new Error("Unexpected response from the AI endpoint");
   return { modell, svar };

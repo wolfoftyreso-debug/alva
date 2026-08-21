@@ -424,14 +424,10 @@ async function overspill(sida) {
 //
 //   VITE_HASH_ROUTER            Sidan serveras utan historik-routing, så
 //                               utan hash matchar ingen route.
-//   VITE_SUPABASE_*             Den gamla butiksklienten byggs fortfarande
-//                               med och konstrueras vid import. Saknas
-//                               värdena kastar den innan routern monteras
-//                               och hela sidan blir tom — det tog en halv
-//                               felsökning att förstå första gången.
 //
-// Platshållarna pekar på en adress som inte finns. Det är avsiktligt:
-// genomgången ska aldrig nå ett nät.
+// Utan VITE_PLATTFORM_URL bygger vi det lokala läget: appen arbetar mot
+// enhetens eget lager och når aldrig ett nät. Det är avsiktligt —
+// genomgången provar flödet, inte backend.
 
 if (!process.env.GENOMGANG_HOPPA_BYGG) {
   execFileSync("npx", ["vite", "build"], {
@@ -440,8 +436,6 @@ if (!process.env.GENOMGANG_HOPPA_BYGG) {
     env: {
       ...process.env,
       VITE_HASH_ROUTER: "1",
-      VITE_SUPABASE_URL: "https://genomgang.invalid",
-      VITE_SUPABASE_PUBLISHABLE_KEY: "genomgang",
     },
   });
 }
