@@ -1373,4 +1373,53 @@ kontroll "historiken ar fortfarande lasbar i last lage" "$KOD" "200"
 KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/fakturor" -H "Authorization: Bearer $TOKEN_A")
 kontroll "fakturorna gar att lasa i last lage" "$KOD" "200"
 
+# 23b. Faktureringsmodulen fran anda till anda
+#
+# Manadsjobbet aterANVANDER arsformade funktioner, sa varje regression har
+# kostar pengar hos kunden. Blocket provar hela kedjan: manadsbelopp,
+# idempotens vid samtidig korning, PDF-vagen och admin-grinden.
+echo "--- 23b. faktureringsmodulen ---"
+
+# Manadsbeloppet: en manad ska kosta en manad.
+MANAD=$(node -e "
+  import('./fakturering.mjs').then(({ fakturera }) => {
+    const pl = { valuta:'SEK', plattform_ar: 2400000, anvandare_manad: 39000, moduler:{}, momssats:0.25, betalningsvillkor:30 };
+    const f = fakturera({ nummer: 1, org: { namn:'V', moduler: [] }, aktiva: 5,
+      period: { fran:'2026-01-20', till:'2026-02-19' }, utfardad:'2026-01-20', prislista: pl });
+    console.log(f.netto);
+  });
+")
+kontroll "en manadsperiod debiterar en manad (inte tolv, inte tva)" "$MANAD" "395000"
+
+# Arsbeloppet ska vara oforandrat.
+AR=$(node -e "
+  import('./fakturering.mjs').then(({ fakturera }) => {
+    const pl = { valuta:'SEK', plattform_ar: 2400000, anvandare_manad: 39000, moduler:{}, momssats:0.25, betalningsvillkor:30 };
+    const f = fakturera({ nummer: 1, org: { namn:'V', moduler: [] }, aktiva: 0,
+      period: { fran:'2026-01-01', till:'2026-12-31' }, utfardad:'2026-01-01', prislista: pl });
+    console.log(f.netto);
+  });
+")
+kontroll "en arsperiod debiterar hela arsavgiften" "$AR" "2400000"
+
+# Idempotens: samma period tva ganger far inte ge tva fakturor.
+PERIOD_TEST='{"fran":"2027-03-01","till":"2027-03-31"}'
+curl -s -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' -H 'X-Fakturering: utfardarnyckel' \
+  -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD_TEST,\"utfardad\":\"2027-03-01\"}" >/dev/null
+KOD=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BAS/api/fakturor" -H 'Content-Type: application/json' \
+  -H 'X-Fakturering: utfardarnyckel' \
+  -d "{\"organisation_id\":\"$ORG_A\",\"period\":$PERIOD_TEST,\"utfardad\":\"2027-03-01\"}")
+kontroll "samma period kan inte faktureras tva ganger" "$KOD" "409"
+
+# PDF: adminvagen fungerar, teknikervagen ar stangd.
+PDF_ID=$(curl -s "$BAS/api/fakturor" -H "Authorization: Bearer $TOKEN_A" | falt '.fakturor[0].id')
+PDF_KOD=$(curl -s -o /tmp/faktura.pdf -w "%{http_code}" "$BAS/api/fakturor/$PDF_ID/pdf" -H "Authorization: Bearer $TOKEN_A")
+kontroll "administrator kan hamta fakturan som PDF" "$PDF_KOD" "200"
+case "$(head -c 4 /tmp/faktura.pdf)" in
+  %PDF) echo "✓ svaret ar en riktig PDF" ;;
+  *) echo "✗ svaret ar ingen PDF"; exit 1 ;;
+esac
+TEK_KOD=$(curl -s -o /dev/null -w "%{http_code}" "$BAS/api/fakturor/$PDF_ID/pdf" -H "Authorization: Bearer $TOKEN_J")
+kontroll "tekniker nekas fakturans PDF (samma grind som listan)" "$TEK_KOD" "403"
+
 echo "Integrationstest: allt grönt"

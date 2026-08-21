@@ -362,6 +362,17 @@ create table if not exists fakturor (
   dokument jsonb not null,
   skapad timestamptz not null default now()
 );
+
+-- Månadsjobbets idempotens vilade helt på senast_fakturerad, som läses
+-- UTANFÖR transaktionen: två samtidiga körningar (cron plus en manuell)
+-- läste samma värde, räknade fram samma period och skrev två fakturor
+-- för den. Låset på fakturor serialiserade bara nummertilldelningen.
+-- Villkoret nedan gör dubbletten omöjlig i stället för osannolik.
+-- Krediteringar undantas: en kreditfaktura avser med avsikt samma period
+-- som den faktura den rättar.
+create unique index if not exists fakturor_org_period_unikt
+  on fakturor (organisation_id, (dokument->'period'->>'fran'), (dokument->'period'->>'till'))
+  where krediterar is null;
 create index if not exists fakturor_org_idx on fakturor (organisation_id, nummer desc);
 
 drop trigger if exists fakturor_append_only on fakturor;

@@ -367,8 +367,32 @@ export async function sattFakturaepost(epost: string): Promise<void> {
 }
 
 /** Fakturans PDF. Kunden hämtar sitt eget underlag själv. */
-export function fakturaPdfUrl(id: string): string {
-  return `${PLATTFORM_URL}/api/fakturor/${id}/pdf`;
+/**
+ * Hämtar fakturan som PDF och lämnar den till webbläsaren.
+ *
+ * Funktionen hette tidigare fakturaPdfUrl och byggde bara en länk. Den
+ * kunde aldrig fungera: endpointen ligger bakom sessionen, och en
+ * navigering kan inte bära en Authorization-header. Den var dessutom
+ * inte anropad någonstans — kundens utlovade väg till sitt eget underlag
+ * fanns alltså inte i gränssnittet alls.
+ *
+ * Nu hämtas dokumentet med sessionen, och blobben lämnas över som en
+ * nedladdning med fakturans beteckning som filnamn.
+ */
+export async function laddaNerFakturaPdf(id: string, beteckning: string): Promise<void> {
+  const res = await plattformFetch(`/api/fakturor/${id}/pdf`);
+  if (!res.ok) throw new Error(`Fel ${res.status}`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const lank = document.createElement("a");
+  lank.href = url;
+  lank.download = `${beteckning}.pdf`;
+  document.body.appendChild(lank);
+  lank.click();
+  lank.remove();
+  // Släpp objektet igen — annars ligger hela PDF:en kvar i minnet så
+  // länge fliken lever.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 // Märkesspecifika kopplingar. Uppgifterna lagras krypterat på servern

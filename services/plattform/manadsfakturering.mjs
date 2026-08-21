@@ -32,6 +32,7 @@ export async function fakturerManaden(pool, { nu = new Date(), torrkor = false }
   );
 
   const utfardade = [];
+  const hoppade = [];
   for (const rad of organisationer.rows) {
     const period = forfallenFakturering(rad.registrerad, rad.senast_fakturerad, nu);
     if (!period) continue;
@@ -98,13 +99,20 @@ export async function fakturerManaden(pool, { nu = new Date(), torrkor = false }
       utfardade.push({ organisation: rad.namn, beteckning: dokument.beteckning, totalt: dokument.totalt, niva: niva.id });
     } catch (fel) {
       await klient.query("rollback").catch(() => {});
+      // 23505 = unik nyckel. Perioden är redan fakturerad av en parallell
+      // körning; det är själva poängen med villkoret, inte ett fel att
+      // avbryta hela jobbet för. Övriga organisationer ska faktureras.
+      if (fel?.code === "23505") {
+        hoppade.push({ organisation: rad.namn, period, skal: "redan fakturerad" });
+        continue;
+      }
       throw fel;
     } finally {
       klient.release();
     }
   }
 
-  return { antal: utfardade.length, utfardade, torrkor };
+  return { antal: utfardade.length, utfardade, hoppade, torrkor };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

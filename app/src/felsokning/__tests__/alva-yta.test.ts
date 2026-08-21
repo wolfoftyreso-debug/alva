@@ -446,7 +446,16 @@ describe("portalen är stängd, eller uttryckligen en demonstration", () => {
     // Ett misslyckat anrop får inte tyst falla tillbaka på exemplet:
     // data som ser äkta ut men inte är det är värre än ett synligt fel.
     expect(fakturor).toContain("hamtningsfel");
-    expect(fakturor).toMatch(/skarpt \? hamtade\?\.\[0\] : exempel/);
+    // HELA listan, inte bara den senaste: historiken och kreditkedjan är
+    // underlaget kunden faktiskt behöver i en tvist, och den låg onåbar
+    // trots att den redan hämtats.
+    expect(fakturor).toMatch(/skarpt \? \(hamtade \?\? \[\]\) : \[exempel\]/);
+    expect(fakturor).toContain("Invoice history");
+    // Och vägen till dokumentet ska finnas i gränssnittet, inte bara i
+    // endpointen: hjälparen som byggde en länk kunde aldrig fungera,
+    // eftersom en navigering inte bär sessionen.
+    expect(fakturor).toContain("laddaNerFakturaPdf");
+    expect(readFileSync("src/felsokning/plattform.ts", "utf8")).not.toContain("export function fakturaPdfUrl");
   });
 
   it("utloggning visas bara när det finns en session att avsluta", () => {

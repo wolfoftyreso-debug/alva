@@ -16,11 +16,15 @@ import {
   fakturera,
   formateraBelopp,
 } from "../../../../services/gemensam/fakturering.mjs";
-import { hamtaFakturor, plattformAktiv } from "@/felsokning/plattform";
-import { Block, Demonstration, Etikett, FARG, Rubrik, Statusmärke, Tabell } from "@/alva/komponenter";
+import { hamtaFakturor, laddaNerFakturaPdf, plattformAktiv } from "@/felsokning/plattform";
+import { Block, Demonstration, Etikett, FARG, Knapp, Rubrik, Statusmärke, Tabell } from "@/alva/komponenter";
 import { Ram } from "./Ram";
 
 interface Faktura {
+  /** Serverns id. Saknas för exempelfakturan, som aldrig hämtas. */
+  id?: string;
+  /** Beteckningen på den faktura denna kreditfaktura rättar. */
+  krediterar?: string;
   beteckning: string;
   organisation: string;
   period: { fran: string; till: string };
@@ -88,8 +92,14 @@ export default function Fakturor() {
     };
   }, [skarpt]);
 
-  // Senast utfärdad först — servern sorterar redan så.
-  const faktura = skarpt ? hamtade?.[0] : exempel;
+  // Senast utfärdad först — servern sorterar redan så. Vyn visade bara
+  // den FÖRSTA: historiken, kreditkedjan och äldre underlag var
+  // onåbara trots att hela listan redan hämtats. Nu väljs fakturan, och
+  // standardvalet är den senaste.
+  const [valdId, setValdId] = useState<string | null>(null);
+  const [pdffel, setPdffel] = useState("");
+  const lista = skarpt ? (hamtade ?? []) : [exempel];
+  const faktura = lista.find((f) => f.id === valdId) ?? lista[0];
 
   // `!faktura` och inte `skarpt && !faktura`: exemplet är alltid
   // definierat, så det här smalnar av typen i stället för att bara
@@ -138,6 +148,33 @@ export default function Fakturor() {
           </Demonstration>
         )}
 
+        {lista.length > 1 && (
+          <Block rubrik="Invoice history" beteckning="ALVA-PROC-0001">
+            <div className="flex flex-wrap gap-2">
+              {lista.map((f) => (
+                <button
+                  key={f.id ?? f.beteckning}
+                  type="button"
+                  onClick={() => setValdId(f.id ?? null)}
+                  className="border px-4 py-2 text-left font-mono text-[12px]"
+                  style={{
+                    borderColor: f.beteckning === faktura.beteckning ? FARG.blue : FARG.lightSteel,
+                    background: f.beteckning === faktura.beteckning ? FARG.background : FARG.white,
+                    color: FARG.graphite,
+                  }}
+                  aria-pressed={f.beteckning === faktura.beteckning}
+                >
+                  {f.beteckning}
+                  <span className="block text-[11px]" style={{ color: FARG.steel }}>
+                    {f.utfardad}
+                    {f.krediterar ? ` · credits ${f.krediterar}` : ""}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Block>
+        )}
+
         <Block rubrik="Invoice" beteckning={faktura.beteckning}>
           <div className="grid gap-6 sm:grid-cols-2">
             <dl className="text-[13px] leading-[22px]">
@@ -162,6 +199,32 @@ export default function Fakturor() {
                 {faktura.betalningssatt} Payment is registered by an administrator when the funds arrive —
                 the platform never records an invoice as paid on its own.
               </p>
+              {/* Kundens väg till sitt eget underlag. Endpointen fanns,
+                  men ingenting i gränssnittet ledde dit — och hjälparen
+                  som byggde en länk kunde ändå aldrig fungera, eftersom
+                  en navigering inte bär sessionen. */}
+              {skarpt && faktura.id && (
+                <>
+                  <div className="mt-4">
+                    <Knapp
+                      variant="sekundar"
+                      onClick={() => {
+                        setPdffel("");
+                        laddaNerFakturaPdf(faktura.id as string, faktura.beteckning).catch((orsak) =>
+                          setPdffel(orsak instanceof Error ? orsak.message : String(orsak)),
+                        );
+                      }}
+                    >
+                      Download PDF
+                    </Knapp>
+                  </div>
+                  {pdffel && (
+                    <p className="mt-2 text-[12px]" style={{ color: FARG.varning }}>
+                      The PDF could not be retrieved: {pdffel}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </Block>

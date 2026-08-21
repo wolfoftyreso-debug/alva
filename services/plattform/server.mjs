@@ -1641,7 +1641,19 @@ export function skapaServer() {
             ],
           );
           return { id: rad.rows[0].id, ...dokument };
+        }).catch((fel) => {
+          // 23505 = unik nyckel. Perioden är redan fakturerad. Utan den
+          // här grenen blev dubbletten ett 500 med ett rått databasfel,
+          // vilket ser ut som ett systemhaveri i stället för det det är:
+          // ett svar på att arbetet redan är gjort.
+          if (fel?.code === "23505") return { redanFakturerad: true };
+          throw fel;
         });
+        if (faktura?.redanFakturerad) {
+          return svara(res, 409, {
+            error: "Perioden är redan fakturerad för den här organisationen.",
+          });
+        }
         logga("info", "faktura utfärdad", { beteckning: faktura.beteckning, organisation: organisation_id });
         return svara(res, 201, faktura);
       }
