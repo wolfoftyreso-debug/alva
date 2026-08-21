@@ -30,10 +30,37 @@ visuellt kontrollerade.
 
 | Fynd | Skäl |
 | --- | --- |
-| **Kunddelningens språk är nu konsekvent engelskt — men kunden är ofta svensk.** Rätt lösning är att delningen följer ett SPRÅKVAL (organisationens eller mottagarens) via tiospråkssystemet, som redan bär 258 nycklar per språk. Sammanfattningens meningar och tidslinjetexterna blir då katalognycklar | Språkval per delning är ett designbeslut (var väljs det? per ärende, per organisation?) och en katalogutbyggnad — eget arbete, inte en snabbrättelse |
-| Portalens demonstrationsdata (Dashboard, fakturor) är engelska med svenska organisationsnamn ("Verkstad A") | Konsekvent nog för demonstration; följer med språkvalsarbetet |
+| ~~Kunddelningens språk är konsekvent engelskt — men kunden är ofta svensk~~ **AVGJORT OCH BYGGT 2026-08-21, se nedan** | — |
+| Portalens demonstrationsdata (Dashboard, fakturor) är engelska med svenska organisationsnamn ("Verkstad A") | Konsekvent nog för demonstration |
+
+## Avgjort efter genomgången · Kunddelningen på mottagarens språk
+
+Beslutet föll på MOTTAGARENS val, inte organisationens: mottagaren är
+den enda läsare som aldrig valt verktyget, och delningsvyn bär nu en
+egen språkväljare med webbens kedja (eget val → webbläsare → engelska,
+sparat lokalt). Bygget, allt genom tiospråkssystemet:
+
+- **77 nya katalognycklar** per språk (`sammanfattning.*`, `delning.*`)
+  i alla tio kataloger — kompletthets-, hållar- och förklädnadstesten
+  omfattar dem automatiskt.
+- **`sammanfatta(arende, sprak)` / `enrading(arende, sprak)`** med
+  engelska som standard: servern (symlänken) och verktyget läser exakt
+  samma text som före bygget; serverns sammanfattningsendpoint tar
+  `?sprak=`. `saknas`-listan är maskinvänd och förblir engelsk.
+- **Delningsvyn och den publika delningssidan** hämtar varje etikett,
+  beskedsflödet och för-laddningsskärmarna ur katalogen.
+- **Tidslinjen översätts INTE**: teknikerns poster är evidens och visas
+  ordagrant på verkstadens arbetsspråk — och vyn SÄGER det, på
+  mottagarens språk, i stället för att låtsas.
+
+Låst av `delningssprak.test.ts` (17 tester: varje nyckel vyn slår upp finns i
+katalogen — `t()` faller annars tyst tillbaka till nyckeln på kundens
+skärm; de gamla litteralerna får inte återuppstå) och av
+språkassertioner i sammanfattningstestet. Verifierat i webbläsare vid
+390 px: engelska utan val, svenska och tyska via väljaren, valet
+överlever omläsning, inga konsolfel, inget spill.
 
 ---
 
-*ALVA-DOC-0014 · Flödena håller; verktyget talar nu ETT språk, och
-nästa språk är ett beslut — inte en olycka.*
+*ALVA-DOC-0014 · Flödena håller; verktyget talar ETT språk — och
+delningen talar mottagarens.*

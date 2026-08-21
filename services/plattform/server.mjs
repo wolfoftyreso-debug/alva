@@ -2478,7 +2478,10 @@ export function skapaServer() {
           handelser: rader.rows.map((r) => ({ ...r, handelse: öppnaHändelse(r.handelse, nycklar) })),
         };
         loggaAtkomst(req, res, { org: anspr.org, anvandare: anspr.sub, arende: sammanfattningVag[1] });
-        return svara(res, 200, { ...sammanfatta(arende), enrading: enrading(arende) });
+        // ?sprak= ger sammanfattningen på mottagarens språk (ALVA-SPEC-060);
+        // okända koder faller till engelska i stället för att bli fel.
+        const sprak = url.searchParams.get("sprak") ?? undefined;
+        return svara(res, 200, { ...sammanfatta(arende, sprak), enrading: enrading(arende, sprak) });
       }
 
       // ---- ALVA-SPEC-020 · Integrationsgränssnitt ----------------------

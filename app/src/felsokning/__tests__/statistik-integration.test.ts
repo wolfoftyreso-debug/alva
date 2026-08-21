@@ -183,6 +183,24 @@ describe("sammanfattningen är härledd, inte genererad", () => {
     expect(enrading(AVSLUTAT_UTAN_ORSAK)).toContain("without an established cause");
     expect(enrading(arende("f1", "X", []))).toContain("in progress");
   });
+
+  it("talar mottagarens språk när ett anges — engelska förblir standard", () => {
+    // ALVA-SPEC-060: de härledda meningarna följer språkvalet, medan
+    // teknikerns egna ord (kundens beskrivning, avvikelsen) står
+    // ordagranna. Utan argument är ingenting förändrat — servern och
+    // verktyget läser samma engelska som före språkbygget.
+    const sv = sammanfatta(AVSLUTAT_MED_ORSAK, "sv");
+    expect(sv.text).toContain("Ärendet gäller Volvo XC60");
+    expect(sv.text).toContain("Symtomet kunde återskapas.");
+    expect(sv.text).toContain("Obalans 38 g");
+    expect(sv.text).toBe(sammanfatta(AVSLUTAT_MED_ORSAK, "sv").text);
+    expect(sammanfatta(AVSLUTAT_MED_ORSAK, "de").text).toContain("Der Vorgang betrifft");
+    expect(enrading(AVSLUTAT_UTAN_ORSAK, "sv")).toContain("avslutat utan fastställd orsak");
+    // Okänd språkkod faller till engelska — hellre läsbart än fel.
+    expect(sammanfatta(AVSLUTAT_MED_ORSAK, "xx").text).toBe(sammanfatta(AVSLUTAT_MED_ORSAK).text);
+    // saknas-listan är maskinvänd och byter aldrig språk.
+    expect(sammanfatta(arende("g1", "X", []), "sv").saknas).toContain("fault description");
+  });
 });
 
 describe("integrationsgränssnittet", () => {

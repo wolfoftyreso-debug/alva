@@ -30,22 +30,17 @@
 // godkännandet en händelse i loggen. Det som visas här är alltid det
 // härledda.
 
+import { STANDARD, t } from "./sprak/index.mjs";
+
 const handelserI = (arende) => (arende.handelser ?? []).map((p) => p.handelse ?? p);
 const av = (handelser, typ) => handelser.filter((h) => h?.typ === typ);
 const sista = (handelser, typ) => av(handelser, typ).at(-1);
 
-const REPRODUKTION = {
-  ja: "The symptom was reproduced.",
-  delvis: "The symptom could be partially reproduced.",
-  nej: "The symptom could not be reproduced under the conditions present during the examination.",
-};
-
-const KVALITET = {
-  symptomet_borta: "At the quality check the symptom was gone.",
-  kvarstar: "At the quality check the symptom remained.",
-  delvis: "At the quality check the symptom partially remained.",
-  ej_verifierbar: "The quality check could not verify the outcome.",
-};
+// Meningarna ligger i språkkatalogen (sammanfattning.*) så att delningen
+// kan tala mottagarens språk. Utfallsorden nedan är LOGGENS värden och
+// översätts aldrig — de är nycklar in i katalogen, inte text.
+const REPRODUKTION = new Set(["ja", "delvis", "nej"]);
+const KVALITET = new Set(["symptomet_borta", "kvarstar", "delvis", "ej_verifierbar"]);
 
 /** Klipper en mening vid en rimlig gräns utan att kapa mitt i ett ord. */
 function korta(text, max = 220) {
@@ -63,9 +58,15 @@ function korta(text, max = 220) {
  * vad är kvar. Varje mening utelämnas när underlaget saknas — utom de
  * som handlar om att något saknas, för de är själva poängen.
  *
+ * Språket är mottagarens: `sprak` väljer katalog, engelska är standard
+ * — servern och verktyget läser den oförändrade engelskan, delningen
+ * skickar mottagarens val. `saknas`-listan är maskinvänd och förblir
+ * engelsk.
+ *
  * @returns { meningar[], text, fullstandig, saknas[] }
  */
-export function sammanfatta(arende) {
+export function sammanfatta(arende, sprak = STANDARD) {
+  const o = (nyckel, variabler) => t(sprak, nyckel, variabler);
   const h = handelserI(arende);
   const meningar = [];
   const saknas = [];
@@ -74,31 +75,37 @@ export function sammanfatta(arende) {
   const objekt = sista(h, "objekt_identifierat")?.objekt;
   if (objekt) {
     const delar = [objekt.beskrivning, objekt.identifierare].filter(Boolean).join(", ");
-    meningar.push(`The case concerns ${delar || "an identified object"}.`);
+    meningar.push(delar ? o("sammanfattning.objekt", { objekt: delar }) : o("sammanfattning.objekt_utan_namn"));
   } else {
     saknas.push("object identification");
-    meningar.push("The object is not identified in the log.");
+    meningar.push(o("sammanfattning.objekt_saknas"));
   }
 
   // 2 · Kundens ord, ordagrant men kortat.
   const fel = sista(h, "felbeskrivning")?.text;
-  if (fel) meningar.push(`The customer described: ”${korta(fel, 160)}”`);
+  if (fel) meningar.push(o("sammanfattning.kundbeskrivning", { text: korta(fel, 160) }));
   else saknas.push("fault description");
 
   // 3 · Kunde vi se det? Detta är den mening en bedömare läser först.
   const repro = sista(h, "reproducering");
-  if (repro) meningar.push(REPRODUKTION[repro.status] ?? "The reproduction is documented.");
+  if (repro)
+    meningar.push(
+      REPRODUKTION.has(repro.status)
+        ? o(`sammanfattning.repro.${repro.status}`)
+        : o("sammanfattning.repro.dokumenterad"),
+    );
   else saknas.push("symptom verification");
 
   // 4 · Orsaken, med teknikerns eget varför när det finns.
   const orsak = sista(h, "felorsak");
   const slutsats = sista(h, "slutsats");
   if (slutsats && slutsats.orsakFastställd === false) {
-    meningar.push(`The cause could not be established: ${korta(slutsats.motivering, 200)}`);
+    meningar.push(o("sammanfattning.orsak_ej_faststalld", { motivering: korta(slutsats.motivering, 200) }));
   } else if (orsak) {
     const kategori = (orsak.orsaker ?? []).join(", ");
-    meningar.push(`Established deviation: ${korta(orsak.avvikelse, 180)}${kategori ? ` Assessed cause: ${kategori}.` : ""}`);
-    if (slutsats?.motivering) meningar.push(`Rationale: ${korta(slutsats.motivering, 220)}`);
+    const avvikelse = o("sammanfattning.avvikelse", { avvikelse: korta(orsak.avvikelse, 180) });
+    meningar.push(kategori ? `${avvikelse} ${o("sammanfattning.bedomd_orsak", { kategori })}` : avvikelse);
+    if (slutsats?.motivering) meningar.push(o("sammanfattning.motivering", { motivering: korta(slutsats.motivering, 220) }));
   } else {
     saknas.push("root cause analysis");
   }
@@ -108,18 +115,23 @@ export function sammanfatta(arende) {
   if (atgard) {
     meningar.push(
       atgard.utford
-        ? `Action performed: ${korta(atgard.beskrivning, 160)}`
-        : `No action was performed: ${korta(atgard.motivering || atgard.beskrivning, 160)}`,
+        ? o("sammanfattning.atgard_utford", { beskrivning: korta(atgard.beskrivning, 160) })
+        : o("sammanfattning.atgard_ej_utford", { motivering: korta(atgard.motivering || atgard.beskrivning, 160) }),
     );
   } else saknas.push("action");
 
   // 6 · Höll det?
   const kvalitet = sista(h, "kvalitetskontroll");
-  if (kvalitet) meningar.push(KVALITET[kvalitet.resultat] ?? "The quality check is documented.");
+  if (kvalitet)
+    meningar.push(
+      KVALITET.has(kvalitet.resultat)
+        ? o(`sammanfattning.kvalitet.${kvalitet.resultat}`)
+        : o("sammanfattning.kvalitet.dokumenterad"),
+    );
 
   // 7 · Vad som är kvar. Utelämnas aldrig när den finns — det är den
   // enda meningen som talar om vad läsaren själv behöver göra.
-  if (slutsats?.kvarstaende) meningar.push(`Remaining: ${korta(slutsats.kvarstaende, 160)}`);
+  if (slutsats?.kvarstaende) meningar.push(o("sammanfattning.kvarstaende", { text: korta(slutsats.kvarstaende, 160) }));
 
   return {
     version: "ALVA-PROC-0030",
@@ -135,16 +147,17 @@ export function sammanfatta(arende) {
  * Kortformen: en enda mening för en lista eller ett API-svar där
  * utrymmet är en rad.
  */
-export function enrading(arende) {
+export function enrading(arende, sprak = STANDARD) {
+  const o = (nyckel, variabler) => t(sprak, nyckel, variabler);
   const h = handelserI(arende);
   const objekt = sista(h, "objekt_identifierat")?.objekt;
   const slutsats = sista(h, "slutsats");
   const orsak = sista(h, "felorsak");
   const avslutat = h.some((x) => x?.typ === "arende_avslutat");
 
-  const vad = objekt?.identifierare ?? "Unidentified object";
-  if (!avslutat) return `${vad} — in progress.`;
-  if (slutsats?.orsakFastställd === false) return `${vad} — closed without an established cause.`;
+  const vad = objekt?.identifierare ?? o("sammanfattning.rad.oidentifierat");
+  if (!avslutat) return o("sammanfattning.rad.pagaende", { vad });
+  if (slutsats?.orsakFastställd === false) return o("sammanfattning.rad.utan_orsak", { vad });
   if (orsak) return `${vad} — ${korta(orsak.avvikelse, 90)}`;
-  return `${vad} — closed.`;
+  return o("sammanfattning.rad.avslutat", { vad });
 }

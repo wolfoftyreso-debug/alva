@@ -3,23 +3,40 @@
 // delningskod genom backend). Skrivskyddad; interna poster (kategoribyten,
 // hypoteser) ingår aldrig i underlaget som når hit externt, och filtreras
 // bort även lokalt.
+//
+// ---- Mottagarens språk (ALVA-SPEC-060) ----------------------------------
+//
+// Mottagaren av en delning — kunden, en försäkringshandläggare, en
+// flottansvarig — är den enda läsare som aldrig valt verktyget. Vyn
+// talar därför MOTTAGARENS språk: allt härlett (sammanfattningen,
+// etiketterna, beskedsflödet) hämtas ur språkkatalogen, och valet följer
+// besökarens eget val → webbläsaren → engelska, samma kedja som den
+// publika webben. Tidslinjens poster är teknikerns egna ord och visas
+// ordagrant på verkstadens arbetsspråk — en översatt logg är inte längre
+// en logg, och det säger vyn öppet i stället för att låtsas.
 
 import { useState } from "react";
 import type { Arende } from "./domain";
-import { KUNDBESLUT_LABEL, handelseRubrik } from "./domain";
+import { handelseRubrik } from "./domain";
 import { arAvslutat, arendeidentitet, brief, foton, tidsfordelningsRader, videor } from "./projektioner";
 import { metodikForArende } from "./store";
 import { Bild, Klipp } from "./Bilagevisning";
 import { sammanfatta } from "../../../services/gemensam/sammanfattning.mjs";
+import { SPRAK, oversattare } from "../../../services/gemensam/sprak/index.mjs";
+import { sattWebbSprak, useWebbSprak } from "../alva/webbsprak";
 import { tidDatum, tidKlockslag } from "./format";
 import { FelsokningSkal, Panel, StorKnapp } from "./ui";
 import { IkonCheck, IkonKlocka, IkonUppdatera } from "./ikoner";
 
+type Oversatt = (nyckel: string, variabler?: Record<string, string | number>) => string;
+
 // Kundens svar på åtgärdsförslaget — den enda skrivande åtgärden i hela
 // delningsvyn. Beskedet kan lämnas en gång och kan inte ändras här.
 function BeslutsKnappar({
+  t,
   vidBeslut,
 }: {
+  t: Oversatt;
   vidBeslut: (beslut: "godkant" | "avbojt", kommentar: string) => Promise<string | null>;
 }) {
   const [val, setVal] = useState<"" | "godkant" | "avbojt">("");
@@ -30,21 +47,21 @@ function BeslutsKnappar({
   return (
     <div className="mt-2 border-t border-[#D7DCE2] pt-2 print:hidden">
       <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
-        Your decision to the workshop
+        {t("delning.beslut.rubrik")}
       </p>
       <div className="mb-2 grid grid-cols-2 gap-2">
         <StorKnapp variant={val === "godkant" ? "primar" : "sekundar"} onClick={() => setVal("godkant")}>
-          Approve the action
+          {t("delning.beslut.godkann")}
         </StorKnapp>
         <StorKnapp variant={val === "avbojt" ? "fara" : "sekundar"} onClick={() => setVal("avbojt")}>
-          Decline
+          {t("delning.beslut.avboj")}
         </StorKnapp>
       </div>
       {val && (
         <>
           <label className="mb-2 block">
             <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">
-              {val === "avbojt" ? "Short rationale (optional)" : "Comment (optional)"}
+              {val === "avbojt" ? t("delning.beslut.motivering") : t("delning.beslut.kommentar")}
             </span>
             <input
               value={kommentar}
@@ -64,28 +81,26 @@ function BeslutsKnappar({
               setSkickar(false);
             }}
           >
-            {skickar ? "Sending …" : "Send decision"}
+            {skickar ? t("delning.beslut.skickar") : t("delning.beslut.skicka")}
           </StorKnapp>
-          <p className="mt-2 text-[11px] text-[#4D5662]">
-            The decision is recorded in the case and cannot be changed here — contact the workshop if you change your mind.
-          </p>
+          <p className="mt-2 text-[11px] text-[#4D5662]">{t("delning.beslut.info")}</p>
         </>
       )}
     </div>
   );
 }
 
-function IdentitetsPanel({ arende, avslutat }: { arende: Arende; avslutat: boolean }) {
+function IdentitetsPanel({ arende, avslutat, t }: { arende: Arende; avslutat: boolean; t: Oversatt }) {
   const idn = arendeidentitet(arende);
   const falt: [string, string | undefined][] = [
-    ["Work order", idn.arbetsorder],
-    ["Claim", idn.claim],
-    ["Claim no.", idn.skadenummer],
-    ["Reg. no.", idn.identifierare],
-    ["VIN", idn.vin],
-    ["Mileage", idn.miltal],
-    ["Responsible technician", idn.ansvarig],
-    ["Status", avslutat ? "Closed" : "Diagnosis in progress"],
+    [t("delning.identitet.arbetsorder"), idn.arbetsorder],
+    [t("delning.identitet.claim"), idn.claim],
+    [t("delning.identitet.skadenummer"), idn.skadenummer],
+    [t("delning.identitet.regnr"), idn.identifierare],
+    [t("delning.identitet.vin"), idn.vin],
+    [t("delning.identitet.miltal"), idn.miltal],
+    [t("delning.identitet.ansvarig"), idn.ansvarig],
+    [t("delning.identitet.status"), avslutat ? t("delning.status.avslutat") : t("delning.status.pagaende")],
   ];
   return (
     <div className="sticky top-12 z-10 mb-4 border border-[#D7DCE2] bg-[#F6F7F8] px-4 py-2 print:static">
@@ -113,6 +128,8 @@ export function DelatArendeVy({
 }: {
   arende: Arende;
   nu: string;
+  // Antingen en katalognyckel (delning.notis.*) som översätts till
+  // mottagarens språk, eller fri text (interna förhandsvisningen).
   notis: string;
   // Satt i den publika vyn: bilagor hämtas då via delningens egen väg,
   // som filtrerar på samma behörighetsnivå som händelserna.
@@ -125,6 +142,8 @@ export function DelatArendeVy({
   // partner-/internnivå.
   redanFiltrerad?: boolean;
 }) {
+  const sprak = useWebbSprak();
+  const t = oversattare(sprak) as Oversatt;
   const metodik = metodikForArende(arende);
   const b = brief(arende, metodik, nu);
   const avslutat = arAvslutat(arende);
@@ -142,29 +161,48 @@ export function DelatArendeVy({
 
   return (
     <FelsokningSkal
-      rubrik={b.objekt?.beskrivning ?? "Case"}
+      rubrik={b.objekt?.beskrivning ?? t("delning.rubrik.fall")}
       hoger={
         <span
           className={`px-4 py-2 text-[12px] font-semibold uppercase ${
             avslutat ? "bg-[#4D5662] text-white" : "bg-[#005CA9] text-white"
           }`}
         >
-          {avslutat ? "Closed" : "Diagnosis in progress"}
+          {avslutat ? t("delning.status.avslutat") : t("delning.status.pagaende")}
         </span>
       }
     >
+      {/* Mottagarens språkval: besökarens eget val → webbläsaren →
+          engelska, sparat lokalt — samma kedja som den publika webben. */}
+      <div className="mb-2 flex justify-end print:hidden">
+        <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4D5662]">
+          {t("sprak.valj")}
+          <select
+            value={sprak}
+            onChange={(e) => sattWebbSprak(e.target.value)}
+            className="border border-[#D7DCE2] bg-white px-2 py-2 text-[12px] font-normal normal-case tracking-normal text-[#1B1E22]"
+          >
+            {SPRAK.map((s) => (
+              <option key={s.kod} value={s.kod}>
+                {s.egetNamn}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       {/* Ärendeidentiteten: låst överst — mottagaren (kund, försäkrings-
           handläggare, kollega) ska aldrig tveka om vilket fordon och
           ärende vyn avser. Härledd ur det nivåfiltrerade underlaget. */}
-      <IdentitetsPanel arende={arende} avslutat={avslutat} />
+      <IdentitetsPanel arende={arende} avslutat={avslutat} t={t} />
 
       {/* ALVA-PROC-0030 · Sammanfattningen först. Mottagaren är oftast
           inte tekniker: kunden, en försäkringshandläggare, en
           flottansvarig. De ska få bilden på fem sekunder och sedan kunna
           gå djupare — inte tvärtom. Texten härleds ur det nivåfiltrerade
           underlaget, så den kan aldrig avslöja något som nivån döljer. */}
-      <Panel rubrik="Summary">
-        <p className="text-[15px] leading-[24px] text-[#1B1E22]">{sammanfatta(arende).text}</p>
+      <Panel rubrik={t("delning.rubrik.sammanfattning")}>
+        <p className="text-[15px] leading-[24px] text-[#1B1E22]">{sammanfatta(arende, sprak).text}</p>
       </Panel>
 
       {/* ALVA-RULE-200 · Teknikerns varför. Den enda rad en
@@ -174,13 +212,16 @@ export function DelatArendeVy({
         if (!post || post.handelse.typ !== "slutsats") return null;
         const h = post.handelse;
         const rader: [string, string][] = [
-          [h.orsakFastställd === false ? "Reason the cause could not be established" : "Rationale", h.motivering],
-          ["Dismissed alternatives", h.uteslutet],
-          ...(h.atgardsval ? ([["Choice of action", h.atgardsval]] as [string, string][]) : []),
-          ["Remaining uncertainty", h.kvarstaende],
+          [
+            h.orsakFastställd === false ? t("delning.slutsats.ej_faststalld") : t("delning.slutsats.motivering"),
+            h.motivering,
+          ],
+          [t("delning.slutsats.uteslutet"), h.uteslutet],
+          ...(h.atgardsval ? ([[t("delning.slutsats.atgardsval"), h.atgardsval]] as [string, string][]) : []),
+          [t("delning.slutsats.kvarstaende"), h.kvarstaende],
         ];
         return (
-          <Panel rubrik="Closing statement and rationale">
+          <Panel rubrik={t("delning.rubrik.slutsats")}>
             <dl className="text-[14px] leading-[22px]">
               {rader.map(([etikett, text]) => (
                 <div key={etikett} className="border-t border-[#D7DCE2] py-2 first:border-t-0">
@@ -194,17 +235,17 @@ export function DelatArendeVy({
       })()}
 
       <p className="mb-4 border border-[#D7DCE2] bg-[#F6F7F8] p-4 text-[12px] text-[#4D5662] print:hidden">
-        {notis}
+        {notis.startsWith("delning.notis.") ? t(notis) : notis}
       </p>
 
       {b.felbeskrivning && (
-        <Panel rubrik="Customer's fault description">
+        <Panel rubrik={t("delning.rubrik.felbeskrivning")}>
           <p className="text-[14px]">”{b.felbeskrivning}”</p>
         </Panel>
       )}
 
       {forslag.length > 0 && (
-        <Panel rubrik="Proposed action">
+        <Panel rubrik={t("delning.rubrik.forslag")}>
           {forslag.map((p) => {
             const h = p.handelse;
             if (h.typ !== "atgardsforslag") return null;
@@ -212,27 +253,31 @@ export function DelatArendeVy({
               <div key={p.id} className="mb-2 last:mb-0">
                 <p className="text-[14px]">{h.beskrivning}</p>
                 {h.uppskattadKostnad && (
-                  <p className="text-[13px] text-[#4D5662]">Estimated cost: {h.uppskattadKostnad}</p>
+                  <p className="text-[13px] text-[#4D5662]">
+                    {t("delning.forslag.kostnad", { kostnad: h.uppskattadKostnad })}
+                  </p>
                 )}
               </div>
             );
           })}
           {beslut?.handelse.typ === "kundbeslut" ? (
             <p className="mt-2 border-t border-[#D7DCE2] pt-2 text-[13px] font-semibold">
-              Your decision: {KUNDBESLUT_LABEL[beslut.handelse.beslut]}{" "}
-              <span className="font-normal text-[#4D5662]">(recorded via {beslut.handelse.kanal})</span>
+              {t("delning.forslag.beslut", { beslut: t(`delning.beslut.${beslut.handelse.beslut}`) })}{" "}
+              <span className="font-normal text-[#4D5662]">
+                {t("delning.forslag.via", { kanal: beslut.handelse.kanal })}
+              </span>
             </p>
           ) : vidBeslut ? (
-            <BeslutsKnappar vidBeslut={vidBeslut} />
+            <BeslutsKnappar t={t} vidBeslut={vidBeslut} />
           ) : (
             <p className="mt-2 border-t border-[#D7DCE2] pt-2 text-[12px] text-[#4D5662]">
-              Awaiting your decision — contact the workshop to approve or decline.
+              {t("delning.forslag.vantar")}
             </p>
           )}
         </Panel>
       )}
 
-      <Panel rubrik="Current status">
+      <Panel rubrik={t("delning.rubrik.laget")}>
         {b.utfordaKontroller.map((k, i) => (
           <p key={`u${i}`} className="py-0 text-[14px]"><span className="text-[#005CA9]"><IkonCheck /></span> {k.text}</p>
         ))}
@@ -243,7 +288,7 @@ export function DelatArendeVy({
       </Panel>
 
       {klipp.length > 0 && (
-        <Panel rubrik="Video">
+        <Panel rubrik={t("delning.rubrik.video")}>
           {klipp.map((v, i) => (
             <figure key={i} className="mb-2">
               <Klipp bilaga={v.bilaga} delningskod={delningskod} className="w-full border border-[#D7DCE2]" />
@@ -253,7 +298,7 @@ export function DelatArendeVy({
         </Panel>
       )}
       {bilder.length > 0 && (
-        <Panel rubrik="Images">
+        <Panel rubrik={t("delning.rubrik.bilder")}>
           <div className="grid grid-cols-2 gap-2">
             {bilder.map((bild, i) => (
               <figure key={i}>
@@ -266,7 +311,7 @@ export function DelatArendeVy({
       )}
 
       {matvarden.length > 0 && (
-        <Panel rubrik="Measurements">
+        <Panel rubrik={t("delning.rubrik.matningar")}>
           <table className="w-full text-[14px]">
             <tbody>
               {matvarden.map((p) => {
@@ -287,7 +332,12 @@ export function DelatArendeVy({
         </Panel>
       )}
 
-      <Panel rubrik="Timeline">
+      <Panel rubrik={t("delning.rubrik.tidslinje")}>
+        {/* Teknikerns ord är evidens, inte gränssnittstext — de visas
+            ordagrant, och vyn säger det i stället för att låtsas. */}
+        {sprak !== "en" && (
+          <p className="mb-2 text-[11px] text-[#4D5662]">{t("delning.tidslinje.arbetssprak")}</p>
+        )}
         {kundposter.map((post) => (
           <p key={post.id} className="py-0 text-[13px]">
             <span className="font-mono font-semibold text-[#005CA9]">{tidKlockslag(post.tidpunkt)}</span>{" "}
@@ -297,12 +347,12 @@ export function DelatArendeVy({
       </Panel>
 
       {!avslutat && pagaende && (
-        <Panel rubrik="Recommended next step">
+        <Panel rubrik={t("delning.rubrik.nasta")}>
           <p className="text-[14px]">{pagaende}</p>
         </Panel>
       )}
 
-      <Panel rubrik="Labour time">
+      <Panel rubrik={t("delning.rubrik.arbetstid")}>
         <p className="text-[17px] font-semibold">{b.totalArbetstid}</p>
         {tidsfordelningsRader(arende, nu).map((r) => (
           <p key={r.label} className="text-[#1B1E22]">
@@ -312,7 +362,7 @@ export function DelatArendeVy({
       </Panel>
 
       <p className="text-center text-[11px] text-[#4D5662]">
-        Case #{arende.nummer} · started {tidDatum(arende.skapad)} · generated from the case log
+        {t("delning.fot", { nummer: arende.nummer, datum: tidDatum(arende.skapad) })}
       </p>
     </FelsokningSkal>
   );
