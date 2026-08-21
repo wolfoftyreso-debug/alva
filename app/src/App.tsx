@@ -38,6 +38,7 @@ import AlvaSupport from "./pages/alva/Support";
 import AlvaInstallningar from "./pages/alva/Installningar";
 import { Portalvakt } from "./pages/alva/Portalvakt";
 import { Felgrans } from "./Felgrans";
+import { useDokumentSprak } from "./alva/webbsprak";
 
 // Vite-envvärden är STRÄNGAR: "false", "0" och "off" är alla sanna i JS,
 // så en flagga satt till "false" slog tidigare PÅ hash-routern — och i
@@ -47,7 +48,10 @@ const HASH_ROUTER = ["1", "true", "yes", "on"].includes(
 );
 const Router = HASH_ROUTER ? HashRouter : BrowserRouter;
 
-const App = () => (
+const App = () => {
+  // Håller <html lang> i takt med det valda språket för skärmläsare.
+  useDokumentSprak();
+  return (
   <Felgrans>
   <Router>
     <Routes>
@@ -89,6 +93,7 @@ const App = () => (
     </Routes>
   </Router>
   </Felgrans>
-);
+  );
+};
 
 export default App;

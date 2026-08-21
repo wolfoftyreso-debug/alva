@@ -45,11 +45,17 @@ export function stodRost(): boolean {
 export function startaIgenkanning(
   paResultat: (r: IgenkanningsResultat) => void,
   paSlut: () => void,
+  sprak?: string,
 ): Igenkanning | undefined {
   const Ctor = ctor();
   if (!Ctor) return undefined;
   const igenkanning = new Ctor();
-  igenkanning.lang = "sv-SE";
+  // Igenkänningsspråket följer det aktiva UI-språket — annars tolkades en
+  // tysk eller rumänsk teknikers tal som svenska oavsett vald språkform.
+  // En bar språkkod (ISO 639-1) är giltig BCP-47 och accepteras av API:t;
+  // faller tillbaka på webbläsarens språk och sist svenska.
+  igenkanning.lang =
+    sprak || (typeof navigator === "undefined" ? "sv-SE" : navigator.language || "sv-SE");
   igenkanning.continuous = true;
   igenkanning.interimResults = true;
   igenkanning.onresult = (event) => {

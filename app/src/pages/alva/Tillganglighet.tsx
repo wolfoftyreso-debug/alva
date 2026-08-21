@@ -11,6 +11,7 @@ import { Ram } from "./Ram";
 const PROVAT: [string, string][] = [
   ["Contrast", "Colour pairs are checked against the design system; status is always stated in words, never by colour alone."],
   ["Structure", "Headings, lists and tables are marked up as such; every evidence image requires alternative text."],
+  ["Language", "The page's language attribute follows the selected language, so a screen reader announces each of the ten languages with the right pronunciation."],
   ["Keyboard", "The interface is operable from a keyboard, and focus is visible on interactive elements."],
   ["Machine testing", "An automated accessibility check runs against the component library on every build."],
   ["Touch targets", "Controls are sized for gloved hands; form fields are at least 16px so mobile browsers do not zoom on focus."],

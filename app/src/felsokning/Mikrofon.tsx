@@ -5,10 +5,12 @@
 import { useEffect, useRef, useState } from "react";
 import { startaIgenkanning, stodRost } from "./rost";
 import { IkonMik } from "./ikoner";
+import { useWebbSprak } from "../alva/webbsprak";
 
 export function MikrofonKnapp({ paText }: { paText: (text: string) => void }) {
   const [lyssnar, setLyssnar] = useState(false);
   const [interim, setInterim] = useState("");
+  const sprak = useWebbSprak();
   const igenkanningRef = useRef<ReturnType<typeof startaIgenkanning>>(undefined);
   const paTextRef = useRef(paText);
   paTextRef.current = paText;
@@ -39,6 +41,7 @@ export function MikrofonKnapp({ paText }: { paText: (text: string) => void }) {
         setLyssnar(false);
         setInterim("");
       },
+      sprak,
     );
   };
 
