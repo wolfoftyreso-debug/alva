@@ -14,6 +14,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { HOGVOLT } from "@/felsokning/metodiker";
+import { metodikForArende } from "@/felsokning/store";
+import { granskaHändelse } from "../../../../services/gemensam/handelser.mjs";
+import { ENDAST_INTERNT } from "@/felsokning/delningsniva";
 import { nastaSteg } from "@/felsokning/metodik";
 import type { Arende, Handelse } from "@/felsokning/domain";
 
@@ -140,5 +143,34 @@ describe("öppna eskaleringar går att svara på", () => {
     // ingenting, och append-only-loggen gick inte att rätta.
     expect(SIDAN).toContain("Use this reference for the answer");
     expect(SIDAN).toContain("setReferens(r);");
+  });
+});
+
+describe("fel metodik går att byta", () => {
+  it("bytet är en händelse som kräver ett varför", () => {
+    // Metodiken avgör vilka krav grinden ställer, så ett byte är ingen
+    // inställning utan ett beslut som ska gå att läsa i efterhand.
+    expect(granskaHändelse({ typ: "metodik_byte", metodikId: "bromsar", motivering: "Vibration only under braking" })).toBeNull();
+    expect(granskaHändelse({ typ: "metodik_byte", metodikId: "bromsar" })).toContain("motivering");
+  });
+
+  it("metodiken följer det senaste bytet, inte valet vid ärendestart", () => {
+    // "Vibrerar när jag bromsar" träffar vibrationsmetodiken före
+    // bromsmetodiken — och vibrationsmetodikens egen text säger att
+    // bromsvibration ska köras som bromsärende. Rådet fanns, vägen inte.
+    const arende = {
+      ...arendeMed([{ typ: "metodik_byte", metodikId: "bromsar", motivering: "Brake judder, not wheel imbalance" } as Handelse]),
+      metodikId: "vibration",
+    };
+    expect(metodikForArende(arende).id).toBe("bromsar");
+  });
+
+  it("bytet är internt — kunden ser arbetsledning, inte procedurval", () => {
+    expect(ENDAST_INTERNT).toContain("metodik_byte");
+  });
+
+  it("väljaren finns i ärendevyn och kräver en motivering", () => {
+    expect(SIDAN).toContain("Wrong methodology? Change it");
+    expect(SIDAN).toContain("motivering.trim().length < 10");
   });
 });

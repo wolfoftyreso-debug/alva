@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import type { Arende, Betalarspar, Handelse, TidKategori, Tillforlitlighet } from "@/felsokning/domain";
 import { BETALARSPAR_LABEL, KUNDBESLUT_LABEL, KVALITETSKONTROLL_LABEL, TIDKATEGORI_LABEL, TILLFORLITLIGHET_LABEL, handelseRubrik } from "@/felsokning/domain";
 import type { Metodik, NastaSteg } from "@/felsokning/metodik";
-import { nastaSteg } from "@/felsokning/metodik";
+import { METODIKER, nastaSteg } from "@/felsokning/metodik";
 import { fasFor, klaraFaser } from "../../../../services/gemensam/faser.mjs";
 import { FARG, Fasrad } from "@/alva/komponenter";
 import { inomTak, sakerhetstak } from "../../../../services/gemensam/sakerhet.mjs";
@@ -1435,6 +1435,17 @@ function GuideFlik({
         ) : steg.kontroll ? (
           <KontrollKort key={`${steg.steg.id}/${steg.kontroll.id}`} steg={steg} skicka={skicka} />
         ) : null}
+
+        {/* Sist i panelen, med avsikt: metodikbytet är en utväg när
+            proceduren är fel, inte ett val teknikern ska möta före
+            arbetet. Ligger den först blir den det första ögat och handen
+            träffar — och en metodik som byts av misstag ändrar vilka krav
+            grinden ställer. */}
+        {!avslutat && (
+          <div className="mt-4 border-t border-[#D7DCE2] pt-2">
+            <MetodikByte metodik={metodik} skicka={skicka} />
+          </div>
+        )}
       </Panel>
 
       {(aiStatus !== "vilar" || senasteAiSvar) && (
@@ -1753,6 +1764,91 @@ function KategoriRad({ arende, skicka }: { arende: Arende; skicka: (h: Handelse)
 }
 
 // En fråga i taget, stora svarsknappar.
+/**
+ * Byte av metodik.
+ *
+ * Metodiken valdes vid ärendestart ur felbeskrivningens ordval och kunde
+ * sedan aldrig ändras. "Vibrerar när jag bromsar" träffar
+ * vibrationsmetodiken före bromsmetodiken — och vibrationsmetodikens
+ * EGEN beskrivning säger att bromsvibration ska köras som bromsärende.
+ * Teknikern fick alltså rådet men inte vägen, och satt fast i fel
+ * procedur genom hela ärendet.
+ *
+ * Bytet kräver ett varför: metodiken avgör vilka krav grinden ställer,
+ * och den som läser loggen ska se när kraven ändrades och på vems
+ * bedömning. Kontrollerna från den gamla metodiken står kvar — loggen
+ * skrivs aldrig om.
+ */
+function MetodikByte({ metodik, skicka }: { metodik: Metodik; skicka: (h: Handelse) => void }) {
+  const [oppen, setOppen] = useState(false);
+  const [vald, setVald] = useState("");
+  const [motivering, setMotivering] = useState("");
+
+  if (!oppen) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOppen(true)}
+        className="text-[12px] underline"
+        style={{ color: "#4D5662" }}
+      >
+        Wrong methodology? Change it
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-2 border border-[#D7DCE2] bg-white p-2">
+      <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-[#4D5662]">
+        Change methodology
+      </p>
+      <p className="mb-2 text-[12px] text-[#4D5662]">
+        The checks already documented remain in the log. The gate evaluates the case against the new methodology
+        from now on.
+      </p>
+      <label className="mb-2 block">
+        <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-[#4D5662]">
+          Methodology
+        </span>
+        <select
+          value={vald}
+          onChange={(h) => setVald(h.target.value)}
+          className="w-full border border-[#D7DCE2] bg-white px-2 py-2 text-[13px]"
+        >
+          <option value="">Select …</option>
+          {METODIKER.filter((m) => m.id !== metodik.id).map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.namn}
+            </option>
+          ))}
+        </select>
+      </label>
+      <TextFalt
+        label="Why is this the right methodology?"
+        varde={motivering}
+        satt={setMotivering}
+        platshallare="e.g. The vibration only occurs under braking — this is brake judder"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <StorKnapp variant="sekundar" onClick={() => setOppen(false)}>
+          Cancel
+        </StorKnapp>
+        <StorKnapp
+          disabled={!vald || motivering.trim().length < 10}
+          onClick={() => {
+            skicka({ typ: "metodik_byte", metodikId: vald, motivering: motivering.trim() });
+            setOppen(false);
+            setVald("");
+            setMotivering("");
+          }}
+        >
+          Change methodology
+        </StorKnapp>
+      </div>
+    </div>
+  );
+}
+
 function FrageKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse) => void }) {
   const fraga = steg.fraga!;
   const [text, setText] = useState("");

@@ -158,6 +158,20 @@ export type Handelse =
   // Ärendetypen styr vilka dokumentationskrav ECM ställer (garanti,
   // försäkring, reklamation …).
   | { typ: "arendetyp_satt"; arendetyp: string }
+  /**
+   * Metodikbyte.
+   *
+   * Metodiken valdes vid ärendestart ur felbeskrivningen och kunde
+   * sedan aldrig ändras. "Vibrerar när jag bromsar" träffar
+   * vibrationsmetodiken före bromsmetodiken — och vibrations-
+   * metodikens egen text säger att bromsvibration ska köras som
+   * bromsärende. Teknikern fick alltså rådet men inte vägen, och
+   * satt fast i fel procedur hela ärendet.
+   *
+   * Bytet kräver ett varför, eftersom det ändrar vilka krav grinden
+   * ställer. Kontroller från den gamla metodiken står kvar i loggen.
+   */
+  | { typ: "metodik_byte"; metodikId: string; motivering: string }
   // FGS-1.0: betalarspåret. Vem som ersätter arbetet avgör beviskraven —
   // fabrik, vagnskadegaranti, försäkringsbolag, extern garantigivare,
   // leasing/fleet, goodwill eller kunden själv. Referensen är claim-,
@@ -357,6 +371,8 @@ export function handelseRubrik(post: LoggPost): string {
       return h.till ? `Work handed over from ${h.fran} to ${h.till}` : `Work handed over by ${h.fran}`;
     case "ansvarig_satt":
       return `Responsible technician: ${h.ansvarig}`;
+    case "metodik_byte":
+      return `Methodology changed to ${h.metodikId}: ${h.motivering}`;
     case "arendetyp_satt":
       return `Case type: ${h.arendetyp}`;
     case "betalare":

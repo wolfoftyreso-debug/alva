@@ -402,7 +402,7 @@ export const DELBART_PARTNER = [...DELBART_KUND, "hypotes"];
 // Betalare, eskalering och reservdel är interna: claimreferenser,
 // fabrikskorrespondens och serienummer hör till garantiakten, inte till
 // kundens delningslänk — kunden ser åtgärden, inte förhandlingen (FGS-1.0).
-export const ENDAST_INTERNT = ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad", "betalare", "eskalering", "reservdel"];
+export const ENDAST_INTERNT = ["kategori_byte", "hypotes", "ai_svar", "ansvarig_satt", "arbetsorder_skannad", "betalare", "eskalering", "reservdel", "metodik_byte"];
 
 export function synligaTyper(niva) {
   if (niva === "intern") return null; // full insyn — ingen filtrering

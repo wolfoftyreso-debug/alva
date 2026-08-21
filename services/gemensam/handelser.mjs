@@ -30,6 +30,11 @@ export const HÄNDELSESCHEMA = {
   arbetsorder_skannad: { falt: "lista" },
   felbeskrivning: { text: "text" },
   arendetyp_satt: { arendetyp: "text" },
+  // Metodikbyte. Metodiken avgör vilka krav grinden ställer, så ett byte
+  // är ingen inställning utan en händelse med ett varför: ärendet
+  // bedöms från och med nu mot en annan uppsättning steg och kontroller,
+  // och den som läser loggen i efterhand ska se när och varför.
+  metodik_byte: { metodikId: "text", motivering: "text" },
   fraga_besvarad: { stegId: "text", frageId: "text", fraga: "text", svar: "text" },
   kontroll_utford: { stegId: "text", kontrollId: "text", text: "text" },
   observation: { text: "text" },

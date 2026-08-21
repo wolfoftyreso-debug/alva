@@ -19,4 +19,5 @@ export const ENDAST_INTERNT: string[] = [
   "betalare",
   "eskalering",
   "reservdel",
+  "metodik_byte",
 ];
