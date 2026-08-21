@@ -31,7 +31,7 @@ PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning
 
 # ---- Tjänsten upp ----
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT node server.mjs &
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel BLINDNINGSNYCKEL=blindningsnyckel PORT=$APPPORT node server.mjs &
 SERVER_PID=$!
 sleep 1
 
@@ -299,7 +299,7 @@ kontroll "utan krypteringsnyckel sparas inga uppgifter" "$KOD" "503"
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel BLINDNINGSNYCKEL=blindningsnyckel PORT=$APPPORT \
   INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
   node server.mjs &
 SERVER_PID=$!
@@ -519,7 +519,7 @@ kontroll "utan konfigurerad utfärdarnyckel utfärdas ingenting" "$KOD" "403"
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel BLINDNINGSNYCKEL=blindningsnyckel PORT=$APPPORT \
   INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
   FAKTURERING_NYCKEL=utfardarnyckel \
   node server.mjs &
@@ -811,7 +811,7 @@ kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 HUVUD=$(node -pe "require('crypto').randomBytes(32).toString('hex')")
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel BLINDNINGSNYCKEL=blindningsnyckel PORT=$APPPORT \
   INTEGRATION_NYCKEL=$(node -pe "require('crypto').randomBytes(32).toString('hex')") \
   PERSONNYCKEL_HUVUD=$HUVUD \
   node server.mjs &
@@ -842,7 +842,7 @@ kontroll "identifieraren gar att lasa med huvudnyckeln" "$IDENT" "KUV123"
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT node server.mjs >/dev/null 2>&1 &
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel BLINDNINGSNYCKEL=blindningsnyckel PORT=$APPPORT node server.mjs >/dev/null 2>&1 &
 SERVER_PID=$!
 sleep 1
 # Utan huvudnyckeln MASKERAS uppgiften — anropet kraschar inte.
@@ -859,6 +859,53 @@ SVAR=$(curl -s "$BAS/api/arenden/arende-kuvert/handelser" -H "Authorization: Bea
 kontroll "utan huvudnyckel maskeras uppgiften" \
   "$(echo "$SVAR" | falt '.handelser[0].handelse.objekt.identifierare')" "[raderat på begäran]"
 kontroll "men anropet gar fortfarande igenom" "$(echo "$SVAR" | falt .handelser.length)" "1"
+
+# 18c. Raderingen forstor ocksa det blindade fordonsindexet (art. 17)
+#
+# Krypto-shreddingen brande nyckeln men LAMNADE identifierare_index: en
+# keyad hash av registreringsnumret, kvar i varje dump. Ett svenskt
+# regnr har ~10^7 former, sa den som har dumpen och nyckeln gick igenom
+# sokrymden och aterfann fordonet — raderingen var reversibel. Indexet
+# maste dö med nyckeln.
+curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"id":"arende-rader","nummer":96,"skapad":"2026-08-06T11:00:00Z"}' >/dev/null
+curl -s -X POST "$BAS/api/arenden/arende-rader/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"r1","tidpunkt":"2026-08-06T11:01:00Z","anvandare":"Anna",
+       "handelse":{"typ":"objekt_identifierat","objekt":{"typ":"Personbil","identifierare":"RAD456",
+       "identifieringsmetod":"Regnr","beskrivning":"Saab 9-5"}}}]}' >/dev/null
+
+INDEX_FORE=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select coalesce(identifierare_index,'') from felsokning_arenden where id='arende-rader'")
+if [ -n "$INDEX_FORE" ]; then echo "✓ blindat index skrivs nar nyckeln finns"; else echo "✗ inget blindat index skrevs"; exit 1; fi
+
+curl -s -X POST "$BAS/api/radering" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
+  -d '{"subjekt":"RAD456","bekraftelse":"RAD456"}' >/dev/null
+INDEX_EFTER=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select coalesce(identifierare_index,'') from felsokning_arenden where id='arende-rader'")
+kontroll "raderingen forstor det blindade indexet" "$INDEX_EFTER" ""
+kontroll "arendet finns kvar — loggen ar orord" \
+  "$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning -tAc "select count(*) from felsokning_arenden where id='arende-rader'")" "1"
+
+# 18d. Betalarens namn omfattas av krypto-shreddingen
+#
+# IDENTIFIERANDE saknade betalare helt, sa den betalande kundens namn och
+# claimreferens lag i KLARTEXT och overlevde en radering. Kvittot sa att
+# subjektet var raderat medan uppgiften stod kvar.
+curl -s -X POST "$BAS/api/arenden/arende-rader/handelser" -H "Authorization: Bearer $TOKEN_A" \
+  -H 'Content-Type: application/json' \
+  -d '{"handelser":[{"id":"r2","tidpunkt":"2026-08-06T11:02:00Z","anvandare":"Anna",
+       "handelse":{"typ":"betalare","spar":"kund","namn":"Anna Andersson","referens":"CLAIM-99"}}]}' >/dev/null
+RAA=$(PGPASSWORD=test "$PGBIN/psql" -h 127.0.0.1 -p $PGPORT -U plattform -d felsokning \
+  -tAc "select handelse::text from felsokning_handelser where id='r2'")
+case "$RAA" in
+  *"Anna Andersson"*) echo "✗ betalarens namn ligger i klartext i loggen"; exit 1 ;;
+  *) echo "✓ betalarens namn ligger krypterat i loggen" ;;
+esac
+case "$RAA" in
+  *"CLAIM-99"*) echo "✗ betalarreferensen ligger i klartext"; exit 1 ;;
+  *) echo "✓ betalarreferensen ligger krypterad" ;;
+esac
 
 # 18b. Grinden talar organisationens språk (ALVA-SPEC-060)
 #
@@ -1062,7 +1109,7 @@ kontroll "sabotage i prefixet fäller förseglingen" "$(echo "$SABOT2" | falt .f
 # så de provas med de former som brukar gå sönder: decimaler, exponenter,
 # stora tal.
 curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
-  -d '{"id":"arende-tal","nummer":90,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
+  -d '{"id":"arende-tal","nummer":94,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
 curl -s -o /dev/null -X POST "$BAS/api/arenden/arende-tal/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
   -d '{"handelser":[{"id":"tal-1","tidpunkt":"2026-08-06T10:01:00Z","anvandare":"Anna","handelse":{"typ":"arbetsorder_skannad","falt":[{"id":"kund_namn","varde":"Test","konfidens":0.9},{"id":"fordon_regnr","varde":"ABC123","konfidens":0.55},{"id":"ao_nummer","varde":"1","konfidens":1},{"id":"fordon_vin","varde":"X","konfidens":1e-7},{"id":"fordon_marke","varde":"Y","konfidens":0.10000000000000009}]}}]}'
 TAL=$(curl -s "$BAS/api/arenden/arende-tal/kedja" -H "Authorization: Bearer $TOKEN_A")
@@ -1078,7 +1125,7 @@ kontroll "kedjan överlever numerisk rundresa genom jsonb" "$(echo "$TAL" | falt
 UTGANGET_ID=$(curl -s -X POST "$BAS/api/matdon" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
   -d '{"beteckning":"Gammal momentnyckel","serienummer":"GM-1","kalibrerad_till":"2019-01-01"}' | falt .id)
 curl -s -X POST "$BAS/api/arenden" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
-  -d '{"id":"arende-kal","nummer":91,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
+  -d '{"id":"arende-kal","nummer":95,"skapad":"2026-08-06T10:00:00Z"}' >/dev/null
 curl -s -o /dev/null -X POST "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bearer $TOKEN_A" -H 'Content-Type: application/json' \
   -d "{\"handelser\":[{\"id\":\"kal-1\",\"tidpunkt\":\"2026-08-06T10:01:00Z\",\"anvandare\":\"Anna\",\"handelse\":{\"typ\":\"matvarde\",\"beskrivning\":\"Moment\",\"varde\":\"120\",\"enhet\":\"Nm\",\"matdonId\":\"$UTGANGET_ID\",\"kalibreradVidMatning\":true}}]}"
 KAL=$(curl -s "$BAS/api/arenden/arende-kal/handelser" -H "Authorization: Bearer $TOKEN_A")
@@ -1137,7 +1184,7 @@ kontroll "tekniker nekas svepet" "$KOD" "403"
 # den inte fångas i samma andetag.
 CLI_KOD=0
 CLI_UT=$(DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel node server.mjs --kedjesvep 2>/dev/null) || CLI_KOD=$?
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel BLINDNINGSNYCKEL=blindningsnyckel node server.mjs --kedjesvep 2>/dev/null) || CLI_KOD=$?
 kontroll "cron-svepet avslutar med felkod vid brott" "$CLI_KOD" "1"
 kontroll "cron-svepet rapporterar brottet i loggformat" \
   "$(echo "$CLI_UT" | grep -c 'arende-kedja')" "1"
@@ -1155,7 +1202,7 @@ kontroll "för stor kropp svarar 413, inte 500" "$KOD" "413"
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 DATABASE_URL="postgresql://plattform:test@127.0.0.1:$PGPORT/felsokning" \
-  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel PORT=$APPPORT SUPPORT_NYCKEL=supportnyckel \
+  JWT_SECRET=integrationshemlighet FORSEGLING_NYCKEL=forseglingsnyckel BLINDNINGSNYCKEL=blindningsnyckel PORT=$APPPORT SUPPORT_NYCKEL=supportnyckel \
   FAKTURERING_NYCKEL=utfardarnyckel node server.mjs &
 SERVER_PID=$!
 sleep 1

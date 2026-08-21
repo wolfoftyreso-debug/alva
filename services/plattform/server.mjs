@@ -13,6 +13,11 @@
 //   JWT_SECRET          HS256-hemlighet, delas med ai-orkestern (krävs)
 //   REGISTRERING_OPPEN  "false" stänger nya organisationer (default öppen, beta)
 //   INTEGRATION_NYCKEL  32 byte (hex/base64) — krypterar kundernas leverantörsuppgifter
+//                       och prenumerationernas signaturhemligheter
+//   BLINDNINGSNYCKEL    blindar fordonsindexet så en raderingsbegäran kan nå hela
+//                       historiken utan att identifieraren lagras i klartext. Utan
+//                       den skrivs inget index (och radering kräver ärende-id) —
+//                       hellre det än ett index som ser blindat ut utan att vara det
 //   TILLATNA_URSPRUNG   kommaseparerade ursprung för CORS (utelämnad = "*")
 //   TILLAT_INTERNA_UPPSLAG  "true" tillåter leverantörsuppslag mot privata nät
 //   ECM_REGLER_FIL / INTEGRATIONER_FIL  sökvägar till utbytbar konfiguration
@@ -218,8 +223,14 @@ function forTataForsok(kod) {
   const forsok = (beslutsForsok.get(kod) ?? []).filter((t) => nu - t < BESLUT_FONSTER_MS);
   forsok.push(nu);
   beslutsForsok.set(kod, forsok);
-  // Enkel städning så kartan inte växer obegränsat.
-  if (beslutsForsok.size > 5000) beslutsForsok.clear();
+  // Städning: rensa BARA utgångna poster. En clear() spolade allas
+  // räknare, så den som fyllde kartan med slumpkoder nollställde sin
+  // egen spärr på köpet.
+  if (beslutsForsok.size > 5000) {
+    for (const [k, tider] of beslutsForsok) {
+      if (!tider.some((t) => nu - t < BESLUT_FONSTER_MS)) beslutsForsok.delete(k);
+    }
+  }
   return forsok.length > BESLUT_TAK;
 }
 
@@ -711,8 +722,26 @@ async function grindHinder(pool, arendeId, nya, sprak = STANDARD) {
  * en raderingsbegäran genomförbar över hela fordonets historik trots att
  * identifieraren är krypterad i loggen (QUALITET C-3).
  */
+/**
+ * Nyckeln som blindar fordonsindexet.
+ *
+ * Egen nyckel, aldrig sessionshemligheten. Tidigare föll den tillbaka på
+ * JWT_SECRET och därefter på TOM STRÄNG — och en HMAC med tom nyckel är
+ * en ren, förutsägbar hash. Ett registreringsnummer har ~10^7 former, så
+ * indexet var då återvändbart med en ordlista: en pseudonymisering som
+ * inte pseudonymiserade, tyst.
+ *
+ * Saknas nyckeln skrivs inget index alls (se blindaIdentifierare).
+ * Hellre en raderingsbegäran som måste ange ärende-id än ett index som
+ * ser blindat ut utan att vara det.
+ */
+function blindningsnyckel() {
+  return process.env.BLINDNINGSNYCKEL || process.env.INTEGRATION_NYCKEL || "";
+}
+
 function blindaIdentifierare(ident) {
-  const nyckel = process.env.INTEGRATION_NYCKEL ?? process.env.JWT_SECRET ?? "";
+  const nyckel = blindningsnyckel();
+  if (!nyckel) return null;
   return createHmac("sha256", nyckel)
     .update(String(ident).trim().toUpperCase().replace(/\s+/g, ""))
     .digest("hex");
@@ -864,7 +893,7 @@ function leverera(orgId, handelse, nyttolast) {
             method: "POST",
             headers: {
               "content-type": "application/json",
-              "alva-signatur": signeraLeverans(kropp, dekryptera(p.hemlighet_krypt), t, createHmac),
+              "alva-signatur": signeraLeverans(kropp, dekryptera(p.hemlighet_krypt, integrationsNyckel()), t, createHmac),
               "alva-handelse": handelse,
             },
             body: kropp,
@@ -1120,7 +1149,17 @@ export function arPrivatAdress(adress) {
   // IPv4-mappade adresser som ::ffff:127.0.0.1.
   if (/^f[cd]/.test(v6) || /^fe[89ab]/.test(v6)) return true;
   const mappad = v6.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
-  return mappad ? arPrivatAdress(mappad[1]) : false;
+  if (mappad) return arPrivatAdress(mappad[1]);
+  // Samma adress i HEXFORM: ::ffff:a9fe:a9fe är 169.254.169.254, alltså
+  // molnets metadatatjänst. Punktnotationen fångades, hexformen inte —
+  // och new URL() normaliserar den inte (till skillnad från decimal och
+  // oktal IPv4), så den gick rakt igenom spärren.
+  const hex = v6.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hex) {
+    const h = (Number.parseInt(hex[1], 16) << 16) | Number.parseInt(hex[2], 16);
+    return arPrivatAdress([(h >>> 24) & 255, (h >>> 16) & 255, (h >>> 8) & 255, h & 255].join("."));
+  }
+  return false;
 }
 
 // Slår upp värdnamnet och avgör om något av svaren pekar inåt. Namn som
@@ -1183,7 +1222,25 @@ export async function gorUppslag(def, uppgifter, identifierare, hamtare = fetch)
   }
 
   try {
-    const svarFran = await hamtare(url, { headers, signal: AbortSignal.timeout(10_000) });
+    // Omdirigeringar följs MANUELLT: spärren ovan prövar bara start-URL:en,
+    // och en leverantör som svarar 302 mot 169.254.169.254 hade annars
+    // tagit oss dit ändå. Varje hopp prövas på nytt, och kedjan är kort.
+    let svarFran = await hamtare(url, { headers, redirect: "manual", signal: AbortSignal.timeout(10_000) });
+    for (let hopp = 0; hopp < 3 && svarFran.status >= 300 && svarFran.status < 400; hopp++) {
+      const nasta = svarFran.headers?.get?.("location");
+      if (!nasta) break;
+      const malet = new URL(nasta, url).toString();
+      if (!/^https?:\/\//.test(malet)) return { ok: false, fel: "Omdirigering till ett protokoll som inte tillåts." };
+      if (process.env.TILLAT_INTERNA_UPPSLAG !== "true") {
+        const internt = await pekarInat(malet);
+        if (internt) return { ok: false, fel: `Omdirigeringen pekar på en intern adress (${internt}) och följs inte.` };
+      }
+      url = malet;
+      svarFran = await hamtare(url, { headers, redirect: "manual", signal: AbortSignal.timeout(10_000) });
+    }
+    if (svarFran.status >= 300 && svarFran.status < 400) {
+      return { ok: false, fel: "Leverantören omdirigerade för många gånger." };
+    }
     if (!svarFran.ok) return { ok: false, fel: `Leverantören svarade ${svarFran.status}.` };
     const data = await svarFran.json();
     const fordon = {};
@@ -1410,6 +1467,19 @@ export function skapaServer() {
                where arende_id = $1 order by sekvens nulls first, tidpunkt, id`,
               [arendeId],
             );
+        // Delningsläsningar loggades inte alls, trots att åtkomstloggen
+        // har en delningskod-kolumn och löftet är att kunna svara på vem
+        // som sett en kunds uppgifter. Organisationen härleds ur ärendet:
+        // den publika vägen har ingen session.
+        const agare = await pool.query(
+          `select organisation_id from felsokning_arenden where id = $1`,
+          [arendeId],
+        );
+        loggaAtkomst(req, res, {
+          org: agare.rows[0]?.organisation_id,
+          arende: arendeId,
+          delningskod: delad[1],
+        });
         return svara(res, 200, { arende: arende.rows[0], handelser: handelser.rows, niva });
       }
 
@@ -1702,6 +1772,11 @@ export function skapaServer() {
       // är ett tillägg, inte den enda vägen till sitt eget underlag.
       const pdfVag = vag.match(/^\/api\/fakturor\/([0-9a-fA-F-]{36})\/pdf$/);
       if (req.method === "GET" && pdfVag) {
+        // Samma grind som fakturalistan: kommersiella uppgifter är
+        // administratörens. PDF-vägen kontrollerade tidigare bara
+        // organisationstillhörighet, så en tekniker med ett fakturaid
+        // kom förbi spärren listan satte upp.
+        if (anspr.roll !== "admin") return svara(res, 403, { error: "Kräver administratörsbehörighet." });
         const rad = await pool.query(
           `select organisation_id, beteckning, dokument from fakturor where id = $1`,
           [pdfVag[1]],
@@ -2425,6 +2500,15 @@ export function skapaServer() {
           if (await pekarInat(url)) {
             return svara(res, 400, { error: "Adressen pekar mot ett internt nät." });
           }
+          // Hemligheten lagras krypterad i vila. Utan nyckel går det inte
+          // — och då ska svaret säga varför, inte bli ett 500 ur ett
+          // kastat createCipheriv. (Anropet saknade tidigare nyckel helt,
+          // så varje prenumeration 500:ade och kanalen var död kod.)
+          if (!integrationsNyckel()) {
+            return svara(res, 503, {
+              error: "INTEGRATION_NYCKEL saknas i driften — prenumerationens hemlighet kan inte lagras krypterad.",
+            });
+          }
           if (!Array.isArray(handelser) || handelser.some((h) => !(h in UTGAENDE))) {
             return svara(res, 400, { error: "handelser måste vara kända händelsetyper.", kanda: Object.keys(UTGAENDE) });
           }
@@ -2443,7 +2527,7 @@ export function skapaServer() {
           const rad = await pool.query(
             `insert into prenumerationer (organisation_id, namn, url, hemlighet_krypt, handelser)
              values ($1, $2, $3, $4, $5) returning id`,
-            [anspr.org, namn.trim(), url, kryptera(nyHemlighet), handelser],
+            [anspr.org, namn.trim(), url, kryptera(nyHemlighet, integrationsNyckel()), handelser],
           );
           return svara(res, 200, {
             id: rad.rows[0].id,
@@ -2620,6 +2704,17 @@ export function skapaServer() {
         if (bort.rowCount === 0) {
           return svara(res, 404, { error: "Inget skyddat underlag finns för det subjektet." });
         }
+        // Det blindade indexet överlevde tidigare krypto-shreddingen: en
+        // keyad hash av ett registreringsnummer, kvar i varje dump, med
+        // en sökrymd som går att gå igenom. Raderingen måste därför
+        // förstöra indexet också — annars är fordonet återidentifierbart
+        // efter att nyckeln brunnit. Triggern skyddar inte kolumnen, den
+        // är härledd.
+        await pool.query(
+          `update felsokning_arenden set identifierare_index = null
+           where organisation_id = $1 and id = any($2::text[])`,
+          [anspr.org, arenden.rows.map((r) => r.id)],
+        );
         // Raderingen loggas — men loggen får inte själv bära uppgiften.
         await pool.query(
           `insert into raderingar (organisation_id, subjekt_hash, begard, begard_av, antal_arenden)
@@ -2864,10 +2959,11 @@ export function skapaServer() {
           if (objekt) {
             const ident = handelser.find((h) => h?.handelse?.typ === "objekt_identifierat")?.handelse?.objekt
               ?.identifierare;
-            if (ident) {
+            const blindat = ident ? blindaIdentifierare(ident) : null;
+            if (blindat) {
               await pool.query(`update felsokning_arenden set identifierare_index = $2 where id = $1`, [
                 handelserVag[1],
-                blindaIdentifierare(ident),
+                blindat,
               ]);
             }
           }
@@ -2992,6 +3088,23 @@ if (ärHuvudmodul && process.env.NODE_ENV !== "test") {
   // Varje avslut varnar redan för sig, men en rad per avslut i en
   // loggström är brus; en rad vid start är ett beslut någon fattat
   // (TÜV-2 T-15).
+  // JWT_SECRET är inte valfri: utan den kastar HMAC-beräkningen och VARJE
+  // autentiserad begäran svarar 500 — medan /halsa (som inte autentiserar)
+  // fortsätter rapportera frisk. En container som ser frisk ut men inte
+  // går att logga in i är det dyraste felet att felsöka i drift, så den
+  // vägrar starta i stället.
+  if (!process.env.JWT_SECRET) {
+    logga("fel", "JWT_SECRET saknas", {
+      konsekvens: "Ingen begäran kan autentiseras. Servern startar inte utan sessionshemlighet.",
+    });
+    process.exit(1);
+  }
+  if (!blindningsnyckel()) {
+    logga("varning", "BLINDNINGSNYCKEL saknas", {
+      konsekvens:
+        "Inget blindat fordonsindex skrivs. Raderingsbegäran måste ange ärende-id i stället för registreringsnummer.",
+    });
+  }
   if (!FORSEGLING_NYCKEL) {
     logga("varning", "FORSEGLING_NYCKEL saknas", {
       konsekvens:

@@ -300,6 +300,15 @@ create table if not exists matdon (
 -- Det gör radering över hela fordonets historik möjlig utan att lagra
 -- identifieraren i klartext någonstans.
 alter table felsokning_arenden add column if not exists identifierare_index text;
+
+-- Ärendenumret är den mänskliga referensen i en tvist och sattes av
+-- klienten utan någon unikhetskontroll — två flikar offline tog båda
+-- max+1 och fick samma nummer. Fakturor och supportärenden har haft
+-- unikhet hela tiden; ärendena förbisågs. Partiellt index så att äldre
+-- rader utan nummer inte blockerar migreringen.
+create unique index if not exists felsokning_arenden_nummer_unikt
+  on felsokning_arenden (organisation_id, nummer)
+  where nummer is not null;
 create index if not exists felsokning_arenden_ident_idx
   on felsokning_arenden (organisation_id, identifierare_index);
 

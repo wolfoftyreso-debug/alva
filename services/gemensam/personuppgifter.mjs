@@ -44,6 +44,11 @@ export const IDENTIFIERANDE = {
     "fordon_vin",
   ],
   kundbeslut: ["kontaktperson"],
+  // Betalarens namn är den betalande kundens namn när spåret är "kund" —
+  // en personuppgift som låg i klartext och överlevde krypto-shreddingen.
+  // Referensen är claim-/ärendenumret hos betalaren och pekar ut samma
+  // person hos tredje part.
+  betalare: ["namn", "referens"],
 };
 
 export const MASKERAT = "[raderat på begäran]";

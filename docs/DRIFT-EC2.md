@@ -55,6 +55,9 @@ JWT_SECRET=<eget 32-byte-hex>
 ANTHROPIC_API_KEY=<Claude-nyckel>
 PERSONNYCKEL_HUVUD=<eget 32-byte-hex>
 FORSEGLING_NYCKEL=<eget 32-byte-hex>
+# Blindar fordonsindexet. Utan den skrivs inget index, och en
+# raderingsbegäran måste ange ärende-id i stället för registreringsnummer.
+BLINDNINGSNYCKEL=<eget 32-byte-hex>
 ECM_REGLER_NYCKEL=<eget 32-byte-hex>
 REGISTRERING_OPPEN=true
 TILLATNA_URSPRUNG=https://<din domän>
