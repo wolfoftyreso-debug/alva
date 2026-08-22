@@ -6,10 +6,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Lennart Svenssons Konditorivaror - Traditionell Svensk Konditoristil */
-
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap');
-
 @layer base {
   :root {
     --background: 38 25% 96%;
@@ -46,9 +42,6 @@
     --gradient-warm: linear-gradient(180deg, hsl(40 30% 94%) 0%, hsl(35 25% 90%) 100%);
     --shadow-classic: 0 4px 20px -4px hsl(25 30% 12% / 0.15);
     --shadow-card: 0 2px 8px hsl(25 30% 12% / 0.08);
-
-    --font-display: 'Cormorant Garamond', serif;
-    --font-body: 'Crimson Text', serif;
   }
 
   .dark {

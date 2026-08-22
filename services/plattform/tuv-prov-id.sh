@@ -16,7 +16,9 @@ APPPORT=8397
 BAS="http://127.0.0.1:$APPPORT"
 DATADIR=$(mktemp -d)
 PGBIN=$(ls -d /usr/lib/postgresql/*/bin | head -1)
-KOD=/home/user/konditori-joy/felsokning
+# Repots rot, härledd ur skriptets läge — aldrig en absolut sökväg till
+# någon annans maskin eller till ett annat repo.
+KOD=$(cd ../.. && pwd)
 
 stada() {
   kill "$SERVER_PID" 2>/dev/null || true
