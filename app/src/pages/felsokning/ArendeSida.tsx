@@ -1901,6 +1901,12 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
   const [resultat, setResultat] = useState("");
   const filRef = useRef<HTMLInputElement>(null);
   const krav = kontroll.krav;
+  // ALVA-RULE-210. Den kontroll som FANN något bär åtgärden och fakturan,
+  // och måste därför bära en bild bunden till just den kontrollen. Bilden
+  // går inte att ta i efterhand när delen väl är demonterad.
+  const [anmarkning, setAnmarkning] = useState(false);
+  const [bevis, setBevis] = useState<string | null>(null);
+  const bevisRef = useRef<HTMLInputElement>(null);
 
   const utford = () => {
     // En kontroll vars krav är ett mätvärde ger ett mätvärde. Tidigare
@@ -1915,16 +1921,32 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
     if (krav === "matvarde" && resultat.trim()) {
       skicka({ typ: "matvarde", beskrivning: kontroll.text, varde: resultat.trim() });
     }
+    // Bevisbilden binds till kontrollen (stegId/kontrollId) — en obunden
+    // bild i loggen kan annars se ut som bevis för vilket fynd som helst.
+    if (anmarkning && bevis) {
+      skicka({
+        typ: "foto",
+        beskrivning: `Finding — ${kontroll.text}`,
+        dataUrl: bevis,
+        stegId: steg.steg.id,
+        kontrollId: kontroll.id,
+      });
+    }
     skicka({
       typ: "kontroll_utford",
       stegId: steg.steg.id,
       kontrollId: kontroll.id,
       text: kontroll.text,
       resultat: resultat.trim() || undefined,
+      ...(anmarkning ? { anmarkning: true } : {}),
     });
   };
 
-  const kravUppfyllt = krav === "foto" || !krav || resultat.trim().length > 0;
+  // En anmärkning på en kontroll som inte redan verifieras med foto kräver
+  // sin egen bild innan den kan markeras utförd.
+  const bevisKravUppfyllt = !anmarkning || krav === "foto" || bevis !== null;
+  const kravUppfyllt =
+    (krav === "foto" || !krav || resultat.trim().length > 0) && bevisKravUppfyllt;
 
   return (
     <>
@@ -1942,7 +1964,13 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
               const fil = e.target.files?.[0];
               if (!fil) return;
               const dataUrl = await skalaNerFoto(fil);
-              skicka({ typ: "foto", beskrivning: kontroll.text, dataUrl });
+              skicka({
+                typ: "foto",
+                beskrivning: kontroll.text,
+                dataUrl,
+                stegId: steg.steg.id,
+                kontrollId: kontroll.id,
+              });
               utford();
             }}
           />
@@ -1976,6 +2004,64 @@ function KontrollKort({ steg, skicka }: { steg: NastaSteg; skicka: (h: Handelse)
           </StorKnapp>
         </>
       )}
+      {/* ALVA-RULE-210 · anmärkningen och dess bevis. */}
+      <div className="mt-4 border-t border-[#D7DCE2] pt-4">
+        <label className="flex items-start gap-2 text-[14px] text-[#1B1E22]">
+          <input
+            type="checkbox"
+            checked={anmarkning}
+            onChange={(h) => setAnmarkning(h.target.checked)}
+            className="mt-[3px]"
+          />
+          <span>
+            This check found a fault
+            <span className="block text-[12px] text-[#4D5662]">
+              A finding carries the repair and the invoice, so it must be photographed where it is found.
+            </span>
+          </span>
+        </label>
+        {anmarkning && krav !== "foto" && (
+          <div className="mt-4">
+            <input
+              ref={bevisRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={async (e) => {
+                const fil = e.target.files?.[0];
+                if (!fil) return;
+                setBevis(await skalaNerFoto(fil));
+              }}
+            />
+            {bevis ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={bevis}
+                  alt={`Evidence for the finding: ${kontroll.text}`}
+                  className="h-16 w-16 border border-[#D7DCE2] object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => bevisRef.current?.click()}
+                  className="min-h-8 border border-[#D7DCE2] bg-white px-3 text-[13px] font-semibold text-[#1B1E22] hover:border-[#005CA9]"
+                >
+                  Replace photograph
+                </button>
+              </div>
+            ) : (
+              <>
+                <StorKnapp variant="sekundar" onClick={() => bevisRef.current?.click()}>
+                  <IkonKamera /> Photograph the finding — required
+                </StorKnapp>
+                <p className="mt-2 text-[12px] font-semibold text-[#005CA9]">
+                  The check cannot be verified until the finding is photographed.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
       <Undantag
         vidUndantag={(orsak) =>
           skicka({

@@ -118,7 +118,11 @@ export function byggDemoArende(nummer: number, anvandare = "Anna"): Arende {
     post(60, { typ: "kategori_byte", kategori: "aktiv_felsokning" }),
     post(75, { typ: "inaktivitet_forklarad", text: "Lifted the car and removed the right front wheel for checking on the balancing machine.", minuter: 15 }),
     post(82, { typ: "matvarde", beskrivning: "Imbalance in the right front wheel", varde: "38", enhet: "g", ...BALANSMASKIN }),
-    post(83, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "balansering", text: "Check wheel balancing", resultat: "38 g imbalance right front — a balance weight is missing. The other wheels within 5 g." }),
+    // ALVA-RULE-210: fyndet som bär åtgärden och fakturan fotograferas där
+    // det görs, och bilden binds till kontrollen (stegId/kontrollId) — en
+    // obunden bild i loggen skulle annars kunna gälla vilket fynd som helst.
+    post(83, { typ: "foto", beskrivning: "Finding — balancer reading, right front", dataUrl: demoFoto("Balancer: 38 g"), stegId: "kontroller", kontrollId: "balansering" }),
+    post(83, { typ: "kontroll_utford", stegId: "kontroller", kontrollId: "balansering", text: "Check wheel balancing", resultat: "38 g imbalance right front — a balance weight is missing. The other wheels within 5 g.", anmarkning: true }),
     post(85, { typ: "observation", text: "Traces of a detached adhesive weight on the inner face of the right front rim" }),
     post(85, {
       typ: "reproducering",

@@ -1066,9 +1066,15 @@ add({ typ: "objekt_identifierat", objekt: { identifierare: "KED123" } });
 add({ typ: "historik_kontrollerad", kontrollerad: true });
 add({ typ: "matarstallning", lage: "ingaende", varde: "14 200", dataUrl: "data:image/png;base64,AA" });
 add({ typ: "reproducering", status: "ja", beskrivning: "Reproducerad vid provkorning pa plan vag." });
+// ALVA-RULE-210: en utford atgard kraver minst en anmarkning, och
+// anmarkningen en bild bunden till samma stegId/kontrollId.
+let fyndSatt = false;
 for (const s of G.steg) for (const k of s.kontroller ?? []) {
-  add({ typ: "kontroll_utford", stegId: s.id, kontrollId: k.id, text: k.text, ...(k.krav === "foto" ? {} : { resultat: "Utan anmarkning." }) });
-  if (k.krav === "foto") add({ typ: "foto", beskrivning: k.text });
+  const arFynd = !fyndSatt && k.krav !== "foto";
+  if (arFynd) fyndSatt = true;
+  add({ typ: "kontroll_utford", stegId: s.id, kontrollId: k.id, text: k.text, ...(k.krav === "foto" ? {} : { resultat: arFynd ? "38 g obalans hoger framhjul." : "Utan anmarkning." }), ...(arFynd ? { anmarkning: true } : {}) });
+  if (k.krav === "foto") add({ typ: "foto", beskrivning: k.text, stegId: s.id, kontrollId: k.id });
+  if (arFynd) add({ typ: "foto", beskrivning: "Fynd - " + k.text, stegId: s.id, kontrollId: k.id });
 }
 add({ typ: "matvarde", beskrivning: "Obalans hoger framhjul", varde: "38", enhet: "g", matdonId: process.env.MATDON_ID });
 add({ typ: "felorsak", avvikelse: "38 g obalans hoger framhjul mot toleransen 5 g.", orsaker: ["Normal wear"], underlag: ["Measurement result"], sakerhet: "hog", atgard: "Balansera om hjulet och provkor." });
@@ -1144,7 +1150,8 @@ else
     add({typ:"historik_kontrollerad",kontrollerad:true});
     add({typ:"matarstallning",lage:"ingaende",varde:"1",dataUrl:"data:image/png;base64,AA"});
     add({typ:"reproducering",status:"ja",beskrivning:"Reproducerad."});
-    for (const s of G.steg) for (const k of s.kontroller??[]){add({typ:"kontroll_utford",stegId:s.id,kontrollId:k.id,text:k.text,...(k.krav==="foto"?{}:{resultat:"U.a."})});if(k.krav==="foto")add({typ:"foto",beskrivning:k.text});}
+    let fynd=false;
+    for (const s of G.steg) for (const k of s.kontroller??[]){const F=!fynd&&k.krav!=="foto";if(F)fynd=true;add({typ:"kontroll_utford",stegId:s.id,kontrollId:k.id,text:k.text,...(k.krav==="foto"?{}:{resultat:F?"38 g obalans.":"U.a."}),...(F?{anmarkning:true}:{})});if(k.krav==="foto")add({typ:"foto",beskrivning:k.text,stegId:s.id,kontrollId:k.id});if(F)add({typ:"foto",beskrivning:"Fynd",stegId:s.id,kontrollId:k.id});}
     add({typ:"matvarde",beskrivning:"Obalans",varde:"38",enhet:"g",matdonId:process.env.MATDON_ID});
     add({typ:"felorsak",avvikelse:"38 g obalans mot 5 g.",orsaker:["Normal wear"],underlag:["Measurement result"],sakerhet:"hog",atgard:"Balansera."});
     add({typ:"atgardsforslag",beskrivning:"Balansera."});

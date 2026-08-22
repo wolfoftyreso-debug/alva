@@ -17,6 +17,15 @@ const GENERISK = ALLA_METODIKER.at(-1)!;
 const ANSPRÅK = { sub: "u-1", namn: "Anna Tekniker", org: "o-1", roll: "tekniker" };
 
 /** Bygger en logg som passerar allt utom det testet handlar om. */
+// ALVA-RULE-210 · den kontroll som bär fyndet i fixturen. Ett åtgärdat fel
+// måste vara antecknat som en anmärkning, och anmärkningen måste bära
+// visuellt bevis bundet till just den kontrollen — fixturen följer regeln,
+// inte tvärtom.
+const FYND = (() => {
+  const steg = GENERISK.steg.find((s: { kontroller?: unknown[] }) => (s.kontroller ?? []).length > 0);
+  return { stegId: steg.id, kontrollId: steg.kontroller[0].id };
+})();
+
 function komplettLogg(extra: Record<string, unknown>[] = []) {
   return [
     { typ: "objekt_identifierat", objekt: { identifierare: "ABC123" } },
@@ -47,6 +56,7 @@ function komplettLogg(extra: Record<string, unknown>[] = []) {
     // Fackgranskningen gav skyddsnätet en felkodskontroll med fotokrav —
     // fixturen följer regeln, inte tvärtom (jfr T-13).
     { typ: "foto", beskrivning: "Felkoder" },
+    { typ: "foto", beskrivning: "Anmärkningen", stegId: FYND.stegId, kontrollId: FYND.kontrollId },
     ...GENERISK.steg.flatMap((s) =>
       (s.kontroller ?? []).map((k) => ({
         typ: "kontroll_utford",
@@ -54,6 +64,7 @@ function komplettLogg(extra: Record<string, unknown>[] = []) {
         kontrollId: k.id,
         text: k.text,
         resultat: "Utförd och dokumenterad.",
+        ...(s.id === FYND.stegId && k.id === FYND.kontrollId ? { anmarkning: true } : {}),
       })),
     ),
     ...extra,
@@ -707,5 +718,106 @@ describe("FGS · betalare och eskalering", () => {
     expect(hinder[0].rubrik).toBe("Mileage documented");
     expect(hinder[0].detalj).toBe("Odometer reading required.");
     expect(grindaArendetyp([...utan, { typ: "matarstallning", lage: "ingaende", varde: "12000" }], rikt)).toEqual([]);
+  });
+});
+
+// ---- ALVA-RULE-210 · Bevis för anmärkningen -------------------------------
+//
+// Varje kontroll bar redan ett resultat. Men den kontroll som FANN något —
+// den som bär åtgärden, fakturan och garantianspråket — fick vara ett blott
+// påstående i text: "bussning sprucken, 4 mm glapp" räckte för att stänga
+// ärendet och fakturera armen utan att en enda bild visade sprickan. Bilden
+// går inte att ta i efterhand när delen väl är demonterad.
+describe("ALVA-RULE-210 · en anmärkning måste bära visuellt bevis", () => {
+  const FYNDKONTROLL = { stegId: FYND.stegId, kontrollId: FYND.kontrollId };
+
+  /** Fixturen utan sitt inbyggda fynd — så varje prov sätter sitt eget. */
+  const utanFynd = () =>
+    komplettLogg().filter(
+      (h) =>
+        !(h.typ === "foto" && h.stegId === FYND.stegId && h.kontrollId === FYND.kontrollId),
+    ).map((h) =>
+      h.typ === "kontroll_utford" && h.stegId === FYND.stegId && h.kontrollId === FYND.kontrollId
+        ? { ...h, anmarkning: undefined }
+        : h,
+    );
+
+  const markera = (logg: Record<string, unknown>[], extra: Record<string, unknown>[] = []) => [
+    ...logg.map((h) =>
+      h.typ === "kontroll_utford" && h.stegId === FYND.stegId && h.kontrollId === FYND.kontrollId
+        ? { ...h, anmarkning: true }
+        : h,
+    ),
+    ...extra,
+  ];
+
+  it("en anmärkning utan bild spärrar avslutet", () => {
+    const hinder = grinda(markera(utanFynd()), GENERISK);
+    expect(hinder.map((h) => h.id)).toContain("anmarkning_bevis");
+  });
+
+  it("en bild bunden till anmärkningen släpper igenom", () => {
+    const hinder = grinda(
+      markera(utanFynd(), [{ typ: "foto", beskrivning: "Fyndet", ...FYNDKONTROLL }]),
+      GENERISK,
+    );
+    expect(hinder).toEqual([]);
+  });
+
+  it("video duger lika bra som foto — rörelsen är ibland hela fyndet", () => {
+    const hinder = grinda(
+      markera(utanFynd(), [{ typ: "video", beskrivning: "Glappet", ...FYNDKONTROLL }]),
+      GENERISK,
+    );
+    expect(hinder).toEqual([]);
+  });
+
+  it("en obunden bild räcker INTE — annars intygar en bild på något annat fyndet", () => {
+    // Detta är gränsen hela regeln står och faller med: loggen är full av
+    // foton (objektet, typskylten, felkoderna) och utan bindningen hade
+    // vilket som helst av dem sett ut som bevis för anmärkningen.
+    const hinder = grinda(
+      markera(utanFynd(), [{ typ: "foto", beskrivning: "Objektet igen" }]),
+      GENERISK,
+    );
+    expect(hinder.map((h) => h.id)).toContain("anmarkning_bevis");
+  });
+
+  it("en bild bunden till FEL kontroll räcker inte heller", () => {
+    const annan = GENERISK.steg.flatMap((s: { id: string; kontroller?: { id: string }[] }) =>
+      (s.kontroller ?? []).map((k) => ({ stegId: s.id, kontrollId: k.id })),
+    ).find((k: { kontrollId: string }) => k.kontrollId !== FYND.kontrollId);
+    const hinder = grinda(
+      markera(utanFynd(), [{ typ: "foto", beskrivning: "Fel kontroll", ...annan }]),
+      GENERISK,
+    );
+    expect(hinder.map((h) => h.id)).toContain("anmarkning_bevis");
+  });
+
+  it("en utförd reparation utan EN ENDA anmärkning spärrar — annars vore kravet frivilligt", () => {
+    // Kringgåendet regeln måste tåla: markera aldrig något som anmärkning,
+    // och kravet på bild träffar aldrig. Då finns det som lagades ingenstans
+    // i loggen som ett fynd.
+    const hinder = grinda(utanFynd(), GENERISK);
+    expect(hinder.map((h) => h.id)).toContain("anmarkning_saknas");
+  });
+
+  it("ett ärende utan utförd åtgärd kräver ingen anmärkning", () => {
+    // Den som inte reparerat något har inte påstått att något var fel.
+    const utanAtgard = utanFynd().filter(
+      (h) => h.typ !== "atgard_utford" && h.typ !== "felorsak",
+    );
+    expect(grinda(utanAtgard, GENERISK).map((h) => h.id)).not.toContain("anmarkning_saknas");
+  });
+
+  it("hindret är läsbart på alla tio språk", () => {
+    for (const kod of ["en", "sv", "de", "fr", "es", "it", "pl", "nl", "pt", "ro"]) {
+      const hinder = grinda(markera(utanFynd()), GENERISK, kod);
+      const post = hinder.find((h) => h.id === "anmarkning_bevis");
+      expect(post, kod).toBeTruthy();
+      // Ingen nyckel läcker ut som text, och rubriken är faktiskt översatt.
+      expect(post!.rubrik, kod).not.toContain("grind.");
+      expect(post!.rubrik.length, kod).toBeGreaterThan(8);
+    }
   });
 });

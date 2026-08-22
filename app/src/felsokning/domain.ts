@@ -115,7 +115,17 @@ export type Handelse =
   | { typ: "fraga_besvarad"; stegId: string; frageId: string; fraga: string; svar: string }
   // undantag: underlaget kunde inte tas fram — obligatorisk orsak i stället
   // för evidens. Kontrollen räknas som hanterad men flaggas i brief/rapport.
-  | { typ: "kontroll_utford"; stegId: string; kontrollId: string; text: string; resultat?: string; undantag?: string }
+  | {
+      typ: "kontroll_utford";
+      stegId: string;
+      kontrollId: string;
+      text: string;
+      resultat?: string;
+      undantag?: string;
+      // ALVA-RULE-210: kontrollen FANN något. Bär åtgärden och fakturan, och
+      // kräver därför visuellt bevis bundet till samma stegId/kontrollId.
+      anmarkning?: boolean;
+    }
   | { typ: "observation"; text: string }
   | {
       typ: "matvarde";
@@ -145,11 +155,11 @@ export type Handelse =
       kalla?: string;
     }
   | { typ: "hypotes"; text: string; niva: Exclude<Tillforlitlighet, "hog"> }
-  | ({ typ: "foto"; beskrivning: string } & Bilaga)
+  | ({ typ: "foto"; beskrivning: string; stegId?: string; kontrollId?: string } & Bilaga)
   // Video med ljud (E3-evidens): för det som låter eller rör sig —
   // motorljud, hjullager, fjädringsrörelse. Kort och komprimerad;
   // originalfilen bevaras som evidens precis som foton.
-  | ({ typ: "video"; beskrivning: string } & Bilaga)
+  | ({ typ: "video"; beskrivning: string; stegId?: string; kontrollId?: string } & Bilaga)
   | { typ: "kommentar"; text: string }
   | { typ: "kategori_byte"; kategori: TidKategori }
   | { typ: "inaktivitet_forklarad"; text: string; minuter: number }

@@ -189,6 +189,8 @@ async function kor(sida, fall) {
   // ---- Guiden och panelerna --------------------------------------------
   let metodik = "";
   let felorsakGjord = false;
+  // ALVA-RULE-210: ärendet måste bära minst en anmärkning med bunden bild.
+  let fyndGjort = false;
   let slutsatsfalt = 0;
 
   for (let varv = 0; varv < 200; varv++) {
@@ -240,6 +242,18 @@ async function kor(sida, fall) {
       if (await finns(verifiera)) {
         const falt = guide.locator('input[type="text"], textarea').first();
         if (await finns(falt)) await fyll(falt, fall.matvarde);
+        // Fyndet görs på första kontrollen som tar ett resultat: en utförd
+        // reparation kräver en anmärkning, och anmärkningen en bild bunden
+        // till just den kontrollen (ALVA-RULE-210). Utan det går ärendet
+        // inte att avsluta — vilket är hela poängen med regeln.
+        if (!fyndGjort) {
+          const kryss = guide.locator('input[type="checkbox"]').first();
+          if (await finns(kryss)) {
+            await kryss.check();
+            await foto(guide.locator('input[type="file"]'));
+            fyndGjort = true;
+          }
+        }
         if (!(await verifiera.first().isDisabled())) {
           await klicka(verifiera);
           continue;

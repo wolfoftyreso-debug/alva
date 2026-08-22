@@ -192,6 +192,63 @@ export function grinda(handelser, metodik, sprak = STANDARD) {
     foton,
   });
 
+  // ---- ALVA-RULE-210 · Bevis för anmärkningen -------------------------
+  //
+  // Varje kontroll måste bära ett resultat. Men den kontroll som FANN
+  // något — anmärkningen — är den som bär åtgärden, fakturan och hela
+  // garantianspråket, och den fick tidigare vara ett blott påstående i
+  // text. "Bussning sprucken, 4 mm glapp" räckte för att stänga ärendet,
+  // byta armen och fakturera, utan att en enda bild visade sprickan.
+  //
+  // Det är samma gränsfel som resten av granskningen letar efter: regeln
+  // var riktig inuti (alla kontroller dokumenteras) men oprövad vid sin
+  // gräns (just den kontroll som betyder något). En bild som tas EFTER
+  // demonteringen går inte att ta i efterhand — bevisbördan måste ligga
+  // där fyndet görs.
+  //
+  // Två krav, som håller ihop:
+  //
+  //   1. En kontroll märkt som anmärkning KRÄVER foto eller video som är
+  //      bunden till just den kontrollen (samma stegId/kontrollId).
+  //   2. Har en åtgärd utförts och en felorsak fastställts, MÅSTE minst
+  //      en anmärkning finnas — annars kunde kravet kringgås genom att
+  //      helt enkelt aldrig märka något som anmärkning.
+  //
+  // Utan (2) vore (1) frivilligt. Med båda kan ett ärende inte längre
+  // stängas med en utförd reparation som ingenting visar.
+  {
+    const bunden = (h) => `${h.stegId ?? ""}/${h.kontrollId ?? ""}`;
+    const visuella = new Set(
+      [...av(handelser, "foto"), ...av(handelser, "video")]
+        .filter((h) => h.stegId && h.kontrollId)
+        .map(bunden),
+    );
+
+    const anmarkningar = av(handelser, "kontroll_utford").filter((h) => h.anmarkning === true);
+    const utanBevis = anmarkningar
+      .filter((h) => !visuella.has(bunden(h)))
+      .map((h) => String(h.text ?? h.kontrollId ?? "").trim())
+      .filter(Boolean);
+
+    kravMedData(
+      "anmarkning_bevis",
+      "grind.anmarkning.bevis",
+      utanBevis.length === 0,
+      utanBevis.slice(0, 5).join(" · "),
+    );
+
+    // Reparation utan en enda dokumenterad anmärkning: det som lagades
+    // finns då ingenstans i loggen som ett fynd.
+    const reparerat = av(handelser, "atgard_utford").some((h) => h.utford === true);
+    const felorsakSatt = av(handelser, "felorsak").length > 0;
+    krav(
+      "anmarkning_saknas",
+      "grind.anmarkning.saknas",
+      !(reparerat && felorsakSatt) || anmarkningar.length > 0,
+      "grind.anmarkning.saknas.detalj",
+    );
+  }
+
   // ALVA-RULE-200 · Slutsatsen. Ett ärende stängs aldrig utan att
   // teknikern lämnat ett varför — motiveringen som knyter slutsatsen
   // till underlaget, vad som uteslöts, och vad som kvarstår osäkert.

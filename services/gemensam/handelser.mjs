@@ -104,11 +104,17 @@ export const HÄNDELSESCHEMA = {
 export const VALFRIA_FÄLT = {
   // Bilagefälten ärvs via intersektion med Bilaga i domänmodellen.
   arbetsorder_skannad: ["bilagaId", "bilagaHash", "dataUrl"],
-  foto: ["bilagaId", "bilagaHash", "dataUrl"],
-  video: ["bilagaId", "bilagaHash", "dataUrl"],
+  // stegId/kontrollId binder bilden till den kontroll den dokumenterar.
+  // Utan bindningen är ett foto bara "ett foto i ärendet" — och en
+  // anmärkning kan då se dokumenterad ut av en bild på något annat.
+  foto: ["bilagaId", "bilagaHash", "dataUrl", "stegId", "kontrollId"],
+  video: ["bilagaId", "bilagaHash", "dataUrl", "stegId", "kontrollId"],
   matarstallning: ["undantag", "bilagaId", "bilagaHash", "dataUrl"],
 
-  kontroll_utford: ["resultat", "undantag"],
+  // anmarkning=true markerar att kontrollen FANN något. Det är den
+  // kontroll som bär åtgärden och fakturan, och därför den som
+  // ALVA-RULE-210 kräver visuellt bevis för.
+  kontroll_utford: ["resultat", "undantag", "anmarkning"],
   betalare: ["referens", "godkannande"],
   eskalering: ["referens", "kanal"],
   reservdel: ["serienummer", "batch", "sparad"],
