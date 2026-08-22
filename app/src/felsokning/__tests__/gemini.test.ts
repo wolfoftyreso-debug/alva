@@ -98,6 +98,68 @@ describe("svaret", () => {
   });
 });
 
+// ---- Regressioner ur ett RIKTIGT Gemini-svar ---------------------------
+//
+// De här två felen levde bakom gröna test, därför att stubbarna ovan hade
+// en enklare form än API:t faktiskt har. Först när ett skarpt anrop gjordes
+// syntes de. Formen nedan är kopierad från ett verkligt svar.
+describe("regressioner mot API:ets verkliga form", () => {
+  it("SVARSDELEN bär också thoughtSignature — den får inte filtreras bort", () => {
+    // Signaturen är en kontinuitetsmarkör, inte ett kvitto på resonemang.
+    // Att filtrera på den kastade bort själva svaret: anropet lyckades och
+    // kommentaren blev tom.
+    const r = lasSvar({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: '{"kommentar":"Mätvärdet 42 g visas.","konfidens":0.95}',
+                thoughtSignature: "EpgPCpUPARFNMg…",
+              },
+            ],
+          },
+          finishReason: "STOP",
+        },
+      ],
+    });
+    expect(r).toEqual({ kommentar: "Mätvärdet 42 g visas.", konfidens: 0.95 });
+  });
+
+  it("en äkta tankedel (thought:true) läses INTE som svar", () => {
+    // Utan den här filtreringen blev kommentaren "Here is the JSON requested:"
+    // när svaret klipptes av tokentaket.
+    const r = lasSvar({
+      candidates: [
+        {
+          content: {
+            parts: [
+              { text: "Here is the JSON requested:", thought: true, thoughtSignature: "abc" },
+              { text: '{"kommentar":"Repor på friktionsytan."}', thoughtSignature: "def" },
+            ],
+          },
+        },
+      ],
+    });
+    expect(r?.kommentar).toBe("Repor på friktionsytan.");
+  });
+
+  it("tokenbudgeten lämnar plats för modellens tänkande", () => {
+    // Tankarna räknas mot maxOutputTokens. En snäv budget klipper svaret
+    // (finishReason MAX_TOKENS) och ger en tom kommentar fast anropet
+    // returnerade 200.
+    expect(byggBegaran({ mediatyp: "image/png", data: "A", prompt: "p" }).generationConfig.maxOutputTokens)
+      .toBeGreaterThanOrEqual(1024);
+  });
+
+  it("skickar ingen thinkingConfig — modellen avvisar en nollbudget med 400", () => {
+    expect(
+      (byggBegaran({ mediatyp: "image/png", data: "A", prompt: "p" }).generationConfig as Record<string, unknown>)
+        .thinkingConfig,
+    ).toBeUndefined();
+  });
+});
+
 describe("analyseraBild kastar aldrig", () => {
   it("returnerar kommentaren med modellnamnet", async () => {
     const r = await analyseraBild("nyckel", { bild: PNG, prompt: "p" }, (async () =>

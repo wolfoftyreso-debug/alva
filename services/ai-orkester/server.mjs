@@ -232,7 +232,7 @@ Gissa inte: välj "generisk" om beskrivningen inte tydligt hör till en specifik
   bildanalys: {
     leverantor: "gemini",
     modell: GEMINI_MODELL,
-    maxTokens: 256,
+    maxTokens: 1024,
     bild: true,
   },
   dokumenttolkning: {

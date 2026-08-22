@@ -34,10 +34,15 @@ const STANDARD_BAS = "https://generativelanguage.googleapis.com/v1beta/models";
 const bas = () => (process.env.GEMINI_BAS || STANDARD_BAS).replace(/\/$/, "");
 
 /** Standardmodell: snabb, ser bra, billig nog för en kommentar per bild. */
-export const STANDARDMODELL = "gemini-2.5-flash";
+export const STANDARDMODELL = "gemini-3.6-flash";
 
 /** Kommentaren hålls kort med flit — en rad under en bild, inte en uppsats. */
 export const MAX_KOMMENTAR = 320;
+
+// Modellen tänker före svaret och tankarna räknas mot maxOutputTokens. En
+// snäv budget klipper svaret (finishReason MAX_TOKENS): anropet ser lyckat
+// ut och kommentaren blir tom. Utrymmet är därför tilltaget trots att
+// svaret är två meningar.
 
 export const BILDANALYS_REGLER = `Du kommenterar ett foto som en fordonstekniker tagit som underlag i en felsökning.
 
@@ -75,7 +80,7 @@ export function delaDataUrl(dataUrl) {
 }
 
 /** Bygger anropets kropp. Bilden först, frågan efter — som i ett samtal. */
-export function byggBegaran({ mediatyp, data, prompt, maxTokens = 256 }) {
+export function byggBegaran({ mediatyp, data, prompt, maxTokens = 1024 }) {
   return {
     system_instruction: { parts: [{ text: BILDANALYS_REGLER }] },
     contents: [
@@ -100,7 +105,12 @@ export function byggBegaran({ mediatyp, data, prompt, maxTokens = 256 }) {
  * som är underlaget.
  */
 export function lasSvar(json) {
-  const text = json?.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("").trim();
+  // Bara `thought: true` markerar en TANKEDEL. `thoughtSignature` sitter på
+  // SVARSDELEN också — den är en kontinuitetssignatur, inte en markör för
+  // resonemang. Att filtrera på den kastade bort själva svaret och gav en
+  // tom kommentar fast anropet lyckats.
+  const delar = (json?.candidates?.[0]?.content?.parts ?? []).filter((p) => p?.thought !== true);
+  const text = delar.map((p) => p?.text ?? "").join("").trim();
   if (!text) return null;
   let tolkat;
   try {
