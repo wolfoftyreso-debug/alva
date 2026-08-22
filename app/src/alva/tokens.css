@@ -1,0 +1,119 @@
+/* ALVA · Designtokens — ALVA-SPEC-002.
+ *
+ * Enda källan till värden. Varje skärm refererar hit; ingen skärm inför
+ * ett eget värde. Schemat och motiven står i docs/ALVA-DESIGNSCHEMA.md.
+ *
+ * Räta hörn, inga skuggor, 8-pixelrutnät. Djup skapas med linje och yta.
+ */
+
+:root {
+  /* ---- Färg · grund ------------------------------------------------ */
+  --alva-grafit: #1b1e22;
+  --alva-stal: #4d5662;
+  --alva-ljusstal: #d7dce2;
+  --alva-yta: #ffffff;
+  --alva-botten: #f6f7f8;
+  --alva-bla: #005ca9;
+
+  /* ---- Färg · härledda steg ---------------------------------------- */
+  --alva-ljusstal-svag: #e8ecf0;   /* avdelare inuti ett kort */
+  --alva-botten-sank: #eef1f3;     /* tabellhuvud, kodruta */
+  --alva-bla-yta: #e6eff7;         /* vald rad — bakgrund, aldrig text */
+  --alva-bla-mork: #004a87;        /* tryckt primärknapp */
+  --alva-stal-svag: #79828e;       /* hjälptext — aldrig brödtext */
+
+  /* ---- Färg · semantik (bärs alltid av ord också) ------------------- */
+  --alva-varning: #8a5a00;
+  --alva-varning-yta: #f6efe0;
+  --alva-stopp: #8b1a1a;
+  --alva-stopp-yta: #f7e8e8;
+  --alva-klar: #1e7a4d;
+  --alva-klar-yta: #e5f1ea;
+
+  /* ---- Rum · 8 px ---------------------------------------------------
+   * --alva-rum-halv finns ENDAST för optisk justering inuti en komponent
+   * och får aldrig sätta avstånd mellan komponenter. */
+  --alva-rum-halv: 4px;
+  --alva-rum-1: 8px;
+  --alva-rum-2: 16px;
+  --alva-rum-3: 24px;
+  --alva-rum-4: 32px;
+  --alva-rum-5: 40px;
+  --alva-rum-6: 48px;
+  --alva-rum-7: 64px;
+  --alva-rum-8: 80px;
+
+  /* ---- Linje och form ---------------------------------------------- */
+  --alva-linje: 1px solid var(--alva-ljusstal);
+  --alva-linje-stark: 1px solid var(--alva-stal);
+  --alva-linje-markerad: 2px solid var(--alva-bla);
+  --alva-radie: 0;
+
+  /* ---- Tryckyta · målgruppen bär handskar --------------------------- */
+  --alva-tryck-min: 48px;
+  --alva-tryck-rymlig: 56px;
+
+  /* ---- Fokus · aldrig utan ersättning ------------------------------- */
+  --alva-fokus: 2px solid var(--alva-bla);
+  --alva-fokus-avstand: 2px;
+
+  /* ---- Typografi ---------------------------------------------------- */
+  --alva-snitt: "DIN 2014", "FF DIN", "IBM Plex Sans", Inter, "Helvetica Neue", system-ui, sans-serif;
+  --alva-snitt-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --alva-grad-utlasning: 10px;   --alva-radavst-utlasning: 14px;
+  --alva-grad-etikett: 11px;     --alva-radavst-etikett: 16px;
+  --alva-grad-data: 12px;        --alva-radavst-data: 18px;
+  --alva-grad-brod: 13px;        --alva-radavst-brod: 20px;
+  --alva-grad-brod-stor: 15px;   --alva-radavst-brod-stor: 24px;
+  --alva-grad-rubrik-3: 16px;    --alva-radavst-rubrik-3: 22px;
+  --alva-grad-rubrik-2: 22px;    --alva-radavst-rubrik-2: 28px;
+  --alva-grad-rubrik-1: 32px;    --alva-radavst-rubrik-1: 38px;
+  --alva-grad-siffra: 40px;      --alva-radavst-siffra: 44px;
+
+  --alva-sparr-etikett: 0.08em;
+  --alva-sparr-utlasning: 0.10em;
+  --alva-sparr-rubrik: 0.02em;
+
+  /* ---- Layout ------------------------------------------------------- */
+  --alva-bredd-innehall: 1040px;
+  --alva-bredd-las: 66ch;
+  --alva-bredd-minsta: 390px;
+
+  /* ---- Rörelse · endast kvittens och inträde (se schemat §7) -------- */
+  --alva-rorelse-kvittens: 120ms;
+  --alva-rorelse-intrade: 160ms;
+  --alva-rorelse-kurva: linear;
+}
+
+/* Siffror står i kolumn på hela ytan: beteckningar jämförs oftare än de
+ * läses. */
+.alva-yta {
+  font-family: var(--alva-snitt);
+  font-variant-numeric: tabular-nums;
+  color: var(--alva-grafit);
+  background: var(--alva-botten);
+}
+
+/* Fokus är aldrig förhandlingsbart. */
+.alva-yta :focus-visible {
+  outline: var(--alva-fokus);
+  outline-offset: var(--alva-fokus-avstand);
+}
+
+/* Långa värden — hash, försegling, beteckning — bryts hellre än att
+ * tvinga fram sidledsscroll. */
+.alva-varde-langt {
+  font-family: var(--alva-snitt-mono);
+  word-break: break-all;
+}
+
+/* Ett värde som rör sig är svårare att läsa än ett som står stilla. */
+@media (prefers-reduced-motion: reduce) {
+  .alva-yta *,
+  .alva-yta *::before,
+  .alva-yta *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

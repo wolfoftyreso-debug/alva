@@ -1,0 +1,437 @@
+<title>ALVA Designschema</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+ --grafit:#1b1e22; --stal:#4d5662; --ljusstal:#d7dce2; --yta:#fff; --botten:#f6f7f8;
+ --ac:#005ca9; --bla-yta:#e6eff7; --bla-mork:#004a87; --stal-svag:#79828e;
+ --ljusstal-svag:#e8ecf0; --botten-sank:#eef1f3;
+ --wr:#8a5a00; --wr-yta:#f6efe0; --st:#8b1a1a; --st-yta:#f7e8e8; --kl:#1e7a4d; --kl-yta:#e5f1ea;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --grafit:#e7eaed; --stal:#a7b0ba; --ljusstal:#2c3138; --yta:#1b1e22; --botten:#111316;
+ --ac:#5aa0e0; --bla-yta:#16283a; --bla-mork:#7ab6ee; --stal-svag:#79828e;
+ --ljusstal-svag:#23272d; --botten-sank:#22262b;
+ --wr:#d6a24a; --wr-yta:#2c2412; --st:#e08a8a; --st-yta:#2e1717; --kl:#5fbf8c; --kl-yta:#122a1f;
+}}
+:root[data-theme="dark"]{
+ --grafit:#e7eaed; --stal:#a7b0ba; --ljusstal:#2c3138; --yta:#1b1e22; --botten:#111316;
+ --ac:#5aa0e0; --bla-yta:#16283a; --bla-mork:#7ab6ee; --stal-svag:#79828e;
+ --ljusstal-svag:#23272d; --botten-sank:#22262b;
+ --wr:#d6a24a; --wr-yta:#2c2412; --st:#e08a8a; --st-yta:#2e1717; --kl:#5fbf8c; --kl-yta:#122a1f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--botten);color:var(--grafit);
+ font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:13px;line-height:20px;
+ font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+header{border-bottom:1px solid var(--ljusstal);background:var(--yta)}
+.mast{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding:32px 0 24px;flex-wrap:wrap}
+.mark{font-size:22px;font-weight:700;letter-spacing:.18em}
+.spec{font-size:10px;letter-spacing:.10em;text-transform:uppercase;color:var(--stal-svag);margin-top:8px}
+h1{font-size:32px;line-height:38px;letter-spacing:.02em;text-transform:uppercase;margin:0;font-weight:700}
+.lede{max-width:66ch;color:var(--stal);font-size:15px;line-height:24px;margin:8px 0 0}
+.tbtn{min-height:48px;border:1px solid var(--ljusstal);background:var(--yta);color:var(--stal);
+ font:inherit;font-size:12px;padding:0 16px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase}
+.tbtn:hover{border-color:var(--stal);color:var(--grafit)}
+section{padding:48px 0;border-bottom:1px solid var(--ljusstal)}
+.et{font-size:11px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--stal);margin:0 0 8px}
+h2{font-size:22px;line-height:28px;letter-spacing:.02em;text-transform:uppercase;margin:0 0 8px;font-weight:600}
+h3{font-size:16px;line-height:22px;letter-spacing:.02em;text-transform:uppercase;margin:32px 0 16px;font-weight:600}
+p{max-width:66ch;margin:0 0 16px;color:var(--stal)}
+p.ink{color:var(--grafit)}
+.card{background:var(--yta);border:1px solid var(--ljusstal);padding:24px}
+.g{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+/* palett */
+.sw{display:flex;gap:16px;align-items:center;padding:8px 0;border-bottom:1px solid var(--ljusstal-svag)}
+.sw:last-child{border-bottom:none}
+.chip{width:48px;height:48px;border:1px solid var(--ljusstal);flex:none}
+.sw code{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--grafit)}
+.sw .hex{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--stal-svag)}
+.sw .roll{font-size:12px;color:var(--stal);margin-left:auto;text-align:right}
+/* skala */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--stal);
+ font-weight:600;padding:8px;background:var(--botten-sank);border-bottom:1px solid var(--ljusstal)}
+td{padding:8px;border-bottom:1px solid var(--ljusstal-svag);vertical-align:baseline}
+td.n{text-align:right;font-family:"IBM Plex Mono",monospace}
+tr:last-child td{border-bottom:none}
+.specimen{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* komponenter */
+.knapp{min-height:48px;padding:0 24px;font:inherit;font-size:12px;font-weight:600;letter-spacing:.08em;
+ text-transform:uppercase;cursor:pointer;border:0;transition:background 120ms linear,border-color 120ms linear}
+.k-pri{background:var(--ac);color:#fff}
+.k-pri:hover{background:var(--bla-mork)}
+.k-sek{background:var(--yta);color:var(--grafit);border:1px solid var(--stal)}
+.k-sek:hover{background:var(--botten-sank)}
+.k-far{background:var(--yta);color:var(--st);border:1px solid var(--st)}
+.k-sp{background:var(--yta);color:var(--stal-svag);border:1px solid var(--ljusstal);cursor:not-allowed}
+.marke{display:inline-flex;align-items:center;gap:8px;border:1px solid currentColor;padding:2px 8px;
+ font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.m-pag{color:var(--ac)}.m-vant{color:var(--stal)}.m-klar{color:var(--kl)}.m-sp{color:var(--st)}
+.matv .et2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--stal)}
+.matv .v{font-size:40px;line-height:44px;font-weight:500;letter-spacing:-.01em;color:var(--wr)}
+.matv .v small{font-size:15px;font-weight:400;margin-left:4px}
+.matv .gr{font-size:12px;color:var(--stal)}
+.matv{border-left:2px solid var(--wr);padding-left:16px}
+.matv.ok{border-left-color:var(--kl)} .matv.ok .v{color:var(--kl)}
+/* tillstånd */
+.tl{display:flex;gap:16px;align-items:center;padding:8px 0;border-bottom:1px solid var(--ljusstal-svag);font-size:12px}
+.tl:last-child{border-bottom:none}
+.tl b{min-width:88px;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--stal)}
+.box{width:56px;height:32px;border:1px solid var(--ljusstal);flex:none}
+.box.hov{border-color:var(--stal)} .box.fok{outline:2px solid var(--ac);outline-offset:2px}
+.box.try{background:var(--botten-sank);border-color:var(--stal)}
+.box.val{border:2px solid var(--ac);background:var(--bla-yta)}
+.box.spa{background:var(--yta);border-style:dashed}
+/* skisser */
+.skiss{background:var(--yta);border:1px solid var(--ljusstal);padding:24px;display:flex;flex-direction:column;gap:16px}
+.skiss svg{width:100%;height:auto;color:var(--grafit)}
+.skiss .rub{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--stal);font-weight:600}
+.skiss p{margin:0;font-size:12px;line-height:18px}
+/* check */
+ul.check{list-style:none;margin:0;padding:0;columns:2;column-gap:32px}
+@media(max-width:640px){ul.check{columns:1}}
+ul.check li{padding:8px 0;font-size:12px;color:var(--grafit);break-inside:avoid;
+ border-bottom:1px solid var(--ljusstal-svag)}
+ul.check li::before{content:"□";margin-right:8px;color:var(--stal)}
+.atg h4{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ac);margin:0 0 8px;font-weight:600}
+.atg dl{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:12px}
+@media(max-width:640px){.atg dl{grid-template-columns:1fr;gap:0}}
+.atg dt{color:var(--stal);padding:8px 0;border-top:1px solid var(--ljusstal-svag)}
+.atg dd{margin:0;color:var(--grafit);padding:8px 0;border-top:1px solid var(--ljusstal-svag)}
+@media(max-width:640px){.atg dd{border-top:none;padding-top:0;padding-bottom:16px}}
+.regel{background:var(--wr-yta);border-left:2px solid var(--wr);padding:16px 24px;margin:16px 0}
+.regel .et{color:var(--wr)}
+.regel p{color:var(--grafit);margin:0}
+footer{padding:48px 0 80px;color:var(--stal-svag);font-size:12px;text-align:center}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header><div class="wrap">
+ <div class="mast">
+  <div>
+   <div class="mark">ALVA</div>
+   <div class="spec">ALVA-SPEC-002 · Designschema 2.0</div>
+  </div>
+  <button class="tbtn" id="tema" type="button">Tema</button>
+ </div>
+ <div style="padding-bottom:32px">
+  <h1>Designschema</h1>
+  <p class="lede">Utökar ALVA-SPEC-001 och ersätter den inte. Identiteten står fast: industriverktyg i tysk verkstadstradition, nästan monokromt, räta hörn, 8-pixelrutnät. Det som tillkommer är tokens, tillstånd, tryckytor, illustration och en kontrollerad öppning för kvittens.</p>
+ </div>
+</div></header>
+
+<div class="wrap">
+
+<section>
+ <p class="et">01 · Utgångspunkt</p>
+ <h2>Vad “mer levande” får betyda</h2>
+ <p>Ett kalibrerat instrument är inte livlöst — det är vaket. Skillnaden mot en konsumentapp är var livet sitter: i hierarki, täthet, materialitet och precision. Aldrig i utsmyckning.</p>
+ <div class="g g2" style="margin-top:24px">
+  <div class="card"><p class="et" style="color:var(--kl)">Tillåtet</p>
+   <p class="ink" style="margin:0">Hierarki som gör att ögat hittar rätt direkt. Medveten rytm i luften. Hårfina linjer och tydliga ytor i stället för skuggor. Exakt linjering och tabulära siffror. Omedelbar återkoppling på ett tryck.</p></div>
+  <div class="card"><p class="et" style="color:var(--st)">Otillåtet</p>
+   <p class="ink" style="margin:0">Färgglädje, gradienter, rundade hörn. Dekorativ animation. Illustration som stämning. Ikonbibliotek. Allt som byter identitet eller lägger brus över ett värde som ska läsas.</p></div>
+ </div>
+ <div class="regel"><p class="et">Regeln</p><p>Liv genom precision, aldrig genom utsmyckning.</p></div>
+</section>
+
+<section>
+ <p class="et">02 · Tokens</p>
+ <h2>Paletten</h2>
+ <p>Enda källan till värden. De härledda stegen är uträknade ur grundfärgerna — inte nya kulörer. Semantiken bärs alltid av ord också, aldrig av färg ensam.</p>
+ <h3>Grund</h3><div class="card">
+  <div class="sw"><span class="chip" style="background:#1B1E22"></span><code>--grafit</code><span class="hex">#1B1E22</span><span class="roll">Brödtext, rubriker</span></div>
+  <div class="sw"><span class="chip" style="background:#4D5662"></span><code>--stal</code><span class="hex">#4D5662</span><span class="roll">Sekundärtext, etiketter</span></div>
+  <div class="sw"><span class="chip" style="background:#D7DCE2"></span><code>--ljusstal</code><span class="hex">#D7DCE2</span><span class="roll">Linjer och ramar</span></div>
+  <div class="sw"><span class="chip" style="background:#FFFFFF"></span><code>--yta</code><span class="hex">#FFFFFF</span><span class="roll">Kort, fält</span></div>
+  <div class="sw"><span class="chip" style="background:#F6F7F8"></span><code>--botten</code><span class="hex">#F6F7F8</span><span class="roll">Sidbakgrund</span></div>
+  <div class="sw"><span class="chip" style="background:#005CA9"></span><code>--bla</code><span class="hex">#005CA9</span><span class="roll">Aktivt, verifierat</span></div></div><h3>Härledda</h3><div class="card">
+  <div class="sw"><span class="chip" style="background:#E8ECF0"></span><code>--ljusstal-svag</code><span class="hex">#E8ECF0</span><span class="roll">Avdelare i kort</span></div>
+  <div class="sw"><span class="chip" style="background:#EEF1F3"></span><code>--botten-sank</code><span class="hex">#EEF1F3</span><span class="roll">Tabellhuvud, kodruta</span></div>
+  <div class="sw"><span class="chip" style="background:#E6EFF7"></span><code>--bla-yta</code><span class="hex">#E6EFF7</span><span class="roll">Vald rad</span></div>
+  <div class="sw"><span class="chip" style="background:#004A87"></span><code>--bla-mork</code><span class="hex">#004A87</span><span class="roll">Tryckt primär</span></div>
+  <div class="sw"><span class="chip" style="background:#79828E"></span><code>--stal-svag</code><span class="hex">#79828E</span><span class="roll">Hjälptext</span></div></div><h3>Semantik — bärs alltid av ord</h3><div class="card">
+  <div class="sw"><span class="chip" style="background:#8A5A00"></span><code>--varning</code><span class="hex">#8A5A00</span><span class="roll">Kräver åtgärd</span></div>
+  <div class="sw"><span class="chip" style="background:#8B1A1A"></span><code>--stopp</code><span class="hex">#8B1A1A</span><span class="roll">Spärrat</span></div>
+  <div class="sw"><span class="chip" style="background:#1E7A4D"></span><code>--klar</code><span class="hex">#1E7A4D</span><span class="roll">Verifierat, förseglat</span></div></div>
+</section>
+
+<section>
+ <p class="et">03 · Typografi</p>
+ <h2>Skalan</h2>
+ <p>Snittkedjan är oförändrad: DIN 2014 → FF DIN → IBM Plex Sans → Inter → Helvetica Neue → system-ui. Aldrig antikva. Graderna fanns uppräknade men utan roller, radavstånd eller vikt — här är de som en skala.</p>
+ <div class="card" style="padding:0;overflow-x:auto">
+ <table><thead><tr><th>Roll</th><th class="n">px</th><th class="n">Rad</th><th class="n">Vikt</th><th class="n">Spärr</th><th>Bruk</th><th style="width:34%">Prov</th></tr></thead><tbody>
+ <tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">utlasning</code></td>
+  <td class="n">10</td><td class="n">14</td><td class="n">600</td><td class="n">.10em</td>
+  <td style="color:var(--stal)">Sidhuvudets utläsning</td>
+  <td class="specimen" style="font-size:10px;line-height:14px;font-weight:600;letter-spacing:.10em;text-transform:uppercase">Vibration 42 g</td></tr><tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">etikett</code></td>
+  <td class="n">11</td><td class="n">16</td><td class="n">600</td><td class="n">.08em</td>
+  <td style="color:var(--stal)">Sektionsetikett, status</td>
+  <td class="specimen" style="font-size:11px;line-height:16px;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Vibration 42 g</td></tr><tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">data</code></td>
+  <td class="n">12</td><td class="n">18</td><td class="n">400</td><td class="n">0</td>
+  <td style="color:var(--stal)">Tabell, navigation</td>
+  <td class="specimen" style="font-size:12px;line-height:18px;font-weight:400;letter-spacing:0;">Vibration 42 g</td></tr><tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">brod</code></td>
+  <td class="n">13</td><td class="n">20</td><td class="n">400</td><td class="n">0</td>
+  <td style="color:var(--stal)">Brödtext i kort</td>
+  <td class="specimen" style="font-size:13px;line-height:20px;font-weight:400;letter-spacing:0;">Vibration 42 g</td></tr><tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">brod-stor</code></td>
+  <td class="n">15</td><td class="n">24</td><td class="n">400</td><td class="n">0</td>
+  <td style="color:var(--stal)">Ingress, symptom</td>
+  <td class="specimen" style="font-size:15px;line-height:24px;font-weight:400;letter-spacing:0;">Vibration 42 g</td></tr><tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">rubrik-3</code></td>
+  <td class="n">16</td><td class="n">22</td><td class="n">600</td><td class="n">.02em</td>
+  <td style="color:var(--stal)">Rubriknivå 3</td>
+  <td class="specimen" style="font-size:16px;line-height:22px;font-weight:600;letter-spacing:.02em;">Vibration 42 g</td></tr><tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">rubrik-2</code></td>
+  <td class="n">22</td><td class="n">28</td><td class="n">600</td><td class="n">.02em</td>
+  <td style="color:var(--stal)">Rubriknivå 2</td>
+  <td class="specimen" style="font-size:22px;line-height:28px;font-weight:600;letter-spacing:.02em;">Vibration 42 g</td></tr><tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">rubrik-1</code></td>
+  <td class="n">32</td><td class="n">38</td><td class="n">700</td><td class="n">.02em</td>
+  <td style="color:var(--stal)">Rubriknivå 1</td>
+  <td class="specimen" style="font-size:32px;line-height:38px;font-weight:700;letter-spacing:.02em;">42</td></tr><tr>
+  <td><code style="font-family:'IBM Plex Mono',monospace">siffra</code></td>
+  <td class="n">40</td><td class="n">44</td><td class="n">500</td><td class="n">-.01em</td>
+  <td style="color:var(--stal)">Ett mätvärde som läses på avstånd</td>
+  <td class="specimen" style="font-size:40px;line-height:44px;font-weight:500;letter-spacing:-.01em;">42</td></tr>
+ </tbody></table></div>
+ <p style="margin-top:16px">Brödtext bryts vid 66 tecken. Löptext som går bredare läses inte — den skummas, och den här produktens texter är till för att läsas.</p>
+</section>
+
+<section>
+ <p class="et">04 · Komponenter</p>
+ <h2>Tillstånd</h2>
+ <p>Biblioteket var definierat; tillstånden var det inte. Utan dem uppfinner varje skärm sina egna. Sex tillstånd, undantagslöst.</p>
+ <div class="g g2">
+  <div class="card">
+   <p class="et">De sex</p>
+   <div class="tl"><b>vila</b><span class="box "></span><span style="color:var(--stal)">Grundform</span></div><div class="tl"><b>hovring</b><span class="box hov"></span><span style="color:var(--stal)">Ram → stål</span></div><div class="tl"><b>fokus</b><span class="box fok"></span><span style="color:var(--stal)">2px blå utanpå</span></div><div class="tl"><b>tryckt</b><span class="box try"></span><span style="color:var(--stal)">Primär: blå mörk</span></div><div class="tl"><b>vald</b><span class="box val"></span><span style="color:var(--stal)">Blå ram + blå yta</span></div><div class="tl"><b>spärrad</b><span class="box spa"></span><span style="color:var(--stal)">Stål svag, alltid med skäl</span></div>
+  </div>
+  <div class="card">
+   <p class="et">Knappar — en primär per vy</p>
+   <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+    <button class="knapp k-pri">Avsluta felsökning</button>
+    <button class="knapp k-sek">Avbryt</button>
+   </div>
+   <div style="display:flex;flex-wrap:wrap;gap:16px">
+    <button class="knapp k-far">Radera underlag</button>
+    <button class="knapp k-sp" disabled>Spärrad</button>
+   </div>
+   <p style="font-size:12px;margin:24px 0 0">Fara-varianten är sekundär i form med avsikt: en oåterkallelig knapp ska inte vara den lättaste att träffa. Ett spärrat läge utan skäl i klartext är ett fel, inte ett tillstånd.</p>
+  </div>
+ </div>
+ <h3>Statusmärke och mätvärde</h3>
+ <div class="g g2">
+  <div class="card">
+   <p class="et">Status — ord + ram, läsbart i svartvitt</p>
+   <div style="display:flex;flex-wrap:wrap;gap:8px">
+    <span class="marke m-pag">○ Pågående</span><span class="marke m-vant">□ Väntar</span>
+    <span class="marke m-klar">✓ Klar</span><span class="marke m-sp">✕ Spärrat</span>
+   </div>
+   <p style="font-size:12px;margin:24px 0 0">Aldrig enbart färg. Aldrig enbart symbol. En status som inte kan uttryckas med de fyra tecknen är inte färdigtänkt.</p>
+  </div>
+  <div class="card">
+   <p class="et">Mätvärde — ny komponent</p>
+   <div style="display:flex;gap:32px;flex-wrap:wrap">
+    <div class="matv"><div class="et2">Obalans höger fram</div><div class="v">42<small>g</small></div><div class="gr">gräns 5 g</div></div>
+    <div class="matv ok"><div class="et2">Lufttryck</div><div class="v">2,4<small>bar</small></div><div class="gr">inom gräns</div></div>
+   </div>
+   <p style="font-size:12px;margin:24px 0 0">Avvikelsen markeras med en linje, inte en färgad bakgrund: värdet ska förbli läsbart.</p>
+  </div>
+ </div>
+</section>
+
+<section>
+ <p class="et">05 · Illustration</p>
+ <h2>Åtta tekniska skisser</h2>
+ <p>Förbudet mot illustrationer fanns för att hålla ute dekorativa figurer — det syftet står fast. Men en verkstadsmanual i DIN-tradition har bilder: principskisser som förklarar det text inte kan. Förbudet ersätts av en snäv tillåtelse: teknisk skiss, ren vektor, fungerar i svartvitt, aldrig ensam informationsbärare.</p>
+ <div class="g g2" style="margin-top:24px">
+ <figure class="skiss" style="margin:0">
+   <svg viewBox="0 0 344 96" fill="none" stroke="currentColor" stroke-width="1.5">
+
+<rect x="8" y="24" width="64" height="48"/>
+<text x="40" y="54" font-size="18" font-weight="600" text-anchor="middle" stroke="none" fill="currentColor">A</text>
+<path d="M72 48 h20"/><path d="M86 44 l6 4 -6 4" fill="none"/>
+<rect x="92" y="24" width="64" height="48" stroke="var(--ac)" stroke-width="2"/>
+<text x="124" y="54" font-size="18" font-weight="600" text-anchor="middle" stroke="none" fill="var(--ac)">L</text>
+<path d="M156 48 h20"/><path d="M170 44 l6 4 -6 4" fill="none"/>
+<rect x="176" y="24" width="64" height="48"/>
+<text x="208" y="54" font-size="18" font-weight="600" text-anchor="middle" stroke="none" fill="currentColor">V</text>
+<path d="M240 48 h20"/><path d="M254 44 l6 4 -6 4" fill="none"/>
+<rect x="260" y="24" width="64" height="48"/>
+<text x="292" y="54" font-size="18" font-weight="600" text-anchor="middle" stroke="none" fill="currentColor">A</text>
+
+<text x="40" y="88" font-size="8" text-anchor="middle" stroke="none" fill="currentColor" opacity=".55">ANALYSIS</text>
+<text x="124" y="88" font-size="8" text-anchor="middle" stroke="none" fill="var(--ac)">LOCALIZATION</text>
+<text x="208" y="88" font-size="8" text-anchor="middle" stroke="none" fill="currentColor" opacity=".55">VERIFICATION</text>
+<text x="292" y="88" font-size="8" text-anchor="middle" stroke="none" fill="currentColor" opacity=".55">ACTION</text>
+</svg>
+   <figcaption><div class="rub">Faserna</div><p>A-L-V-A som fyra led i en kedja — varje fas låser upp nästa.</p></figcaption>
+ </figure><figure class="skiss" style="margin:0">
+   <svg viewBox="0 0 344 104" fill="none" stroke="currentColor" stroke-width="1.5">
+
+<rect x="16" y="16" width="88" height="44"/>
+<line x1="16" y1="42" x2="104" y2="42" stroke-width="1" opacity=".45"/>
+<text x="24" y="34" font-size="9" stroke="none" fill="currentColor">HÄNDELSE 1</text>
+<text x="24" y="54" font-size="8" font-family="monospace" stroke="none" fill="currentColor" opacity=".6">h0…0f4a</text>
+<path d="M104 38 h24"/><path d="M122 34 l6 4 -6 4"/>
+<path d="M60 60 v14"/><circle cx="60" cy="79" r="5" stroke-width="1.2"/>
+<text x="60" y="82" font-size="7" text-anchor="middle" stroke="none" fill="currentColor">#</text>
+<rect x="128" y="16" width="88" height="44"/>
+<line x1="128" y1="42" x2="216" y2="42" stroke-width="1" opacity=".45"/>
+<text x="136" y="34" font-size="9" stroke="none" fill="currentColor">HÄNDELSE 2</text>
+<text x="136" y="54" font-size="8" font-family="monospace" stroke="none" fill="currentColor" opacity=".6">h1…1f4a</text>
+<path d="M216 38 h24"/><path d="M234 34 l6 4 -6 4"/>
+<path d="M172 60 v14"/><circle cx="172" cy="79" r="5" stroke-width="1.2"/>
+<text x="172" y="82" font-size="7" text-anchor="middle" stroke="none" fill="currentColor">#</text>
+<rect x="240" y="16" width="88" height="44"/>
+<line x1="240" y1="42" x2="328" y2="42" stroke-width="1" opacity=".45"/>
+<text x="248" y="34" font-size="9" stroke="none" fill="currentColor">HÄNDELSE 3</text>
+<text x="248" y="54" font-size="8" font-family="monospace" stroke="none" fill="currentColor" opacity=".6">h2…2f4a</text>
+
+<path d="M284 60 v14"/><circle cx="284" cy="79" r="5" stroke-width="1.2"/>
+<text x="284" y="82" font-size="7" text-anchor="middle" stroke="none" fill="currentColor">#</text>
+<text x="172" y="99" font-size="8" text-anchor="middle" stroke="none" fill="currentColor" opacity=".55">SHA-256 PER LÄNK</text>
+</svg>
+   <figcaption><div class="rub">Beviskedjan</div><p>Varje händelse bär en hash av sitt innehåll OCH av föregående länk. Ändras en rad bryts varje länk efter den.</p></figcaption>
+ </figure><figure class="skiss" style="margin:0">
+   <svg viewBox="0 0 344 112" fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="16" y="30" width="120" height="48"/>
+<text x="26" y="50" font-size="9" stroke="none" fill="currentColor">KEDJEROT</text>
+<text x="26" y="66" font-size="8" font-family="monospace" stroke="none" fill="currentColor" opacity=".6">2d70…428d</text>
+<path d="M136 54 h34"/><path d="M164 50 l6 4 -6 4"/>
+<rect x="176" y="22" width="152" height="64" stroke="var(--ac)" stroke-width="2"/>
+<rect x="196" y="44" width="28" height="22" stroke="var(--ac)"/>
+<path d="M203 44 v-7 a7 7 0 0 1 14 0 v7" stroke="var(--ac)"/>
+<text x="236" y="52" font-size="9" stroke="none" fill="var(--ac)">HMAC-FÖRSEGLING</text>
+<text x="236" y="66" font-size="8" stroke="none" fill="currentColor" opacity=".6">nyckel utanför databasen</text>
+<text x="252" y="102" font-size="8" text-anchor="middle" stroke="none" fill="currentColor" opacity=".55">OÅTERKALLELIG VID AVSLUT</text>
+</svg>
+   <figcaption><div class="rub">Förseglingen</div><p>Vid avslut förseglas kedjans rot med en nyckel utanför databasen. Den som räknar om kedjan kan inte försegla om den.</p></figcaption>
+ </figure><figure class="skiss" style="margin:0">
+   <svg viewBox="0 0 344 112" fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="16" y="34" width="112" height="44"/>
+<text x="26" y="54" font-size="9" stroke="none" fill="currentColor">FÖRSEGLAD ROT</text>
+<text x="26" y="69" font-size="8" font-family="monospace" stroke="none" fill="currentColor" opacity=".6">a317…33ab</text>
+<path d="M128 56 h40" stroke-dasharray="5 4"/><path d="M162 52 l6 4 -6 4"/>
+<circle cx="228" cy="56" r="30" stroke="var(--ac)" stroke-width="2"/>
+<path d="M228 38 v18 l13 8" stroke="var(--ac)" stroke-width="2"/>
+<text x="228" y="102" font-size="8" text-anchor="middle" stroke="none" fill="var(--ac)">OBEROENDE TSA</text>
+<path d="M272 56 h40" stroke-dasharray="5 4"/><path d="M306 52 l6 4 -6 4"/>
+<text x="328" y="52" font-size="9" text-anchor="end" stroke="none" fill="currentColor">RFC</text>
+<text x="328" y="64" font-size="9" text-anchor="end" stroke="none" fill="currentColor">3161</text>
+</svg>
+   <figcaption><div class="rub">Tidsförankringen</div><p>En oberoende tidsstämplingstjänst intygar tiden. Serverns egen klocka är annars enda vittnet — och den tillhör en part i tvisten.</p></figcaption>
+ </figure><figure class="skiss" style="margin:0">
+   <svg viewBox="0 0 344 112" fill="none" stroke="currentColor" stroke-width="1.5">
+<line x1="24" y1="72" x2="320" y2="72"/>
+<line x1="24" y1="72" x2="24" y2="60" stroke-width="1"/><line x1="61" y1="72" x2="61" y2="66" stroke-width="1"/><line x1="98" y1="72" x2="98" y2="60" stroke-width="1"/><line x1="135" y1="72" x2="135" y2="66" stroke-width="1"/><line x1="172" y1="72" x2="172" y2="60" stroke-width="1"/><line x1="209" y1="72" x2="209" y2="66" stroke-width="1"/><line x1="246" y1="72" x2="246" y2="60" stroke-width="1"/><line x1="283" y1="72" x2="283" y2="66" stroke-width="1"/><line x1="320" y1="72" x2="320" y2="60" stroke-width="1"/>
+<line x1="135" y1="40" x2="135" y2="80" stroke-width="2" stroke-dasharray="4 3"/>
+<text x="135" y="94" font-size="8" text-anchor="middle" stroke="none" fill="currentColor" opacity=".6">GRÄNS 5 g</text>
+<line x1="264" y1="34" x2="264" y2="80" stroke="var(--wr)" stroke-width="3"/>
+<text x="264" y="26" font-size="15" font-weight="600" text-anchor="middle" stroke="none" fill="var(--wr)">42 g</text>
+<text x="264" y="94" font-size="8" text-anchor="middle" stroke="none" fill="var(--wr)">UTANFÖR GRÄNS</text>
+</svg>
+   <figcaption><div class="rub">Mätvärdet</div><p>Ett värde läses mot sin gräns. Avvikelsen markeras med en linje — värdet självt förblir läsbart.</p></figcaption>
+ </figure><figure class="skiss" style="margin:0">
+   <svg viewBox="0 0 344 112" fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="16" y="16" width="150" height="24"/>
+<text x="26" y="32" font-size="9" stroke="none" fill="currentColor" opacity="0.6">KONTROLL 1 · U.a.</text><rect x="16" y="48" width="150" height="24" stroke="var(--wr)" stroke-width="2"/>
+<text x="26" y="64" font-size="9" stroke="none" fill="var(--wr)" opacity="1">KONTROLL 2 · FYND</text><rect x="16" y="80" width="150" height="24"/>
+<text x="26" y="96" font-size="9" stroke="none" fill="currentColor" opacity="0.6">KONTROLL 3 · U.a.</text>
+<path d="M166 60 h30" stroke="var(--wr)"/><path d="M190 56 l6 4 -6 4" stroke="var(--wr)"/>
+<rect x="204" y="26" width="124" height="68" stroke="var(--wr)" stroke-width="2"/>
+<circle cx="252" cy="56" r="17"/><path d="M264 68 l14 14" stroke-width="2"/>
+<text x="266" y="90" font-size="8" text-anchor="middle" stroke="none" fill="var(--wr)">BUNDEN BEVISBILD</text>
+</svg>
+   <figcaption><div class="rub">Anmärkningen</div><p>Den kontroll som fann något bär åtgärden och fakturan — och kräver därför en bild bunden till just den kontrollen.</p></figcaption>
+ </figure><figure class="skiss" style="margin:0">
+   <svg viewBox="0 0 344 112" fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="16" y="20" width="120" height="76"/>
+<text x="26" y="38" font-size="9" stroke="none" fill="currentColor">ÄRENDET</text>
+<line x1="26" y1="52" x2="126" y2="52" stroke-width="1" opacity=".45"/><line x1="26" y1="64" x2="126" y2="64" stroke-width="1" opacity=".45"/><line x1="26" y1="76" x2="96" y2="76" stroke-width="2" stroke="var(--wr)"/><line x1="26" y1="88" x2="126" y2="88" stroke-width="1" opacity=".45"/>
+<text x="150" y="46" font-size="8" stroke="none" fill="var(--wr)">INTERNT</text>
+<path d="M150 56 h26" stroke="var(--wr)"/><path d="M164 51 l-6 5 6 5" stroke="var(--wr)"/>
+<path d="M136 78 h56" stroke-dasharray="5 4"/><path d="M186 74 l6 4 -6 4"/>
+<rect x="200" y="20" width="128" height="76" stroke="var(--ac)" stroke-width="2"/>
+<text x="210" y="38" font-size="9" stroke="none" fill="var(--ac)">MOTTAGAREN SER</text>
+<line x1="210" y1="54" x2="318" y2="54" stroke-width="1" opacity=".45"/><line x1="210" y1="68" x2="286" y2="68" stroke-width="1" opacity=".45"/><line x1="210" y1="82" x2="318" y2="82" stroke-width="1" opacity=".45"/>
+</svg>
+   <figcaption><div class="rub">Delningen</div><p>Mottagaren ser ärendet på sin nivå. Interna poster filtreras bort på servern — inte i vyn.</p></figcaption>
+ </figure><figure class="skiss" style="margin:0">
+   <svg viewBox="0 0 344 112" fill="none" stroke="currentColor" stroke-width="1.5">
+<rect x="16" y="20" width="132" height="76"/>
+<text x="26" y="38" font-size="9" stroke="none" fill="currentColor">LOGGEN — INTAKT</text>
+<line x1="26" y1="54" x2="138" y2="54" stroke-width="1" opacity=".45"/><line x1="26" y1="66" x2="138" y2="66" stroke-width="1" opacity=".45"/><line x1="26" y1="78" x2="138" y2="78" stroke-width="1" opacity=".45"/><line x1="26" y1="90" x2="138" y2="90" stroke-width="1" opacity=".45"/>
+<rect x="196" y="20" width="132" height="76" stroke-dasharray="5 4"/>
+<text x="206" y="38" font-size="9" stroke="none" fill="currentColor" opacity=".55">IDENTITETEN</text>
+<rect x="236" y="52" width="26" height="20" stroke-width="1.5"/>
+<path d="M242 52 v-6 a6 6 0 0 1 12 0 v6"/>
+<path d="M222 40 l56 48" stroke="var(--st)" stroke-width="2.5"/>
+<path d="M278 40 l-56 48" stroke="var(--st)" stroke-width="2.5"/>
+<text x="262" y="106" font-size="8" text-anchor="middle" stroke="none" fill="var(--st)">NYCKELN FÖRSTÖRD</text>
+<path d="M148 58 h44" stroke-dasharray="4 3" opacity=".5"/>
+</svg>
+   <figcaption><div class="rub">Raderingen</div><p>Krypto-shredding: nyckeln förstörs, protokollet står kvar. Ärendet visar fortfarande vad som mättes — bara inte vems bil.</p></figcaption>
+ </figure>
+ </div>
+</section>
+
+<section>
+ <p class="et">06 · Rörelse</p>
+ <h2>Kvittens, inget annat</h2>
+ <p>Förbudet mot rörelse hade rätt i sak: ett värde som rör sig är svårare att läsa än ett som står stilla. Den meningen behålls. Men förbudet gjorde också att systemet inte kunde kvittera — och en tekniker med handskar, i buller, på en repig skärm som inte får kvittens trycker igen, och dubbelregistrerar.</p>
+ <div class="g g2">
+  <div class="card"><p class="et" style="color:var(--kl)">Tillåtet</p>
+   <p class="ink" style="margin:0">Tillståndsbyte på en kontroll: ≤120 ms, enbart färg.<br>Att ett nytt element visas: ≤160 ms, enbart opacitet.<br>Kurvan är <code>linear</code> — en mjuk kurva antyder fysikalitet, och det här är ett instrument.</p></div>
+  <div class="card"><p class="et" style="color:var(--st)">Aldrig</p>
+   <p class="ink" style="margin:0">Ett värde eller en siffra som ändras. Fasrad, statusmärke, mätvärde. Snurror, pulser, skelett. Sidövergångar, parallax, scrollrörelse.</p></div>
+ </div>
+ <div class="regel"><p class="et">Undantagslöst</p><p><code>prefers-reduced-motion: reduce</code> stänger av allt. Utan undantag.</p></div>
+</section>
+
+<section>
+ <p class="et">07 · Tillämpning</p>
+ <h2>Åtgärder i flödena</h2>
+ <p>Genomgång av de fem flödena, med brist och åtgärd.</p>
+ <div class="card atg" style="margin-bottom:16px">
+  <h4>Publika webbplatsen</h4>
+  <dl><dt>Exempelflödet kan förväxlas med skarpt läge</dt><dd>→ Omslut med Demonstration</dd><dt>Fasnamnen oöversatta för ny besökare</dt><dd>→ Engelskt namn kvar, förklaring i brödtext under</dd><dt>Risk för två primärknappar i ansökan</dt><dd>→ Endast Skicka ansökan är primär</dd><dt>Fotens juridiklänkar för små</dt><dd>→ Full radhöjd som träffyta, 48 px</dd></dl></div><div class="card atg" style="margin-bottom:16px">
+  <h4>Inloggning och portalvakt</h4>
+  <dl><dt>Laddningsindikator under tokenkontroll</dt><dd>→ Procedurvy med ○ och □, ingen snurra</dd><dt>Fel markeras bara med färgad ram</dt><dd>→ Statusmärke med ord: SPÄRRAT, UTGÅNGEN</dd><dt>Två primärknappar</dt><dd>→ Återställ blir textlänk i stål</dd><dt>Fält för små för handskar</dt><dd>→ 48 px tryckyta</dd></dl></div><div class="card atg" style="margin-bottom:16px">
+  <h4>Teknikerflödet</h4>
+  <dl><dt>Grindens hinder är en löpande textlista</dt><dd>→ Ett statusmärke per hinder, kontrollen namngiven</dd><dt>Fasrad svårläst i solljus</dt><dd>→ Symbol alltid kopplad till fasnamnet</dd><dt>Ingen kvittens vid markerad kontroll</dt><dd>→ Tillståndskvittens ≤120 ms</dd><dt>Bevisbild kan inte granskas i detalj</dt><dd>→ Helskärm vid klick, 0 ms</dd><dt>Mätvärden saknar egen form</dt><dd>→ Komponenten Mätvärde</dd></dl></div><div class="card atg" style="margin-bottom:16px">
+  <h4>Kunddelning</h4>
+  <dl><dt>Hashkedjan tvingar sidledsscroll</dt><dd>→ break-all + staplad dt/dd</dd><dt>Godkänn/Avböj som blå och röd</dt><dd>→ Godkänn primär, Avböj sekundär, ingen röd knapp</dd><dt>Mottagaren förstår inte fasnamnen</dt><dd>→ Förklaring under namnet</dd></dl></div><div class="card atg" style="margin-bottom:16px">
+  <h4>Arbetsledarens portal</h4>
+  <dl><dt>Navigationen blandar språk</dt><dd>→ Strukturen engelsk, innehållet på arbetsspråket</dd><dt>Statistik riskerar färger utanför paletten</dt><dd>→ Stapel i stål, markerad i blå — inget mer</dd><dt>Flera primärknappar vid radåtgärder</dt><dd>→ Radåtgärder sekundära</dd></dl></div>
+</section>
+
+<section>
+ <p class="et">08 · Leverans</p>
+ <h2>Checklista före en skärm lämnas</h2>
+ <div class="card"><ul class="check"><li>Varje värde kommer ur en token</li><li>Allt rum på 8-pixelrutnätet</li><li>Exakt en primärknapp</li><li>Varje kontroll når 48 px</li><li>Fokus syns på allt fokuserbart</li><li>Ingen status bärs av färg ensam</li><li>Läsbar i svartvitt</li><li>Inget spärrat läge utan skäl</li><li>390 px utan sidledsscroll</li><li>Långa värden bryts</li><li>Ingen rörelse utöver §7</li><li>Demo märkt med Demonstration</li></ul></div>
+</section>
+
+</div>
+<footer><div class="wrap">Liv genom precision, aldrig genom utsmyckning.</div></footer>
+<script>
+const r=document.documentElement;
+try{const t=localStorage.getItem("alva.schema.tema");if(t)r.setAttribute("data-theme",t);}catch{}
+document.getElementById("tema").onclick=()=>{
+ const nu=r.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+ const ny=nu==="dark"?"light":"dark";r.setAttribute("data-theme",ny);
+ try{localStorage.setItem("alva.schema.tema",ny);}catch{}
+};
+</script>
