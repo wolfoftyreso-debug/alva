@@ -84,6 +84,7 @@ speglar den körande produkten och inte en tidigare variant.
 | Amazon Web Services (Aurora PostgreSQL) | Lagring av händelseloggen och användare | EU-region (välj EU vid drift) | Nej, när EU-region väljs |
 | Amazon Web Services (S3) | Lagring av bilagor — **valfritt**, standard är i databasen (`bilage_innehall`) | EU-region | Nej, när EU-region väljs |
 | Anthropic (Claude API) | AI-orkesterns tolkning: arbetsordertydning och diagnosresonemang | USA | **Ja** — se avsnitt 4 |
+| Google (Gemini API) | Bildanalys — **en kommentar under en bevisbild** (valfri, av/på med `GEMINI_API_KEY`; under utvärdering) | USA | **Ja** — se avsnitt 4 |
 
 Ingen betalningshanterare finns med. Fakturering sker utan kortuppgifter och
 utan extern tjänst; betalning registreras av en administratör när pengarna kommit
@@ -97,10 +98,11 @@ inte i produktionsbygget; dess edge-funktioner var det enda stället kortbetalni
 
 ## 4. Överföring till tredje land — bedömning (TIA)
 
-**En enda överföring till tredje land sker: AI-orkesterns anrop till Anthropic
-(Claude API) i USA.** Allt annat kan hållas inom EU genom regionvalet.
+**Överföringar till tredje land sker till AI-leverantörerna: Anthropic (Claude API)
+och — när bildanalysen är påslagen — Google (Gemini API), båda i USA.** Allt annat
+kan hållas inom EU genom regionvalet.
 
-Två behandlingar går till Anthropic:
+Behandlingarna:
 
 - **Arbetsordertydning.** Ett foto av en arbetsorder skickas för OCR och
   layoutförståelse. Bilden **kan innehålla samtliga kunduppgifter** — namn,
@@ -110,8 +112,14 @@ Två behandlingar går till Anthropic:
 - **Diagnosresonemang.** Verksamhetsdata (mätvärden, symptom, kontroller).
   Fältkatalogen för det som skickas är identifierande-medveten, men verkstaden
   ska instrueras att inte skriva personuppgifter i fritextfält som följer med.
+- **Bildanalys (Gemini, valfri).** Ett bevisfoto skickas för en kort kommentar.
+  Fotot kan visa en fordonsdetalj, men också — oavsiktligt — ett
+  registreringsnummer, en verkstadslokal eller en person i bakgrunden. Funktionen
+  är därför **av som standard** och slås på per drift med `GEMINI_API_KEY`. Den
+  är under utvärdering; ingen kommentar skrivs till den förseglade loggen, så
+  behandlingen lämnar inget spår i bevismaterialet.
 
-**Grund för överföringen.** Anthropics standardavtalsklausuler (SCC, modul 2/3)
+**Grund för överföringen.** Respektive leverantörs standardavtalsklausuler (SCC, modul 2/3)
 tecknas som del av biträdesavtalskedjan. En kompletterande bedömning
 (Transfer Impact Assessment) krävs enligt Schrems II:
 

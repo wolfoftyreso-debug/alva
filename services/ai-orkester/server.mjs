@@ -6,6 +6,10 @@
 //
 // Miljövariabler:
 //   ANTHROPIC_API_KEY    Claude-nyckel (plattformshemlighet, krävs)
+//   GEMINI_API_KEY       Gemini-nyckel för bildanalys (valfri). Utan den
+//                        svarar /api/ai på uppgiften "bildanalys" med 503 och
+//                        bilderna visas utan kommentar — felsökningen står
+//                        aldrig på en modell.
 //   JWT_SECRET           JWT-hemlighet för verifiering (krävs — fail closed).
 //                        SUPABASE_JWT_SECRET godtas som legacy-alias.
 //   PORT                 default 8080
@@ -14,6 +18,7 @@ import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
+import { STANDARDMODELL as GEMINI_MODELL, analyseraBild } from "./gemini.mjs";
 import { avsluta, logga, mätvärde, spårFrån, starta } from "./observation.mjs";
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -220,6 +225,16 @@ Gissa inte: välj "generisk" om beskrivningen inte tydligt hör till en specifik
     schema: INSTRUMENT_SCHEMA,
     bild: true,
   },
+  // Bildanalys (ALVA-SPEC-072): EN kommentar under en bevisbild. Går till
+  // Gemini, inte Claude — hela poängen med utvärderingen är att pröva en
+  // annan modells ögon på samma underlag. Kommentaren är ett andra par
+  // ögon, aldrig evidens: se gemini.mjs för kontraktet.
+  bildanalys: {
+    leverantor: "gemini",
+    modell: GEMINI_MODELL,
+    maxTokens: 256,
+    bild: true,
+  },
   dokumenttolkning: {
     modell: "claude-sonnet-5",
     effort: "low",
@@ -311,7 +326,10 @@ export function skapaServer() {
     // JWT_SECRET delas med plattformstjänsten. SUPABASE_JWT_SECRET godtas
     // som legacy-alias så en äldre secret-koppling inte slutar verifiera.
     const jwtHemlighet = process.env.JWT_SECRET ?? process.env.SUPABASE_JWT_SECRET;
-    if (!apiNyckel || !jwtHemlighet) {
+    // Autentiseringen krävs alltid. MODELLNYCKELN krävs per leverantör och
+    // prövas där anropet görs: bildanalysen går till Gemini och ska inte
+    // hänga på att en Claude-nyckel råkar vara satt.
+    if (!jwtHemlighet) {
       return svara(res, 503, { error: "AI-tjänsten är inte konfigurerad." });
     }
 
@@ -361,6 +379,35 @@ export function skapaServer() {
         { type: "image", source: { type: "base64", media_type: matchning[1], data: matchning[2] } },
         { type: "text", text: prompt },
       ];
+    }
+
+    // Gemini-vägen: en kommentar under en bevisbild. Egen leverantör, egen
+    // nyckel, eget felläge — en utebliven kommentar får aldrig stoppa
+    // felsökningen, så allt som går fel blir 503 och bilden står kvar utan
+    // kommentar (se gemini.mjs).
+    if (konfig.leverantor === "gemini") {
+      const geminiNyckel = process.env.GEMINI_API_KEY;
+      if (!geminiNyckel) {
+        return svara(res, 503, { error: "Bildanalysen är inte konfigurerad.", avstangd: true });
+      }
+      const utfall = await res.spann.mät(`modell_${uppgift}`, () =>
+        analyseraBild(geminiNyckel, { bild, prompt, modell: konfig.modell, maxTokens: konfig.maxTokens }),
+      );
+      if (!utfall) {
+        logga("varning", "bildanalysen uteblev", {
+          uppgift,
+          modell: konfig.modell,
+          spårId: res.spår.spårId,
+          konsekvens: "Bilden visas utan kommentar. Underlaget är oförändrat.",
+        });
+        return svara(res, 502, { error: "Bildanalysen kunde inte genomföras." });
+      }
+      mätvärde("ModellBildanalys", 1, "Count", { Uppgift: uppgift, Modell: konfig.modell });
+      return svara(res, 200, { modell: utfall.modell, svar: utfall });
+    }
+
+    if (!apiNyckel) {
+      return svara(res, 503, { error: "AI-tjänsten är inte konfigurerad." });
     }
 
     try {

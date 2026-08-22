@@ -77,7 +77,7 @@ import { Dialog, FelsokningSkal, NivaBadge, Panel, StorKnapp, TextFalt } from "@
 import { lasVideo, skalaNerFoto, tidDatum, tidKlockslag } from "@/felsokning/format";
 import { IkonCheck, IkonKamera, IkonKryss, IkonLank, IkonPunkt, IkonSok, IkonVarning } from "@/felsokning/ikoner";
 import { Ljudpanel } from "@/felsokning/Ljudpanel";
-import { Bild, Klipp } from "@/felsokning/Bilagevisning";
+import { Bild, Bildkommentar, Klipp } from "@/felsokning/Bilagevisning";
 import { bilageFalt } from "@/felsokning/bilagor";
 
 const FLIKAR = [
@@ -2571,7 +2571,12 @@ function LoggFlik({ arende }: { arende: Arende }) {
               <p className="text-[13px] text-[#1B1E22]">{handelseRubrik(post)}</p>
               <p className="text-[11px] text-[#4D5662]">{post.anvandare}</p>
               {post.handelse.typ === "foto" && (
-                <Bild bilaga={post.handelse} alt={post.handelse.beskrivning} className="mt-2 max-h-40 border border-[#D7DCE2]" />
+                <>
+                  <Bild bilaga={post.handelse} alt={post.handelse.beskrivning} className="mt-2 max-h-40 border border-[#D7DCE2]" />
+                  {/* ALVA-SPEC-072 · under utvärdering: ett andra par ögon
+                      på bilden. Uteblir kommentaren syns ingenting. */}
+                  <Bildkommentar bilaga={post.handelse} kontroll={post.handelse.beskrivning} />
+                </>
               )}
               {post.handelse.typ === "video" && (
                 <Klipp bilaga={post.handelse} className="mt-2 max-h-40 border border-[#D7DCE2]" />

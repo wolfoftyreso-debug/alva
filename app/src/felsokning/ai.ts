@@ -13,6 +13,7 @@
 // - sammanfattning   → Claude Sonnet 5  (överlämning: risker & osäkerheter)
 // - metodikval       → Claude Haiku 4.5 (klassificering av felbeskrivning)
 // - dokumenttolkning → Claude Sonnet 5  (vision: skannad arbetsorder → fält)
+// - bildanalys       → Gemini           (en kommentar under en bevisbild)
 
 import type { Arende } from "./domain";
 import { handelseRubrik } from "./domain";
@@ -27,7 +28,8 @@ export type AiUppgift =
   | "sammanfattning"
   | "metodikval"
   | "dokumenttolkning"
-  | "instrumentavlasning";
+  | "instrumentavlasning"
+  | "bildanalys";
 
 export type AiRadTyp = "observation" | "verifierat" | "hypotes" | "rekommendation";
 
@@ -285,4 +287,42 @@ export async function valjMetodikMedAi(felbeskrivning: string): Promise<string |
   } catch {
     return null;
   }
+}
+
+/**
+ * En kommentar under en bevisbild (ALVA-SPEC-072). Går till Gemini, inte
+ * till Claude — utvärderingen handlar om att pröva en annan modells ögon
+ * på samma underlag.
+ *
+ * Kommentaren är ett andra par ögon, ALDRIG evidens: den skrivs inte till
+ * den förseglade loggen, den bedöms inte av grinden och den kan inte höja
+ * säkerhetstaket. Uteblir den visas bilden utan kommentar — bilden är
+ * underlaget, kommentaren ett tillägg.
+ *
+ * @param dataUrl  bilden som data-URL (foto, inte vektor)
+ * @param kontroll kontrollens text, så modellen vet vad den tittar efter
+ * @param sprak    svaret ska stå på kontrollens språk
+ */
+export async function kommenteraBild(
+  dataUrl: string,
+  kontroll: string,
+  sprak?: string,
+): Promise<{ kommentar: string; konfidens?: number; modell: string } | null> {
+  const resultat = await anropa(
+    "bildanalys",
+    `This photograph was taken as evidence for the check: "${kontroll}".` +
+      (sprak ? ` Answer in the language of that text (${sprak}).` : "") +
+      " Describe what is visible. Do not diagnose.",
+    { bild: dataUrl },
+  ).catch(() => null);
+  if (!resultat) return null;
+  const svar = resultat.svar as { kommentar?: unknown; konfidens?: unknown };
+  const kommentar = String(svar?.kommentar ?? "").trim();
+  if (!kommentar) return null;
+  const konfidens = Number(svar?.konfidens);
+  return {
+    kommentar,
+    ...(Number.isFinite(konfidens) ? { konfidens } : {}),
+    modell: resultat.modell,
+  };
 }

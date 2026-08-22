@@ -67,3 +67,64 @@ export function Klipp({
   if (!kalla) return <Platshallare text="The video could not be retrieved." />;
   return <video src={kalla} controls className={className} />;
 }
+
+/**
+ * En kommentar under en bevisbild (ALVA-SPEC-072, utvärdering).
+ *
+ * Kommentaren är ett ANDRA PAR ÖGON, aldrig evidens. Den är därför
+ * visuellt underordnad bilden, bär alltid modellens namn, och skrivs inte
+ * till den förseglade loggen — append-only betyder att det som skrivs dit
+ * inte går att ta tillbaka, och man lägger inte modellutdata i ett
+ * bevismaterial medan man fortfarande utvärderar om det är till nytta.
+ *
+ * Uteblir kommentaren visas ingenting alls. Bilden är underlaget.
+ */
+export function Bildkommentar({
+  bilaga,
+  kontroll,
+  sprak,
+  delningskod,
+}: {
+  bilaga: Bilaga;
+  kontroll: string;
+  sprak?: string;
+  delningskod?: string;
+}) {
+  const kalla = useKalla(bilaga, delningskod);
+  const [svar, setSvar] = useState<{ kommentar: string; konfidens?: number; modell: string } | null>(null);
+  const [laddar, setLaddar] = useState(false);
+
+  useEffect(() => {
+    if (typeof kalla !== "string" || !kalla.startsWith("data:image/")) return;
+    let aktuell = true;
+    setLaddar(true);
+    import("./ai")
+      .then((m) => m.kommenteraBild(kalla, kontroll, sprak))
+      .then((r) => aktuell && setSvar(r))
+      .catch(() => aktuell && setSvar(null))
+      .finally(() => aktuell && setLaddar(false));
+    return () => {
+      aktuell = false;
+    };
+  }, [kalla, kontroll, sprak]);
+
+  if (laddar) {
+    return <p className="mt-2 text-[11px] text-[#4D5662]">Reading the image…</p>;
+  }
+  if (!svar) return null;
+
+  return (
+    <p className="mt-2 border-l-2 border-[#D7DCE2] pl-2 text-[12px] leading-[17px] text-[#4D5662]">
+      <span className="mr-2 font-semibold uppercase tracking-[0.06em] text-[#4D5662]">
+        AI · {svar.modell}
+      </span>
+      {svar.kommentar}
+      {typeof svar.konfidens === "number" && (
+        <span className="ml-2 text-[#4D5662]">({Math.round(svar.konfidens * 100)}% read confidence)</span>
+      )}
+      <span className="mt-2 block text-[10px] uppercase tracking-[0.06em] text-[#4D5662]">
+        Comment, not evidence — the photograph is the record
+      </span>
+    </p>
+  );
+}
